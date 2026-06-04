@@ -297,7 +297,7 @@ export default function CreatePage() {
   const TABS: { id: ActiveTab; label: string }[] = [
     { id: "wizard", label: language === "he" ? "אשף" : "Wizard" },
     { id: "prompt", label: language === "he" ? "טקסט חופשי" : "Text Prompt" },
-    { id: "script", label: language === "he" ? "סקריפט" : "Script" },
+    { id: "script", label: language === "he" ? "סיפור שנוצר" : "Generated Script" },
   ];
 
   return (
