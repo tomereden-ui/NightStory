@@ -1,4 +1,4 @@
-import type { Story, Voice, UserProfile, NavItem } from "@/types";
+import type { Story, Voice, UserProfile, NavItem, ScriptBlock } from "@/types";
 
 export const VOICES: Voice[] = [
   { id: "v1", name: "Luna", nameHe: "לונה", gender: "female", style: "warm", language: "en", avatarEmoji: "🌙" },
@@ -178,4 +178,73 @@ export function getFeaturedStories(): Story[] {
 
 export function getRecentStories(ids: string[]): Story[] {
   return ids.map((id) => STORIES.find((s) => s.id === id)).filter(Boolean) as Story[];
+}
+
+export const STORY_SETTINGS = [
+  { id: "magic-forest", label: "Magic Forest", labelHe: "יער קסום", emoji: "🌲" },
+  { id: "dinosaurs",    label: "Dinosaurs",    labelHe: "דינוזאורים", emoji: "🦕" },
+  { id: "space",        label: "Space",        labelHe: "חלל",         emoji: "🚀" },
+  { id: "underwater",   label: "Underwater",   labelHe: "מתחת למים",   emoji: "🐚" },
+  { id: "dragons",      label: "Dragons",      labelHe: "דרקונים",     emoji: "🐉" },
+  { id: "fairies",      label: "Fairies",      labelHe: "פיות",        emoji: "🧚" },
+];
+
+function blockId(order: number): string {
+  return `blk-${order}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+export function generateMockScript(
+  hero: string,
+  settingId: string,
+  primaryVoiceId: string
+): ScriptBlock[] {
+  const settingLabel =
+    STORY_SETTINGS.find((s) => s.id === settingId)?.label.toLowerCase() ??
+    "a magical place";
+  const heroName = hero.trim() || "the brave one";
+
+  return [
+    {
+      id: blockId(1),
+      blockOrder: 1,
+      characterName: "Narrator",
+      assignedVoiceId: "v1",
+      textPayload: `Once upon a time, in ${settingLabel} where stars touched the ground, there lived ${heroName}.`,
+    },
+    {
+      id: blockId(2),
+      blockOrder: 2,
+      characterName: heroName,
+      assignedVoiceId: primaryVoiceId,
+      textPayload: `"Tonight," whispered ${heroName}, "I will discover what lies beyond the shimmer."`,
+    },
+    {
+      id: blockId(3),
+      blockOrder: 3,
+      characterName: "Narrator",
+      assignedVoiceId: "v1",
+      textPayload: `The ${settingLabel} hummed with ancient secrets, each shadow hiding a story waiting to be found.`,
+    },
+    {
+      id: blockId(4),
+      blockOrder: 4,
+      characterName: "Wise Guide",
+      assignedVoiceId: "v3",
+      textPayload: `"You carry the light within you," said the Wise Guide, voice gentle as falling snow. "Trust it."`,
+    },
+    {
+      id: blockId(5),
+      blockOrder: 5,
+      characterName: heroName,
+      assignedVoiceId: primaryVoiceId,
+      textPayload: `${heroName} took a deep breath, stepped forward — and smiled. The ${settingLabel} lit up in reply.`,
+    },
+    {
+      id: blockId(6),
+      blockOrder: 6,
+      characterName: "Narrator",
+      assignedVoiceId: "v1",
+      textPayload: `And so, under a sky full of patient stars, the most wonderful adventure began — one block of wonder at a time.`,
+    },
+  ];
 }

@@ -93,3 +93,16 @@ export interface NavItem {
   href: string;
   icon: string;
 }
+
+export interface ScriptBlock {
+  id: string;
+  blockOrder: number;
+  characterName: string;
+  assignedVoiceId: string;
+  textPayload: string;
+}
+
+export interface GeneratedScriptState {
+  storyId: string;
+  blocks: ScriptBlock[];
+}
