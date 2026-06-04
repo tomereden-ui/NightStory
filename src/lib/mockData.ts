@@ -1,42 +1,10 @@
 import type { Story, Voice, UserProfile, NavItem } from "@/types";
 
 export const VOICES: Voice[] = [
-  {
-    id: "v1",
-    name: "Luna",
-    nameHe: "לונה",
-    gender: "female",
-    style: "warm",
-    language: "en",
-    avatarEmoji: "🌙",
-  },
-  {
-    id: "v2",
-    name: "Leo",
-    nameHe: "ליאו",
-    gender: "male",
-    style: "playful",
-    language: "en",
-    avatarEmoji: "🦁",
-  },
-  {
-    id: "v3",
-    name: "Starlight",
-    nameHe: "כוכבית",
-    gender: "neutral",
-    style: "calm",
-    language: "he",
-    avatarEmoji: "⭐",
-  },
-  {
-    id: "v4",
-    name: "Noa",
-    nameHe: "נועה",
-    gender: "female",
-    style: "gentle",
-    language: "he",
-    avatarEmoji: "🌺",
-  },
+  { id: "v1", name: "Luna", nameHe: "לונה", gender: "female", style: "warm", language: "en", avatarEmoji: "🌙" },
+  { id: "v2", name: "Leo", nameHe: "ליאו", gender: "male", style: "playful", language: "en", avatarEmoji: "🦁" },
+  { id: "v3", name: "Starlight", nameHe: "כוכבית", gender: "neutral", style: "calm", language: "he", avatarEmoji: "⭐" },
+  { id: "v4", name: "Noa", nameHe: "נועה", gender: "female", style: "gentle", language: "he", avatarEmoji: "🌺" },
 ];
 
 export const STORIES: Story[] = [
@@ -44,12 +12,11 @@ export const STORIES: Story[] = [
     id: "s1",
     title: "The Dragon Who Was Afraid of the Dark",
     titleHe: "הדרקון שפחד מהחושך",
-    description:
-      "Ember the dragon discovers that the dark holds more wonders than fears, and learns that bravery is about taking that first small step.",
-    descriptionHe:
-      "גחלת הדרקון מגלה שהחושך מסתיר פלאים רבים, ולומד שאומץ הוא לקחת את הצעד הראשון.",
+    description: "Ember the dragon discovers that the dark holds more wonders than fears.",
+    descriptionHe: "גחלת הדרקון מגלה שהחושך מסתיר פלאים רבים.",
     coverEmoji: "🐉",
-    coverColor: "#1A3A5C",
+    coverColor: "#1a1040",
+    coverGradient: "linear-gradient(135deg, #1a1040 0%, #2d1b69 50%, #0a0520 100%)",
     durationSeconds: 720,
     ageGroup: "4-6",
     category: "fantasy",
@@ -67,12 +34,11 @@ export const STORIES: Story[] = [
     id: "s2",
     title: "Stars and the Sleeping Moon",
     titleHe: "הכוכבים והירח הישן",
-    description:
-      "When the moon falls asleep too early, the little stars must work together to light up the night sky for all the children below.",
-    descriptionHe:
-      "כאשר הירח נרדם מוקדם מדי, הכוכבים הקטנים חייבים לעבוד יחד כדי להאיר את השמיים.",
+    description: "When the moon falls asleep too early, the little stars must light up the night sky.",
+    descriptionHe: "כאשר הירח נרדם מוקדם מדי, הכוכבים הקטנים חייבים להאיר את השמיים.",
     coverEmoji: "🌟",
-    coverColor: "#1C2B4A",
+    coverColor: "#0a1530",
+    coverGradient: "linear-gradient(135deg, #0a1530 0%, #162a5e 50%, #050d20 100%)",
     durationSeconds: 540,
     ageGroup: "2-4",
     category: "bedtime",
@@ -90,12 +56,11 @@ export const STORIES: Story[] = [
     id: "s3",
     title: "Captain Finn and the Whale Song",
     titleHe: "קפטן פין ושיר הלוויתן",
-    description:
-      "A tiny sailor and a giant whale become the most unlikely of friends during a midnight ocean voyage filled with music and magic.",
-    descriptionHe:
-      "מלח קטן ולוויתן ענק הופכים לחברים הכי בלתי צפויים בהפלגת לילה מלאת מוזיקה וקסם.",
+    description: "A tiny sailor and a giant whale become the most unlikely of friends.",
+    descriptionHe: "מלח קטן ולוויתן ענק הופכים לחברים הכי בלתי צפויים.",
     coverEmoji: "🐋",
-    coverColor: "#0E2640",
+    coverColor: "#001a2e",
+    coverGradient: "linear-gradient(135deg, #001a2e 0%, #003a5c 50%, #000d1a 100%)",
     durationSeconds: 840,
     ageGroup: "6-8",
     category: "adventure",
@@ -113,12 +78,11 @@ export const STORIES: Story[] = [
     id: "s4",
     title: "The Bunny Who Counted Clouds",
     titleHe: "הארנבון שספר עננים",
-    description:
-      "Little Benny the bunny can't fall asleep, so he begins counting clouds — and discovers that each one holds a dream waiting to happen.",
-    descriptionHe:
-      "ארנבון קטן לא יכול לישון, אז הוא מתחיל לספור עננים ומגלה שכל ענן מכיל חלום.",
+    description: "Little Benny the bunny can't fall asleep, so he begins counting clouds.",
+    descriptionHe: "ארנבון קטן לא יכול לישון, אז הוא מתחיל לספור עננים.",
     coverEmoji: "🐰",
-    coverColor: "#1E3050",
+    coverColor: "#1a0a2e",
+    coverGradient: "linear-gradient(135deg, #1a0a2e 0%, #3d1a5e 50%, #0d0520 100%)",
     durationSeconds: 480,
     ageGroup: "2-4",
     category: "bedtime",
@@ -137,10 +101,10 @@ export const STORIES: Story[] = [
     title: "אורית והיער הקסום",
     titleHe: "אורית והיער הקסום",
     description: "Orit steps into an enchanted forest and meets magical creatures.",
-    descriptionHe:
-      "אורית נכנסת ליער קסום ופוגשת יצורים מופלאים שמלמדים אותה על כוח הדמיון.",
+    descriptionHe: "אורית נכנסת ליער קסום ופוגשת יצורים מופלאים.",
     coverEmoji: "🌲",
-    coverColor: "#142B1E",
+    coverColor: "#041a0e",
+    coverGradient: "linear-gradient(135deg, #041a0e 0%, #0a3d20 50%, #020d07 100%)",
     durationSeconds: 660,
     ageGroup: "4-6",
     category: "fairy-tale",
@@ -156,22 +120,21 @@ export const STORIES: Story[] = [
   },
   {
     id: "s6",
-    title: "Robot Rex Finds His Heart",
-    titleHe: "רובוט רקס מוצא את ליבו",
-    description:
-      "Rex is a robot who thinks he can't feel emotions — until a little girl named Maya shows him that kindness is the most powerful code of all.",
-    descriptionHe:
-      "רקס הוא רובוט שחושב שאינו יכול להרגיש — עד שילדה קטנה בשם מאיה מגלה לו את סוד הטוב.",
-    coverEmoji: "🤖",
-    coverColor: "#1A2540",
+    title: "The Clockwork Constellation",
+    titleHe: "קבוצת הכוכבים המכנית",
+    description: "A clockmaker's daughter discovers that the stars are actually tiny gears keeping time for the universe.",
+    descriptionHe: "בתו של שען מגלה שהכוכבים הם גלגלי שיניים קטנים.",
+    coverEmoji: "⚙️",
+    coverColor: "#1a1000",
+    coverGradient: "linear-gradient(135deg, #1a1000 0%, #3d2800 50%, #0d0800 100%)",
     durationSeconds: 780,
     ageGroup: "6-8",
     category: "adventure",
     language: "en",
     voice: VOICES[1],
-    tags: ["robots", "kindness", "friendship"],
-    tagsHe: ["רובוטים", "טוב לב", "חברות"],
-    isFeatured: false,
+    tags: ["space", "clockwork", "mystery"],
+    tagsHe: ["חלל", "שעון", "מסתורין"],
+    isFeatured: true,
     isFavorite: false,
     playCount: 723,
     createdAt: "2024-04-02",
@@ -187,51 +150,21 @@ export const MOCK_USER: UserProfile = {
   language: "en",
   preferredAgeGroup: "4-6",
   favoriteStoryIds: ["s1", "s4"],
-  recentlyPlayedIds: ["s2", "s1", "s4", "s3"],
+  recentlyPlayedIds: ["s6", "s1", "s4", "s3"],
   subscriptionTier: "premium",
   subscriptionExpiresAt: "2025-01-01",
   childProfiles: [
-    {
-      id: "c1",
-      name: "Maya",
-      avatarEmoji: "🌸",
-      ageGroup: "4-6",
-      favoriteCategories: ["fantasy", "animals", "bedtime"],
-    },
-    {
-      id: "c2",
-      name: "Lior",
-      avatarEmoji: "🚀",
-      ageGroup: "6-8",
-      favoriteCategories: ["adventure", "space"],
-    },
+    { id: "c1", name: "Maya", avatarEmoji: "🌸", ageGroup: "4-6", favoriteCategories: ["fantasy", "animals", "bedtime"] },
+    { id: "c2", name: "Lior", avatarEmoji: "🚀", ageGroup: "6-8", favoriteCategories: ["adventure", "space"] },
   ],
   createdAt: "2024-01-01",
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: "home", label: "Home", labelHe: "בית", href: "/", icon: "🏠" },
-  {
-    id: "library",
-    label: "Library",
-    labelHe: "ספרייה",
-    href: "/library",
-    icon: "📚",
-  },
-  {
-    id: "player",
-    label: "Player",
-    labelHe: "נגן",
-    href: "/player",
-    icon: "🎵",
-  },
-  {
-    id: "profile",
-    label: "Profile",
-    labelHe: "פרופיל",
-    href: "/profile",
-    icon: "👤",
-  },
+  { id: "home", label: "Stories", labelHe: "סיפורים", href: "/", icon: "📖" },
+  { id: "library", label: "Create", labelHe: "צור", href: "/create", icon: "✨" },
+  { id: "player", label: "Player", labelHe: "נגן", href: "/player", icon: "🎵" },
+  { id: "profile", label: "Profile", labelHe: "פרופיל", href: "/profile", icon: "👤" },
 ];
 
 export function formatDuration(seconds: number): string {
@@ -244,7 +177,5 @@ export function getFeaturedStories(): Story[] {
 }
 
 export function getRecentStories(ids: string[]): Story[] {
-  return ids
-    .map((id) => STORIES.find((s) => s.id === id))
-    .filter(Boolean) as Story[];
+  return ids.map((id) => STORIES.find((s) => s.id === id)).filter(Boolean) as Story[];
 }

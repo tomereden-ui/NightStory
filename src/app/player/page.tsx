@@ -13,116 +13,122 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+const STORY_SEGMENTS = [
+  { type: "narrator", text: "Once upon a time, in a land where the stars always danced a little too fast, there lived a child named Pixel." },
+  { type: "character", name: "Pixel (The Robot)", text: "Wait! I can hear the constellations talking from the Giant Celestial Cloud!" },
+  { type: "narrator", text: "Pixel had a mind full of shiny chrome, lots of intellectual support and clicking gears that hummed a quiet lullaby." },
+  { type: "character", name: "Nova (Fairy)", text: "Be careful, little one. The stars are fragile tonight." },
+];
+
 function PlayerContent() {
   const searchParams = useSearchParams();
   const storyId = searchParams.get("id");
   const { language, t, isRTL } = useLanguage();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(18);
 
-  const story = storyId ? STORIES.find((s) => s.id === storyId) : STORIES[0];
-
+  const story = storyId ? STORIES.find((s) => s.id === storyId) : STORIES[5];
   if (!story) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-4">
         <span className="text-5xl">😴</span>
-        <p className="text-white/50 text-sm">
-          {language === "he" ? "בחר סיפור מהספרייה" : "Choose a story from the Library"}
-        </p>
-        <Link href="/library" className="btn-outline text-sm">
-          {t("library")}
-        </Link>
+        <p className="text-white/40 text-sm">Choose a story from the Library</p>
+        <Link href="/library" className="btn-outline text-sm">{t("library")}</Link>
       </div>
     );
   }
 
   const title = language === "he" && story.titleHe ? story.titleHe : story.title;
-  const description =
-    language === "he" && story.descriptionHe ? story.descriptionHe : story.description;
-  const voiceName =
-    language === "he" && story.voice.nameHe ? story.voice.nameHe : story.voice.name;
-
+  const voiceName = language === "he" && story.voice.nameHe ? story.voice.nameHe : story.voice.name;
   const currentSec = Math.round((progress / 100) * story.durationSeconds);
 
   return (
     <div className="relative min-h-full flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
-      <StarField count={40} />
+      <StarField count={30} />
 
-      {/* Back */}
-      <div className="relative px-5 pt-12 pb-4">
-        <Link
-          href="/library"
-          className="inline-flex items-center gap-1.5 text-white/40 text-sm hover:text-white/60 transition-colors"
-        >
-          <span className={isRTL ? "rotate-180 inline-block" : ""}>←</span>
-          {t("library")}
+      {/* Header */}
+      <div className="relative flex items-center justify-between px-5 pt-12 pb-4">
+        <Link href="/library" className="w-8 h-8 rounded-full bg-bg-card border border-bg-border flex items-center justify-center text-white/40 hover:text-white transition-colors">
+          ←
         </Link>
+        <h2 className="text-sm font-semibold text-white/80 truncate max-w-[60%] text-center">{title}</h2>
+        <button className="w-8 h-8 rounded-full bg-bg-card border border-bg-border flex items-center justify-center text-white/40 hover:text-white transition-colors text-sm">
+          ↑
+        </button>
       </div>
 
-      {/* Cover */}
-      <div className="relative flex flex-col items-center px-8 flex-1">
+      {/* Scrollable narrative */}
+      <div className="relative flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-3">
+        {STORY_SEGMENTS.map((seg, i) => (
+          <div
+            key={i}
+            className={`animate-float-up ${seg.type === "narrator" ? "" : "ml-2"}`}
+            style={{ animationDelay: `${i * 0.1}s` }}
+          >
+            {seg.type === "narrator" ? (
+              <div className="bg-bg-card border border-bg-border rounded-2xl rounded-tl-sm px-4 py-3">
+                <p className="text-[10px] text-purple-bright font-medium uppercase tracking-wider mb-1.5">Narrator</p>
+                <p className="text-white/70 text-sm leading-relaxed">{seg.text}</p>
+              </div>
+            ) : (
+              <div className="bg-bg-elevated border border-teal/15 rounded-2xl rounded-tl-sm px-4 py-3">
+                <p className="text-[10px] text-teal font-medium uppercase tracking-wider mb-1.5">{seg.name}</p>
+                <p className="text-white/80 text-sm leading-relaxed italic">"{seg.text}"</p>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Continue reading fade */}
+        <div className="h-8 bg-gradient-to-t from-bg to-transparent" />
+      </div>
+
+      {/* Player controls */}
+      <div className="relative px-5 pb-4">
         <div
-          className="w-56 h-56 rounded-3xl flex items-center justify-center text-8xl shadow-card border border-white/5 mb-8"
-          style={{ backgroundColor: story.coverColor }}
+          className="rounded-3xl border border-white/5 p-4"
+          style={{ background: "linear-gradient(135deg, #0E1225 0%, #080B18 100%)" }}
         >
-          {story.coverEmoji}
-        </div>
+          {/* Story info */}
+          <div className="flex items-center gap-3 mb-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl border border-white/5 flex-shrink-0"
+              style={{ background: story.coverGradient ?? story.coverColor }}
+            >
+              {story.coverEmoji}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{title}</p>
+              <p className="text-white/35 text-xs">{story.voice.avatarEmoji} {voiceName}</p>
+            </div>
+            <button className="text-pink text-lg">{story.isFavorite ? "♥" : "♡"}</button>
+          </div>
 
-        {/* Title & meta */}
-        <div className={`w-full text-center mb-8 ${isRTL ? "font-hebrew" : ""}`}>
-          <h1 className="text-xl font-bold text-white leading-tight mb-1">{title}</h1>
-          <p className="text-white/40 text-sm mb-2">
-            {story.voice.avatarEmoji} {voiceName}
-          </p>
-          <p className="text-white/30 text-xs leading-relaxed line-clamp-2">
-            {description}
-          </p>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full mb-4">
+          {/* Progress */}
           <input
-            type="range"
-            min={0}
-            max={100}
-            value={progress}
+            type="range" min={0} max={100} value={progress}
             onChange={(e) => setProgress(Number(e.target.value))}
-            className="w-full accent-gold cursor-pointer"
+            className="w-full accent-purple cursor-pointer mb-1"
           />
-          <div className="flex justify-between text-white/30 text-xs mt-1">
+          <div className="flex justify-between text-white/25 text-[10px] mb-4">
             <span>{formatTime(currentSec)}</span>
             <span>{formatTime(story.durationSeconds)}</span>
           </div>
-        </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-center gap-8 mb-8">
-          <button className="text-white/40 hover:text-white/70 transition-colors text-2xl">
-            ⏮
-          </button>
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="w-16 h-16 rounded-full bg-gold-gradient shadow-gold flex items-center justify-center text-navy text-2xl transition-transform active:scale-95"
-          >
-            {isPlaying ? "⏸" : "▶"}
-          </button>
-          <button className="text-white/40 hover:text-white/70 transition-colors text-2xl">
-            ⏭
-          </button>
-        </div>
-
-        {/* Tags */}
-        <div className="flex flex-wrap gap-2 justify-center">
-          {(language === "he" && story.tagsHe ? story.tagsHe : story.tags).map(
-            (tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 rounded-full bg-navy-lighter border border-white/10 text-white/40 text-xs"
-              >
-                {tag}
-              </span>
-            )
-          )}
+          {/* Controls */}
+          <div className="flex items-center justify-between">
+            <button className="text-white/30 hover:text-white/60 transition-colors text-xl w-10 h-10 flex items-center justify-center">⏮</button>
+            <button className="text-white/30 hover:text-white/60 transition-colors text-xl w-10 h-10 flex items-center justify-center">«</button>
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl shadow-purple transition-transform active:scale-95"
+              style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}
+            >
+              {isPlaying ? "⏸" : "▶"}
+            </button>
+            <button className="text-white/30 hover:text-white/60 transition-colors text-xl w-10 h-10 flex items-center justify-center">»</button>
+            <button className="text-white/30 hover:text-white/60 transition-colors text-base w-10 h-10 flex items-center justify-center">↗</button>
+          </div>
         </div>
       </div>
     </div>
@@ -131,13 +137,11 @@ function PlayerContent() {
 
 export default function PlayerPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <span className="text-4xl animate-pulse-slow">🌙</span>
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <span className="text-4xl animate-pulse-slow">✨</span>
+      </div>
+    }>
       <PlayerContent />
     </Suspense>
   );

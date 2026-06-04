@@ -37,6 +37,7 @@ export interface Story {
   descriptionHe?: string;
   coverEmoji: string;
   coverColor: string;
+  coverGradient?: string;
   audioUrl?: string;
   durationSeconds: number;
   ageGroup: AgeGroup;

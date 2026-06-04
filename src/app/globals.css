@@ -3,20 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --navy: #0d1b2e;
-  --navy-light: #142338;
-  --navy-lighter: #1a2f4a;
-  --gold: #f5c842;
-  --gold-dark: #d4a820;
+  --bg: #080b18;
+  --bg-card: #0e1225;
+  --teal: #00d4ff;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html,
-body {
-  background-color: #0d1b2e;
+html, body {
+  background-color: #080b18;
   color: #ffffff;
   font-family: var(--font-inter), sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -24,52 +21,71 @@ body {
   overscroll-behavior: none;
 }
 
-[dir="rtl"] {
-  font-family: var(--font-rubik), sans-serif;
-}
+[dir="rtl"] { font-family: var(--font-rubik), sans-serif; }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: #0d1b2e;
-}
-::-webkit-scrollbar-thumb {
-  background: #1a2f4a;
-  border-radius: 2px;
-}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #080b18; }
+::-webkit-scrollbar-thumb { background: #1e2440; border-radius: 2px; }
 
-/* Hide scrollbar on mobile while keeping scroll */
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
 
 @layer components {
   .card-base {
-    @apply rounded-2xl bg-navy-card border border-white/5 shadow-card;
+    @apply rounded-2xl bg-bg-card border border-bg-border shadow-card;
   }
 
-  .btn-gold {
-    @apply bg-gold-gradient text-navy font-semibold rounded-full px-6 py-3
-           shadow-gold hover:opacity-90 active:scale-95 transition-all duration-150;
+  .btn-primary {
+    @apply bg-purple-gradient text-white font-semibold rounded-2xl px-6 py-3
+           shadow-purple hover:opacity-90 active:scale-95 transition-all duration-150;
+  }
+
+  .btn-teal {
+    @apply bg-teal-gradient text-bg font-semibold rounded-2xl px-6 py-3
+           shadow-teal hover:opacity-90 active:scale-95 transition-all duration-150;
+  }
+
+  .btn-vivid {
+    @apply text-white font-semibold rounded-2xl px-6 py-3
+           hover:opacity-90 active:scale-95 transition-all duration-150;
+    background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
   }
 
   .btn-outline {
-    @apply border border-gold/40 text-gold rounded-full px-6 py-3
-           hover:bg-gold/10 active:scale-95 transition-all duration-150;
+    @apply border border-purple/40 text-purple-bright rounded-2xl px-6 py-3
+           hover:bg-purple/10 active:scale-95 transition-all duration-150;
   }
 
-  .text-gradient-gold {
+  .text-gradient-teal {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #f5c842, #d4a820);
+    background-image: linear-gradient(135deg, #00D4FF, #8B5CF6);
+  }
+
+  .text-gradient-vivid {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 50%, #EC4899 100%);
   }
 
   .star-dot {
     @apply absolute rounded-full bg-white animate-twinkle;
+  }
+
+  .glow-border-teal {
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    box-shadow: 0 0 16px rgba(0, 212, 255, 0.1), inset 0 0 16px rgba(0, 212, 255, 0.05);
+  }
+
+  .glow-border-purple {
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 16px rgba(139, 92, 246, 0.1), inset 0 0 16px rgba(139, 92, 246, 0.05);
+  }
+
+  .tab-active {
+    @apply text-teal border-b-2 border-teal;
+  }
+
+  .tab-inactive {
+    @apply text-white/30 border-b-2 border-transparent;
   }
 }

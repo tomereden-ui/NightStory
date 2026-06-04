@@ -12,13 +12,11 @@ export default function RecentSection() {
   if (recent.length === 0) return null;
 
   return (
-    <section className="mb-6">
+    <section className="mb-5">
       <SectionHeader title={t("recentlyPlayed")} />
       <div className="flex gap-3 overflow-x-auto hide-scrollbar px-5 pb-1">
         {recent.map((story) => (
-          <div key={story.id} className="flex-shrink-0">
-            <StoryCard story={story} variant="compact" />
-          </div>
+          <StoryCard key={story.id} story={story} variant="compact" />
         ))}
       </div>
     </section>
