@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy: #0d1b2e;
+  --navy-light: #142338;
+  --navy-lighter: #1a2f4a;
+  --gold: #f5c842;
+  --gold-dark: #d4a820;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: #0d1b2e;
+  color: #ffffff;
+  font-family: var(--font-inter), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+[dir="rtl"] {
+  font-family: var(--font-rubik), sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #0d1b2e;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a2f4a;
+  border-radius: 2px;
+}
+
+/* Hide scrollbar on mobile while keeping scroll */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@layer components {
+  .card-base {
+    @apply rounded-2xl bg-navy-card border border-white/5 shadow-card;
+  }
+
+  .btn-gold {
+    @apply bg-gold-gradient text-navy font-semibold rounded-full px-6 py-3
+           shadow-gold hover:opacity-90 active:scale-95 transition-all duration-150;
+  }
+
+  .btn-outline {
+    @apply border border-gold/40 text-gold rounded-full px-6 py-3
+           hover:bg-gold/10 active:scale-95 transition-all duration-150;
+  }
+
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #f5c842, #d4a820);
+  }
+
+  .star-dot {
+    @apply absolute rounded-full bg-white animate-twinkle;
+  }
+}
