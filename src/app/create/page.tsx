@@ -4,8 +4,9 @@ import { useState, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import StarField from "@/components/ui/StarField";
 import ScriptTab from "@/components/studio/ScriptTab";
-import { VOICES, STORY_SETTINGS, generateMockScript } from "@/lib/mockData";
+import { VOICES, STORY_SETTINGS } from "@/lib/mockData";
 import type { ScriptBlock } from "@/types";
+import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 
 type ActiveTab = "wizard" | "prompt" | "script";
 
@@ -233,17 +234,36 @@ export default function CreatePage() {
   const [isProducing, setIsProducing] = useState(false);
   const [done, setDone] = useState(false);
 
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const hasScript = scriptBlocks.length > 0;
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     const hasInput = activeTab === "prompt" ? promptText.trim().length > 0 : hero.trim().length > 0;
     if (!hasInput) return;
     setGenerating(true);
-    setTimeout(() => {
-      setScriptBlocks(generateMockScript(hero || "the hero", setting, selectedVoice));
-      setGenerating(false);
+    setGenerateError(null);
+
+    const settingLabel = STORY_SETTINGS.find((s) => s.id === setting)?.label ?? setting;
+
+    const body: GenerateStoryRequest = activeTab === "prompt"
+      ? { mode: "prompt", promptText, primaryVoiceId: selectedVoice }
+      : { mode: "wizard", hero, setting: settingLabel, plot, primaryVoiceId: selectedVoice };
+
+    try {
+      const res = await fetch("/api/generate-story", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed");
+      setScriptBlocks(data.blocks as ScriptBlock[]);
       setActiveTab("script");
-    }, 2000);
+    } catch (err: unknown) {
+      setGenerateError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleProduce = useCallback((blocks: ScriptBlock[]) => {
@@ -325,6 +345,13 @@ export default function CreatePage() {
             );
           })}
         </div>
+
+        {/* API error banner */}
+        {generateError && (
+          <div className="mb-4 px-4 py-3 rounded-2xl bg-pink/10 border border-pink/30 text-pink text-xs leading-relaxed">
+            ⚠ {generateError}
+          </div>
+        )}
 
         {activeTab === "wizard" && (
           <WizardTab hero={hero} setHero={setHero} setting={setting} setSetting={setSetting}
