@@ -9,7 +9,7 @@ import type { ScriptBlock } from "@/types";
 
 type ActiveTab = "wizard" | "prompt" | "script";
 
-// ─── Wizard tab ────────────────────────────────────────────────────────────
+// ─── Wizard tab ─────────────────────────────────────────────────────────────
 
 interface WizardTabProps {
   hero: string; setHero: (v: string) => void;
@@ -21,13 +21,11 @@ interface WizardTabProps {
   language: string;
 }
 
-function WizardTab({
-  hero, setHero, setting, setSetting, plot, setPlot,
-  selectedVoice, setSelectedVoice, generating, onGenerate, language,
-}: WizardTabProps) {
+function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selectedVoice, setSelectedVoice, generating, onGenerate, language }: WizardTabProps) {
   const canGenerate = hero.trim().length > 0;
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       {/* Main character */}
       <div>
         <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
@@ -35,33 +33,31 @@ function WizardTab({
         </label>
         <input
           type="text"
-          placeholder={language === "he" ? "לדוגמה: ילדה אמיצה…" : "e.g. a brave little girl…"}
+          placeholder={language === "he" ? "לדוגמה: ילדה אמיצה…" : "Describe the main character, e.g., a brave girl"}
           value={hero}
           onChange={(e) => setHero(e.target.value)}
           className="w-full bg-bg-card border border-bg-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-purple/50 transition-colors"
         />
       </div>
 
-      {/* Setting grid */}
+      {/* Setting — horizontal scrolling chips */}
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
-          {language === "he" ? "איפה זה קורה?" : "Setting"}
+        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3 block">
+          {language === "he" ? "סביבה" : "Setting"}
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
           {STORY_SETTINGS.map((s) => (
             <button
               key={s.id}
               onClick={() => setSetting(setting === s.id ? "" : s.id)}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-medium transition-all ${
                 setting === s.id
-                  ? "border-purple bg-purple/15 shadow-purple-sm"
-                  : "border-bg-border bg-bg-card hover:border-purple/30"
+                  ? "border-teal/60 bg-teal/10 text-teal shadow-teal-sm"
+                  : "border-bg-border bg-bg-card text-white/45 hover:border-white/20"
               }`}
             >
-              <span className="text-2xl">{s.emoji}</span>
-              <span className="text-[10px] text-white/50 font-medium">
-                {language === "he" ? s.labelHe : s.label}
-              </span>
+              <span className="text-base">{s.emoji}</span>
+              {language === "he" ? s.labelHe : s.label}
             </button>
           ))}
         </div>
@@ -70,10 +66,10 @@ function WizardTab({
       {/* Plot */}
       <div>
         <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
-          {language === "he" ? "מה קורה?" : "The Plot"}
+          {language === "he" ? "העלילה" : "The Plot"}
         </label>
         <textarea
-          placeholder={language === "he" ? "מה קורה בסיפור? (אופציונלי)" : "What happens in the story? (optional)"}
+          placeholder={language === "he" ? "מה יקרה בסיפור? (אופציונלי)" : "What happens? Leave blank and let the AI surprise you."}
           value={plot}
           onChange={(e) => setPlot(e.target.value)}
           rows={3}
@@ -81,47 +77,57 @@ function WizardTab({
         />
       </div>
 
-      {/* Voice picker */}
+      {/* Voice player */}
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
-          {language === "he" ? "מי מספר?" : "Voice Player"}
+        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3 block">
+          {language === "he" ? "נגן קולי" : "Voice Player"}
         </label>
-        <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
-          {VOICES.map((voice) => (
-            <button
-              key={voice.id}
-              onClick={() => setSelectedVoice(voice.id)}
-              className={`flex-shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border transition-all ${
-                selectedVoice === voice.id
-                  ? "border-teal bg-teal/10 shadow-teal-sm"
-                  : "border-bg-border bg-bg-card hover:border-teal/30"
-              }`}
-            >
-              <span className="text-2xl">{voice.avatarEmoji}</span>
-              <span className="text-[10px] text-white/60 font-medium">
-                {language === "he" ? voice.nameHe : voice.name}
-              </span>
-              <span
-                className={`text-[9px] capitalize ${
-                  selectedVoice === voice.id ? "text-teal" : "text-white/25"
-                }`}
+        <div className="flex gap-3">
+          {VOICES.map((voice) => {
+            const isSelected = selectedVoice === voice.id;
+            return (
+              <button
+                key={voice.id}
+                onClick={() => setSelectedVoice(voice.id)}
+                className="flex flex-col items-center gap-1.5 flex-1"
               >
-                {voice.style}
-              </span>
-            </button>
-          ))}
+                {/* Dark circular avatar */}
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl border-2 transition-all ${
+                    isSelected
+                      ? "border-teal shadow-teal-sm bg-bg-elevated"
+                      : "border-bg-border bg-bg-card"
+                  }`}
+                  style={isSelected ? { boxShadow: "0 0 0 3px rgba(0,212,255,0.15)" } : {}}
+                >
+                  {voice.avatarEmoji}
+                </div>
+                <span className={`text-[10px] font-medium ${isSelected ? "text-teal" : "text-white/35"}`}>
+                  {language === "he" ? voice.nameHe : voice.name}
+                </span>
+                <span className={`text-[9px] capitalize ${isSelected ? "text-teal/60" : "text-white/20"}`}>
+                  {voice.style}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Generate */}
+      {/* Generate button — teal */}
       <button
         onClick={onGenerate}
         disabled={!canGenerate || generating}
-        className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
+        className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all mt-1 ${
           canGenerate && !generating
-            ? "btn-vivid"
+            ? "text-bg"
             : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
         }`}
+        style={
+          canGenerate && !generating
+            ? { background: "linear-gradient(135deg,#00D4FF,#0094B3)", boxShadow: "0 4px 24px rgba(0,212,255,0.35)" }
+            : {}
+        }
       >
         {generating ? (
           <span className="flex items-center justify-center gap-2">
@@ -129,14 +135,14 @@ function WizardTab({
             {language === "he" ? "יוצר סיפור…" : "Generating script…"}
           </span>
         ) : (
-          <span>✨ {language === "he" ? "צור סיפור" : "Generate Script"}</span>
+          language === "he" ? "✨ צור סיפור" : "✨ Generate Story"
         )}
       </button>
     </div>
   );
 }
 
-// ─── Prompt tab ─────────────────────────────────────────────────────────────
+// ─── Prompt tab ──────────────────────────────────────────────────────────────
 
 interface PromptTabProps {
   promptText: string; setPromptText: (v: string) => void;
@@ -146,61 +152,51 @@ interface PromptTabProps {
   language: string;
 }
 
-function PromptTab({
-  promptText, setPromptText, selectedVoice, setSelectedVoice,
-  generating, onGenerate, language,
-}: PromptTabProps) {
+function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice, generating, onGenerate, language }: PromptTabProps) {
   const canGenerate = promptText.trim().length > 0;
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <div>
         <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
           {language === "he" ? "תאר את הסיפור" : "Describe your story"}
         </label>
         <textarea
-          placeholder={
-            language === "he"
-              ? "כתוב כל מה שעל הלב…"
-              : "Tell me anything — characters, setting, mood, ending… AI will craft the rest."
-          }
+          placeholder={language === "he"
+            ? "כתוב כל מה שרוצים…"
+            : "Tell me anything — characters, setting, mood, how it ends… AI will craft the rest."}
           value={promptText}
           onChange={(e) => setPromptText(e.target.value)}
-          rows={6}
+          rows={8}
           className="w-full bg-bg-card border border-bg-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-teal/40 transition-colors resize-none leading-relaxed"
-          style={{
-            boxShadow: promptText ? "0 0 0 1px rgba(0,212,255,0.08)" : "none",
-          }}
         />
-        <p className="text-white/15 text-[10px] mt-1.5 text-right">
+        <p className="text-white/15 text-[10px] mt-1 text-right">
           {promptText.trim().split(/\s+/).filter(Boolean).length} words
         </p>
       </div>
 
-      {/* Voice */}
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
+        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3 block">
           {language === "he" ? "קול ראשי" : "Primary Voice"}
         </label>
-        <div className="flex gap-2.5 overflow-x-auto hide-scrollbar pb-1">
-          {VOICES.map((voice) => (
-            <button
-              key={voice.id}
-              onClick={() => setSelectedVoice(voice.id)}
-              className={`flex-shrink-0 flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all ${
-                selectedVoice === voice.id
-                  ? "border-teal bg-teal/10 shadow-teal-sm"
-                  : "border-bg-border bg-bg-card hover:border-teal/30"
-              }`}
-            >
-              <span className="text-lg">{voice.avatarEmoji}</span>
-              <div className="text-left">
-                <p className={`text-xs font-medium ${selectedVoice === voice.id ? "text-teal" : "text-white/60"}`}>
+        <div className="flex gap-3">
+          {VOICES.map((voice) => {
+            const isSelected = selectedVoice === voice.id;
+            return (
+              <button key={voice.id} onClick={() => setSelectedVoice(voice.id)} className="flex flex-col items-center gap-1.5 flex-1">
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl border-2 transition-all ${
+                    isSelected ? "border-teal bg-bg-elevated shadow-teal-sm" : "border-bg-border bg-bg-card"
+                  }`}
+                >
+                  {voice.avatarEmoji}
+                </div>
+                <span className={`text-[10px] font-medium ${isSelected ? "text-teal" : "text-white/35"}`}>
                   {language === "he" ? voice.nameHe : voice.name}
-                </p>
-                <p className="text-[9px] text-white/25 capitalize">{voice.style}</p>
-              </div>
-            </button>
-          ))}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -208,37 +204,29 @@ function PromptTab({
         onClick={onGenerate}
         disabled={!canGenerate || generating}
         className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
-          canGenerate && !generating
-            ? "btn-vivid"
-            : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
+          canGenerate && !generating ? "text-bg" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
         }`}
+        style={canGenerate && !generating ? { background: "linear-gradient(135deg,#00D4FF,#0094B3)", boxShadow: "0 4px 24px rgba(0,212,255,0.35)" } : {}}
       >
         {generating ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="animate-pulse-slow">✨</span>
-            Generating script…
-          </span>
-        ) : (
-          <span>✨ Generate Script</span>
-        )}
+          <span className="flex items-center justify-center gap-2"><span className="animate-pulse-slow">✨</span>Generating…</span>
+        ) : "✨ Generate Story"}
       </button>
     </div>
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CreatePage() {
   const { language, isRTL } = useLanguage();
 
-  // Wizard inputs — persist across tab switches
   const [hero, setHero] = useState("");
   const [setting, setSetting] = useState("");
   const [plot, setPlot] = useState("");
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0].id);
   const [promptText, setPromptText] = useState("");
 
-  // Tab + generation state
   const [activeTab, setActiveTab] = useState<ActiveTab>("wizard");
   const [generating, setGenerating] = useState(false);
   const [scriptBlocks, setScriptBlocks] = useState<ScriptBlock[]>([]);
@@ -248,14 +236,11 @@ export default function CreatePage() {
   const hasScript = scriptBlocks.length > 0;
 
   const handleGenerate = () => {
-    const hasInput =
-      activeTab === "prompt" ? promptText.trim().length > 0 : hero.trim().length > 0;
+    const hasInput = activeTab === "prompt" ? promptText.trim().length > 0 : hero.trim().length > 0;
     if (!hasInput) return;
-
     setGenerating(true);
     setTimeout(() => {
-      const blocks = generateMockScript(hero || "the hero", setting, selectedVoice);
-      setScriptBlocks(blocks);
+      setScriptBlocks(generateMockScript(hero || "the hero", setting, selectedVoice));
       setGenerating(false);
       setActiveTab("script");
     }, 2000);
@@ -263,26 +248,15 @@ export default function CreatePage() {
 
   const handleProduce = useCallback((blocks: ScriptBlock[]) => {
     setIsProducing(true);
-    // Production: forward `blocks` to your audio generation service
-    // e.g. await audioService.produce({ storyId: uuid(), blocks })
-    console.info("[NightStory] Producing story blocks:", blocks);
-    setTimeout(() => {
-      setIsProducing(false);
-      setDone(true);
-    }, 3000);
+    console.info("[NightStory] Producing:", blocks);
+    setTimeout(() => { setIsProducing(false); setDone(true); }, 3000);
   }, []);
 
   const handleReset = () => {
-    setDone(false);
-    setHero("");
-    setPlot("");
-    setSetting("");
-    setPromptText("");
-    setScriptBlocks([]);
-    setActiveTab("wizard");
+    setDone(false); setHero(""); setPlot(""); setSetting("");
+    setPromptText(""); setScriptBlocks([]); setActiveTab("wizard");
   };
 
-  // ── Done screen ──────────────────────────────────────────────────────────
   if (done) {
     return (
       <div className="relative min-h-full flex flex-col items-center justify-center px-5 text-center">
@@ -293,42 +267,34 @@ export default function CreatePage() {
           <p className="text-white/40 text-sm mb-8">Your magical story is ready to listen.</p>
           <div className="flex gap-3 justify-center">
             <a href="/player" className="btn-vivid text-sm px-6 py-3">▶ Listen Now</a>
-            <button onClick={handleReset} className="btn-outline text-sm px-6 py-3">
-              Create Another
-            </button>
+            <button onClick={handleReset} className="btn-outline text-sm px-6 py-3">Create Another</button>
           </div>
         </div>
       </div>
     );
   }
 
-  // ── Tab definitions ──────────────────────────────────────────────────────
   const TABS: { id: ActiveTab; label: string }[] = [
-    { id: "wizard", label: "WIZARD" },
-    { id: "prompt", label: "PROMPT" },
-    { id: "script", label: "SCRIPT" },
+    { id: "wizard", label: language === "he" ? "אשף" : "Wizard" },
+    { id: "prompt", label: language === "he" ? "טקסט חופשי" : "Text Prompt" },
+    { id: "script", label: language === "he" ? "סקריפט" : "Script" },
   ];
 
   return (
-    <div className="relative min-h-full" dir={isRTL ? "rtl" : "ltr"}>
-      <StarField count={30} />
+    <div className="relative min-h-full bg-bg" dir={isRTL ? "rtl" : "ltr"}>
+      <StarField count={25} />
 
       <div className="relative px-5 pt-12 pb-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
-          <a
-            href="/"
-            className="w-8 h-8 rounded-full bg-bg-card border border-bg-border flex items-center justify-center text-white/40 hover:text-white transition-colors"
-          >
+          <a href="/" className="w-8 h-8 rounded-full bg-bg-card border border-bg-border flex items-center justify-center text-white/40 hover:text-white transition-colors">
             ←
           </a>
           <div>
-            <h1 className="text-xl font-bold text-white">
+            <h1 className="text-lg font-bold text-white">
               {language === "he" ? "צור סיפור" : "Story Creator"}
             </h1>
-            <p className="text-white/30 text-xs">
-              {language === "he" ? "AI יכתוב עבורך" : "AI writes, you direct"}
-            </p>
+            <p className="text-white/30 text-xs">AI writes · you direct</p>
           </div>
         </div>
 
@@ -337,85 +303,42 @@ export default function CreatePage() {
           {TABS.map(({ id, label }) => {
             const isActive = activeTab === id;
             const isDisabled = id === "script" && !hasScript;
-
             return (
               <button
                 key={id}
                 onClick={() => !isDisabled && setActiveTab(id)}
                 disabled={isDisabled}
-                className={`relative flex-1 pb-3 text-[11px] font-bold tracking-widest transition-colors ${
-                  isActive
-                    ? "text-teal"
-                    : isDisabled
-                    ? "text-white/15 cursor-not-allowed"
-                    : "text-white/35 hover:text-white/60"
+                className={`relative flex-1 pb-3 text-xs font-semibold transition-colors ${
+                  isActive ? "text-white" : isDisabled ? "text-white/15 cursor-not-allowed" : "text-white/35 hover:text-white/60"
                 }`}
               >
                 <span className="flex items-center justify-center gap-1.5">
                   {label}
-                  {/* dot: pulsing teal when script ready, muted when locked */}
                   {id === "script" && (
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        hasScript
-                          ? "bg-teal animate-pulse"
-                          : "bg-white/10"
-                      }`}
-                    />
+                    <span className={`w-1.5 h-1.5 rounded-full ${hasScript ? "bg-teal animate-pulse" : "bg-white/10"}`} />
                   )}
                 </span>
-
-                {/* Active underline */}
                 {isActive && (
-                  <span
-                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                    style={{
-                      background: "linear-gradient(90deg,#00D4FF,#8B5CF6)",
-                    }}
-                  />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg,#00D4FF,#8B5CF6)" }} />
                 )}
               </button>
             );
           })}
         </div>
 
-        {/* Tab content */}
         {activeTab === "wizard" && (
-          <WizardTab
-            hero={hero}
-            setHero={setHero}
-            setting={setting}
-            setSetting={setSetting}
-            plot={plot}
-            setPlot={setPlot}
-            selectedVoice={selectedVoice}
-            setSelectedVoice={setSelectedVoice}
-            generating={generating}
-            onGenerate={handleGenerate}
-            language={language}
-          />
+          <WizardTab hero={hero} setHero={setHero} setting={setting} setSetting={setSetting}
+            plot={plot} setPlot={setPlot} selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice}
+            generating={generating} onGenerate={handleGenerate} language={language} />
         )}
-
         {activeTab === "prompt" && (
-          <PromptTab
-            promptText={promptText}
-            setPromptText={setPromptText}
-            selectedVoice={selectedVoice}
-            setSelectedVoice={setSelectedVoice}
-            generating={generating}
-            onGenerate={handleGenerate}
-            language={language}
-          />
+          <PromptTab promptText={promptText} setPromptText={setPromptText}
+            selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice}
+            generating={generating} onGenerate={handleGenerate} language={language} />
         )}
-
         {activeTab === "script" && (
-          <ScriptTab
-            blocks={scriptBlocks}
-            voices={VOICES}
-            onBlocksChange={setScriptBlocks}
-            onProduce={handleProduce}
-            isProducing={isProducing}
-          />
+          <ScriptTab blocks={scriptBlocks} voices={VOICES} onBlocksChange={setScriptBlocks}
+            onProduce={handleProduce} isProducing={isProducing} />
         )}
       </div>
     </div>

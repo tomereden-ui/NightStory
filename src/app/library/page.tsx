@@ -1,30 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
-import StoryCard from "@/components/ui/StoryCard";
 import StarField from "@/components/ui/StarField";
-import { STORIES } from "@/lib/mockData";
+import { STORIES, formatDuration } from "@/lib/mockData";
 import type { StoryCategory } from "@/types";
 
-const CATEGORY_LABELS: Record<StoryCategory, { en: string; he: string; emoji: string }> = {
-  adventure: { en: "Adventure", he: "הרפתקה", emoji: "🗺️" },
-  fantasy: { en: "Fantasy", he: "פנטזיה", emoji: "🧙" },
-  animals: { en: "Animals", he: "חיות", emoji: "🐾" },
-  bedtime: { en: "Bedtime", he: "לפני שינה", emoji: "🌙" },
-  friendship: { en: "Friendship", he: "חברות", emoji: "🤝" },
-  nature: { en: "Nature", he: "טבע", emoji: "🌿" },
-  space: { en: "Space", he: "חלל", emoji: "🚀" },
-  "fairy-tale": { en: "Fairy Tale", he: "אגדה", emoji: "🏰" },
+const CATEGORY_LABELS: Record<StoryCategory, { en: string; he: string }> = {
+  adventure:    { en: "Adventure",  he: "הרפתקה"    },
+  fantasy:      { en: "Fantasy",    he: "פנטזיה"    },
+  animals:      { en: "Animals",    he: "חיות"      },
+  bedtime:      { en: "Bedtime",    he: "לפני שינה" },
+  friendship:   { en: "Friendship", he: "חברות"     },
+  nature:       { en: "Nature",     he: "טבע"       },
+  space:        { en: "Space",      he: "חלל"       },
+  "fairy-tale": { en: "Fairy Tale", he: "אגדה"      },
 };
 
+const DURATION_COLORS = [
+  "text-teal bg-teal/10 border-teal/20",
+  "text-purple-bright bg-purple/10 border-purple/20",
+  "text-pink bg-pink/10 border-pink/20",
+];
+
 export default function LibraryPage() {
-  const { t, language, isRTL } = useLanguage();
+  const { language } = useLanguage();
+  const [activeTab, setActiveTab] = useState<"my" | "public">("my");
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<StoryCategory | "all">("all");
-  const [activeTab, setActiveTab] = useState<"my" | "public">("my");
-
-  const categories = Object.entries(CATEGORY_LABELS) as [StoryCategory, { en: string; he: string; emoji: string }][];
 
   const filtered = STORIES.filter((story) => {
     const title = language === "he" && story.titleHe ? story.titleHe : story.title;
@@ -33,105 +37,121 @@ export default function LibraryPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const categories = Object.entries(CATEGORY_LABELS) as [StoryCategory, { en: string; he: string }][];
+
   return (
-    <div className="relative min-h-full">
-      <StarField count={25} />
+    <div className="relative min-h-full bg-bg">
+      <StarField count={20} />
 
       {/* Header */}
-      <div className="relative px-5 pt-12 pb-3">
+      <div className="relative px-5 pt-12 pb-0">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-lg font-bold text-white tracking-tight">
             <span className="text-gradient-teal">NightStory</span>
           </h1>
-          <div className="w-8 h-8 rounded-full bg-bg-elevated border border-purple/20 flex items-center justify-center text-base">
-            🌙
+          <div className="flex items-center gap-2">
+            <button className="w-8 h-8 rounded-full bg-bg-card border border-bg-border flex items-center justify-center text-sm">
+              🔔
+            </button>
+            <div className="w-8 h-8 rounded-full bg-bg-card border border-purple/20 flex items-center justify-center text-sm">
+              🌙
+            </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-6 border-b border-white/5 mb-4">
-          <button
-            onClick={() => setActiveTab("my")}
-            className={`pb-2.5 text-sm font-medium transition-colors ${activeTab === "my" ? "tab-active" : "tab-inactive"}`}
-          >
-            {language === "he" ? "הסיפורים שלי" : "MY STORIES"}
-          </button>
-          <button
-            onClick={() => setActiveTab("public")}
-            className={`pb-2.5 text-sm font-medium transition-colors ${activeTab === "public" ? "tab-active" : "tab-inactive"}`}
-          >
-            {language === "he" ? "ציבורי" : "PUBLIC"}
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 text-sm">🔍</span>
-          <input
-            type="search"
-            placeholder={t("search")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            dir={isRTL ? "rtl" : "ltr"}
-            className="w-full bg-bg-card border border-bg-border rounded-xl py-2.5 pl-9 pr-4 text-sm text-white placeholder-white/20 outline-none focus:border-purple/40 transition-colors"
-          />
+        <div className="flex border-b border-bg-border">
+          {(["my", "public"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 pb-3 text-xs font-bold tracking-widest uppercase transition-colors relative ${
+                activeTab === tab ? "text-white" : "text-white/25 hover:text-white/50"
+              }`}
+            >
+              {tab === "my" ? (language === "he" ? "הסיפורים שלי" : "MY STORIES") : (language === "he" ? "ציבורי" : "PUBLIC")}
+              {activeTab === tab && (
+                <span className="absolute bottom-0 left-0 right-0 h-px bg-white" />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Category filter */}
-      <div className="flex gap-2 overflow-x-auto hide-scrollbar px-5 pb-3">
+      <div className="flex gap-2 overflow-x-auto hide-scrollbar px-5 py-3">
         <button
           onClick={() => setActiveCategory("all")}
-          className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all border ${
+          className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-medium border transition-all ${
             activeCategory === "all"
-              ? "bg-purple text-white border-purple"
-              : "bg-bg-card text-white/40 border-bg-border"
+              ? "bg-white text-bg border-white"
+              : "bg-transparent text-white/35 border-white/10 hover:border-white/25"
           }`}
         >
-          {language === "he" ? "הכל" : "All"}
+          All
         </button>
         {categories.map(([key, labels]) => (
           <button
             key={key}
             onClick={() => setActiveCategory(key)}
-            className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+            className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-medium border transition-all ${
               activeCategory === key
-                ? "bg-purple text-white border-purple"
-                : "bg-bg-card text-white/40 border-bg-border"
+                ? "bg-white text-bg border-white"
+                : "bg-transparent text-white/35 border-white/10 hover:border-white/25"
             }`}
           >
-            <span>{labels.emoji}</span>
             {language === "he" ? labels.he : labels.en}
           </button>
         ))}
       </div>
 
       {/* Story list */}
-      <div className="relative px-5 pb-4">
-        {filtered.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {filtered.map((story) => (
-              <StoryCard key={story.id} story={story} variant="list" />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center py-16 text-center">
-            <span className="text-5xl mb-4">🔍</span>
-            <p className="text-white/30 text-sm">
-              {language === "he" ? "לא נמצאו סיפורים" : "No stories found"}
-            </p>
-          </div>
-        )}
+      <div className="px-5 flex flex-col gap-1 pb-4">
+        {filtered.map((story, i) => {
+          const title = language === "he" && story.titleHe ? story.titleHe : story.title;
+          const desc = language === "he" && story.descriptionHe ? story.descriptionHe : story.description;
+          const durationColor = DURATION_COLORS[i % DURATION_COLORS.length];
+
+          return (
+            <Link
+              key={story.id}
+              href={`/player?id=${story.id}`}
+              className="flex items-center gap-3 py-3 border-b border-white/4 hover:bg-white/2 transition-colors group"
+            >
+              {/* Circular thumbnail */}
+              <div
+                className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center text-xl border border-white/10 shadow-card overflow-hidden"
+                style={{ background: story.coverGradient ?? story.coverColor }}
+              >
+                {story.coverEmoji}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-semibold truncate leading-tight">{title}</p>
+                <p className="text-white/35 text-xs truncate mt-0.5 leading-tight">{desc}</p>
+              </div>
+
+              {/* Duration pill */}
+              <div className={`flex-shrink-0 px-2.5 py-0.5 rounded-full border text-[10px] font-semibold ${durationColor}`}>
+                {formatDuration(story.durationSeconds)}
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
       {/* FAB */}
-      <a
+      <Link
         href="/create"
-        className="fixed bottom-24 right-4 w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-purple z-40"
-        style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}
+        className="fixed bottom-24 right-4 w-12 h-12 rounded-2xl flex items-center justify-center text-white text-2xl font-light shadow-purple z-40"
+        style={{ background: "linear-gradient(135deg,#8B5CF6,#EC4899)", boxShadow: "0 4px 20px rgba(139,92,246,0.5)" }}
       >
         +
-      </a>
+      </Link>
+
+      {/* Bottom nav spacer */}
+      <div className="h-4" />
     </div>
   );
 }
