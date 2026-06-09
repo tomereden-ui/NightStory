@@ -40,15 +40,40 @@ export default function ScriptTab({
 
   const handlePlayPreview = useCallback(
     (id: string) => {
+      // Stop any current speech
+      window.speechSynthesis.cancel();
+
       if (playingBlockId === id) {
         setPlayingBlockId(null);
         return;
       }
+
+      const block = blocks.find((b) => b.id === id);
+      if (!block) return;
+
+      const utterance = new SpeechSynthesisUtterance(block.textPayload);
+
+      // Pick a voice based on assigned voice character
+      const allVoices = window.speechSynthesis.getVoices();
+      const voice = voices.find((v) => v.id === block.assignedVoiceId);
+      if (voice) {
+        // Match gender/style to browser voice
+        const preferred = allVoices.find((bv) =>
+          voice.gender === "female"
+            ? bv.name.toLowerCase().includes("female") || bv.name.toLowerCase().includes("samantha") || bv.name.toLowerCase().includes("victoria") || bv.name.toLowerCase().includes("zira")
+            : bv.name.toLowerCase().includes("male") || bv.name.toLowerCase().includes("david") || bv.name.toLowerCase().includes("mark")
+        );
+        if (preferred) utterance.voice = preferred;
+        utterance.pitch = voice.style === "playful" ? 1.3 : voice.style === "calm" ? 0.9 : 1.0;
+        utterance.rate = voice.style === "gentle" ? 0.85 : voice.style === "calm" ? 0.9 : 1.0;
+      }
+
       setPlayingBlockId(id);
-      // Simulate 5-second TTS preview; real impl would call speech API here
-      setTimeout(() => setPlayingBlockId((cur) => (cur === id ? null : cur)), 5000);
+      utterance.onend = () => setPlayingBlockId((cur) => (cur === id ? null : cur));
+      utterance.onerror = () => setPlayingBlockId(null);
+      window.speechSynthesis.speak(utterance);
     },
-    [playingBlockId]
+    [playingBlockId, blocks, voices]
   );
 
   if (blocks.length === 0) {
