@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { ScriptBlock, Voice } from "@/types";
 import ScriptBlockCard from "./ScriptBlockCard";
 import SpeechPlayerModal from "./SpeechPlayerModal";
@@ -19,6 +19,14 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  // Warm up speech synthesis so voices are ready when user taps play
+  useEffect(() => {
+    const load = () => window.speechSynthesis.getVoices();
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
+
   const activeBlock = blocks.find((b) => b.id === activeBlockId) ?? null;
   const activeVoice = activeBlock ? (voices.find((v) => v.id === activeBlock.assignedVoiceId) ?? voices[0]) : null;
 
@@ -30,10 +38,11 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     utterance.pitch = voice?.style === "playful" ? 1.25 : 1.0;
     utterance.volume = 1;
     utterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
-    utterance.onend = () => { setIsPlaying(false); setIsPaused(false); };
-    utterance.onerror = () => { setIsPlaying(false); setIsPaused(false); };
+    utterance.onend = () => { setIsPlaying(false); setIsPaused(false); setActiveBlockId(null); };
+    utterance.onerror = (e) => { console.error("SpeechSynthesis error", e); setIsPlaying(false); setIsPaused(false); };
     utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    // Chrome bug: speak() silently fails if called immediately after cancel()
+    setTimeout(() => { window.speechSynthesis.speak(utterance); }, 50);
     setIsPlaying(true);
     setIsPaused(false);
   }, [voices]);

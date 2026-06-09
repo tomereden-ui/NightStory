@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, Suspense } from "react";
+import { useState, useRef, useCallback, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
@@ -26,6 +26,14 @@ function PlayerContent() {
   const [progress, setProgress] = useState(0);
   const segmentIndexRef = useRef(0);
 
+  // Warm up speech synthesis — Chrome requires voices to be loaded
+  useEffect(() => {
+    const load = () => window.speechSynthesis.getVoices();
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
+
   const story = (params.get("id") ? STORIES.find((s) => s.id === params.get("id")) : null) ?? STORIES[5];
   const title = language === "he" && story.titleHe ? story.titleHe : story.title;
   const currentSec = Math.round((progress / 100) * story.durationSeconds);
@@ -50,7 +58,8 @@ function PlayerContent() {
       segmentIndexRef.current = index + 1;
       speakSegment(index + 1);
     };
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+      console.error("SpeechSynthesis error", e);
       setPlaying(false);
       setActiveSegment(null);
     };
@@ -65,10 +74,11 @@ function PlayerContent() {
       window.speechSynthesis.resume();
       setPlaying(true);
     } else {
+      // Chrome bug: speak() fails if called immediately after cancel()
       window.speechSynthesis.cancel();
       segmentIndexRef.current = 0;
       setPlaying(true);
-      speakSegment(0);
+      setTimeout(() => speakSegment(0), 50);
     }
   }, [playing, speakSegment]);
 
