@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ScriptBlock, Voice } from "@/types";
 
 interface SpeechPlayerModalProps {
@@ -20,19 +22,23 @@ export default function SpeechPlayerModal({
   onStop,
 }: SpeechPlayerModalProps) {
   const isNarrator = block.characterName === "Narrator";
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        style={{ zIndex: 9998 }}
         onClick={onStop}
       />
 
       {/* Floating player panel */}
       <div
-        className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm z-50 rounded-3xl border border-white/10 shadow-glow overflow-hidden animate-float-up"
-        style={{ background: "linear-gradient(160deg,#131729,#0E1225)" }}
+        className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-white/10 shadow-glow overflow-hidden animate-float-up"
+        style={{ background: "linear-gradient(160deg,#131729,#0E1225)", zIndex: 9999 }}
       >
         {/* Top accent bar */}
         <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg,#8B5CF6,#EC4899,#00D4FF)" }} />
@@ -94,6 +100,7 @@ export default function SpeechPlayerModal({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
