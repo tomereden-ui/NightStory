@@ -6,12 +6,29 @@ import StarField from "@/components/ui/StarField";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
 
+function BuildTimestamp() {
+  const raw = process.env.NEXT_PUBLIC_BUILD_TIME;
+  if (!raw) return null;
+  const d = new Date(raw);
+  const label = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) +
+    " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return (
+    <span className="text-white/15 text-[9px] font-mono tracking-wide">
+      v {label}
+    </span>
+  );
+}
+
 export default function HeroSection() {
   const { t, isRTL } = useLanguage();
 
   return (
     <section className="relative overflow-hidden pt-12 pb-5 px-5">
       <StarField count={40} />
+      {/* Build timestamp — top-left corner */}
+      <div className="absolute top-3 left-4">
+        <BuildTimestamp />
+      </div>
 
       {/* Top bar */}
       <div className={`relative flex items-center justify-between mb-6 ${isRTL ? "flex-row-reverse" : ""}`}>
