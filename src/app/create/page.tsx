@@ -336,6 +336,51 @@ export default function CreatePage() {
     { id: "script", label: language === "he" ? "סיפור שנוצר" : "Generated Script" },
   ];
 
+  // Generating overlay
+  if (generating) {
+    const messages = [
+      "Weaving your story…",
+      "Giving voice to the characters…",
+      "Painting the setting with words…",
+      "Sprinkling a little magic…",
+    ];
+    return (
+      <div className="relative min-h-full bg-bg flex flex-col items-center justify-center px-8 text-center">
+        <StarField count={50} />
+        <div className="relative flex flex-col items-center gap-6">
+          {/* Pulsing orb */}
+          <div className="relative w-24 h-24 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full animate-ping opacity-20"
+              style={{ background: "radial-gradient(circle, #8B5CF6, #EC4899)" }} />
+            <div className="absolute inset-2 rounded-full opacity-40 animate-pulse"
+              style={{ background: "radial-gradient(circle, #8B5CF6, #EC4899)" }} />
+            <span className="relative text-5xl animate-pulse-slow">✨</span>
+          </div>
+
+          <div>
+            <h2 className="text-white text-xl font-bold mb-2">
+              {language === "he" ? "יוצר את הסיפור שלך…" : "Crafting your story…"}
+            </h2>
+            <p className="text-white/35 text-sm">
+              {language === "he" ? "זה ייקח כמה שניות" : messages[Math.floor(Date.now() / 1000) % messages.length]}
+            </p>
+          </div>
+
+          {/* Animated dots */}
+          <div className="flex gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className="w-2 h-2 rounded-full"
+                style={{
+                  background: "linear-gradient(135deg,#8B5CF6,#EC4899)",
+                  animation: `bounce 1s ease-in-out ${i * 0.15}s infinite`,
+                }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-full bg-bg" dir={isRTL ? "rtl" : "ltr"}>
       <StarField count={25} />
