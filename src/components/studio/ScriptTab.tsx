@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { ScriptBlock, Voice } from "@/types";
 import ScriptBlockCard from "./ScriptBlockCard";
+import SpeechPlayerModal from "./SpeechPlayerModal";
 
 interface ScriptTabProps {
   blocks: ScriptBlock[];
@@ -12,56 +13,67 @@ interface ScriptTabProps {
   isProducing: boolean;
 }
 
-export default function ScriptTab({
-  blocks,
-  voices,
-  onBlocksChange,
-  onProduce,
-  isProducing,
-}: ScriptTabProps) {
-  // Only one block plays at a time
-  const [playingBlockId, setPlayingBlockId] = useState<string | null>(null);
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing }: ScriptTabProps) {
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const activeBlock = blocks.find((b) => b.id === activeBlockId) ?? null;
+  const activeVoice = activeBlock ? (voices.find((v) => v.id === activeBlock.assignedVoiceId) ?? voices[0]) : null;
+
+  const startSpeech = useCallback((block: ScriptBlock) => {
+    window.speechSynthesis.cancel();
+    const voice = voices.find((v) => v.id === block.assignedVoiceId);
+    const utterance = new SpeechSynthesisUtterance(block.textPayload);
+    utterance.rate = voice?.style === "gentle" || voice?.style === "calm" ? 0.88 : 1.0;
+    utterance.pitch = voice?.style === "playful" ? 1.25 : 1.0;
+    utterance.volume = 1;
+    utterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
+    utterance.onend = () => { setIsPlaying(false); setIsPaused(false); };
+    utterance.onerror = () => { setIsPlaying(false); setIsPaused(false); };
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+    setIsPlaying(true);
+    setIsPaused(false);
+  }, [voices]);
+
+  const handleOpenPlayer = useCallback((id: string) => {
+    const block = blocks.find((b) => b.id === id);
+    if (!block) return;
+    setActiveBlockId(id);
+    startSpeech(block);
+  }, [blocks, startSpeech]);
+
+  const handlePlayPause = useCallback(() => {
+    if (isPaused) {
+      window.speechSynthesis.resume();
+      setIsPlaying(true);
+      setIsPaused(false);
+    } else if (isPlaying) {
+      window.speechSynthesis.pause();
+      setIsPlaying(false);
+      setIsPaused(true);
+    } else if (activeBlock) {
+      startSpeech(activeBlock);
+    }
+  }, [isPaused, isPlaying, activeBlock, startSpeech]);
+
+  const handleStop = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setIsPlaying(false);
+    setIsPaused(false);
+    setActiveBlockId(null);
+  }, []);
 
   const handleTextChange = useCallback(
-    (id: string, text: string) => {
-      onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, textPayload: text } : b)));
-    },
+    (id: string, text: string) => onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, textPayload: text } : b))),
     [blocks, onBlocksChange]
   );
 
   const handleVoiceChange = useCallback(
-    (id: string, voiceId: string) => {
-      onBlocksChange(
-        blocks.map((b) => (b.id === id ? { ...b, assignedVoiceId: voiceId } : b))
-      );
-    },
+    (id: string, voiceId: string) => onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, assignedVoiceId: voiceId } : b))),
     [blocks, onBlocksChange]
-  );
-
-  const handlePlayPreview = useCallback(
-    (id: string) => {
-      window.speechSynthesis.cancel();
-
-      if (playingBlockId === id) {
-        setPlayingBlockId(null);
-        return;
-      }
-
-      const block = blocks.find((b) => b.id === id);
-      if (!block) return;
-
-      const voice = voices.find((v) => v.id === block.assignedVoiceId);
-      const utterance = new SpeechSynthesisUtterance(block.textPayload);
-      utterance.rate = voice?.style === "gentle" || voice?.style === "calm" ? 0.88 : 1.0;
-      utterance.pitch = voice?.style === "playful" ? 1.25 : 1.0;
-      utterance.volume = 1;
-
-      setPlayingBlockId(id);
-      utterance.onend = () => setPlayingBlockId((cur) => (cur === id ? null : cur));
-      utterance.onerror = () => setPlayingBlockId(null);
-      window.speechSynthesis.speak(utterance);
-    },
-    [playingBlockId, blocks, voices]
   );
 
   if (blocks.length === 0) {
@@ -73,67 +85,69 @@ export default function ScriptTab({
     );
   }
 
-  const totalWords = blocks.reduce(
-    (sum, b) => sum + b.textPayload.trim().split(/\s+/).filter(Boolean).length,
-    0
-  );
+  const totalWords = blocks.reduce((sum, b) => sum + b.textPayload.trim().split(/\s+/).filter(Boolean).length, 0);
   const estimatedSecs = Math.ceil(totalWords / 2.5);
   const estimatedMin = Math.floor(estimatedSecs / 60);
   const estimatedRemSec = estimatedSecs % 60;
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Script meta bar */}
-      <div className="flex items-center justify-between mb-0.5">
-        <p className="text-white/30 text-xs">
-          {blocks.length} blocks · ~{estimatedMin}:{String(estimatedRemSec).padStart(2, "0")} min · tap{" "}
-          <span className="text-teal/60">avatar</span> to reassign voice
-        </p>
-        <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-          <span className="text-teal text-[10px] font-semibold tracking-widest">READY</span>
+    <>
+      <div className="flex flex-col gap-3">
+        {/* Meta bar */}
+        <div className="flex items-center justify-between mb-0.5">
+          <p className="text-white/30 text-xs">
+            {blocks.length} blocks · ~{estimatedMin}:{String(estimatedRemSec).padStart(2, "0")} min · tap{" "}
+            <span className="text-teal/60">avatar</span> to reassign voice
+          </p>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
+            <span className="text-teal text-[10px] font-semibold tracking-widest">READY</span>
+          </div>
         </div>
+
+        {/* Block list */}
+        <div className="flex flex-col gap-2.5">
+          {blocks.map((block) => (
+            <ScriptBlockCard
+              key={block.id}
+              block={block}
+              voices={voices}
+              isPlaying={activeBlockId === block.id && isPlaying}
+              onTextChange={handleTextChange}
+              onVoiceChange={handleVoiceChange}
+              onPlayPreview={handleOpenPlayer}
+            />
+          ))}
+        </div>
+
+        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-1" />
+
+        <button
+          onClick={() => onProduce(blocks)}
+          disabled={isProducing}
+          className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
+            !isProducing ? "btn-vivid" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
+          }`}
+        >
+          {isProducing ? (
+            <span className="flex items-center justify-center gap-2"><span className="animate-pulse-slow">🎙️</span>Mixing audio tracks…</span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">🎙️ Produce Story</span>
+          )}
+        </button>
       </div>
 
-      {/* Block list */}
-      <div className="flex flex-col gap-2.5">
-        {blocks.map((block) => (
-          <ScriptBlockCard
-            key={block.id}
-            block={block}
-            voices={voices}
-            isPlaying={playingBlockId === block.id}
-            onTextChange={handleTextChange}
-            onVoiceChange={handleVoiceChange}
-            onPlayPreview={handlePlayPreview}
-          />
-        ))}
-      </div>
-
-      {/* Divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-1" />
-
-      {/* Produce button — submits compiled ScriptBlock[] to backend */}
-      <button
-        onClick={() => onProduce(blocks)}
-        disabled={isProducing}
-        className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
-          !isProducing
-            ? "btn-vivid"
-            : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
-        }`}
-      >
-        {isProducing ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="animate-pulse-slow">🎙️</span>
-            Mixing audio tracks…
-          </span>
-        ) : (
-          <span className="flex items-center justify-center gap-2">
-            🎙️ Produce Story
-          </span>
-        )}
-      </button>
-    </div>
+      {/* Floating speech player */}
+      {activeBlock && activeVoice && (
+        <SpeechPlayerModal
+          block={activeBlock}
+          voice={activeVoice}
+          isPlaying={isPlaying}
+          isPaused={isPaused}
+          onPlayPause={handlePlayPause}
+          onStop={handleStop}
+        />
+      )}
+    </>
   );
 }
