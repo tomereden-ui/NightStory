@@ -18,31 +18,49 @@ interface RawBlock {
   textPayload: string;
 }
 
-function buildPrompt(body: GenerateStoryRequest): string {
-  const base =
-    "Generate a children's bedtime story of approximately 5 minutes (around 650 words). " +
-    "The story should be gentle, imaginative, and suitable for ages 4–8.\n\n";
+// ─── Hardcoded script execution guidance ──────────────────────────────────────
 
-  let definition = "";
+const SCRIPT_GUIDANCE = `Act as an expert children's audio playwright and immersive sound designer.
+
+Write a captivating, high-energy, and emotionally resonant children's audio drama script designed for children aged 5 to 9. The final audio run-time must be approximately 5 minutes (aim for a word count between 650 to 750 words).
+
+### Structural Architecture
+- Characters: Exactly 2 distinct, highly expressive child or animal characters, plus 1 engaging, warm, and comforting Narrator.
+- Format: Standard multi-character screenplay naming formatting.
+- Voice Performance Tags: Every single line of dialogue or narration MUST include bracketed emotional, tone, or breath tags (e.g., [excited], [gasp], [whispering], [laughs]) to guide the text-to-speech engine's performance.
+
+### Language & Dialogue Pacing Rules
+- Use highly active, sensory, and dynamic language (e.g., "SQUISH!", "CRACKLE!").
+- Keep sentences short and punchy. Children absorb spoken audio best in brief, rhythmically varied phrases.
+- Avoid abstract text. Replace descriptive prose with audible actions. Instead of saying a character is scared, write a short gasp followed by a quick, breathless line.
+- Introduce natural dialogue elements: short interruptions, quick conversational back-and-forths, and matching reactive sounds.
+
+### The Plot Outline
+Ensure the story has a clear, satisfying arc: an exciting opening hook, a moment of wondrous discovery, a gentle micro-conflict or suspenseful climax, and a comforting, calming resolution perfect for a satisfying conclusion.`;
+
+// ─── Prompt builder ───────────────────────────────────────────────────────────
+
+function buildPrompt(body: GenerateStoryRequest): string {
+  let storyDef = "";
 
   if (body.mode === "prompt" && body.promptText) {
-    definition = `Story description:\n${body.promptText}`;
+    storyDef = `\n\nStory description:\n${body.promptText}`;
   } else {
     const parts: string[] = [];
     if (body.hero)    parts.push(`Main character: ${body.hero}`);
     if (body.setting) parts.push(`Setting: ${body.setting}`);
     if (body.plot)    parts.push(`Plot: ${body.plot}`);
-    definition = parts.join("\n");
+    if (parts.length) storyDef = "\n\n" + parts.join("\n");
   }
 
   const format =
     "\n\nReturn the story as a JSON array of script blocks. Each block must have exactly two fields:\n" +
     '- "characterName": use "Narrator" for narration, or the character\'s actual name for spoken dialogue\n' +
-    '- "textPayload": the text content (narrator text or spoken line, no quotation marks around the whole payload)\n\n' +
-    "Aim for 6–12 blocks total. Include at least one dialogue block per main character.\n" +
+    '- "textPayload": the full spoken text including all performance tags (e.g., "[excited] Wow! Look at that!")\n\n' +
+    "Aim for 12–18 blocks total to cover the full 5-minute runtime. Balance dialogue across all characters.\n" +
     "Return ONLY the raw JSON array — no markdown fences, no explanation, nothing else.";
 
-  return base + definition + format;
+  return storyDef + format;
 }
 
 function assignVoice(characterName: string, primaryVoiceId: string, heroName: string): string {
@@ -71,7 +89,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: SCRIPT_GUIDANCE,
+    });
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
