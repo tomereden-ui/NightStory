@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface SynthesizeRequest {
   text: string;
   characterName: string;
 }
 
-// ─── Voice & persona selection ─────────────────────────────────────────────
-// Maps character archetype → best Gemini prebuilt voice + system instruction
-// that shapes the vocal performance (tone, pacing, emotion).
+// ─── Voice + persona selection ────────────────────────────────────────────────
 
 interface VoiceProfile {
   voiceName: string;
@@ -16,74 +13,45 @@ interface VoiceProfile {
 }
 
 function getVoiceProfile(characterName: string): VoiceProfile {
-  const n = characterName.toLowerCase();
+  const n = (characterName ?? "").toLowerCase();
 
-  // Narrator — calm, warm storytelling
   if (n === "narrator") {
     return {
       voiceName: "Charon",
-      persona:
-        "You are a beloved bedtime story narrator. Read with a soft, warm, unhurried voice — " +
-        "like a parent reading to a child they adore. Paint vivid images with gentle emphasis. " +
-        "Never rush. Let each sentence breathe.",
+      persona: "Speak as a warm, unhurried bedtime story narrator. Use a gentle, soothing tone — like a parent reading to a beloved child. Pace yourself slowly, let each sentence breathe, and convey wonder and calm.",
     };
   }
-
-  // Child / young hero character
   if (/child|kid|boy|girl|little|young|pixel|toby|mia|leo|lily|pip/.test(n)) {
     return {
       voiceName: "Puck",
-      persona:
-        "You are voicing a child character in a bedtime story. Sound genuinely bright, curious " +
-        "and full of wonder — light, playful, slightly breathless with excitement. " +
-        "Be natural, not performed.",
+      persona: "Speak as a bright, curious child character. Sound genuinely playful and full of wonder — light, a little breathless with excitement. Be natural and spontaneous.",
     };
   }
-
-  // Fairy / magical / mystical creature
   if (/fairy|faerie|sprite|elf|pixie|nova|magic|wizard|witch|enchant|star|moon|dream/.test(n)) {
     return {
       voiceName: "Kore",
-      persona:
-        "You are voicing a magical being in a children's story. Speak with a gentle, ethereal quality — " +
-        "otherworldly yet warm and kind. Let your voice feel like starlight: soft, clear, a little " +
-        "mysterious but never scary.",
+      persona: "Speak as an ethereal, magical being. Your voice should feel soft and otherworldly — gentle and warm, with a hint of mystery. Never scary, always kind.",
     };
   }
-
-  // Dragon / creature / beast
   if (/dragon|beast|monster|giant|troll|wolf|bear/.test(n)) {
     return {
       voiceName: "Fenrir",
-      persona:
-        "You are voicing a creature character in a children's bedtime story. Sound vivid and characterful — " +
-        "rumbling and expressive, but NOT frightening. This is a gentle story; keep warmth even in " +
-        "dramatic moments.",
+      persona: "Speak as a vivid creature character in a children's story. Sound expressive and characterful — rumbling, but NOT frightening. Keep warmth even in dramatic moments.",
     };
   }
-
-  // Wise elder / grandparent / mentor
   if (/grandpa|grandma|elder|old|wise|sage|king|queen|master/.test(n)) {
     return {
       voiceName: "Orbit",
-      persona:
-        "You are voicing a wise elder in a children's story. Speak with measured warmth and quiet " +
-        "authority — unhurried, thoughtful, carrying the weight of lived experience. " +
-        "Each word should feel deliberate and comforting.",
+      persona: "Speak as a wise, measured elder. Your voice carries quiet authority and warmth — unhurried, thoughtful, like someone who has lived many wonderful stories.",
     };
   }
-
-  // Default female character
   return {
     voiceName: "Aoede",
-    persona:
-      "You are a character in a children's bedtime story. Speak naturally, warmly, and " +
-      "expressively — full of personality, gentle in delivery. Sound like a real person, " +
-      "not a robot.",
+    persona: "Speak as a warm, expressive character in a children's bedtime story. Sound natural and full of personality — gentle, clear, and engaging.",
   };
 }
 
-// ─── PCM → WAV conversion (Gemini TTS returns raw 16-bit PCM) ──────────────
+// ─── PCM → WAV helper (Gemini TTS returns raw 16-bit PCM at 24 kHz) ──────────
 
 function pcmToWav(pcmBase64: string): Buffer {
   const pcm = Buffer.from(pcmBase64, "base64");
@@ -100,7 +68,7 @@ function pcmToWav(pcmBase64: string): Buffer {
   wav.write("WAVE", o); o += 4;
   wav.write("fmt ", o); o += 4;
   wav.writeUInt32LE(16, o); o += 4;
-  wav.writeUInt16LE(1, o); o += 2;         // PCM
+  wav.writeUInt16LE(1, o); o += 2;
   wav.writeUInt16LE(numChannels, o); o += 2;
   wav.writeUInt32LE(sampleRate, o); o += 4;
   wav.writeUInt32LE(byteRate, o); o += 4;
@@ -112,7 +80,58 @@ function pcmToWav(pcmBase64: string): Buffer {
   return wav;
 }
 
-// ─── Route handler ──────────────────────────────────────────────────────────
+// ─── Direct REST call with retry ─────────────────────────────────────────────
+
+async function callGeminiTTS(
+  apiKey: string,
+  model: string,
+  promptText: string,
+  voiceName: string,
+): Promise<{ audioBase64: string; mimeType: string }> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const body = {
+    contents: [{ role: "user", parts: [{ text: promptText }] }],
+    generationConfig: {
+      responseModalities: ["AUDIO"],
+      speechConfig: {
+        voiceConfig: {
+          prebuiltVoiceConfig: { voiceName },
+        },
+      },
+    },
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (res.status === 500 && attempt < 3) {
+      await new Promise((r) => setTimeout(r, attempt * 800));
+      continue;
+    }
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Gemini TTS ${res.status}: ${err.slice(0, 200)}`);
+    }
+
+    const json = await res.json();
+    const part = json.candidates?.[0]?.content?.parts?.[0];
+    const inlineData = part?.inlineData as { mimeType: string; data: string } | undefined;
+
+    if (!inlineData?.data) throw new Error("No audio data in Gemini response");
+
+    return { audioBase64: inlineData.data, mimeType: inlineData.mimeType };
+  }
+
+  throw new Error("Gemini TTS failed after 3 attempts");
+}
+
+// ─── Route ────────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -134,53 +153,31 @@ export async function POST(req: NextRequest) {
 
   const profile = getVoiceProfile(characterName ?? "");
 
+  // Embed persona as a speaking instruction in the prompt itself
+  // (TTS models don't support systemInstruction)
+  const promptText = `[${profile.persona}]\n\n${text}`;
+
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const { audioBase64, mimeType } = await callGeminiTTS(
+      apiKey,
+      "gemini-2.5-flash-preview-tts",
+      promptText,
+      profile.voiceName,
+    );
 
-    // gemini-2.5-flash-preview-tts is the dedicated speech model
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-preview-tts",
-      systemInstruction: profile.persona,
-    });
+    // Convert PCM to WAV if the model returned raw audio
+    let finalBase64 = audioBase64;
+    let finalMime = "audio/wav";
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text }] }],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      generationConfig: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: profile.voiceName },
-          },
-        },
-      } as Record<string, unknown>,
-    });
-
-    const part = result.response.candidates?.[0]?.content?.parts?.[0];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const inlineData = (part as any)?.inlineData as
-      | { mimeType: string; data: string }
-      | undefined;
-
-    if (!inlineData?.data) {
-      return NextResponse.json({ error: "No audio returned from Gemini." }, { status: 502 });
-    }
-
-    // Convert PCM to WAV if needed, otherwise return audio/wav as-is
-    let audioBase64: string;
-    let mimeType = "audio/wav";
-
-    if (inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")) {
-      const wavBuf = pcmToWav(inlineData.data);
-      audioBase64 = wavBuf.toString("base64");
+    if (mimeType.includes("L16") || mimeType.includes("pcm")) {
+      finalBase64 = pcmToWav(audioBase64).toString("base64");
     } else {
-      audioBase64 = inlineData.data;
-      mimeType = inlineData.mimeType;
+      finalMime = mimeType;
     }
 
     return NextResponse.json({
-      audioData: audioBase64,
-      mimeType,
+      audioData: finalBase64,
+      mimeType: finalMime,
       voiceName: profile.voiceName,
     });
   } catch (err: unknown) {
