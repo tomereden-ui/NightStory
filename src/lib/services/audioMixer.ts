@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import path from "path";
 import fs from "fs";
 
 export interface MixTrack {
@@ -8,12 +9,25 @@ export interface MixTrack {
   isLooping: boolean;
 }
 
-// Lazy require so Next.js never tries to bundle ffmpeg-static at module load time
+// Resolve ffmpeg binary path without require() so webpack never tries to bundle it.
+// Checks FFMPEG_PATH env var first, then the ffmpeg-static binary inside node_modules.
 function getFfmpegPath(): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const p = require("ffmpeg-static") as string | null;
-  if (!p) throw new Error("ffmpeg-static binary not found");
-  return p;
+  if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
+
+  const candidates = [
+    path.join(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg"),
+    path.join(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg.exe"),
+    "/usr/bin/ffmpeg",
+    "/usr/local/bin/ffmpeg",
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+
+  throw new Error(
+    "ffmpeg binary not found. Install ffmpeg-static or set the FFMPEG_PATH environment variable.",
+  );
 }
 
 function runFfmpeg(args: string[]): Promise<void> {

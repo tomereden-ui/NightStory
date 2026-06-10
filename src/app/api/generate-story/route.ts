@@ -47,7 +47,10 @@ The final audio run-time must be exactly ${durationMinutes} minute${durationMinu
 
 ### The Plot Outline
 Ensure the story has a clear, satisfying arc: an exciting opening hook, a moment of wondrous discovery, a gentle micro-conflict or suspenseful climax, and a comforting, calming resolution.
-${durationMinutes >= 8 ? "For longer stories, develop the world and characters more deeply — add a secondary subplot, extra sensory detail, and more extended emotional beats." : ""}`;
+${durationMinutes >= 8 ? "For longer stories, develop the world and characters more deeply — add a secondary subplot, extra sensory detail, and more extended emotional beats." : ""}
+
+### Language
+Write the entire script in the same language as the story description provided by the user. Do not default to any particular language — match whatever language the user wrote in.`;
 }
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
@@ -70,7 +73,7 @@ function buildPrompt(body: GenerateStoryRequest): string {
   }
 
   const format =
-    `\n\nIMPORTANT: Write the entire story — all narration, dialogue, and character names — in the SAME LANGUAGE as the story description or character names above. Do not switch to English if the input is in another language.\n\n` +
+    `\n\nLANGUAGE RULE: Detect the language of the story description above and write every word of the script — narration, dialogue, character names, and performance tags — in that exact same language. If the description is in English, write in English. If it is in Hebrew, write in Hebrew. Never mix languages or translate the input.\n\n` +
     `Target runtime: ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""} (≈ ${targetWords} words spoken aloud).\n\n` +
     `Return the story as a JSON array of script blocks. Each block must have exactly two fields:\n` +
     `- "characterName": use "Narrator" (translated to the story language) for narration, or the character's actual name for spoken dialogue\n` +
