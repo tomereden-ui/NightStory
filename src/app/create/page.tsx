@@ -330,9 +330,13 @@ export default function CreatePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ blocks }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: { jobId?: string; error?: string } = {};
+      try { data = JSON.parse(text); } catch {
+        throw new Error(`Server error (${res.status}): ${text.slice(0, 300)}`);
+      }
       if (!res.ok) throw new Error(data.error ?? "Production failed");
-      setProductionJobId(data.jobId as string);
+      setProductionJobId(data.jobId!);
     } catch (err: unknown) {
       setGenerateError(err instanceof Error ? err.message : "Production failed");
       setIsProducing(false);
