@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { ScriptBlock, Voice } from "@/types";
 import ScriptBlockCard from "./ScriptBlockCard";
 import SpeechPlayerModal from "./SpeechPlayerModal";
@@ -13,74 +13,78 @@ interface ScriptTabProps {
   isProducing: boolean;
 }
 
+async function base64ToAudioUrl(base64: string, mimeType: string): Promise<string> {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: mimeType });
+  return URL.createObjectURL(blob);
+}
+
 export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing }: ScriptTabProps) {
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  // Pre-load voices so they're available when user taps play
-  useEffect(() => {
-    const load = () => window.speechSynthesis.getVoices();
-    load();
-    window.speechSynthesis.onvoiceschanged = load;
-    return () => { window.speechSynthesis.onvoiceschanged = null; };
-  }, []);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioBlobUrl = useRef<string | null>(null);
 
   const activeBlock = blocks.find((b) => b.id === activeBlockId) ?? null;
-  const activeVoice = activeBlock ? (voices.find((v) => v.id === activeBlock.assignedVoiceId) ?? voices[0]) : null;
+  const activeVoice = activeBlock
+    ? (voices.find((v) => v.id === activeBlock.assignedVoiceId) ?? voices[0])
+    : null;
 
-  const startSpeech = useCallback((block: ScriptBlock) => {
-    setSpeechError(null);
-
-    if (!('speechSynthesis' in window)) {
-      setSpeechError("Speech not supported in this browser");
-      return;
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current = null;
     }
+    if (audioBlobUrl.current) {
+      URL.revokeObjectURL(audioBlobUrl.current);
+      audioBlobUrl.current = null;
+    }
+  }, []);
 
-    const synth = window.speechSynthesis;
-    synth.cancel();
+  const startSpeech = useCallback(async (block: ScriptBlock) => {
+    stopAudio();
+    setSpeechError(null);
+    setIsLoading(true);
+    setIsPlaying(false);
+    setIsPaused(false);
 
-    const doSpeak = () => {
-      const utterance = new SpeechSynthesisUtterance(block.textPayload);
-      utterance.lang = "en-US";
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
-      utterance.volume = 1;
+    try {
+      const res = await fetch("/api/synthesize-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: block.textPayload, characterName: block.characterName }),
+      });
 
-      // Explicitly pick a voice — Chrome on Windows silently fails without one
-      const available = synth.getVoices();
-      const pick = available.find((v) => v.lang.startsWith("en") && v.localService)
-        ?? available.find((v) => v.lang.startsWith("en"))
-        ?? available[0];
-      if (pick) utterance.voice = pick;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Speech generation failed");
 
-      utterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
-      utterance.onend = () => { setIsPlaying(false); setIsPaused(false); setActiveBlockId(null); };
-      utterance.onerror = (e) => {
-        console.error("SpeechSynthesis error", e);
-        setSpeechError(`Audio error: ${e.error}`);
-        setIsPlaying(false);
-        setIsPaused(false);
+      const url = await base64ToAudioUrl(data.audioData, data.mimeType ?? "audio/wav");
+      audioBlobUrl.current = url;
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onplay  = () => { setIsLoading(false); setIsPlaying(true);  setIsPaused(false); };
+      audio.onpause = () => { setIsPlaying(false); setIsPaused(true);  };
+      audio.onended = () => {
+        setIsPlaying(false); setIsPaused(false); setActiveBlockId(null);
+        URL.revokeObjectURL(url); audioBlobUrl.current = null;
+      };
+      audio.onerror = () => {
+        setSpeechError("Playback failed"); setIsLoading(false); setIsPlaying(false);
       };
 
-      utteranceRef.current = utterance;
-      synth.speak(utterance);
-
-      // Verify it actually started (Chrome silent-fail guard)
-      setTimeout(() => {
-        if (!synth.speaking && !synth.pending) {
-          setSpeechError("Audio didn't start — check system volume or try again");
-          setIsPlaying(false);
-        }
-      }, 400);
-    };
-
-    setTimeout(doSpeak, 150);
-    setIsPlaying(true);
-    setIsPaused(false);
-  }, [voices]);
+      await audio.play();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to generate audio";
+      setSpeechError(msg);
+      setIsLoading(false);
+    }
+  }, [stopAudio]);
 
   const handleOpenPlayer = useCallback((id: string) => {
     const block = blocks.find((b) => b.id === id);
@@ -90,34 +94,37 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   }, [blocks, startSpeech]);
 
   const handlePlayPause = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) {
+      if (activeBlock) startSpeech(activeBlock);
+      return;
+    }
     if (isPaused) {
-      window.speechSynthesis.resume();
-      setIsPlaying(true);
-      setIsPaused(false);
+      audio.play();
     } else if (isPlaying) {
-      window.speechSynthesis.pause();
-      setIsPlaying(false);
-      setIsPaused(true);
-    } else if (activeBlock) {
-      startSpeech(activeBlock);
+      audio.pause();
     }
   }, [isPaused, isPlaying, activeBlock, startSpeech]);
 
   const handleStop = useCallback(() => {
-    window.speechSynthesis.cancel();
+    stopAudio();
     setIsPlaying(false);
     setIsPaused(false);
+    setIsLoading(false);
     setActiveBlockId(null);
-  }, []);
+    setSpeechError(null);
+  }, [stopAudio]);
 
   const handleTextChange = useCallback(
-    (id: string, text: string) => onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, textPayload: text } : b))),
-    [blocks, onBlocksChange]
+    (id: string, text: string) =>
+      onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, textPayload: text } : b))),
+    [blocks, onBlocksChange],
   );
 
   const handleVoiceChange = useCallback(
-    (id: string, voiceId: string) => onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, assignedVoiceId: voiceId } : b))),
-    [blocks, onBlocksChange]
+    (id: string, voiceId: string) =>
+      onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, assignedVoiceId: voiceId } : b))),
+    [blocks, onBlocksChange],
   );
 
   if (blocks.length === 0) {
@@ -129,7 +136,9 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     );
   }
 
-  const totalWords = blocks.reduce((sum, b) => sum + b.textPayload.trim().split(/\s+/).filter(Boolean).length, 0);
+  const totalWords = blocks.reduce(
+    (sum, b) => sum + b.textPayload.trim().split(/\s+/).filter(Boolean).length, 0,
+  );
   const estimatedSecs = Math.ceil(totalWords / 2.5);
   const estimatedMin = Math.floor(estimatedSecs / 60);
   const estimatedRemSec = estimatedSecs % 60;
@@ -137,11 +146,9 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   return (
     <>
       <div className="flex flex-col gap-3">
-        {/* Meta bar */}
         <div className="flex items-center justify-between mb-0.5">
           <p className="text-white/30 text-xs">
-            {blocks.length} blocks · ~{estimatedMin}:{String(estimatedRemSec).padStart(2, "0")} min · tap{" "}
-            <span className="text-teal/60">avatar</span> to reassign voice
+            {blocks.length} blocks · ~{estimatedMin}:{String(estimatedRemSec).padStart(2, "0")} min
           </p>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
@@ -149,7 +156,6 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </div>
         </div>
 
-        {/* Block list */}
         <div className="flex flex-col gap-2.5">
           {blocks.map((block) => (
             <ScriptBlockCard
@@ -174,18 +180,20 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           }`}
         >
           {isProducing ? (
-            <span className="flex items-center justify-center gap-2"><span className="animate-pulse-slow">🎙️</span>Mixing audio tracks…</span>
+            <span className="flex items-center justify-center gap-2">
+              <span className="animate-pulse-slow">🎙️</span>Mixing audio tracks…
+            </span>
           ) : (
             <span className="flex items-center justify-center gap-2">🎙️ Produce Story</span>
           )}
         </button>
       </div>
 
-      {/* Floating speech player */}
       {activeBlock && activeVoice && (
         <SpeechPlayerModal
           block={activeBlock}
           voice={activeVoice}
+          isLoading={isLoading}
           isPlaying={isPlaying}
           isPaused={isPaused}
           speechError={speechError}
