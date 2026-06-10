@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-import { v4 as uuidv4 } from "uuid";
 import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
 import { planDrama } from "@/lib/services/dramaPlanner";
 import { synthesizeLine } from "@/lib/services/ttsService";
@@ -208,7 +207,7 @@ export async function POST(req: NextRequest) {
   ensureDirs();
   pruneJobs();
 
-  const jobId = uuidv4();
+  const jobId = crypto.randomUUID();
   createJob(jobId);
 
   const elevenKey = process.env.ELEVENLABS_API_KEY ?? null;
