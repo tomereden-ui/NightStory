@@ -54,8 +54,9 @@ function buildPrompt(body: GenerateStoryRequest): string {
   }
 
   const format =
-    "\n\nReturn the story as a JSON array of script blocks. Each block must have exactly two fields:\n" +
-    '- "characterName": use "Narrator" for narration, or the character\'s actual name for spoken dialogue\n' +
+    "\n\nIMPORTANT: Write the entire story — all narration, dialogue, and character names — in the SAME LANGUAGE as the story description or character names above. Do not switch to English if the input is in another language.\n\n" +
+    "Return the story as a JSON array of script blocks. Each block must have exactly two fields:\n" +
+    '- "characterName": use "Narrator" (translated to the story language) for narration, or the character\'s actual name for spoken dialogue\n' +
     '- "textPayload": the full spoken text including all performance tags (e.g., "[excited] Wow! Look at that!")\n\n' +
     "Aim for 12–18 blocks total to cover the full 5-minute runtime. Balance dialogue across all characters.\n" +
     "Return ONLY the raw JSON array — no markdown fences, no explanation, nothing else.";
