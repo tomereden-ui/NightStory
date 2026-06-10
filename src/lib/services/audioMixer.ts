@@ -100,7 +100,7 @@ export async function mixTracks(
   await runFfmpeg(args);
 }
 
-/** Fallback: simple concatenation of dialogue clips with no timing */
+/** Fallback: simple concatenation of dialogue clips with no timing (requires ffmpeg) */
 export async function concatenateTracks(
   filePaths: string[],
   outputPath: string,
@@ -121,4 +121,63 @@ export async function concatenateTracks(
   );
 
   await runFfmpeg(args);
+}
+
+/**
+ * Pure-JS WAV concatenation — no ffmpeg or native binaries required.
+ * All Gemini TTS output is 16-bit PCM WAV, so this works as a universal fallback.
+ */
+export function concatenateWavFilesPureJS(filePaths: string[], outputPath: string): void {
+  const valid = filePaths.filter((p) => fs.existsSync(p));
+  if (valid.length === 0) throw new Error("No valid WAV files");
+
+  let numChannels = 1;
+  let sampleRate = 24000;
+  let bitsPerSample = 16;
+  const pcmChunks: Buffer[] = [];
+
+  for (const p of valid) {
+    const buf = fs.readFileSync(p);
+    if (buf.length < 44) continue;
+    if (buf.toString("ascii", 0, 4) !== "RIFF" || buf.toString("ascii", 8, 12) !== "WAVE") continue;
+
+    numChannels = buf.readUInt16LE(22);
+    sampleRate = buf.readUInt32LE(24);
+    bitsPerSample = buf.readUInt16LE(34);
+
+    // Scan for the "data" chunk (not always at fixed offset)
+    let pos = 12;
+    while (pos < buf.length - 8) {
+      const chunkId = buf.toString("ascii", pos, pos + 4);
+      const chunkSize = buf.readUInt32LE(pos + 4);
+      if (chunkId === "data") {
+        pcmChunks.push(buf.subarray(pos + 8, pos + 8 + chunkSize));
+        break;
+      }
+      pos += 8 + chunkSize + (chunkSize % 2); // word-align
+    }
+  }
+
+  if (pcmChunks.length === 0) throw new Error("No PCM data found in WAV files");
+
+  const pcm = Buffer.concat(pcmChunks);
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const header = Buffer.alloc(44);
+
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(pcm.length, 40);
+
+  fs.writeFileSync(outputPath, Buffer.concat([header, pcm]));
 }

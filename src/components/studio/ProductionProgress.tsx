@@ -11,7 +11,7 @@ interface Props {
 
 const STEP_ICONS: Record<string, string> = {
   pending:   "⏳",
-  planning:  "✍️",
+  planning:  "🗺️",
   recording: "🎙️",
   sfx:       "🔊",
   mixing:    "🎚️",
@@ -58,7 +58,7 @@ export default function ProductionProgress({ jobId, onDone, onError }: Props) {
   const progress = job?.progress ?? 0;
 
   const STEPS = [
-    { key: "planning",  label: "Writing script",        icon: "✍️" },
+    { key: "planning",  label: "Planning timeline",      icon: "🗺️" },
     { key: "recording", label: "Recording voices",       icon: "🎙️" },
     { key: "sfx",       label: "Generating SFX",         icon: "🔊" },
     { key: "mixing",    label: "Mixing audio",            icon: "🎚️" },

@@ -5,7 +5,7 @@ import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
 import { planDrama } from "@/lib/services/dramaPlanner";
 import { synthesizeLine } from "@/lib/services/ttsService";
 import { generateSfx, writeSilence } from "@/lib/services/sfxService";
-import { mixTracks, concatenateTracks } from "@/lib/services/audioMixer";
+import { mixTracks, concatenateTracks, concatenateWavFilesPureJS } from "@/lib/services/audioMixer";
 import { VoiceMap } from "@/lib/services/voiceMap";
 import type { ScriptBlock } from "@/types";
 
@@ -39,7 +39,7 @@ async function runProduction(
     // ── Step 1: Drama planning ─────────────────────────────────────────────
     updateJob(jobId, {
       status: "planning",
-      step: "✍️ Writing drama script…",
+      step: "🗺️ Planning audio timeline…",
       progress: 5,
     });
 
@@ -130,7 +130,11 @@ async function runProduction(
 
     const outputFilename = `drama_${jobId}.mp3`;
     const outputPath = path.join(OUT_DIR, outputFilename);
-    const audioUrl = `/output/${outputFilename}`;
+    let audioUrl = `/output/${outputFilename}`;
+
+    const dialoguePaths = dialogueTracks
+      .map((t) => path.join(jobTmp, `${t.id}.wav`))
+      .filter((p) => fs.existsSync(p));
 
     // Build the track list for the mixer
     const mixTrackList = drama.tracks
@@ -145,14 +149,8 @@ async function runProduction(
       .map((t) => {
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);
         const wav = path.join(jobTmp, `${t.id}.wav`);
-        const filePath =
-          t.type === "dialogue"
-            ? wav
-            : fs.existsSync(mp3)
-            ? mp3
-            : wav;
         return {
-          filePath,
+          filePath: t.type === "dialogue" ? wav : fs.existsSync(mp3) ? mp3 : wav,
           startMs: t.start_ms,
           isSfx: t.type === "sfx",
           isLooping: !!(t.type === "sfx" && t.loop),
@@ -160,14 +158,21 @@ async function runProduction(
       });
 
     try {
+      // Level 1: full mix with SFX + timing
       await mixTracks(mixTrackList, outputPath, totalDurationMs);
     } catch (mixErr) {
-      console.warn("[Mixer] Mix failed, falling back to concat:", mixErr);
-      // Fallback: simple concatenation of dialogue only
-      const dialoguePaths = dialogueTracks
-        .map((t) => path.join(jobTmp, `${t.id}.wav`))
-        .filter((p) => fs.existsSync(p));
-      await concatenateTracks(dialoguePaths, outputPath);
+      console.warn("[Mixer] ffmpeg mix failed:", mixErr);
+      try {
+        // Level 2: ffmpeg concat (dialogue only, no timing/SFX)
+        await concatenateTracks(dialoguePaths, outputPath);
+      } catch (concatErr) {
+        console.warn("[Mixer] ffmpeg concat failed, using pure-JS WAV fallback:", concatErr);
+        // Level 3: pure-JS WAV — works with zero native dependencies
+        const wavFilename = `drama_${jobId}.wav`;
+        const wavOutputPath = path.join(OUT_DIR, wavFilename);
+        concatenateWavFilesPureJS(dialoguePaths, wavOutputPath);
+        audioUrl = `/output/${wavFilename}`;
+      }
     }
 
     updateJob(jobId, {

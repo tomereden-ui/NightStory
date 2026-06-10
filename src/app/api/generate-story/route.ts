@@ -50,7 +50,7 @@ Ensure the story has a clear, satisfying arc: an exciting opening hook, a moment
 ${durationMinutes >= 8 ? "For longer stories, develop the world and characters more deeply — add a secondary subplot, extra sensory detail, and more extended emotional beats." : ""}
 
 ### Language
-Write the entire script in the same language as the story description provided by the user. Do not default to any particular language — match whatever language the user wrote in.`;
+Determine the story language from the PROSE TEXT of the description — sentences, plot descriptions, setting descriptions. Character names and place names are proper nouns and must NOT be used to infer the language. For example, a character named "Amit", "Liu", or "Lior" does not make the story Hindi, Chinese, or Hebrew. If the prose is written in English, write the entire script in English. Only use a non-English language if the prose itself is written in that language.`;
 }
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ function buildPrompt(body: GenerateStoryRequest): string {
   }
 
   const format =
-    `\n\nLANGUAGE RULE: Detect the language of the story description above and write every word of the script — narration, dialogue, character names, and performance tags — in that exact same language. If the description is in English, write in English. If it is in Hebrew, write in Hebrew. Never mix languages or translate the input.\n\n` +
+    `\n\nLANGUAGE RULE: Look at the PROSE SENTENCES in the story description above (not the character names) to determine the language. If the sentences are in English, write the entire script in English — even if a character is named "Amit" or has a non-English name. If the sentences are in Hebrew, write in Hebrew. Character and place names are not language indicators. Never mix languages.\n\n` +
     `Target runtime: ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""} (≈ ${targetWords} words spoken aloud).\n\n` +
     `Return the story as a JSON array of script blocks. Each block must have exactly two fields:\n` +
     `- "characterName": use "Narrator" (translated to the story language) for narration, or the character's actual name for spoken dialogue\n` +
