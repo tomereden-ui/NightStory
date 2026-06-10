@@ -2,39 +2,56 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
-import { getFeaturedStories, formatDuration } from "@/lib/mockData";
+import { getFeaturedStories } from "@/lib/mockData";
+
+function durationLabel(seconds: number) {
+  return `${Math.floor(seconds / 60)} min`;
+}
 
 export default function FeaturedSection() {
   const { t, language } = useLanguage();
   const stories = getFeaturedStories();
 
   return (
-    <section className="mb-2">
+    <section className="mb-4">
       <div className="flex items-center justify-between px-5 mb-3">
         <h2 className="text-white/80 font-semibold text-sm tracking-wide">{t("featuredStories")}</h2>
-        <Link href="/library" className="text-white/25 text-xs hover:text-white/50 transition-colors">See all →</Link>
+        <Link href="/library" className="text-white/25 text-xs">See all →</Link>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto hide-scrollbar px-5 pb-1">
+      <div className="flex gap-3 overflow-x-auto hide-scrollbar px-5 pb-2">
         {stories.map((story) => {
           const title = language === "he" && story.titleHe ? story.titleHe : story.title;
+          const voiceName = language === "he" ? story.voice.nameHe : story.voice.name;
+
           return (
-            <Link key={story.id} href={`/player?id=${story.id}`} className="flex-shrink-0 group">
-              <div className="w-40 rounded-2xl overflow-hidden border border-white/5 transition-transform group-hover:scale-[1.02] group-active:scale-[0.98]"
-                style={{ background: story.coverGradient ?? story.coverColor }}>
-                {/* Cover art area */}
-                <div className="h-36 flex items-center justify-center text-6xl relative">
-                  <div className="absolute inset-0 opacity-20"
-                    style={{ background: "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.15), transparent 70%)" }} />
-                  <span className="relative drop-shadow-lg">{story.coverEmoji}</span>
-                </div>
-                {/* Info */}
-                <div className="p-2.5" style={{ background: "rgba(0,0,0,0.5)" }}>
-                  <p className="text-white text-xs font-semibold leading-tight line-clamp-2">{title}</p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-white/35 text-[10px]">{story.voice.avatarEmoji} {language === "he" ? story.voice.nameHe : story.voice.name}</span>
-                    <span className="text-teal/60 text-[10px]">{formatDuration(story.durationSeconds)}</span>
-                  </div>
+            <Link
+              key={story.id}
+              href={`/player?id=${story.id}`}
+              className="flex-shrink-0 w-44 rounded-2xl overflow-hidden active:scale-[0.97] transition-transform"
+              style={{ border: "1px solid rgba(255,255,255,0.07)" }}
+            >
+              {/* Cover */}
+              <div
+                className="h-36 flex items-center justify-center text-6xl relative"
+                style={{ background: story.coverGradient ?? story.coverColor }}
+              >
+                <div
+                  className="absolute inset-0"
+                  style={{ background: "radial-gradient(circle at 50% 35%, rgba(255,255,255,0.08), transparent 65%)" }}
+                />
+                <span className="relative drop-shadow-lg">{story.coverEmoji}</span>
+              </div>
+              {/* Info */}
+              <div className="px-3 py-2.5" style={{ background: "rgba(10,12,20,0.9)" }}>
+                <p className="text-white text-xs font-semibold leading-snug line-clamp-2 mb-1.5">{title}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-white/35 text-[10px]">
+                    {story.voice.avatarEmoji} {voiceName}
+                  </span>
+                  <span className="text-[10px] font-bold" style={{ color: "#00D4FF" }}>
+                    {durationLabel(story.durationSeconds)}
+                  </span>
                 </div>
               </div>
             </Link>

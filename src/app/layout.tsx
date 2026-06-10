@@ -25,9 +25,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" dir="ltr" className={`${inter.variable} ${rubik.variable}`}>
-      <body className="min-h-screen bg-bg antialiased">
+      <body className="min-h-screen antialiased" style={{ background: "#0A0C14" }}>
         <LanguageProvider>
-          <div className="flex flex-col min-h-screen max-w-md mx-auto relative bg-app-gradient">
+          <div className="flex flex-col min-h-screen max-w-md mx-auto relative" style={{ background: "#0A0C14" }}>
             <main className="flex-1 pb-24 overflow-x-hidden">{children}</main>
             <BottomNav />
           </div>
