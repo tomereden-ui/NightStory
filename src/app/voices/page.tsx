@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 type VoiceStatus = "cloned" | "demo" | "none";
@@ -210,9 +210,64 @@ function RecordingModal({
 
 // ─── Voices page ──────────────────────────────────────────────────────────────
 
+async function generatePreview(text: string, characterName: string): Promise<string> {
+  const res = await fetch("/api/synthesize-speech", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, characterName }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "TTS failed");
+  const bytes = Uint8Array.from(atob(data.audioData), (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: data.mimeType ?? "audio/wav" });
+  return URL.createObjectURL(blob);
+}
+
 export default function VoicesPage() {
   const [members, setMembers] = useState<FamilyMember[]>(FAMILY_MEMBERS);
   const [recording, setRecording] = useState<FamilyMember | null>(null);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
+
+  const stopPreview = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    setPreviewingId(null);
+  }, []);
+
+  const handlePreview = useCallback(async (member: FamilyMember) => {
+    if (previewingId === member.id) {
+      stopPreview();
+      return;
+    }
+    stopPreview();
+    setPreviewError(null);
+    setPreviewingId(member.id);
+
+    try {
+      // Pass the role as characterName so getVoiceProfile picks the right voice
+      // e.g. "Child" → Puck, "Grandpa" → Orbit, others → Aoede
+      const url = await generatePreview(member.samplePhrase, member.role);
+      blobUrlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { stopPreview(); };
+      audio.onerror = () => { setPreviewError("Playback failed"); stopPreview(); };
+      await audio.play();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Preview failed";
+      setPreviewError(msg);
+      setPreviewingId(null);
+    }
+  }, [previewingId, stopPreview]);
 
   const handleCloned = (id: string) => {
     setMembers((prev) => prev.map((m) => m.id === id ? { ...m, status: "cloned" } : m));
@@ -265,70 +320,81 @@ export default function VoicesPage() {
         </div>
       </div>
 
+      {/* Error banner */}
+      {previewError && (
+        <div className="mx-5 mb-3 px-4 py-2.5 rounded-2xl text-xs"
+          style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
+          ⚠ {previewError}
+        </div>
+      )}
+
       {/* Member list */}
       <div className="px-5 flex flex-col gap-3 pb-6">
-        {members.map((member) => (
-          <div
-            key={member.id}
-            className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            {/* Avatar */}
+        {members.map((member) => {
+          const isPreviewing = previewingId === member.id;
+          return (
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: `2px solid ${member.status === "cloned" ? member.accent : "rgba(255,255,255,0.1)"}`,
-                boxShadow: member.status === "cloned" ? `0 0 12px ${member.accent}30` : "none",
-              }}
+              key={member.id}
+              className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
             >
-              {member.emoji}
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold">{member.name}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-white/25 text-[10px]">{member.role}</span>
-                <span className="text-[10px]" style={{ color: STATUS_COLOR[member.status] }}>
-                  · {STATUS_LABEL[member.status]}
-                </span>
-              </div>
-            </div>
-
-            {/* Preview button */}
-            {member.status !== "none" && (
-              <button
-                className="w-8 h-8 rounded-full flex items-center justify-center text-xs transition-colors flex-shrink-0"
-                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}
-                onClick={() => {
-                  const u = new SpeechSynthesisUtterance(member.samplePhrase.slice(0, 60));
-                  u.rate = 0.9;
-                  window.speechSynthesis.cancel();
-                  setTimeout(() => window.speechSynthesis.speak(u), 100);
+              {/* Avatar */}
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: `2px solid ${member.status === "cloned" ? member.accent : "rgba(255,255,255,0.1)"}`,
+                  boxShadow: member.status === "cloned" ? `0 0 12px ${member.accent}30` : "none",
                 }}
               >
-                ▶
-              </button>
-            )}
+                {member.emoji}
+              </div>
 
-            {/* Record button */}
-            <button
-              onClick={() => setRecording(member)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold flex-shrink-0 active:scale-95 transition-transform"
-              style={member.status === "cloned" ? {
-                background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.4)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              } : {
-                background: `linear-gradient(90deg,${member.accent},#0088AA)`,
-                color: "#0A0C14",
-              }}
-            >
-              🎤 {member.status === "cloned" ? "Re-record" : "Record"}
-            </button>
-          </div>
-        ))}
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-semibold">{member.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-white/25 text-[10px]">{member.role}</span>
+                  <span className="text-[10px]" style={{ color: STATUS_COLOR[member.status] }}>
+                    · {STATUS_LABEL[member.status]}
+                  </span>
+                </div>
+              </div>
+
+              {/* Preview button — Gemini TTS */}
+              {member.status !== "none" && (
+                <button
+                  disabled={!!previewingId && !isPreviewing}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs transition-all flex-shrink-0 active:scale-95"
+                  style={{
+                    background: isPreviewing ? `${member.accent}22` : "rgba(255,255,255,0.05)",
+                    color: isPreviewing ? member.accent : "rgba(255,255,255,0.4)",
+                    border: isPreviewing ? `1px solid ${member.accent}66` : "1px solid rgba(255,255,255,0.08)",
+                  }}
+                  onClick={() => handlePreview(member)}
+                >
+                  {isPreviewing ? "⏹" : "▶"}
+                </button>
+              )}
+
+              {/* Record button */}
+              <button
+                onClick={() => setRecording(member)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold flex-shrink-0 active:scale-95 transition-transform"
+                style={member.status === "cloned" ? {
+                  background: "rgba(255,255,255,0.05)",
+                  color: "rgba(255,255,255,0.4)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                } : {
+                  background: `linear-gradient(90deg,${member.accent},#0088AA)`,
+                  color: "#0A0C14",
+                }}
+              >
+                🎤 {member.status === "cloned" ? "Re-record" : "Record"}
+              </button>
+            </div>
+          );
+        })}
 
         {/* Add member */}
         <button
