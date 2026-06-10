@@ -123,7 +123,13 @@ async function callGeminiTTS(
     const part = json.candidates?.[0]?.content?.parts?.[0];
     const inlineData = part?.inlineData as { mimeType: string; data: string } | undefined;
 
-    if (!inlineData?.data) throw new Error("No audio data in Gemini response");
+    console.log("[TTS] candidate part keys:", part ? Object.keys(part) : "none");
+    console.log("[TTS] inlineData mimeType:", inlineData?.mimeType, "data length:", inlineData?.data?.length ?? 0);
+
+    if (!inlineData?.data) {
+      console.error("[TTS] Full response:", JSON.stringify(json).slice(0, 500));
+      throw new Error("No audio data in Gemini response");
+    }
 
     return { audioBase64: inlineData.data, mimeType: inlineData.mimeType };
   }
@@ -175,6 +181,7 @@ export async function POST(req: NextRequest) {
       finalMime = mimeType;
     }
 
+    console.log("[TTS] Returning mimeType:", finalMime, "base64 length:", finalBase64.length);
     return NextResponse.json({
       audioData: finalBase64,
       mimeType: finalMime,

@@ -88,12 +88,20 @@ function PlayerContent() {
       segIdxRef.current = index + 1;
       playIndex(index + 1, urls);
     };
-    audio.onerror = () => {
+    audio.onerror = (e) => {
+      console.error("Audio playback error:", e);
+      setError("Audio playback failed — check console for details");
       setPhase("idle");
       setActiveSegment(null);
     };
-    audio.play().catch(console.error);
-  }, []);
+    audio.play().catch((e: unknown) => {
+      console.error("audio.play() rejected:", e);
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(`Playback blocked: ${msg}`);
+      setPhase("idle");
+      setActiveSegment(null);
+    });
+  }, [setError]);
 
   const handlePlay = useCallback(async () => {
     if (phase === "paused" && audioRef.current) {
