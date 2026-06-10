@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
-import StarField from "@/components/ui/StarField";
 import { STORIES } from "@/lib/mockData";
 
 function formatTime(s: number) {
@@ -91,40 +90,41 @@ function PlayerContent() {
   }, []);
 
   return (
-    <div className="relative min-h-full flex flex-col bg-bg" dir={isRTL ? "rtl" : "ltr"}>
-      <StarField count={30} />
-
+    <div className="min-h-full flex flex-col" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
-      <div className="relative flex items-center justify-between px-5 pt-12 pb-3">
-        <Link href="/library" className="w-8 h-8 rounded-full bg-bg-card border border-bg-border flex items-center justify-center text-white/40 hover:text-white transition-colors text-sm">
+      <div className="flex items-center justify-between px-5 pt-12 pb-3">
+        <Link href="/library"
+          className="w-8 h-8 flex items-center justify-center text-white/40 text-base">
           ←
         </Link>
-        <p className="text-white/70 text-sm font-semibold truncate max-w-[55%] text-center">{title}</p>
-        <button onClick={handleStop} className="w-8 h-8 rounded-full bg-bg-card border border-bg-border flex items-center justify-center text-white/40 hover:text-white transition-colors text-sm">
+        <p className="text-white text-sm font-semibold truncate max-w-[55%] text-center">{title}</p>
+        <button onClick={handleStop}
+          className="w-8 h-8 flex items-center justify-center text-white/30 text-base transition-colors hover:text-white/60">
           ■
         </button>
       </div>
 
       {/* Scrollable narrative */}
-      <div className="relative flex-1 overflow-y-auto px-5 py-2 flex flex-col gap-2.5">
+      <div className="flex-1 overflow-y-auto px-5 py-2 flex flex-col gap-2.5">
         {SEGMENTS.map((seg, i) => {
           const isActive = activeSegment === i;
           return (
-            <div key={i} className="animate-float-up" style={{ animationDelay: `${i * 0.08}s` }}>
+            <div key={i}>
               {seg.type === "narrator" ? (
-                <div className="rounded-2xl rounded-tl-sm px-4 py-3 border transition-all"
+                <div
+                  className="rounded-2xl px-4 py-3 transition-all"
                   style={{
-                    background: isActive ? "#141830" : "#0E1225",
-                    borderColor: isActive ? "rgba(139,92,246,0.5)" : "rgba(139,92,246,0.15)",
-                    boxShadow: isActive ? "0 0 16px rgba(139,92,246,0.15)" : "none",
+                    background: isActive ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+                    border: isActive ? "1px solid rgba(0,212,255,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                    boxShadow: isActive ? "0 0 16px rgba(0,212,255,0.08)" : "none",
                   }}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-purple-bright/60 text-[10px] font-bold uppercase tracking-widest">{seg.speaker}</p>
+                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">{seg.speaker}</p>
                     {isActive && (
                       <span className="flex gap-0.5 items-end h-3">
                         {[1,2,3].map((j) => (
-                          <span key={j} className="w-0.5 rounded-full bg-purple-bright"
-                            style={{ height: `${8 + j * 4}px`, animation: `bounce 0.5s ease-in-out ${j * 0.1}s infinite` }} />
+                          <span key={j} className="w-0.5 rounded-full"
+                            style={{ background: "#00D4FF", height: `${8 + j * 4}px`, animation: `bounce 0.5s ease-in-out ${j * 0.1}s infinite` }} />
                         ))}
                       </span>
                     )}
@@ -132,19 +132,20 @@ function PlayerContent() {
                   <p className="text-white/65 text-sm leading-relaxed">{seg.text}</p>
                 </div>
               ) : (
-                <div className="rounded-2xl rounded-tl-sm px-4 py-3 border ml-3 transition-all"
+                <div
+                  className="rounded-2xl px-4 py-3 ml-3 transition-all"
                   style={{
-                    background: isActive ? "#0D1828" : "#0A1220",
-                    borderColor: isActive ? "rgba(0,212,255,0.45)" : "rgba(0,212,255,0.12)",
-                    boxShadow: isActive ? "0 0 16px rgba(0,212,255,0.1)" : "none",
+                    background: isActive ? "rgba(0,212,255,0.06)" : "rgba(0,212,255,0.03)",
+                    border: isActive ? "1px solid rgba(0,212,255,0.3)" : "1px solid rgba(0,212,255,0.08)",
+                    boxShadow: isActive ? "0 0 16px rgba(0,212,255,0.08)" : "none",
                   }}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-teal/70 text-[10px] font-bold uppercase tracking-widest">{seg.speaker}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(0,212,255,0.6)" }}>{seg.speaker}</p>
                     {isActive && (
                       <span className="flex gap-0.5 items-end h-3">
                         {[1,2,3].map((j) => (
-                          <span key={j} className="w-0.5 rounded-full bg-teal"
-                            style={{ height: `${8 + j * 4}px`, animation: `bounce 0.5s ease-in-out ${j * 0.1}s infinite` }} />
+                          <span key={j} className="w-0.5 rounded-full"
+                            style={{ background: "#00D4FF", height: `${8 + j * 4}px`, animation: `bounce 0.5s ease-in-out ${j * 0.1}s infinite` }} />
                         ))}
                       </span>
                     )}
@@ -159,11 +160,17 @@ function PlayerContent() {
       </div>
 
       {/* Player panel */}
-      <div className="relative px-4 pb-3">
-        <div className="rounded-3xl px-4 pt-3 pb-4 border border-white/5" style={{ background: "linear-gradient(135deg,#0E1225,#080B18)" }}>
+      <div className="px-4 pb-3">
+        <div
+          className="rounded-3xl px-4 pt-3 pb-4"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
           {/* Story row */}
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl border border-white/5 flex-shrink-0"
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 overflow-hidden"
               style={{ background: story.coverGradient ?? story.coverColor }}>
               {story.coverEmoji}
             </div>
@@ -171,7 +178,7 @@ function PlayerContent() {
               <p className="text-white text-sm font-semibold truncate">{title}</p>
               <p className="text-white/30 text-xs">{story.voice.avatarEmoji} {language === "he" ? story.voice.nameHe : story.voice.name}</p>
             </div>
-            <button className="text-pink/60 hover:text-pink text-lg transition-colors">
+            <button className="text-white/25 text-lg hover:text-white/50 transition-colors">
               {story.isFavorite ? "♥" : "♡"}
             </button>
           </div>
@@ -179,7 +186,8 @@ function PlayerContent() {
           {/* Progress */}
           <input type="range" min={0} max={100} value={progress}
             onChange={(e) => setProgress(+e.target.value)}
-            className="w-full accent-purple cursor-pointer mb-1" />
+            className="w-full cursor-pointer mb-1"
+            style={{ accentColor: "#00D4FF" }} />
           <div className="flex justify-between text-white/20 text-[10px] mb-3">
             <span>{formatTime(currentSec)}</span>
             <span>{formatTime(story.durationSeconds)}</span>
@@ -189,13 +197,20 @@ function PlayerContent() {
           <div className="flex items-center justify-between">
             <button onClick={handleStop} className="text-white/25 text-xl w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors">⏮</button>
             <button className="text-white/25 text-lg w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors">«</button>
-            <button onClick={handlePlayPause}
-              className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl active:scale-95 transition-transform"
-              style={{ background: "linear-gradient(135deg,#8B5CF6,#EC4899)", boxShadow: "0 4px 20px rgba(139,92,246,0.5)" }}>
+            <button
+              onClick={handlePlayPause}
+              className="w-14 h-14 rounded-full flex items-center justify-center text-bg text-xl active:scale-95 transition-transform font-bold"
+              style={{
+                background: "linear-gradient(135deg,#00D4FF,#00A8C8)",
+                boxShadow: "0 4px 20px rgba(0,212,255,0.4)",
+                color: "#0A0C14",
+              }}>
               {playing ? "⏸" : "▶"}
             </button>
             <button className="text-white/25 text-lg w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors">»</button>
-            <button className="text-white/25 text-sm w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors border border-white/10 rounded-xl">
+            <button
+              className="text-white/25 text-sm w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors rounded-xl"
+              style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
               ↗
             </button>
           </div>

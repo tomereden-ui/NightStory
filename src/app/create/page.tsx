@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import StarField from "@/components/ui/StarField";
 import ScriptTab from "@/components/studio/ScriptTab";
 import { VOICES, STORY_SETTINGS } from "@/lib/mockData";
 import type { ScriptBlock } from "@/types";
@@ -10,20 +9,9 @@ import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 
 type ActiveTab = "wizard" | "prompt" | "script";
 
-// Per-voice accent colors matching mockup
 const VOICE_ACCENTS = ["#00D4FF", "#8B5CF6", "#EC4899", "#10D9A0"];
 
-// Atmospheric gradient backgrounds for each setting card
-const SETTING_BG: Record<string, string> = {
-  "magic-forest": "radial-gradient(ellipse at 40% 30%, #0f4422 0%, #062414 60%, #020e06 100%)",
-  "dinosaurs":    "radial-gradient(ellipse at 50% 65%, #1e4010 0%, #0e2208 55%, #060e03 100%)",
-  "space":        "radial-gradient(ellipse at 50% 25%, #1e0d56 0%, #09062e 55%, #020118 100%)",
-  "underwater":   "radial-gradient(ellipse at 50% 40%, #054266 0%, #022035 55%, #01101c 100%)",
-  "dragons":      "radial-gradient(ellipse at 45% 35%, #441408 0%, #220a04 55%, #0e0402 100%)",
-  "fairies":      "radial-gradient(ellipse at 50% 35%, #420d66 0%, #21083a 55%, #0e0418 100%)",
-};
-
-// ─── Wizard tab ──────────────────────────────────────────────────────────────
+// ─── Wizard tab ───────────────────────────────────────────────────────────────
 
 interface WizardTabProps {
   hero: string; setHero: (v: string) => void;
@@ -39,136 +27,149 @@ function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selected
   const canGenerate = hero.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Who is the hero? */}
+    <div className="flex flex-col gap-7">
+      {/* Main Character */}
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
-          {language === "he" ? "מי הגיבור?" : "Who is the hero?"}
+        <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">
+          {language === "he" ? "דמות ראשית" : "Main Character"}
         </label>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder={language === "he" ? "לדוגמה: ילדה אמיצה בשם מיה…" : "e.g. a brave little girl named Mia…"}
-            value={hero}
-            onChange={(e) => setHero(e.target.value)}
-            className="w-full bg-bg-card border border-bg-border rounded-xl px-4 py-3 pr-10 text-sm text-white placeholder-white/20 outline-none focus:border-purple/50 transition-colors"
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-purple/50 text-base pointer-events-none">✨</span>
-        </div>
+        <input
+          type="text"
+          placeholder={language === "he" ? "שם הדמות הראשית… (לדוגמה, ליאו)" : "Name the main character... (e.g., Leo)"}
+          value={hero}
+          onChange={(e) => setHero(e.target.value)}
+          className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none transition-colors"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)")}
+          onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+        />
       </div>
 
-      {/* Where does it happen? — 3-column image grid */}
+      {/* Setting — horizontal chips */}
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3 block">
-          {language === "he" ? "איפה זה קורה?" : "Where does it happen?"}
+        <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-3">
+          {language === "he" ? "סביבה" : "Setting"}
         </label>
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
           {STORY_SETTINGS.map((s) => {
             const isSelected = setting === s.id;
             return (
               <button
                 key={s.id}
                 onClick={() => setSetting(isSelected ? "" : s.id)}
-                className={`relative aspect-square flex flex-col items-center justify-end pb-2.5 rounded-2xl overflow-hidden border-2 transition-all active:scale-95 ${
-                  isSelected ? "border-purple/60 scale-[1.03]" : "border-white/5 hover:border-white/15"
-                }`}
-                style={{ background: SETTING_BG[s.id] ?? "#0E1225" }}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium transition-all active:scale-95"
+                style={isSelected ? {
+                  background: "rgba(0,212,255,0.14)",
+                  border: "1px solid rgba(0,212,255,0.4)",
+                  color: "#00D4FF",
+                } : {
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "rgba(255,255,255,0.55)",
+                }}
               >
-                {/* Glow overlay on select */}
-                {isSelected && (
-                  <div className="absolute inset-0 pointer-events-none"
-                    style={{ background: "radial-gradient(circle at 50% 40%, rgba(139,92,246,0.28), transparent 70%)" }} />
-                )}
-                {/* Emoji */}
-                <span className="absolute inset-0 flex items-center justify-center text-4xl" style={{ paddingBottom: "18px" }}>
-                  {s.emoji}
-                </span>
-                {/* Label */}
-                <span className={`relative z-10 text-[10px] font-semibold ${isSelected ? "text-purple-bright" : "text-white/55"}`}>
-                  {language === "he" ? s.labelHe : s.label}
-                </span>
+                <span>{s.emoji}</span>
+                <span>{language === "he" ? s.labelHe : s.label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* What happens? */}
+      {/* The Plot */}
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
-          {language === "he" ? "מה יקרה?" : "What happens?"}
+        <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">
+          {language === "he" ? "עלילה" : "The Plot"}
         </label>
         <textarea
-          placeholder={language === "he" ? "תאר את העלילה… (אופציונלי)" : "Describe the plot… or leave blank for a surprise!"}
+          placeholder={language === "he" ? "מה קורה הלילה?" : "What is tonight's adventure?"}
           value={plot}
           onChange={(e) => setPlot(e.target.value)}
-          rows={3}
-          className="w-full bg-bg-card border border-bg-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-purple/50 transition-colors resize-none"
+          rows={4}
+          className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none resize-none transition-colors leading-relaxed"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)")}
+          onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
         />
       </div>
 
-      {/* Who is reading? — per-voice accent colors */}
+      {/* Voice Player */}
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3 block">
-          {language === "he" ? "מי מספר?" : "Who is reading?"}
+        <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-4">
+          {language === "he" ? "קריין" : "Voice Player"}
         </label>
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           {VOICES.map((voice, idx) => {
             const isSelected = selectedVoice === voice.id;
-            const accent = VOICE_ACCENTS[idx] ?? "#8B5CF6";
+            const accent = VOICE_ACCENTS[idx] ?? "#00D4FF";
             return (
               <button
                 key={voice.id}
                 onClick={() => setSelectedVoice(voice.id)}
-                className="flex flex-col items-center gap-1.5 flex-1"
+                className="flex flex-col items-center gap-2 flex-1"
               >
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all"
-                  style={
-                    isSelected
-                      ? { border: `2px solid ${accent}`, background: "#131729", boxShadow: `0 0 0 3px ${accent}28, 0 0 14px ${accent}40` }
-                      : { border: "2px solid rgba(255,255,255,0.08)", background: "#0E1225" }
-                  }
+                  className="w-13 h-13 rounded-full flex items-center justify-center text-xl transition-all"
+                  style={isSelected ? {
+                    width: 52, height: 52,
+                    background: "rgba(255,255,255,0.08)",
+                    border: `2px solid ${accent}`,
+                    boxShadow: `0 0 0 3px ${accent}22`,
+                  } : {
+                    width: 52, height: 52,
+                    background: "rgba(255,255,255,0.05)",
+                    border: "2px solid rgba(255,255,255,0.1)",
+                  }}
                 >
                   {voice.avatarEmoji}
                 </div>
-                <span className="text-[10px] font-medium transition-colors" style={{ color: isSelected ? accent : "rgba(255,255,255,0.35)" }}>
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-wide"
+                  style={{ color: isSelected ? accent : "rgba(255,255,255,0.35)" }}
+                >
                   {language === "he" ? voice.nameHe : voice.name}
                 </span>
-                <span className="text-[9px] capitalize text-white/20">{voice.style}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Generate button — purple/pink */}
+      {/* Generate button */}
       <button
         onClick={onGenerate}
         disabled={!canGenerate || generating}
-        className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] ${
-          canGenerate && !generating ? "text-white" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
-        }`}
-        style={
-          canGenerate && !generating
-            ? { background: "linear-gradient(135deg,#8B5CF6,#EC4899)", boxShadow: "0 4px 24px rgba(139,92,246,0.45)" }
-            : {}
-        }
+        className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
+        style={canGenerate && !generating ? {
+          background: "linear-gradient(90deg,#00D4FF,#00A8C8)",
+          color: "#0A0C14",
+          boxShadow: "0 4px 24px rgba(0,212,255,0.35)",
+        } : {
+          background: "rgba(255,255,255,0.05)",
+          color: "rgba(255,255,255,0.2)",
+          border: "1px solid rgba(255,255,255,0.07)",
+        }}
       >
         {generating ? (
           <span className="flex items-center justify-center gap-2">
-            <span className="animate-pulse-slow">✨</span>
+            <span className="animate-pulse">✨</span>
             {language === "he" ? "יוצר סיפור…" : "Generating story…"}
           </span>
         ) : (
-          language === "he" ? "✨ צור סיפור" : "✨ Generate Story"
+          language === "he" ? "צור סיפור" : "GENERATE STORY"
         )}
       </button>
     </div>
   );
 }
 
-// ─── Prompt tab ──────────────────────────────────────────────────────────────
+// ─── Prompt tab ───────────────────────────────────────────────────────────────
 
 interface PromptTabProps {
   promptText: string; setPromptText: (v: string) => void;
@@ -182,46 +183,59 @@ function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice,
   const canGenerate = promptText.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2 block">
+        <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">
           {language === "he" ? "ספר לי על הסיפור" : "Tell me about the story"}
         </label>
         <textarea
           placeholder={language === "he"
             ? "כתוב כל מה שרוצים — דמויות, מקום, מצב רוח, סוף…"
-            : "Describe anything — characters, setting, mood, how it ends… AI will craft the rest."}
+            : "Describe anything — characters, setting, mood, how it ends…"}
           value={promptText}
           onChange={(e) => setPromptText(e.target.value)}
-          rows={8}
-          className="w-full bg-bg-card border border-bg-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-purple/40 transition-colors resize-none leading-relaxed"
+          rows={9}
+          className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none resize-none leading-relaxed"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)")}
+          onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
         />
         <p className="text-white/15 text-[10px] mt-1 text-right">
           {promptText.trim().split(/\s+/).filter(Boolean).length} words
         </p>
       </div>
 
+      {/* Voice Player */}
       <div>
-        <label className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-3 block">
-          {language === "he" ? "מי מספר?" : "Who is reading?"}
+        <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-4">
+          {language === "he" ? "קריין" : "Voice Player"}
         </label>
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           {VOICES.map((voice, idx) => {
             const isSelected = selectedVoice === voice.id;
-            const accent = VOICE_ACCENTS[idx] ?? "#8B5CF6";
+            const accent = VOICE_ACCENTS[idx] ?? "#00D4FF";
             return (
-              <button key={voice.id} onClick={() => setSelectedVoice(voice.id)} className="flex flex-col items-center gap-1.5 flex-1">
+              <button key={voice.id} onClick={() => setSelectedVoice(voice.id)} className="flex flex-col items-center gap-2 flex-1">
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all"
-                  style={
-                    isSelected
-                      ? { border: `2px solid ${accent}`, background: "#131729", boxShadow: `0 0 0 3px ${accent}28` }
-                      : { border: "2px solid rgba(255,255,255,0.08)", background: "#0E1225" }
-                  }
+                  className="rounded-full flex items-center justify-center text-xl transition-all"
+                  style={isSelected ? {
+                    width: 52, height: 52,
+                    background: "rgba(255,255,255,0.08)",
+                    border: `2px solid ${accent}`,
+                    boxShadow: `0 0 0 3px ${accent}22`,
+                  } : {
+                    width: 52, height: 52,
+                    background: "rgba(255,255,255,0.05)",
+                    border: "2px solid rgba(255,255,255,0.1)",
+                  }}
                 >
                   {voice.avatarEmoji}
                 </div>
-                <span className="text-[10px] font-medium" style={{ color: isSelected ? accent : "rgba(255,255,255,0.35)" }}>
+                <span className="text-[10px] font-semibold uppercase tracking-wide"
+                  style={{ color: isSelected ? accent : "rgba(255,255,255,0.35)" }}>
                   {language === "he" ? voice.nameHe : voice.name}
                 </span>
               </button>
@@ -233,14 +247,22 @@ function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice,
       <button
         onClick={onGenerate}
         disabled={!canGenerate || generating}
-        className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] ${
-          canGenerate && !generating ? "text-white" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
-        }`}
-        style={canGenerate && !generating ? { background: "linear-gradient(135deg,#8B5CF6,#EC4899)", boxShadow: "0 4px 24px rgba(139,92,246,0.45)" } : {}}
+        className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
+        style={canGenerate && !generating ? {
+          background: "linear-gradient(90deg,#00D4FF,#00A8C8)",
+          color: "#0A0C14",
+          boxShadow: "0 4px 24px rgba(0,212,255,0.35)",
+        } : {
+          background: "rgba(255,255,255,0.05)",
+          color: "rgba(255,255,255,0.2)",
+          border: "1px solid rgba(255,255,255,0.07)",
+        }}
       >
         {generating ? (
-          <span className="flex items-center justify-center gap-2"><span className="animate-pulse-slow">✨</span>Generating story…</span>
-        ) : "✨ Generate Story"}
+          <span className="flex items-center justify-center gap-2">
+            <span className="animate-pulse">✨</span>Generating…
+          </span>
+        ) : "GENERATE STORY"}
       </button>
     </div>
   );
@@ -273,7 +295,6 @@ export default function CreatePage() {
     setGenerateError(null);
 
     const settingLabel = STORY_SETTINGS.find((s) => s.id === setting)?.label ?? setting;
-
     const body: GenerateStoryRequest = activeTab === "prompt"
       ? { mode: "prompt", promptText, primaryVoiceId: selectedVoice }
       : { mode: "wizard", hero, setting: settingLabel, plot, primaryVoiceId: selectedVoice };
@@ -307,71 +328,31 @@ export default function CreatePage() {
     setGenerateError(null);
   };
 
-  if (done) {
-    return (
-      <div className="relative min-h-full flex flex-col items-center justify-center px-5 text-center">
-        <StarField count={40} />
-        <div className="relative">
-          <div className="text-7xl mb-4 animate-pulse-slow">✨</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Story Ready!</h2>
-          <p className="text-white/40 text-sm mb-8">Your magical story is ready to listen.</p>
-          <div className="flex gap-3 justify-center">
-            <a href="/player" className="text-white text-sm font-semibold px-6 py-3 rounded-2xl"
-              style={{ background: "linear-gradient(135deg,#8B5CF6,#EC4899)", boxShadow: "0 4px 20px rgba(139,92,246,0.4)" }}>
-              ▶ Listen Now
-            </a>
-            <button onClick={handleReset}
-              className="text-white/60 text-sm font-semibold px-6 py-3 rounded-2xl border border-white/10 hover:border-white/25 transition-all">
-              Create Another
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const TABS: { id: ActiveTab; label: string }[] = [
-    { id: "wizard", label: language === "he" ? "אשף" : "Wizard" },
-    { id: "prompt", label: language === "he" ? "טקסט חופשי" : "Text Prompt" },
-    { id: "script", label: language === "he" ? "סיפור שנוצר" : "Generated Script" },
-  ];
-
   // Generating overlay
   if (generating) {
-    const messages = [
-      "Weaving your story…",
-      "Giving voice to the characters…",
-      "Painting the setting with words…",
-      "Sprinkling a little magic…",
-    ];
     return (
-      <div className="relative min-h-full bg-bg flex flex-col items-center justify-center px-8 text-center">
-        <StarField count={50} />
-        <div className="relative flex flex-col items-center gap-6">
-          {/* Pulsing orb */}
+      <div className="min-h-full flex flex-col items-center justify-center px-8 text-center" style={{ background: "#0A0C14" }}>
+        <div className="flex flex-col items-center gap-6">
           <div className="relative w-24 h-24 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full animate-ping opacity-20"
-              style={{ background: "radial-gradient(circle, #8B5CF6, #EC4899)" }} />
+              style={{ background: "radial-gradient(circle,#00D4FF,#0088AA)" }} />
             <div className="absolute inset-2 rounded-full opacity-40 animate-pulse"
-              style={{ background: "radial-gradient(circle, #8B5CF6, #EC4899)" }} />
-            <span className="relative text-5xl animate-pulse-slow">✨</span>
+              style={{ background: "radial-gradient(circle,#00D4FF,#0088AA)" }} />
+            <span className="relative text-5xl animate-pulse">✨</span>
           </div>
-
           <div>
             <h2 className="text-white text-xl font-bold mb-2">
               {language === "he" ? "יוצר את הסיפור שלך…" : "Crafting your story…"}
             </h2>
             <p className="text-white/35 text-sm">
-              {language === "he" ? "זה ייקח כמה שניות" : messages[Math.floor(Date.now() / 1000) % messages.length]}
+              {language === "he" ? "זה ייקח כמה שניות" : "Weaving words into magic…"}
             </p>
           </div>
-
-          {/* Animated dots */}
           <div className="flex gap-2">
             {[0, 1, 2, 3].map((i) => (
               <span key={i} className="w-2 h-2 rounded-full"
                 style={{
-                  background: "linear-gradient(135deg,#8B5CF6,#EC4899)",
+                  background: "linear-gradient(135deg,#00D4FF,#0088AA)",
                   animation: `bounce 1s ease-in-out ${i * 0.15}s infinite`,
                 }} />
             ))}
@@ -381,28 +362,53 @@ export default function CreatePage() {
     );
   }
 
-  return (
-    <div className="relative min-h-full bg-bg" dir={isRTL ? "rtl" : "ltr"}>
-      <StarField count={25} />
+  if (done) {
+    return (
+      <div className="min-h-full flex flex-col items-center justify-center px-5 text-center" style={{ background: "#0A0C14" }}>
+        <div className="text-7xl mb-4">✨</div>
+        <h2 className="text-2xl font-bold text-white mb-2">Story Ready!</h2>
+        <p className="text-white/40 text-sm mb-8">Your magical story is ready to listen.</p>
+        <div className="flex gap-3 justify-center">
+          <a href="/player"
+            className="text-bg font-semibold text-sm px-6 py-3 rounded-2xl"
+            style={{ background: "linear-gradient(90deg,#00D4FF,#00A8C8)", color: "#0A0C14" }}>
+            ▶ Listen Now
+          </a>
+          <button onClick={handleReset}
+            className="text-white/60 text-sm font-semibold px-6 py-3 rounded-2xl"
+            style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+            Create Another
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-      <div className="relative px-5 pt-12 pb-8">
+  const TABS: { id: ActiveTab; label: string }[] = [
+    { id: "wizard", label: language === "he" ? "אשף" : "Guided Wizard" },
+    { id: "prompt", label: language === "he" ? "טקסט חופשי" : "Text Prompt" },
+    { id: "script", label: language === "he" ? "סיפור שנוצר" : "Script" },
+  ];
+
+  return (
+    <div className="min-h-full" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
+      <div className="px-5 pt-12 pb-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <a href="/" className="w-8 h-8 rounded-full bg-bg-card border border-bg-border flex items-center justify-center text-white/40 hover:text-white transition-colors flex-shrink-0">
+        <div className="flex items-center mb-7">
+          <a
+            href="/library"
+            className="w-8 h-8 flex items-center justify-center text-white/50 text-base"
+          >
             ←
           </a>
-          <div>
-            <h1 className="text-base font-bold text-white leading-tight">
-              {language === "he" ? "ספר סיפור" : "Tell a Story"}
-            </h1>
-            <p className="text-white/30 text-[11px]">
-              {language === "he" ? "בואו ניצור חלום הלילה ✨" : "Let's create a dream tonight ✨"}
-            </p>
-          </div>
+          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">
+            {language === "he" ? "יוצר סיפורים" : "Story Creator"}
+          </h1>
+          <div className="w-8" />
         </div>
 
         {/* Tab bar */}
-        <div className="flex border-b border-bg-border mb-6">
+        <div className="flex mb-7" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           {TABS.map(({ id, label }) => {
             const isActive = activeTab === id;
             const isDisabled = id === "script" && !hasScript;
@@ -411,19 +417,18 @@ export default function CreatePage() {
                 key={id}
                 onClick={() => !isDisabled && setActiveTab(id)}
                 disabled={isDisabled}
-                className={`relative flex-1 pb-3 text-[11px] font-semibold transition-colors ${
-                  isActive ? "text-white" : isDisabled ? "text-white/15 cursor-not-allowed" : "text-white/35 hover:text-white/60"
+                className={`relative flex-1 pb-3 text-[11px] font-bold tracking-wider uppercase transition-colors ${
+                  isActive ? "text-white" : isDisabled ? "text-white/15 cursor-not-allowed" : "text-white/30"
                 }`}
               >
                 <span className="flex items-center justify-center gap-1.5">
                   {label}
-                  {id === "script" && (
-                    <span className={`w-1.5 h-1.5 rounded-full ${hasScript ? "bg-purple animate-pulse" : "bg-white/10"}`} />
+                  {id === "script" && hasScript && (
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#00D4FF" }} />
                   )}
                 </span>
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                    style={{ background: "linear-gradient(90deg,#8B5CF6,#EC4899)" }} />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#00D4FF" }} />
                 )}
               </button>
             );
@@ -432,7 +437,8 @@ export default function CreatePage() {
 
         {/* Error banner */}
         {generateError && (
-          <div className="mb-4 px-4 py-3 rounded-2xl bg-pink/10 border border-pink/30 text-pink text-xs leading-relaxed">
+          <div className="mb-5 px-4 py-3 rounded-2xl text-xs leading-relaxed"
+            style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
             ⚠ {generateError}
           </div>
         )}
