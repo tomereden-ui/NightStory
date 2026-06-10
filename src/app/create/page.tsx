@@ -3,11 +3,14 @@
 import { useState, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import ScriptTab from "@/components/studio/ScriptTab";
+import ProductionProgress from "@/components/studio/ProductionProgress";
+import DramaPlayer from "@/components/studio/DramaPlayer";
 import { VOICES, STORY_SETTINGS } from "@/lib/mockData";
 import type { ScriptBlock } from "@/types";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
+import type { Job } from "@/lib/jobs";
 
-type ActiveTab = "wizard" | "prompt" | "script";
+type ActiveTab = "wizard" | "prompt" | "script" | "producing" | "drama";
 
 const VOICE_ACCENTS = ["#00D4FF", "#8B5CF6", "#EC4899", "#10D9A0"];
 
@@ -283,7 +286,8 @@ export default function CreatePage() {
   const [generating, setGenerating] = useState(false);
   const [scriptBlocks, setScriptBlocks] = useState<ScriptBlock[]>([]);
   const [isProducing, setIsProducing] = useState(false);
-  const [done, setDone] = useState(false);
+  const [productionJobId, setProductionJobId] = useState<string | null>(null);
+  const [completedJob, setCompletedJob] = useState<Job | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const hasScript = scriptBlocks.length > 0;
@@ -316,16 +320,44 @@ export default function CreatePage() {
     }
   };
 
-  const handleProduce = useCallback((blocks: ScriptBlock[]) => {
+  const handleProduce = useCallback(async (blocks: ScriptBlock[]) => {
     setIsProducing(true);
-    console.info("[NightStory] Producing:", blocks);
-    setTimeout(() => { setIsProducing(false); setDone(true); }, 3000);
+    setGenerateError(null);
+    setActiveTab("producing");
+    try {
+      const res = await fetch("/api/produce-drama", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Production failed");
+      setProductionJobId(data.jobId as string);
+    } catch (err: unknown) {
+      setGenerateError(err instanceof Error ? err.message : "Production failed");
+      setIsProducing(false);
+      setActiveTab("script");
+    }
+  }, []);
+
+  const handleProductionDone = useCallback((job: Job) => {
+    setCompletedJob(job);
+    setIsProducing(false);
+    setActiveTab("drama");
+  }, []);
+
+  const handleProductionError = useCallback((msg: string) => {
+    setGenerateError(msg);
+    setIsProducing(false);
+    setProductionJobId(null);
+    setActiveTab("script");
   }, []);
 
   const handleReset = () => {
-    setDone(false); setHero(""); setPlot(""); setSetting("");
+    setHero(""); setPlot(""); setSetting("");
     setPromptText(""); setScriptBlocks([]); setActiveTab("wizard");
-    setGenerateError(null);
+    setGenerateError(null); setProductionJobId(null); setCompletedJob(null);
+    setIsProducing(false);
   };
 
   // Generating overlay
@@ -362,23 +394,39 @@ export default function CreatePage() {
     );
   }
 
-  if (done) {
+  // Production in progress
+  if (activeTab === "producing" && productionJobId) {
     return (
-      <div className="min-h-full flex flex-col items-center justify-center px-5 text-center" style={{ background: "#0A0C14" }}>
-        <div className="text-7xl mb-4">✨</div>
-        <h2 className="text-2xl font-bold text-white mb-2">Story Ready!</h2>
-        <p className="text-white/40 text-sm mb-8">Your magical story is ready to listen.</p>
-        <div className="flex gap-3 justify-center">
-          <a href="/player"
-            className="text-bg font-semibold text-sm px-6 py-3 rounded-2xl"
-            style={{ background: "linear-gradient(90deg,#00D4FF,#00A8C8)", color: "#0A0C14" }}>
-            ▶ Listen Now
-          </a>
-          <button onClick={handleReset}
-            className="text-white/60 text-sm font-semibold px-6 py-3 rounded-2xl"
-            style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
-            Create Another
-          </button>
+      <div className="min-h-full" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
+        <div className="px-5 pt-12 pb-8">
+          <div className="flex items-center mb-7">
+            <button onClick={() => { setActiveTab("script"); setIsProducing(false); setProductionJobId(null); }}
+              className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Producing Drama</h1>
+            <div className="w-8" />
+          </div>
+          <ProductionProgress
+            jobId={productionJobId}
+            onDone={handleProductionDone}
+            onError={handleProductionError}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Completed drama
+  if (activeTab === "drama" && completedJob) {
+    return (
+      <div className="min-h-full" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
+        <div className="px-5 pt-12 pb-8">
+          <div className="flex items-center mb-7">
+            <button onClick={handleReset}
+              className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Drama Ready</h1>
+            <div className="w-8" />
+          </div>
+          <DramaPlayer job={completedJob} onGenerateAnother={handleReset} />
         </div>
       </div>
     );
