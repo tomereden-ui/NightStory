@@ -16,17 +16,47 @@ const VOICE_ACCENTS = ["#00D4FF", "#8B5CF6", "#EC4899", "#10D9A0"];
 
 // ─── Wizard tab ───────────────────────────────────────────────────────────────
 
+function DurationSlider({ value, onChange, language }: { value: number; onChange: (v: number) => void; language: string }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-white/40 text-[10px] font-bold uppercase tracking-widest">
+          {language === "he" ? "אורך הסיפור" : "Story Length"}
+        </label>
+        <span
+          className="text-xs font-bold px-2.5 py-0.5 rounded-full"
+          style={{ background: "rgba(0,212,255,0.12)", color: "#00D4FF", border: "1px solid rgba(0,212,255,0.25)" }}
+        >
+          {value} {language === "he" ? "דק׳" : "min"}
+        </span>
+      </div>
+      <input
+        type="range" min={1} max={15} step={1} value={value}
+        onChange={(e) => onChange(+e.target.value)}
+        className="w-full cursor-pointer"
+        style={{ accentColor: "#00D4FF" }}
+      />
+      <div className="flex justify-between text-white/20 text-[10px] mt-1">
+        <span>1 {language === "he" ? "דק׳" : "min"}</span>
+        <span className="text-white/15">· · · · · · · · · · · · · ·</span>
+        <span>15 {language === "he" ? "דק׳" : "min"}</span>
+      </div>
+    </div>
+  );
+}
+
 interface WizardTabProps {
   hero: string; setHero: (v: string) => void;
   setting: string; setSetting: (v: string) => void;
   plot: string; setPlot: (v: string) => void;
   selectedVoice: string; setSelectedVoice: (v: string) => void;
+  durationMinutes: number; setDurationMinutes: (v: number) => void;
   generating: boolean;
   onGenerate: () => void;
   language: string;
 }
 
-function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selectedVoice, setSelectedVoice, generating, onGenerate, language }: WizardTabProps) {
+function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selectedVoice, setSelectedVoice, durationMinutes, setDurationMinutes, generating, onGenerate, language }: WizardTabProps) {
   const canGenerate = hero.trim().length > 0;
 
   return (
@@ -144,6 +174,9 @@ function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selected
         </div>
       </div>
 
+      {/* Duration slider */}
+      <DurationSlider value={durationMinutes} onChange={setDurationMinutes} language={language} />
+
       {/* Generate button */}
       <button
         onClick={onGenerate}
@@ -177,12 +210,13 @@ function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selected
 interface PromptTabProps {
   promptText: string; setPromptText: (v: string) => void;
   selectedVoice: string; setSelectedVoice: (v: string) => void;
+  durationMinutes: number; setDurationMinutes: (v: number) => void;
   generating: boolean;
   onGenerate: () => void;
   language: string;
 }
 
-function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice, generating, onGenerate, language }: PromptTabProps) {
+function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice, durationMinutes, setDurationMinutes, generating, onGenerate, language }: PromptTabProps) {
   const canGenerate = promptText.trim().length > 0;
 
   return (
@@ -247,6 +281,9 @@ function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice,
         </div>
       </div>
 
+      {/* Duration slider */}
+      <DurationSlider value={durationMinutes} onChange={setDurationMinutes} language={language} />
+
       <button
         onClick={onGenerate}
         disabled={!canGenerate || generating}
@@ -281,6 +318,7 @@ export default function CreatePage() {
   const [plot, setPlot] = useState("");
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0].id);
   const [promptText, setPromptText] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState(5);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("wizard");
   const [generating, setGenerating] = useState(false);
@@ -300,8 +338,8 @@ export default function CreatePage() {
 
     const settingLabel = STORY_SETTINGS.find((s) => s.id === setting)?.label ?? setting;
     const body: GenerateStoryRequest = activeTab === "prompt"
-      ? { mode: "prompt", promptText, primaryVoiceId: selectedVoice }
-      : { mode: "wizard", hero, setting: settingLabel, plot, primaryVoiceId: selectedVoice };
+      ? { mode: "prompt", promptText, primaryVoiceId: selectedVoice, durationMinutes }
+      : { mode: "wizard", hero, setting: settingLabel, plot, primaryVoiceId: selectedVoice, durationMinutes };
 
     try {
       const res = await fetch("/api/generate-story", {
@@ -361,7 +399,7 @@ export default function CreatePage() {
     setHero(""); setPlot(""); setSetting("");
     setPromptText(""); setScriptBlocks([]); setActiveTab("wizard");
     setGenerateError(null); setProductionJobId(null); setCompletedJob(null);
-    setIsProducing(false);
+    setIsProducing(false); setDurationMinutes(5);
   };
 
   // Generating overlay
@@ -498,11 +536,13 @@ export default function CreatePage() {
         {activeTab === "wizard" && (
           <WizardTab hero={hero} setHero={setHero} setting={setting} setSetting={setSetting}
             plot={plot} setPlot={setPlot} selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice}
+            durationMinutes={durationMinutes} setDurationMinutes={setDurationMinutes}
             generating={generating} onGenerate={handleGenerate} language={language} />
         )}
         {activeTab === "prompt" && (
           <PromptTab promptText={promptText} setPromptText={setPromptText}
             selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice}
+            durationMinutes={durationMinutes} setDurationMinutes={setDurationMinutes}
             generating={generating} onGenerate={handleGenerate} language={language} />
         )}
         {activeTab === "script" && (
