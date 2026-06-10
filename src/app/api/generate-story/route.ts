@@ -11,6 +11,8 @@ export interface GenerateStoryRequest {
   promptText?: string;
   // primary voice id chosen by user (v1–v4)
   primaryVoiceId: string;
+  // desired audio length in minutes (1–15)
+  durationMinutes?: number;
 }
 
 interface RawBlock {
@@ -18,16 +20,24 @@ interface RawBlock {
   textPayload: string;
 }
 
-// ─── Hardcoded script execution guidance ──────────────────────────────────────
+// ─── Dynamic script guidance based on requested duration ──────────────────────
 
-const SCRIPT_GUIDANCE = `Act as an expert children's audio playwright and immersive sound designer.
+function buildScriptGuidance(durationMinutes: number): string {
+  const targetWords = Math.round(durationMinutes * 140);
+  const wordRange = `${targetWords - 60}–${targetWords + 60}`;
+  const minBlocks = Math.max(4, Math.round(durationMinutes * 2.5));
+  const maxBlocks = Math.max(8, Math.round(durationMinutes * 3.6));
 
-Write a captivating, high-energy, and emotionally resonant children's audio drama script designed for children aged 5 to 9. The final audio run-time must be approximately 5 minutes (aim for a word count between 650 to 750 words).
+  return `Act as an expert children's audio playwright and immersive sound designer.
+
+Write a captivating, high-energy, and emotionally resonant children's audio drama script designed for children aged 5 to 9.
+The final audio run-time must be exactly ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""} (aim for a word count of ${wordRange} words).
 
 ### Structural Architecture
 - Characters: Exactly 2 distinct, highly expressive child or animal characters, plus 1 engaging, warm, and comforting Narrator.
 - Format: Standard multi-character screenplay naming formatting.
 - Voice Performance Tags: Every single line of dialogue or narration MUST include bracketed emotional, tone, or breath tags (e.g., [excited], [gasp], [whispering], [laughs]) to guide the text-to-speech engine's performance.
+- Script blocks: Aim for ${minBlocks}–${maxBlocks} blocks to fill the full ${durationMinutes}-minute runtime.
 
 ### Language & Dialogue Pacing Rules
 - Use highly active, sensory, and dynamic language (e.g., "SQUISH!", "CRACKLE!").
@@ -36,13 +46,19 @@ Write a captivating, high-energy, and emotionally resonant children's audio dram
 - Introduce natural dialogue elements: short interruptions, quick conversational back-and-forths, and matching reactive sounds.
 
 ### The Plot Outline
-Ensure the story has a clear, satisfying arc: an exciting opening hook, a moment of wondrous discovery, a gentle micro-conflict or suspenseful climax, and a comforting, calming resolution perfect for a satisfying conclusion.`;
+Ensure the story has a clear, satisfying arc: an exciting opening hook, a moment of wondrous discovery, a gentle micro-conflict or suspenseful climax, and a comforting, calming resolution.
+${durationMinutes >= 8 ? "For longer stories, develop the world and characters more deeply — add a secondary subplot, extra sensory detail, and more extended emotional beats." : ""}`;
+}
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
 function buildPrompt(body: GenerateStoryRequest): string {
-  let storyDef = "";
+  const durationMinutes = Math.min(15, Math.max(1, body.durationMinutes ?? 5));
+  const targetWords = Math.round(durationMinutes * 140);
+  const minBlocks = Math.max(4, Math.round(durationMinutes * 2.5));
+  const maxBlocks = Math.max(8, Math.round(durationMinutes * 3.6));
 
+  let storyDef = "";
   if (body.mode === "prompt" && body.promptText) {
     storyDef = `\n\nStory description:\n${body.promptText}`;
   } else {
@@ -54,12 +70,13 @@ function buildPrompt(body: GenerateStoryRequest): string {
   }
 
   const format =
-    "\n\nIMPORTANT: Write the entire story — all narration, dialogue, and character names — in the SAME LANGUAGE as the story description or character names above. Do not switch to English if the input is in another language.\n\n" +
-    "Return the story as a JSON array of script blocks. Each block must have exactly two fields:\n" +
-    '- "characterName": use "Narrator" (translated to the story language) for narration, or the character\'s actual name for spoken dialogue\n' +
-    '- "textPayload": the full spoken text including all performance tags (e.g., "[excited] Wow! Look at that!")\n\n' +
-    "Aim for 12–18 blocks total to cover the full 5-minute runtime. Balance dialogue across all characters.\n" +
-    "Return ONLY the raw JSON array — no markdown fences, no explanation, nothing else.";
+    `\n\nIMPORTANT: Write the entire story — all narration, dialogue, and character names — in the SAME LANGUAGE as the story description or character names above. Do not switch to English if the input is in another language.\n\n` +
+    `Target runtime: ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""} (≈ ${targetWords} words spoken aloud).\n\n` +
+    `Return the story as a JSON array of script blocks. Each block must have exactly two fields:\n` +
+    `- "characterName": use "Narrator" (translated to the story language) for narration, or the character's actual name for spoken dialogue\n` +
+    `- "textPayload": the full spoken text including all performance tags (e.g., "[excited] Wow! Look at that!")\n\n` +
+    `Aim for ${minBlocks}–${maxBlocks} blocks to fill the full runtime. Balance dialogue across all characters.\n` +
+    `Return ONLY the raw JSON array — no markdown fences, no explanation, nothing else.`;
 
   return storyDef + format;
 }
@@ -67,9 +84,7 @@ function buildPrompt(body: GenerateStoryRequest): string {
 function assignVoice(characterName: string, primaryVoiceId: string, heroName: string): string {
   const name = characterName.toLowerCase();
   if (name === "narrator") return "v1";
-  // if the block character matches the hero name, use the user's chosen voice
   if (heroName && name.includes(heroName.toLowerCase().slice(0, 5))) return primaryVoiceId;
-  // secondary characters alternate between v3 and v4
   return "v3";
 }
 
@@ -86,18 +101,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
+  const durationMinutes = Math.min(15, Math.max(1, body.durationMinutes ?? 5));
   const prompt = buildPrompt(body);
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      systemInstruction: SCRIPT_GUIDANCE,
+      systemInstruction: buildScriptGuidance(durationMinutes),
     });
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
 
-    // Strip optional markdown fences Gemini sometimes adds despite instructions
     const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
 
     let raw: RawBlock[];
