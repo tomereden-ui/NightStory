@@ -17,9 +17,10 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [speechError, setSpeechError] = useState<string | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Warm up speech synthesis so voices are ready when user taps play
+  // Pre-load voices so they're available when user taps play
   useEffect(() => {
     const load = () => window.speechSynthesis.getVoices();
     load();
@@ -31,18 +32,52 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const activeVoice = activeBlock ? (voices.find((v) => v.id === activeBlock.assignedVoiceId) ?? voices[0]) : null;
 
   const startSpeech = useCallback((block: ScriptBlock) => {
-    window.speechSynthesis.cancel();
-    const voice = voices.find((v) => v.id === block.assignedVoiceId);
-    const utterance = new SpeechSynthesisUtterance(block.textPayload);
-    utterance.rate = voice?.style === "gentle" || voice?.style === "calm" ? 0.88 : 1.0;
-    utterance.pitch = voice?.style === "playful" ? 1.25 : 1.0;
-    utterance.volume = 1;
-    utterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
-    utterance.onend = () => { setIsPlaying(false); setIsPaused(false); setActiveBlockId(null); };
-    utterance.onerror = (e) => { console.error("SpeechSynthesis error", e); setIsPlaying(false); setIsPaused(false); };
-    utteranceRef.current = utterance;
-    // Chrome bug: speak() silently fails if called immediately after cancel()
-    setTimeout(() => { window.speechSynthesis.speak(utterance); }, 50);
+    setSpeechError(null);
+
+    if (!('speechSynthesis' in window)) {
+      setSpeechError("Speech not supported in this browser");
+      return;
+    }
+
+    const synth = window.speechSynthesis;
+    synth.cancel();
+
+    const doSpeak = () => {
+      const utterance = new SpeechSynthesisUtterance(block.textPayload);
+      utterance.lang = "en-US";
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 1;
+
+      // Explicitly pick a voice — Chrome on Windows silently fails without one
+      const available = synth.getVoices();
+      const pick = available.find((v) => v.lang.startsWith("en") && v.localService)
+        ?? available.find((v) => v.lang.startsWith("en"))
+        ?? available[0];
+      if (pick) utterance.voice = pick;
+
+      utterance.onstart = () => { setIsPlaying(true); setIsPaused(false); };
+      utterance.onend = () => { setIsPlaying(false); setIsPaused(false); setActiveBlockId(null); };
+      utterance.onerror = (e) => {
+        console.error("SpeechSynthesis error", e);
+        setSpeechError(`Audio error: ${e.error}`);
+        setIsPlaying(false);
+        setIsPaused(false);
+      };
+
+      utteranceRef.current = utterance;
+      synth.speak(utterance);
+
+      // Verify it actually started (Chrome silent-fail guard)
+      setTimeout(() => {
+        if (!synth.speaking && !synth.pending) {
+          setSpeechError("Audio didn't start — check system volume or try again");
+          setIsPlaying(false);
+        }
+      }, 400);
+    };
+
+    setTimeout(doSpeak, 150);
     setIsPlaying(true);
     setIsPaused(false);
   }, [voices]);
@@ -153,6 +188,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           voice={activeVoice}
           isPlaying={isPlaying}
           isPaused={isPaused}
+          speechError={speechError}
           onPlayPause={handlePlayPause}
           onStop={handleStop}
         />

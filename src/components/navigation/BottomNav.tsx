@@ -10,11 +10,30 @@ const NAV = [
   { label: "Profile",  icon: "👤", href: "/profile"   },
 ];
 
+function BuildBadge() {
+  const raw = process.env.NEXT_PUBLIC_BUILD_TIME;
+  if (!raw) return null;
+  const d = new Date(raw);
+  const label = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+    + " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return (
+    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full pb-1 pointer-events-none">
+      <span
+        className="text-[9px] font-mono px-2 py-0.5 rounded-full"
+        style={{ background: "rgba(0,212,255,0.12)", color: "rgba(0,212,255,0.5)", border: "1px solid rgba(0,212,255,0.15)" }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export default function BottomNav() {
   const pathname = usePathname();
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50">
+      <BuildBadge />
       <div
         className="absolute inset-0"
         style={{

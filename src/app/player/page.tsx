@@ -45,10 +45,20 @@ function PlayerContent() {
       return;
     }
     const seg = SEGMENTS[index];
+    const synth = window.speechSynthesis;
     const utterance = new SpeechSynthesisUtterance(seg.text);
+    utterance.lang = "en-US";
     utterance.rate = seg.type === "narrator" ? 0.9 : 1.0;
     utterance.pitch = seg.type === "character" ? 1.15 : 1.0;
     utterance.volume = 1;
+
+    // Explicitly set a local English voice — Chrome on Windows silently fails without this
+    const available = synth.getVoices();
+    const pick = available.find((v) => v.lang.startsWith("en") && v.localService)
+      ?? available.find((v) => v.lang.startsWith("en"))
+      ?? available[0];
+    if (pick) utterance.voice = pick;
+
     utterance.onstart = () => {
       setActiveSegment(index);
       setProgress(Math.round((index / SEGMENTS.length) * 100));
@@ -62,7 +72,7 @@ function PlayerContent() {
       setPlaying(false);
       setActiveSegment(null);
     };
-    window.speechSynthesis.speak(utterance);
+    synth.speak(utterance);
   }, []);
 
   const handlePlayPause = useCallback(() => {
@@ -73,11 +83,11 @@ function PlayerContent() {
       window.speechSynthesis.resume();
       setPlaying(true);
     } else {
-      // Chrome bug: speak() fails if called immediately after cancel()
       window.speechSynthesis.cancel();
       segmentIndexRef.current = 0;
       setPlaying(true);
-      setTimeout(() => speakSegment(0), 50);
+      // 150ms gap after cancel — needed for Chrome to reset properly
+      setTimeout(() => speakSegment(0), 150);
     }
   }, [playing, speakSegment]);
 
