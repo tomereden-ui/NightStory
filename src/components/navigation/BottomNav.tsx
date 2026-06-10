@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // Update this string with each push so the version is always visible
-const BUILD_LABEL = "Jun 10 · 2025";
+const BUILD_LABEL = "Jun 10 · v3";
 
 const NAV = [
-  { label: "Library",  icon: "📚", href: "/library" },
-  { label: "Discover", icon: "🔍", href: "/"         },
-  { label: "Sleep",    icon: "🌙", href: "/player"   },
-  { label: "Profile",  icon: "👤", href: "/profile"  },
+  { label: "Library", icon: "📚", href: "/library" },
+  { label: "Create",  icon: "✨", href: "/create"  },
+  { label: "Voices",  icon: "🎙️", href: "/voices"  },
+  { label: "Profile", icon: "👤", href: "/profile"  },
 ];
 
 export default function BottomNav() {
@@ -49,10 +49,7 @@ export default function BottomNav() {
 
       <ul className="relative flex items-center justify-around px-2 pt-0 pb-2">
         {NAV.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname === item.href || pathname.startsWith(item.href);
+          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
 
           return (
             <li key={item.href}>
