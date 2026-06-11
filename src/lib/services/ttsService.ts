@@ -32,12 +32,16 @@ export async function synthesizeLine(
   voiceName: string,
   apiKey: string,
   outputPath: string,
+  systemInstruction?: string,
 ): Promise<void> {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
-  const body = {
+  const body: Record<string, unknown> = {
+    ...(systemInstruction
+      ? { systemInstruction: { parts: [{ text: systemInstruction }] } }
+      : {}),
     contents: [{ role: "user", parts: [{ text: line }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],

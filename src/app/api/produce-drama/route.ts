@@ -9,6 +9,7 @@ import { mixTracks, concatenateTracks, concatenateWavFilesPureJS } from "@/lib/s
 import { VoiceMap } from "@/lib/services/voiceMap";
 import { addEntry } from "@/lib/libraryStore";
 import { generateCoverImage } from "@/lib/services/imageService";
+import { profileCharacters } from "@/lib/services/characterProfiler";
 import type { ScriptBlock } from "@/types";
 
 function generateSummary(blocks: ScriptBlock[]): string {
@@ -54,7 +55,14 @@ async function runProduction(
     });
 
     const drama = await planDrama(blocks, geminiKey);
-    updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 15 });
+    updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 12 });
+
+    // ── Step 1b: Voice profiling ───────────────────────────────────────────
+    updateJob(jobId, {
+      step: "🎭 Casting character voices…",
+      progress: 15,
+    });
+    const voiceProfiles = await profileCharacters(blocks, geminiKey);
 
     const dialogueTracks = drama.tracks.filter((t) => t.type === "dialogue");
     const sfxTracks = drama.tracks.filter((t) => t.type === "sfx");
@@ -77,12 +85,12 @@ async function runProduction(
       await Promise.all(
         batch.map(async (track) => {
           const outPath = path.join(jobTmp, `${track.id}.wav`);
-          const voice = voiceMap.assign(
-            track.character ?? "Narrator",
-            track.voice_style,
-          );
+          const charName = track.character ?? "Narrator";
+          const profile = voiceProfiles[charName];
+          const voice = profile?.voiceName ?? voiceMap.assign(charName, track.voice_style);
+          const persona = profile?.persona;
           try {
-            await synthesizeLine(track.line ?? "", voice, geminiKey, outPath);
+            await synthesizeLine(track.line ?? "", voice, geminiKey, outPath, persona);
           } catch (err) {
             console.warn(`[TTS] Skipping ${track.id}:`, err);
             skippedLines.push(track.id);
@@ -213,7 +221,9 @@ async function runProduction(
       step: "✅ Drama ready!",
       progress: 100,
       audioUrl,
-      voiceAssignments: voiceMap.getAll(),
+      voiceAssignments: Object.fromEntries(
+        Object.entries(voiceProfiles).map(([k, v]) => [k, v.voiceName])
+      ),
       skippedLines,
     });
   } catch (err: unknown) {
