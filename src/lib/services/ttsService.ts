@@ -38,10 +38,7 @@ export async function synthesizeLine(
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
-  const body: Record<string, unknown> = {
-    ...(systemInstruction
-      ? { systemInstruction: { parts: [{ text: systemInstruction }] } }
-      : {}),
+  const basePayload = {
     contents: [{ role: "user", parts: [{ text: line }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
@@ -49,36 +46,47 @@ export async function synthesizeLine(
     },
   };
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+  // Try with systemInstruction first; fall back to without it if the model rejects it
+  const payloads: Record<string, unknown>[] = systemInstruction
+    ? [
+        { systemInstruction: { parts: [{ text: systemInstruction }] }, ...basePayload },
+        basePayload,
+      ]
+    : [basePayload];
 
-    if (res.status === 500 && attempt < 3) {
-      await new Promise((r) => setTimeout(r, attempt * 1000));
-      continue;
+  let lastError = "";
+  for (const body of payloads) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (res.status === 500 && attempt < 3) {
+        await new Promise((r) => setTimeout(r, attempt * 1000));
+        continue;
+      }
+      if (!res.ok) {
+        lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`;
+        break; // try next payload (without systemInstruction)
+      }
+
+      const json = await res.json();
+      const inlineData = json.candidates?.[0]?.content?.parts?.[0]
+        ?.inlineData as { mimeType: string; data: string } | undefined;
+
+      if (!inlineData?.data) { lastError = "No audio in TTS response"; break; }
+
+      const buf =
+        inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")
+          ? pcmToWav(inlineData.data)
+          : Buffer.from(inlineData.data, "base64");
+
+      fs.writeFileSync(outputPath, buf);
+      return;
     }
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`TTS ${res.status}: ${err.slice(0, 200)}`);
-    }
-
-    const json = await res.json();
-    const inlineData = json.candidates?.[0]?.content?.parts?.[0]
-      ?.inlineData as { mimeType: string; data: string } | undefined;
-
-    if (!inlineData?.data) throw new Error("No audio in TTS response");
-
-    const buf =
-      inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")
-        ? pcmToWav(inlineData.data)
-        : Buffer.from(inlineData.data, "base64");
-
-    fs.writeFileSync(outputPath, buf);
-    return;
   }
 
-  throw new Error("TTS failed after 3 attempts");
+  throw new Error(lastError || "TTS failed");
 }
