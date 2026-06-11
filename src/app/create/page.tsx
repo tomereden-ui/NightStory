@@ -5,12 +5,13 @@ import { useLanguage } from "@/context/LanguageContext";
 import ScriptTab from "@/components/studio/ScriptTab";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
+import QuickCreateTab from "@/components/studio/QuickCreateTab";
 import { VOICES, STORY_SETTINGS } from "@/lib/mockData";
 import type { ScriptBlock } from "@/types";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 
-type ActiveTab = "wizard" | "prompt" | "script" | "producing" | "drama";
+type ActiveTab = "wizard" | "prompt" | "quick" | "script" | "producing" | "drama";
 
 const VOICE_ACCENTS = ["#00D4FF", "#8B5CF6", "#EC4899", "#10D9A0"];
 
@@ -358,6 +359,25 @@ export default function CreatePage() {
     }
   };
 
+  const handleGenerateWithPrompt = useCallback(async (text: string, duration: number) => {
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      const res = await fetch("/api/generate-story", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "prompt", promptText: text, primaryVoiceId: selectedVoice, durationMinutes: duration }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed");
+      setScriptBlocks(data.blocks as ScriptBlock[]);
+      setActiveTab("script");
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setGenerating(false);
+    }
+  }, [selectedVoice]);
+
   const handleProduce = useCallback(async (blocks: ScriptBlock[]) => {
     setIsProducing(true);
     setGenerateError(null);
@@ -477,6 +497,7 @@ export default function CreatePage() {
   const TABS: { id: ActiveTab; label: string }[] = [
     { id: "wizard", label: language === "he" ? "אשף" : "Guided Wizard" },
     { id: "prompt", label: language === "he" ? "טקסט חופשי" : "Text Prompt" },
+    { id: "quick",  label: language === "he" ? "בקליק" : "Quick" },
     { id: "script", label: language === "he" ? "סיפור שנוצר" : "Script" },
   ];
 
@@ -544,6 +565,9 @@ export default function CreatePage() {
             selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice}
             durationMinutes={durationMinutes} setDurationMinutes={setDurationMinutes}
             generating={generating} onGenerate={handleGenerate} language={language} />
+        )}
+        {activeTab === "quick" && (
+          <QuickCreateTab onGenerate={handleGenerateWithPrompt} generating={generating} language={language} />
         )}
         {activeTab === "script" && (
           <ScriptTab blocks={scriptBlocks} voices={VOICES} onBlocksChange={setScriptBlocks}
