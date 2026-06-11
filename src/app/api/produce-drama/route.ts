@@ -8,6 +8,7 @@ import { generateSfx, writeSilence } from "@/lib/services/sfxService";
 import { mixTracks, concatenateTracks, concatenateWavFilesPureJS } from "@/lib/services/audioMixer";
 import { VoiceMap } from "@/lib/services/voiceMap";
 import { addEntry } from "@/lib/libraryStore";
+import { generateCoverImage } from "@/lib/services/imageService";
 import type { ScriptBlock } from "@/types";
 
 function generateSummary(blocks: ScriptBlock[]): string {
@@ -184,11 +185,24 @@ async function runProduction(
       }
     }
 
+    // ── Step 5: Cover image ───────────────────────────────────────────────
+    updateJob(jobId, {
+      status: "mixing",
+      step: "🎨 Generating cover image…",
+      progress: 88,
+    });
+
+    const coverFilename = `cover_${jobId}.jpg`;
+    const coverPath = path.join(OUT_DIR, coverFilename);
+    const coverOk = await generateCoverImage(drama.title, blocks, geminiKey, coverPath);
+    const coverUrl = coverOk ? `/output/${coverFilename}` : undefined;
+
     addEntry({
       id: jobId,
       title: drama.title,
       summary: generateSummary(blocks),
       audioUrl,
+      coverUrl,
       durationSeconds: drama.duration_estimate_seconds,
       createdAt: Date.now(),
       blocks,

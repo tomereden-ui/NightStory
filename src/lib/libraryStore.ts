@@ -7,6 +7,7 @@ export interface LibraryEntry {
   title: string;
   summary: string;
   audioUrl: string;
+  coverUrl?: string;
   durationSeconds: number;
   createdAt: number;
   blocks: ScriptBlock[];

@@ -102,9 +102,18 @@ export default function StoryDetailPage() {
           <div className="w-8" />
         </div>
 
-        <p className="text-center text-white/20 text-[11px] mb-7">
+        <p className="text-center text-white/20 text-[11px] mb-6">
           {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
         </p>
+
+        {/* Cover image */}
+        {entry.coverUrl && (
+          <div className="mb-7 rounded-2xl overflow-hidden w-full aspect-square max-w-xs mx-auto"
+            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover" />
+          </div>
+        )}
 
         {/* Script blocks */}
         <div className="flex flex-col gap-3">

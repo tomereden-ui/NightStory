@@ -67,13 +67,18 @@ export default function LibraryPage() {
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
               >
                 <div
-                  className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xl"
+                  className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center text-xl"
                   style={{
                     background: "rgba(0,212,255,0.08)",
                     border: "1px solid rgba(0,212,255,0.15)",
                   }}
                 >
-                  🎙️
+                  {entry.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover" />
+                  ) : (
+                    "🎙️"
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-sm font-semibold truncate leading-snug">
