@@ -7,7 +7,16 @@ import { synthesizeLine } from "@/lib/services/ttsService";
 import { generateSfx, writeSilence } from "@/lib/services/sfxService";
 import { mixTracks, concatenateTracks, concatenateWavFilesPureJS } from "@/lib/services/audioMixer";
 import { VoiceMap } from "@/lib/services/voiceMap";
+import { addEntry } from "@/lib/libraryStore";
 import type { ScriptBlock } from "@/types";
+
+function generateSummary(blocks: ScriptBlock[]): string {
+  const narrator = blocks.find((b) => b.characterName.toLowerCase().includes("narrat"));
+  const text = (narrator ?? blocks[0])?.textPayload ?? "";
+  const stripped = text.replace(/\[.*?\]/g, "").trim();
+  const words = stripped.split(/\s+/).filter(Boolean);
+  return words.slice(0, 20).join(" ") + (words.length > 20 ? "…" : "");
+}
 
 const TMP_DIR = path.join(process.cwd(), "tmp", "audio");
 const OUT_DIR = path.join(process.cwd(), "public", "output");
@@ -174,6 +183,16 @@ async function runProduction(
         audioUrl = `/output/${wavFilename}`;
       }
     }
+
+    addEntry({
+      id: jobId,
+      title: drama.title,
+      summary: generateSummary(blocks),
+      audioUrl,
+      durationSeconds: drama.duration_estimate_seconds,
+      createdAt: Date.now(),
+      blocks,
+    });
 
     updateJob(jobId, {
       status: "done",

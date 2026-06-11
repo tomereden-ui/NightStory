@@ -32,3 +32,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated story library and audio output
+/data/
+/public/output/
+/tmp/
