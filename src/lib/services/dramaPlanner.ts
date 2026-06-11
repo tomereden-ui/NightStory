@@ -33,8 +33,8 @@ TIMING RULES:
 - Start first dialogue at 1500ms to let the opening ambient SFX establish
 
 SFX RULES:
-- First track: ambient background (start_ms: 0, loop: true, duration_hint_ms: 12000)
-- Add 3–5 event SFX at emotionally significant moments
+- First track MUST be an ambient background loop (start_ms: 0, loop: true, duration_hint_ms: 12000). Its description must match the story's setting — e.g. "gentle forest ambience with birds and rustling leaves" for a forest, "ocean waves on a sandy beach" for the sea, "cozy fireplace crackling indoors" for a home. Choose the most fitting soundscape for the story.
+- Add 2–4 event SFX at emotionally significant moments (a discovery, a scare, a magical moment)
 - SFX descriptions must be short, concrete, and specific (e.g. "owl hooting in a dark forest, single call")
 - Non-looping SFX duration_hint_ms: typically 1000–4000ms
 

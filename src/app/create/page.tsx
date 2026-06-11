@@ -318,7 +318,7 @@ export default function CreatePage() {
   const [plot, setPlot] = useState("");
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0].id);
   const [promptText, setPromptText] = useState("");
-  const [durationMinutes, setDurationMinutes] = useState(5);
+  const [durationMinutes, setDurationMinutes] = useState(1);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("wizard");
   const [generating, setGenerating] = useState(false);
