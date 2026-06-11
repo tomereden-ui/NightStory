@@ -44,9 +44,9 @@ export async function POST(req: NextRequest) {
   }
 
   const outPath = path.join(OUT_DIR, `test_sfx_${id}.mp3`);
-  const ok = await generateSfx(body.text, 5000, elevenKey, outPath);
-  if (!ok) {
-    return NextResponse.json({ error: "ElevenLabs SFX generation failed. Check your API key." }, { status: 502 });
+  const result = await generateSfx(body.text, 5000, elevenKey, outPath);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 502 });
   }
 
   return NextResponse.json({ audioUrl: `/output/test_sfx_${id}.mp3` });

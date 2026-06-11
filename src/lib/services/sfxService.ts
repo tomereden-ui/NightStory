@@ -9,7 +9,7 @@ export async function generateSfx(
   durationHintMs: number,
   apiKey: string,
   outputPath: string,
-): Promise<boolean> {
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const durationSeconds = Math.min(22, Math.max(0.5, durationHintMs / 1000));
 
   try {
@@ -28,18 +28,18 @@ export async function generateSfx(
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      console.warn(
-        `[SFX] ElevenLabs ${res.status} for "${description.slice(0, 50)}": ${txt.slice(0, 100)}`,
-      );
-      return false;
+      const msg = `ElevenLabs ${res.status}: ${txt.slice(0, 200)}`;
+      console.warn(`[SFX] ${msg}`);
+      return { ok: false, error: msg };
     }
 
     const buf = Buffer.from(await res.arrayBuffer());
     fs.writeFileSync(outputPath, buf);
-    return true;
+    return { ok: true };
   } catch (err) {
-    console.warn(`[SFX] Failed for "${description.slice(0, 50)}":`, err);
-    return false;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[SFX] Failed for "${description.slice(0, 50)}":`, msg);
+    return { ok: false, error: msg };
   }
 }
 

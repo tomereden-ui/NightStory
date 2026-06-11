@@ -113,13 +113,13 @@ async function runProduction(
             ? Math.min(22000, totalDurationMs) // request full duration for ambient
             : (track.duration_hint_ms ?? 3000);
 
-          const ok = await generateSfx(
+          const sfxResult = await generateSfx(
             track.description ?? "",
             durationHint,
             elevenKey,
             outPath,
           );
-          if (!ok) writeSilence(durationHint, outPath.replace(".mp3", ".wav"));
+          if (!sfxResult.ok) writeSilence(durationHint, outPath.replace(".mp3", ".wav"));
 
           sfxDone++;
           updateJob(jobId, {
