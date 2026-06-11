@@ -22,7 +22,7 @@ export async function generateSfx(
       body: JSON.stringify({
         text: description,
         duration_seconds: durationSeconds,
-        prompt_influence: 0.3,
+        prompt_influence: 0.8,
       }),
     });
 

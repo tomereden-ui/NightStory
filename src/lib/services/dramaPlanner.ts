@@ -33,10 +33,10 @@ TIMING RULES:
 - Start first dialogue at 1500ms to let the opening ambient SFX establish
 
 SFX RULES:
-- First track MUST be an ambient background loop (start_ms: 0, loop: true, duration_hint_ms: 12000). Its description must match the story's setting — e.g. "gentle forest ambience with birds and rustling leaves" for a forest, "ocean waves on a sandy beach" for the sea, "cozy fireplace crackling indoors" for a home. Choose the most fitting soundscape for the story.
-- Add 2–4 event SFX at emotionally significant moments (a discovery, a scare, a magical moment)
-- SFX descriptions must be short, concrete, and specific (e.g. "owl hooting in a dark forest, single call")
-- Non-looping SFX duration_hint_ms: typically 1000–4000ms
+- First track MUST be an ambient background loop (start_ms: 0, loop: true, duration_hint_ms: 12000). Its description must be a rich, evocative soundscape that matches the story's setting exactly — include the environment, texture, mood, and subtle details (e.g. "a dense enchanted forest at night, with soft cricket chirps, distant owl hoots, leaves rustling in a light breeze, and a faint magical shimmer — peaceful and mysterious").
+- Add 2–4 event SFX at emotionally significant moments (a discovery, a scare, a magical moment, a surprise).
+- Each SFX description must be detailed and cinematic — 2–3 sentences describing the exact sound, its texture, intensity, and emotional tone so the sound generator can produce it precisely. Example: "A single wooden door creaking open slowly, old and heavy, with a deep groan that echoes in a stone corridor. Tense and eerie."
+- Non-looping SFX duration_hint_ms: typically 1500–4000ms
 
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no explanation:
 {
