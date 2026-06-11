@@ -79,22 +79,27 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    // Generate TTS in batches of 3 for speed
-    for (let i = 0; i < dialogueTracks.length; i += 3) {
-      const batch = dialogueTracks.slice(i, i + 3);
+    // Generate TTS in batches of 2 to stay within rate limits
+    for (let i = 0; i < dialogueTracks.length; i += 2) {
+      const batch = dialogueTracks.slice(i, i + 2);
       await Promise.all(
         batch.map(async (track) => {
           const outPath = path.join(jobTmp, `${track.id}.wav`);
+          const line = track.line?.trim() ?? "";
+          if (!line) {
+            writeSilence(500, outPath);
+            dialogueDone++;
+            return;
+          }
           const charName = track.character ?? "Narrator";
           const profile = voiceProfiles[charName];
           const voice = profile?.voiceName ?? voiceMap.assign(charName, track.voice_style);
           const persona = profile?.persona;
           try {
-            await synthesizeLine(track.line ?? "", voice, geminiKey, outPath, persona);
+            await synthesizeLine(line, voice, geminiKey, outPath, persona);
           } catch (err) {
             console.warn(`[TTS] Skipping ${track.id}:`, err);
             skippedLines.push(track.id);
-            // write silence so the timeline still has a file at this slot
             writeSilence(2000, outPath);
           }
           dialogueDone++;

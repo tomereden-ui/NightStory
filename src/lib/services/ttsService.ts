@@ -54,29 +54,46 @@ export async function synthesizeLine(
       ]
     : [basePayload];
 
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
   let lastError = "";
   for (const body of payloads) {
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    // Up to 5 attempts per payload with backoff for rate limits
+    for (let attempt = 1; attempt <= 5; attempt++) {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
-      if (res.status === 500 && attempt < 3) {
-        await new Promise((r) => setTimeout(r, attempt * 1000));
+      // Rate limited — wait and retry same payload
+      if (res.status === 429) {
+        const wait = Math.min(30000, attempt * 3000);
+        console.warn(`[TTS] Rate limited, waiting ${wait}ms (attempt ${attempt})`);
+        await sleep(wait);
         continue;
       }
+
+      // Transient server error — retry with short backoff
+      if (res.status === 500 && attempt < 3) {
+        await sleep(attempt * 1500);
+        continue;
+      }
+
+      // Other API error — try next payload (e.g. without systemInstruction)
       if (!res.ok) {
         lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`;
-        break; // try next payload (without systemInstruction)
+        break;
       }
 
       const json = await res.json();
       const inlineData = json.candidates?.[0]?.content?.parts?.[0]
         ?.inlineData as { mimeType: string; data: string } | undefined;
 
-      if (!inlineData?.data) { lastError = "No audio in TTS response"; break; }
+      if (!inlineData?.data) {
+        lastError = "No audio in TTS response";
+        break;
+      }
 
       const buf =
         inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")
