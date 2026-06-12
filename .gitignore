@@ -33,7 +33,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# generated story library and audio output
+# design mockups
+design-concepts.html
 /data/
 /public/output/
 /tmp/
