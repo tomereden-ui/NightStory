@@ -13,7 +13,7 @@ import type { Job } from "@/lib/jobs";
 
 type ActiveTab = "wizard" | "prompt" | "quick" | "script" | "producing" | "drama";
 
-const VOICE_ACCENTS = ["#00D4FF", "#8B5CF6", "#EC4899", "#10D9A0"];
+const VOICE_ACCENTS = ["#4fc3f7", "#8B5CF6", "#EC4899", "#10D9A0"];
 
 // ─── Wizard tab ───────────────────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ function DurationSlider({ value, onChange, language }: { value: number; onChange
         </label>
         <span
           className="text-xs font-bold px-2.5 py-0.5 rounded-full"
-          style={{ background: "rgba(0,212,255,0.12)", color: "#00D4FF", border: "1px solid rgba(0,212,255,0.25)" }}
+          style={{ background: "rgba(79,195,247,0.12)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.25)" }}
         >
           {value} {language === "he" ? "דק׳" : "min"}
         </span>
@@ -35,7 +35,7 @@ function DurationSlider({ value, onChange, language }: { value: number; onChange
         type="range" min={1} max={15} step={1} value={value}
         onChange={(e) => onChange(+e.target.value)}
         className="w-full cursor-pointer"
-        style={{ accentColor: "#00D4FF" }}
+        style={{ accentColor: "#4fc3f7" }}
       />
       <div className="flex justify-between text-white/20 text-[10px] mt-1">
         <span>1 {language === "he" ? "דק׳" : "min"}</span>
@@ -77,7 +77,7 @@ function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selected
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.08)",
           }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)")}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
           onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
         />
       </div>
@@ -96,9 +96,9 @@ function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selected
                 onClick={() => setSetting(isSelected ? "" : s.id)}
                 className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium transition-all active:scale-95"
                 style={isSelected ? {
-                  background: "rgba(0,212,255,0.14)",
-                  border: "1px solid rgba(0,212,255,0.4)",
-                  color: "#00D4FF",
+                  background: "rgba(79,195,247,0.14)",
+                  border: "1px solid rgba(79,195,247,0.4)",
+                  color: "#4fc3f7",
                 } : {
                   background: "rgba(255,255,255,0.04)",
                   border: "1px solid rgba(255,255,255,0.1)",
@@ -128,7 +128,7 @@ function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selected
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.08)",
           }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)")}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
           onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
         />
       </div>
@@ -141,7 +141,7 @@ function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selected
         <div className="flex gap-4">
           {VOICES.map((voice, idx) => {
             const isSelected = selectedVoice === voice.id;
-            const accent = VOICE_ACCENTS[idx] ?? "#00D4FF";
+            const accent = VOICE_ACCENTS[idx] ?? "#4fc3f7";
             return (
               <button
                 key={voice.id}
@@ -184,9 +184,9 @@ function WizardTab({ hero, setHero, setting, setSetting, plot, setPlot, selected
         disabled={!canGenerate || generating}
         className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
         style={canGenerate && !generating ? {
-          background: "linear-gradient(90deg,#00D4FF,#00A8C8)",
-          color: "#0A0C14",
-          boxShadow: "0 4px 24px rgba(0,212,255,0.35)",
+          background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)",
+          color: "#05080F",
+          boxShadow: "0 4px 24px rgba(79,195,247,0.35)",
         } : {
           background: "rgba(255,255,255,0.05)",
           color: "rgba(255,255,255,0.2)",
@@ -238,7 +238,7 @@ function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice,
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.08)",
           }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)")}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
           onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
         />
         <p className="text-white/15 text-[10px] mt-1 text-right">
@@ -254,7 +254,7 @@ function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice,
         <div className="flex gap-4">
           {VOICES.map((voice, idx) => {
             const isSelected = selectedVoice === voice.id;
-            const accent = VOICE_ACCENTS[idx] ?? "#00D4FF";
+            const accent = VOICE_ACCENTS[idx] ?? "#4fc3f7";
             return (
               <button key={voice.id} onClick={() => setSelectedVoice(voice.id)} className="flex flex-col items-center gap-2 flex-1">
                 <div
@@ -290,9 +290,9 @@ function PromptTab({ promptText, setPromptText, selectedVoice, setSelectedVoice,
         disabled={!canGenerate || generating}
         className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
         style={canGenerate && !generating ? {
-          background: "linear-gradient(90deg,#00D4FF,#00A8C8)",
-          color: "#0A0C14",
-          boxShadow: "0 4px 24px rgba(0,212,255,0.35)",
+          background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)",
+          color: "#05080F",
+          boxShadow: "0 4px 24px rgba(79,195,247,0.35)",
         } : {
           background: "rgba(255,255,255,0.05)",
           color: "rgba(255,255,255,0.2)",
@@ -425,13 +425,13 @@ export default function CreatePage() {
   // Generating overlay
   if (generating) {
     return (
-      <div className="min-h-full flex flex-col items-center justify-center px-8 text-center" style={{ background: "#0A0C14" }}>
+      <div className="min-h-full flex flex-col items-center justify-center px-8 text-center" style={{ background: "transparent" }}>
         <div className="flex flex-col items-center gap-6">
           <div className="relative w-24 h-24 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full animate-ping opacity-20"
-              style={{ background: "radial-gradient(circle,#00D4FF,#0088AA)" }} />
+              style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
             <div className="absolute inset-2 rounded-full opacity-40 animate-pulse"
-              style={{ background: "radial-gradient(circle,#00D4FF,#0088AA)" }} />
+              style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
             <span className="relative text-5xl animate-pulse">✨</span>
           </div>
           <div>
@@ -446,7 +446,7 @@ export default function CreatePage() {
             {[0, 1, 2, 3].map((i) => (
               <span key={i} className="w-2 h-2 rounded-full"
                 style={{
-                  background: "linear-gradient(135deg,#00D4FF,#0088AA)",
+                  background: "linear-gradient(135deg,#4fc3f7,#0088AA)",
                   animation: `bounce 1s ease-in-out ${i * 0.15}s infinite`,
                 }} />
             ))}
@@ -459,7 +459,7 @@ export default function CreatePage() {
   // Production in progress
   if (activeTab === "producing" && productionJobId) {
     return (
-      <div className="min-h-full" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
+      <div className="min-h-full" style={{ background: "transparent" }} dir={isRTL ? "rtl" : "ltr"}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
             <button onClick={() => { setActiveTab("script"); setIsProducing(false); setProductionJobId(null); }}
@@ -480,7 +480,7 @@ export default function CreatePage() {
   // Completed drama
   if (activeTab === "drama" && completedJob) {
     return (
-      <div className="min-h-full" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
+      <div className="min-h-full" style={{ background: "transparent" }} dir={isRTL ? "rtl" : "ltr"}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
             <button onClick={handleReset}
@@ -502,7 +502,7 @@ export default function CreatePage() {
   ];
 
   return (
-    <div className="min-h-full" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
+    <div className="min-h-full" style={{ background: "transparent" }} dir={isRTL ? "rtl" : "ltr"}>
       <div className="px-5 pt-12 pb-8">
         {/* Header */}
         <div className="flex items-center mb-7">
@@ -535,11 +535,11 @@ export default function CreatePage() {
                 <span className="flex items-center justify-center gap-1.5">
                   {label}
                   {id === "script" && hasScript && (
-                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#00D4FF" }} />
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#4fc3f7" }} />
                   )}
                 </span>
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#00D4FF" }} />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />
                 )}
               </button>
             );

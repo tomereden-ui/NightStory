@@ -46,8 +46,8 @@ export default function ScriptBlockCard({
       style={
         isFocused
           ? {
-              borderColor: "rgba(0,212,255,0.4)",
-              boxShadow: "0 0 0 1px rgba(0,212,255,0.1), 0 0 20px rgba(0,212,255,0.06)",
+              borderColor: "rgba(79,195,247,0.4)",
+              boxShadow: "0 0 0 1px rgba(79,195,247,0.1), 0 0 20px rgba(79,195,247,0.06)",
             }
           : { borderColor: "rgba(255,255,255,0.06)" }
       }
@@ -57,7 +57,7 @@ export default function ScriptBlockCard({
         className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full transition-all duration-200"
         style={{
           background: isFocused
-            ? "linear-gradient(180deg,#00D4FF,#8B5CF6)"
+            ? "linear-gradient(180deg,#4fc3f7,#8B5CF6)"
             : "transparent",
         }}
       />

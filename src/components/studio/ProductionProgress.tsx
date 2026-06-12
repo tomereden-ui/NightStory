@@ -76,11 +76,11 @@ export default function ProductionProgress({ jobId, onDone, onError }: Props) {
       <div className="relative w-24 h-24 flex items-center justify-center">
         <div
           className="absolute inset-0 rounded-full animate-ping opacity-15"
-          style={{ background: "radial-gradient(circle,#00D4FF,#0088AA)" }}
+          style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }}
         />
         <div
           className="absolute inset-2 rounded-full opacity-30 animate-pulse"
-          style={{ background: "radial-gradient(circle,#00D4FF,#0088AA)" }}
+          style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }}
         />
         <span className="relative text-5xl">{icon}</span>
       </div>
@@ -100,7 +100,7 @@ export default function ProductionProgress({ jobId, onDone, onError }: Props) {
           className="h-full rounded-full transition-all duration-500"
           style={{
             width: `${progress}%`,
-            background: "linear-gradient(90deg,#00D4FF,#00A8C8)",
+            background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)",
           }}
         />
       </div>
@@ -117,12 +117,12 @@ export default function ProductionProgress({ jobId, onDone, onError }: Props) {
               className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
               style={{
                 background: isActive
-                  ? "rgba(0,212,255,0.08)"
+                  ? "rgba(79,195,247,0.08)"
                   : isDone
                   ? "rgba(16,217,160,0.05)"
                   : "rgba(255,255,255,0.02)",
                 border: isActive
-                  ? "1px solid rgba(0,212,255,0.25)"
+                  ? "1px solid rgba(79,195,247,0.25)"
                   : isDone
                   ? "1px solid rgba(16,217,160,0.15)"
                   : "1px solid rgba(255,255,255,0.05)",
@@ -135,7 +135,7 @@ export default function ProductionProgress({ jobId, onDone, onError }: Props) {
                 className="text-xs font-medium"
                 style={{
                   color: isActive
-                    ? "#00D4FF"
+                    ? "#4fc3f7"
                     : isDone
                     ? "#10D9A0"
                     : "rgba(255,255,255,0.25)",
@@ -150,7 +150,7 @@ export default function ProductionProgress({ jobId, onDone, onError }: Props) {
                       key={j}
                       className="w-0.5 rounded-full"
                       style={{
-                        background: "#00D4FF",
+                        background: "#4fc3f7",
                         height: `${6 + j * 3}px`,
                         animation: `bounce 0.5s ease-in-out ${j * 0.1}s infinite`,
                       }}

@@ -63,7 +63,7 @@ export default function TestPage() {
   const canGenerate = text.trim().length > 0 && !loading;
 
   return (
-    <div className="min-h-full" style={{ background: "#0A0C14" }}>
+    <div className="min-h-full" style={{ background: "transparent" }}>
       <div className="px-5 pt-12 pb-36">
         {/* Header */}
         <div className="flex items-center justify-center mb-8">
@@ -81,9 +81,9 @@ export default function TestPage() {
               onClick={() => { setMode(m); setAudioUrl(null); setError(null); }}
               className="flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all"
               style={mode === m ? {
-                background: "rgba(0,212,255,0.12)",
-                color: "#00D4FF",
-                border: "1px solid rgba(0,212,255,0.25)",
+                background: "rgba(79,195,247,0.12)",
+                color: "#4fc3f7",
+                border: "1px solid rgba(79,195,247,0.25)",
               } : {
                 color: "rgba(255,255,255,0.3)",
               }}
@@ -110,14 +110,14 @@ export default function TestPage() {
               background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.08)",
             }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(0,212,255,0.4)")}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
             onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
           />
         </div>
 
         {mode === "sfx" && (
           <p className="text-white/20 text-[10px] mb-4">
-            Requires <span style={{ color: "rgba(0,212,255,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
+            Requires <span style={{ color: "rgba(79,195,247,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
           </p>
         )}
 
@@ -127,9 +127,9 @@ export default function TestPage() {
           disabled={!canGenerate}
           className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] mt-2"
           style={canGenerate ? {
-            background: "linear-gradient(90deg,#00D4FF,#00A8C8)",
-            color: "#0A0C14",
-            boxShadow: "0 4px 24px rgba(0,212,255,0.3)",
+            background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)",
+            color: "#05080F",
+            boxShadow: "0 4px 24px rgba(79,195,247,0.3)",
           } : {
             background: "rgba(255,255,255,0.05)",
             color: "rgba(255,255,255,0.2)",
@@ -176,7 +176,7 @@ export default function TestPage() {
 
           <div
             className="fixed bottom-0 left-0 right-0 px-5 pb-8 pt-6"
-            style={{ background: "linear-gradient(to top, #0A0C14 75%, transparent)" }}
+            style={{ background: "linear-gradient(to top, #05080F 75%, transparent)" }}
           >
             <div
               className="rounded-2xl px-5 py-4"
@@ -190,7 +190,7 @@ export default function TestPage() {
                 <button
                   onClick={handlePlayPause}
                   className="w-11 h-11 rounded-full flex items-center justify-center text-lg flex-shrink-0 active:scale-95 transition-transform"
-                  style={{ background: "linear-gradient(135deg,#00D4FF,#00A8C8)" }}
+                  style={{ background: "linear-gradient(135deg,#4fc3f7,#2a8cb5)" }}
                 >
                   {playing ? "⏸" : "▶"}
                 </button>
@@ -214,7 +214,7 @@ export default function TestPage() {
                   value={currentTime}
                   onChange={handleSeek}
                   className="flex-1 cursor-pointer"
-                  style={{ accentColor: "#00D4FF" }}
+                  style={{ accentColor: "#4fc3f7" }}
                 />
                 <span className="text-white/30 text-[10px] w-8 flex-shrink-0">
                   {formatTime(duration)}

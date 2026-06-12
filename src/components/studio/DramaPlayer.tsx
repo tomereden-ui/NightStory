@@ -81,7 +81,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
       {/* Title card */}
       <div
         className="px-5 py-4 rounded-2xl flex items-center gap-3"
-        style={{ background: "rgba(0,212,255,0.05)", border: "1px solid rgba(0,212,255,0.15)" }}
+        style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
       >
         <span className="text-3xl">🎭</span>
         <div className="flex-1 min-w-0">
@@ -114,7 +114,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           value={currentTime}
           onChange={handleSeek}
           className="w-full cursor-pointer mb-1"
-          style={{ accentColor: "#00D4FF" }}
+          style={{ accentColor: "#4fc3f7" }}
         />
         <div className="flex justify-between text-white/20 text-[10px] mb-4">
           <span>{formatTime(currentTime)}</span>
@@ -132,7 +132,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <button
             onClick={handlePlayPause}
             className="w-16 h-16 rounded-full flex items-center justify-center text-2xl active:scale-95 transition-transform"
-            style={{ background: "linear-gradient(135deg,#00D4FF,#00A8C8)", color: "#0A0C14", boxShadow: "0 4px 20px rgba(0,212,255,0.4)" }}
+            style={{ background: "linear-gradient(135deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 20px rgba(79,195,247,0.4)" }}
           >
             {playing ? "⏸" : "▶"}
           </button>
@@ -150,9 +150,9 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
       {activeTrack && (
         <div
           className="px-4 py-3 rounded-2xl"
-          style={{ background: "rgba(0,212,255,0.06)", border: "1px solid rgba(0,212,255,0.25)" }}
+          style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.25)" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#00D4FF" }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#4fc3f7" }}>
             {activeTrack.character}
             {voiceAssignments[activeTrack.character?.toLowerCase() ?? ""] && (
               <span className="text-white/25 normal-case font-normal tracking-normal ml-2">
@@ -176,7 +176,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
               <span
                 key={char}
                 className="text-[10px] px-2.5 py-1 rounded-full"
-                style={{ background: "rgba(0,212,255,0.08)", color: "rgba(0,212,255,0.7)", border: "1px solid rgba(0,212,255,0.15)" }}
+                style={{ background: "rgba(79,195,247,0.08)", color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.15)" }}
               >
                 {char} · {voice}
               </span>
@@ -210,7 +210,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
                         ? t.loop
                           ? "rgba(139,92,246,0.5)"
                           : "rgba(245,158,11,0.5)"
-                        : "rgba(0,212,255,0.5)",
+                        : "rgba(79,195,247,0.5)",
                   }}
                   title={t.type === "dialogue" ? `${t.character}: ${t.line?.slice(0, 40)}` : t.description}
                 />
@@ -229,7 +229,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           </div>
           <div className="flex gap-3 mt-2">
             {[
-              { color: "rgba(0,212,255,0.7)",   label: "Dialogue" },
+              { color: "rgba(79,195,247,0.7)",   label: "Dialogue" },
               { color: "rgba(139,92,246,0.7)",  label: "Ambient" },
               { color: "rgba(245,158,11,0.7)",  label: "SFX" },
             ].map((l) => (
@@ -259,7 +259,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <div className="px-4 pb-4 flex flex-col gap-2 max-h-64 overflow-y-auto">
             {dialogueTracks.map((t) => (
               <div key={t.id} className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#00D4FF" }}>
+                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#4fc3f7" }}>
                   {t.character}
                 </span>
                 <span className="text-xs text-white/55 leading-relaxed">{t.line}</span>
@@ -275,7 +275,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           href={job.audioUrl}
           download
           className="flex-1 py-3 rounded-2xl text-sm font-semibold text-center active:scale-95 transition-transform"
-          style={{ background: "linear-gradient(90deg,#00D4FF,#00A8C8)", color: "#0A0C14" }}
+          style={{ background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F" }}
         >
           ↓ Download MP3
         </a>

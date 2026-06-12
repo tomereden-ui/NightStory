@@ -33,10 +33,10 @@ export default function SpeechPlayerModal({
       />
       <div
         className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm rounded-3xl overflow-hidden"
-        style={{ background: "#111520", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 40px rgba(0,0,0,0.6)", zIndex: 9999 }}
+        style={{ background: "rgba(8,12,24,0.95)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 40px rgba(0,0,0,0.6)", zIndex: 9999 }}
       >
         {/* Top accent */}
-        <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg,#00D4FF,#8B5CF6,#EC4899)" }} />
+        <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg,#4fc3f7,#8B5CF6,#EC4899)" }} />
 
         <div className="px-5 pt-4 pb-5 flex flex-col gap-4">
           {/* Character header */}
@@ -49,7 +49,7 @@ export default function SpeechPlayerModal({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-widest"
-                style={{ color: soundActive ? "#00D4FF" : "rgba(255,255,255,0.4)" }}>
+                style={{ color: soundActive ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>
                 {block.characterName}
               </p>
               <p className="text-white/35 text-[11px]">{voice.name} · Gemini TTS</p>
@@ -59,7 +59,7 @@ export default function SpeechPlayerModal({
               <div className="flex gap-1 items-end h-5 flex-shrink-0">
                 {[0,1,2,3].map((i) => (
                   <span key={i} className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: "#00D4FF", animation: `bounce 0.6s ease-in-out ${i*0.12}s infinite` }} />
+                    style={{ background: "#4fc3f7", animation: `bounce 0.6s ease-in-out ${i*0.12}s infinite` }} />
                 ))}
               </div>
             ) : (
@@ -67,7 +67,7 @@ export default function SpeechPlayerModal({
                 {[1,2,3,4].map((i) => (
                   <span key={i} className="w-1 rounded-full"
                     style={{
-                      background: soundActive ? "linear-gradient(180deg,#00D4FF,#0088AA)" : "rgba(255,255,255,0.12)",
+                      background: soundActive ? "linear-gradient(180deg,#4fc3f7,#0088AA)" : "rgba(255,255,255,0.12)",
                       height: soundActive ? undefined : "4px",
                       animation: soundActive ? `bounce 0.6s ease-in-out ${(i-1)*0.12}s infinite` : "none",
                       minHeight: "4px", maxHeight: "20px",
@@ -104,8 +104,8 @@ export default function SpeechPlayerModal({
               style={isLoading ? {
                 background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)",
               } : {
-                background: "linear-gradient(90deg,#00D4FF,#00A8C8)",
-                color: "#0A0C14", boxShadow: "0 4px 16px rgba(0,212,255,0.3)",
+                background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)",
+                color: "#05080F", boxShadow: "0 4px 16px rgba(79,195,247,0.3)",
               }}
             >
               {isLoading ? "Generating…" : isPaused ? "▶ Resume" : isPlaying ? "⏸ Pause" : "▶ Play"}

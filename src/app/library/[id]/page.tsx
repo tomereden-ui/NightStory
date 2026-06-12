@@ -57,7 +57,7 @@ export default function StoryDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-full flex items-center justify-center" style={{ background: "#0A0C14" }}>
+      <div className="cosmic-page min-h-full flex items-center justify-center">
         <span className="text-white/30 text-sm animate-pulse">Loading…</span>
       </div>
     );
@@ -65,17 +65,16 @@ export default function StoryDetailPage() {
 
   if (!entry) {
     return (
-      <div className="min-h-full flex flex-col items-center justify-center gap-4" style={{ background: "#0A0C14" }}>
+      <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
         <span className="text-4xl">🌙</span>
         <p className="text-white/30 text-sm">Story not found.</p>
-        <button onClick={() => router.back()} className="text-xs text-white/40 underline">Go back</button>
+        <button onClick={() => router.back()} className="text-xs" style={{ color: "rgba(79,195,247,0.5)" }}>Go back</button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full" style={{ background: "#0A0C14" }}>
-      {/* Hidden audio element */}
+    <div className="cosmic-page min-h-full">
       <audio
         ref={audioRef}
         src={entry.audioUrl}
@@ -86,98 +85,156 @@ export default function StoryDetailPage() {
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
       />
 
-      {/* Scrollable content with bottom padding for player */}
-      <div className="px-5 pt-12 pb-48">
-        {/* Header */}
-        <div className="flex items-center mb-2">
+      <div className="pb-44">
+        {/* Atmospheric cover area */}
+        <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
+          {entry.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover" />
+          ) : (
+            <div
+              className="w-full h-full"
+              style={{
+                background:
+                  "radial-gradient(ellipse 70% 60% at 50% 25%, rgba(79,195,247,0.2) 0%, transparent 60%)," +
+                  "radial-gradient(ellipse 50% 50% at 80% 80%, rgba(45,27,78,0.5) 0%, transparent 55%)," +
+                  "radial-gradient(ellipse 60% 70% at 10% 80%, rgba(10,61,74,0.4) 0%, transparent 55%)," +
+                  "linear-gradient(180deg,#060a18 0%,#0d1a3a 40%,#1a0a38 80%,#05080f 100%)",
+              }}
+            >
+              {/* Stars in cover */}
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 208" fill="none">
+                <circle cx="30" cy="25" r="1" fill="rgba(255,255,255,.6)"/>
+                <circle cx="80" cy="15" r="1.2" fill="rgba(255,255,255,.7)"/>
+                <circle cx="140" cy="30" r=".8" fill="rgba(200,220,255,.8)"/>
+                <circle cx="200" cy="18" r="1" fill="rgba(255,255,255,.6)"/>
+                <circle cx="260" cy="28" r="1.1" fill="rgba(255,255,255,.7)"/>
+                <circle cx="290" cy="12" r=".8" fill="rgba(200,220,255,.5)"/>
+                <circle cx="50" cy="55" r=".9" fill="rgba(255,255,255,.5)"/>
+                <circle cx="170" cy="45" r="1" fill="rgba(200,220,255,.6)"/>
+                <circle cx="240" cy="60" r=".8" fill="rgba(255,255,255,.7)"/>
+                {/* Constellation */}
+                <circle cx="80" cy="45" r="1" fill="rgba(180,210,255,.7)"/>
+                <circle cx="100" cy="38" r="1" fill="rgba(180,210,255,.7)"/>
+                <circle cx="120" cy="48" r="1" fill="rgba(180,210,255,.7)"/>
+                <line x1="80" y1="45" x2="100" y2="38" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
+                <line x1="100" y1="38" x2="120" y2="48" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
+                {/* Glow orb */}
+                <circle cx="160" cy="100" r="40" fill="rgba(79,195,247,0.06)"/>
+                <circle cx="160" cy="100" r="20" fill="rgba(79,195,247,0.1)"/>
+                <circle cx="160" cy="100" r="8"  fill="rgba(150,220,255,0.2)"/>
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-7xl" style={{ filter: "drop-shadow(0 0 24px rgba(79,195,247,0.5))" }}>🌙</span>
+              </div>
+            </div>
+          )}
+
+          {/* Gradient fade to page bg */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-20"
+            style={{ background: "linear-gradient(to bottom, transparent, #05080F)" }}
+          />
+          {/* Now playing label */}
+          <div className="absolute bottom-6 left-5">
+            <span className="text-[9px] tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.7)" }}>
+              Now Playing
+            </span>
+          </div>
+          {/* Back button */}
           <button
             onClick={() => router.back()}
-            className="w-8 h-8 flex items-center justify-center text-white/50 text-base flex-shrink-0"
+            className="absolute top-12 left-4 w-8 h-8 flex items-center justify-center rounded-full"
+            style={{ background: "rgba(5,8,20,0.6)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)" }}
           >
-            ←
+            <span className="text-white/60 text-sm">←</span>
           </button>
-          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide truncate px-2">
-            {entry.title}
-          </h1>
-          <div className="w-8" />
         </div>
 
-        <p className="text-center text-white/20 text-[11px] mb-6">
-          {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
-        </p>
+        {/* Meta */}
+        <div className="px-5 mb-1">
+          <h1 className="text-xl font-light tracking-wide text-white mb-1">{entry.title}</h1>
+          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.38)" }}>
+            {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
+          </p>
+        </div>
 
-        {/* Cover image */}
-        {entry.coverUrl && (
-          <div className="mb-7 rounded-2xl overflow-hidden w-full aspect-square max-w-xs mx-auto"
-            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.5)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover" />
-          </div>
-        )}
+        {/* Divider */}
+        <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
 
         {/* Script blocks */}
-        <div className="flex flex-col gap-3">
+        <div className="px-5 flex flex-col gap-3">
           {entry.blocks.map((block) => {
             const isNarrator = block.characterName.toLowerCase().includes("narrat");
             return (
-              <div
-                key={block.id}
-                className="px-4 py-3 rounded-2xl"
-                style={{
-                  background: isNarrator
-                    ? "rgba(255,255,255,0.03)"
-                    : "rgba(0,212,255,0.05)",
-                  border: isNarrator
-                    ? "1px solid rgba(255,255,255,0.06)"
-                    : "1px solid rgba(0,212,255,0.12)",
-                }}
-              >
-                <p
-                  className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                  style={{ color: isNarrator ? "rgba(255,255,255,0.3)" : "#00D4FF" }}
+              <div key={block.id}>
+                {!isNarrator && (
+                  <p
+                    className="text-[9px] font-semibold uppercase tracking-widest mb-1 ml-3"
+                    style={{ color: "rgba(79,195,247,0.72)" }}
+                  >
+                    {block.characterName}
+                  </p>
+                )}
+                <div
+                  className="px-4 py-3 rounded-xl"
+                  style={isNarrator ? {
+                    color: "rgba(255,255,255,0.45)",
+                    fontStyle: "italic",
+                    fontSize: "11px",
+                    lineHeight: "1.6",
+                  } : {
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderLeft: "2px solid rgba(79,195,247,0.3)",
+                    color: "rgba(255,255,255,0.82)",
+                    fontSize: "11.5px",
+                    lineHeight: "1.6",
+                  }}
                 >
-                  {block.characterName}
-                </p>
-                <p className="text-white/70 text-sm leading-relaxed">
                   {block.textPayload}
-                </p>
+                </div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Sticky audio player */}
+      {/* Sticky player bar */}
       <div
-        className="fixed bottom-0 left-0 right-0 px-5 pb-8 pt-6"
-        style={{ background: "linear-gradient(to top, #0A0C14 75%, transparent)" }}
+        className="fixed bottom-0 left-0 right-0 px-4 pb-8 pt-6"
+        style={{ background: "linear-gradient(to top, #05080F 70%, transparent)" }}
       >
         <div
-          className="rounded-2xl px-5 py-4"
+          className="rounded-2xl px-4 py-3.5"
           style={{
-            background: "rgba(15,18,28,0.95)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            backdropFilter: "blur(12px)",
+            background: "rgba(5,8,20,0.92)",
+            border: "1px solid rgba(255,255,255,0.09)",
+            backdropFilter: "blur(20px)",
           }}
         >
-          {/* Title row */}
           <div className="flex items-center gap-3 mb-3">
             <button
               onClick={handlePlayPause}
               className="w-11 h-11 rounded-full flex items-center justify-center text-lg flex-shrink-0 active:scale-95 transition-transform"
-              style={{ background: "linear-gradient(135deg,#00D4FF,#00A8C8)" }}
+              style={{
+                background: "rgba(79,195,247,0.14)",
+                border: "1.5px solid rgba(79,195,247,0.45)",
+                boxShadow: "0 0 14px rgba(79,195,247,0.3)",
+              }}
             >
               {playing ? "⏸" : "▶"}
             </button>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold truncate leading-snug">{entry.title}</p>
-              <p className="text-white/30 text-xs">{entry.summary.split(" ").slice(0, 6).join(" ")}…</p>
+              <p className="text-white text-sm font-medium truncate leading-snug">{entry.title}</p>
+              <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.3)" }}>
+                {entry.summary.split(" ").slice(0, 6).join(" ")}…
+              </p>
             </div>
           </div>
 
-          {/* Progress bar */}
           <div className="flex items-center gap-2">
-            <span className="text-white/30 text-[10px] w-8 text-right flex-shrink-0">
+            <span className="text-[10px] w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
               {formatTime(currentTime)}
             </span>
             <input
@@ -188,9 +245,9 @@ export default function StoryDetailPage() {
               value={currentTime}
               onChange={handleSeek}
               className="flex-1 cursor-pointer"
-              style={{ accentColor: "#00D4FF" }}
+              style={{ accentColor: "#4fc3f7" }}
             />
-            <span className="text-white/30 text-[10px] w-8 flex-shrink-0">
+            <span className="text-[10px] w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
               {formatTime(duration || entry.durationSeconds)}
             </span>
           </div>

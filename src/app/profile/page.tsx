@@ -6,7 +6,7 @@ import { MOCK_USER } from "@/lib/mockData";
 
 const TIER_BADGE: Record<string, { label: string; color: string; emoji: string }> = {
   free:    { label: "Free",    color: "rgba(255,255,255,0.3)",  emoji: "🌱" },
-  basic:   { label: "Basic",   color: "#00D4FF",               emoji: "⭐" },
+  basic:   { label: "Basic",   color: "#4fc3f7",               emoji: "⭐" },
   premium: { label: "Premium", color: "#8B5CF6",               emoji: "👑" },
   family:  { label: "Family",  color: "#EC4899",               emoji: "🏡" },
 };
@@ -31,7 +31,7 @@ export default function ProfilePage() {
   const tier = TIER_BADGE[user.subscriptionTier] ?? TIER_BADGE.free;
 
   return (
-    <div className="min-h-full" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
+    <div className="min-h-full" style={{ background: "transparent" }} dir={isRTL ? "rtl" : "ltr"}>
       <div className="px-5 pt-12 pb-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -43,7 +43,7 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center mb-8">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-3"
-            style={{ background: "rgba(255,255,255,0.06)", border: "2px solid rgba(0,212,255,0.25)" }}
+            style={{ background: "rgba(255,255,255,0.06)", border: "2px solid rgba(79,195,247,0.25)" }}
           >
             {user.avatarEmoji}
           </div>
@@ -106,7 +106,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-3 gap-3">
             {[
               { value: user.favoriteStoryIds.length, label: language === "he" ? "מועדפים" : "Favorites", color: "#EC4899" },
-              { value: user.recentlyPlayedIds.length, label: language === "he" ? "הושמעו" : "Played",    color: "#00D4FF" },
+              { value: user.recentlyPlayedIds.length, label: language === "he" ? "הושמעו" : "Played",    color: "#4fc3f7" },
               { value: user.childProfiles.length,     label: language === "he" ? "ילדים" : "Children",   color: "#8B5CF6" },
             ].map((stat) => (
               <div

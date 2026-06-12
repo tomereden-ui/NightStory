@@ -18,7 +18,7 @@ interface FamilyMember {
 const FAMILY_MEMBERS: FamilyMember[] = [
   {
     id: "fm1", name: "Maya", role: "Child", emoji: "🧒",
-    status: "demo", accent: "#00D4FF",
+    status: "demo", accent: "#4fc3f7",
     samplePhrase: "Once upon a time, in a land far away, a little star fell from the sky and became my best friend.",
   },
   {
@@ -51,7 +51,7 @@ const STATUS_LABEL: Record<VoiceStatus, string> = {
 
 const STATUS_COLOR: Record<VoiceStatus, string> = {
   cloned: "#10D9A0",
-  demo:   "#00D4FF",
+  demo:   "#4fc3f7",
   none:   "rgba(255,255,255,0.25)",
 };
 
@@ -99,7 +99,7 @@ function RecordingModal({
       />
       <div
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md rounded-t-3xl overflow-hidden"
-        style={{ background: "#111520", border: "1px solid rgba(255,255,255,0.1)", zIndex: 9999 }}
+        style={{ background: "rgba(8,12,24,0.95)", border: "1px solid rgba(255,255,255,0.1)", zIndex: 9999 }}
       >
         <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg,${member.accent},#8B5CF6)` }} />
 
@@ -122,7 +122,7 @@ function RecordingModal({
               <button
                 onClick={onClose}
                 className="w-full py-3.5 rounded-2xl font-semibold text-sm"
-                style={{ background: `linear-gradient(90deg,${member.accent},#00A8C8)`, color: "#0A0C14" }}
+                style={{ background: `linear-gradient(90deg,${member.accent},#2a8cb5)`, color: "#05080F" }}
               >
                 Done
               </button>
@@ -277,7 +277,7 @@ export default function VoicesPage() {
     const names = ["Alex", "Lily", "Tom", "Emma", "Jake"];
     const roles = ["Sibling", "Cousin", "Friend", "Uncle", "Aunt"];
     const emojis = ["🧒", "👧", "👦", "🧑", "👩"];
-    const accents = ["#00D4FF", "#8B5CF6", "#EC4899", "#F59E0B", "#10D9A0"];
+    const accents = ["#4fc3f7", "#8B5CF6", "#EC4899", "#F59E0B", "#10D9A0"];
     const i = members.length % 5;
     setMembers((prev) => [
       ...prev,
@@ -294,7 +294,7 @@ export default function VoicesPage() {
   };
 
   return (
-    <div className="min-h-full" style={{ background: "#0A0C14" }}>
+    <div className="min-h-full" style={{ background: "transparent" }}>
       {/* Header */}
       <div className="px-5 pt-12 pb-4">
         <h1 className="text-base font-semibold text-white tracking-wide mb-0.5">Family Voices</h1>
@@ -309,7 +309,7 @@ export default function VoicesPage() {
         >
           {[
             { value: members.filter((m) => m.status === "cloned").length, label: "Cloned", color: "#10D9A0" },
-            { value: members.filter((m) => m.status === "demo").length,   label: "Demo",   color: "#00D4FF" },
+            { value: members.filter((m) => m.status === "demo").length,   label: "Demo",   color: "#4fc3f7" },
             { value: members.filter((m) => m.status === "none").length,   label: "Pending", color: "rgba(255,255,255,0.3)" },
           ].map((s) => (
             <div key={s.label} className="text-center">
@@ -387,7 +387,7 @@ export default function VoicesPage() {
                   border: "1px solid rgba(255,255,255,0.08)",
                 } : {
                   background: `linear-gradient(90deg,${member.accent},#0088AA)`,
-                  color: "#0A0C14",
+                  color: "#05080F",
                 }}
               >
                 🎤 {member.status === "cloned" ? "Re-record" : "Record"}

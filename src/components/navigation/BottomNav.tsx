@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Update this string with each push so the version is always visible
-const BUILD_LABEL = "Jun 10 · v3";
+const BUILD_LABEL = "Jun 12 · v4";
 
 const NAV = [
   { label: "Library", icon: "📚", href: "/library" },
@@ -22,20 +21,20 @@ export default function BottomNav() {
       <div
         className="absolute inset-0"
         style={{
-          background: "rgba(10,12,20,0.95)",
+          background: "rgba(5,8,20,0.9)",
           backdropFilter: "blur(20px)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
         }}
       />
 
-      {/* Version indicator — always visible inside the nav */}
+      {/* Version badge */}
       <div className="relative flex justify-center pt-1.5">
         <span
           className="text-[9px] font-mono px-2.5 py-0.5 rounded-full"
           style={{
-            background: "rgba(0,212,255,0.1)",
-            color: "rgba(0,212,255,0.6)",
-            border: "1px solid rgba(0,212,255,0.18)",
+            background: "rgba(79,195,247,0.08)",
+            color: "rgba(79,195,247,0.55)",
+            border: "1px solid rgba(79,195,247,0.15)",
           }}
         >
           {process.env.NEXT_PUBLIC_BUILD_TIME
@@ -57,21 +56,25 @@ export default function BottomNav() {
               <Link href={item.href} className="flex flex-col items-center gap-0.5 group" aria-label={item.label}>
                 <span
                   className="relative flex items-center justify-center w-12 h-9 rounded-2xl transition-all"
-                  style={isActive ? { background: "rgba(0,212,255,0.08)" } : {}}
+                  style={isActive ? {
+                    background: "rgba(79,195,247,0.1)",
+                    boxShadow: "0 0 12px rgba(79,195,247,0.15)",
+                  } : {}}
                 >
                   {isActive && (
                     <span
                       className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full"
-                      style={{ background: "#00D4FF" }}
+                      style={{ background: "#4fc3f7", boxShadow: "0 0 6px rgba(79,195,247,0.7)" }}
                     />
                   )}
-                  <span className={`text-xl transition-transform ${isActive ? "scale-110" : "group-hover:scale-105"}`}>
+                  <span className={`text-xl transition-transform ${isActive ? "scale-110" : "group-hover:scale-105"}`}
+                    style={isActive ? { filter: "drop-shadow(0 0 6px rgba(79,195,247,0.7))" } : {}}>
                     {item.icon}
                   </span>
                 </span>
                 <span
                   className="text-[10px] font-medium tracking-wide"
-                  style={{ color: isActive ? "#00D4FF" : "rgba(255,255,255,0.28)" }}
+                  style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.28)" }}
                 >
                   {item.label}
                 </span>

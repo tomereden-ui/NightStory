@@ -64,7 +64,7 @@ const WORLDS: WorldCard[] = [
 ];
 
 const MOODS: Mood[] = [
-  { id: "adventure", emoji: "🚀", label: "Adventure & Mystery", desc: "Fast-paced · riddle-solving", tone: "thrilling, adventurous, and full of mystery and exciting plot twists", accent: "#00D4FF" },
+  { id: "adventure", emoji: "🚀", label: "Adventure & Mystery", desc: "Fast-paced · riddle-solving", tone: "thrilling, adventurous, and full of mystery and exciting plot twists", accent: "#4fc3f7" },
   { id: "silly",     emoji: "😂", label: "Silly & Funny",        desc: "Absurd humor · nonsense",    tone: "silly, funny, and full of absurd humor and unexpected nonsense moments",     accent: "#F59E0B" },
   { id: "calm",      emoji: "🌙", label: "Calm & Dreamy",        desc: "Slow-paced · soothing",       tone: "calm, dreamy, gently poetic, and soothing with soft ambient descriptions",   accent: "#8B5CF6" },
 ];
@@ -79,9 +79,9 @@ function StepDots({ step }: { step: number }) {
           className="rounded-full transition-all"
           style={
             s === step
-              ? { width: 20, height: 6, background: "#F59E0B" }
+              ? { width: 20, height: 6, background: "#4fc3f7", boxShadow: "0 0 8px rgba(79,195,247,0.6)" }
               : s < step
-              ? { width: 6, height: 6, background: "rgba(245,158,11,0.5)" }
+              ? { width: 6, height: 6, background: "rgba(79,195,247,0.45)" }
               : { width: 6, height: 6, background: "rgba(255,255,255,0.15)" }
           }
         />
@@ -169,15 +169,38 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
                 setStep(2);
               }}
               className="relative rounded-2xl overflow-hidden flex flex-col items-center justify-center transition-all active:scale-95"
-              style={{ height: 140, background: world.bg }}
+              style={{
+                height: 130,
+                background: world.bg,
+                border: "1px solid rgba(255,255,255,0.09)",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+              }}
             >
-              <span className="text-4xl mb-2">{world.emoji}</span>
+              {/* Subtle nebula overlay */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: "radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.05) 0%, transparent 70%)",
+                }}
+              />
+              {/* Star particles */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" fill="none">
+                <circle cx="10" cy="12" r="0.7" fill="rgba(255,255,255,0.6)"/>
+                <circle cx="25" cy="7"  r="0.5" fill="rgba(255,255,255,0.5)"/>
+                <circle cx="70" cy="10" r="0.7" fill="rgba(255,255,255,0.7)"/>
+                <circle cx="85" cy="6"  r="0.5" fill="rgba(255,255,255,0.5)"/>
+                <circle cx="90" cy="20" r="0.6" fill="rgba(255,255,255,0.4)"/>
+                <circle cx="15" cy="25" r="0.5" fill="rgba(255,255,255,0.4)"/>
+              </svg>
+              <span className="relative text-4xl mb-1.5" style={{ filter: "drop-shadow(0 0 10px rgba(255,255,255,0.3))" }}>
+                {world.emoji}
+              </span>
               {/* Label overlay */}
               <div
-                className="absolute bottom-0 left-0 right-0 px-2 py-2"
-                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)" }}
+                className="absolute bottom-0 left-0 right-0 px-2 py-2.5"
+                style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)" }}
               >
-                <span className="text-white text-[11px] font-semibold leading-tight block text-center">
+                <span className="text-white text-[10.5px] font-medium leading-tight block text-center tracking-wide">
                   {world.label}
                 </span>
               </div>
