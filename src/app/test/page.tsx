@@ -88,19 +88,91 @@ function AudioPlayer({
   );
 }
 
+// ─── Pure-browser audio merge using Web Audio API ────────────────────────────
+
+function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const length = buffer.length;
+  const pcmLength = length * numChannels * 2; // 16-bit
+  const arrayBuffer = new ArrayBuffer(44 + pcmLength);
+  const view = new DataView(arrayBuffer);
+
+  const writeStr = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + pcmLength, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, "data");
+  view.setUint32(40, pcmLength, true);
+
+  let offset = 44;
+  for (let i = 0; i < length; i++) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([arrayBuffer], { type: "audio/wav" });
+}
+
+async function mergeAudioInBrowser(speechUrl: string, sfxUrl: string): Promise<string> {
+  const ctx = new AudioContext();
+
+  const [speechRes, sfxRes] = await Promise.all([fetch(speechUrl), fetch(sfxUrl)]);
+  const [speechRaw, sfxRaw] = await Promise.all([speechRes.arrayBuffer(), sfxRes.arrayBuffer()]);
+  const [speechBuf, sfxBuf] = await Promise.all([
+    ctx.decodeAudioData(speechRaw),
+    ctx.decodeAudioData(sfxRaw),
+  ]);
+
+  const sampleRate = speechBuf.sampleRate;
+  const outLength = speechBuf.length;
+  const numChannels = Math.max(speechBuf.numberOfChannels, sfxBuf.numberOfChannels);
+  const out = ctx.createBuffer(numChannels, outLength, sampleRate);
+
+  // Mix: speech at 1.0, SFX looped at 0.28
+  for (let ch = 0; ch < numChannels; ch++) {
+    const outData = out.getChannelData(ch);
+    const speechData = speechBuf.getChannelData(Math.min(ch, speechBuf.numberOfChannels - 1));
+    const sfxData   = sfxBuf.getChannelData(Math.min(ch, sfxBuf.numberOfChannels - 1));
+    for (let i = 0; i < outLength; i++) {
+      outData[i] = speechData[i] + sfxData[i % sfxBuf.length] * 0.28;
+      // soft clip
+      if (outData[i] > 1)  outData[i] = 1;
+      if (outData[i] < -1) outData[i] = -1;
+    }
+  }
+
+  await ctx.close();
+  const blob = audioBufferToWavBlob(out);
+  return URL.createObjectURL(blob);
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 export default function TestPage() {
   const [mode, setMode] = useState<Mode>("tts");
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Track TTS and SFX audio separately
   const [ttsAudioUrl, setTtsAudioUrl] = useState<string | null>(null);
   const [ttsText, setTtsText] = useState("");
   const [sfxAudioUrl, setSfxAudioUrl] = useState<string | null>(null);
   const [sfxText, setSfxText] = useState("");
 
-  // Merged audio
   const [mergedAudioUrl, setMergedAudioUrl] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
@@ -142,14 +214,8 @@ export default function TestPage() {
     setMergedAudioUrl(null);
 
     try {
-      const res = await fetch("/api/merge-audio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ speechUrl: ttsAudioUrl, sfxUrl: sfxAudioUrl }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Merge failed");
-      setMergedAudioUrl(data.audioUrl);
+      const url = await mergeAudioInBrowser(ttsAudioUrl, sfxAudioUrl);
+      setMergedAudioUrl(url);
     } catch (err: unknown) {
       setMergeError(err instanceof Error ? err.message : "Merge failed");
     } finally {
@@ -329,7 +395,7 @@ export default function TestPage() {
               {merging ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="animate-pulse">🎚️</span>
-                  Merging audio…
+                  Merging in browser…
                 </span>
               ) : !ttsAudioUrl || !sfxAudioUrl ? (
                 `Merge  ·  need ${!ttsAudioUrl ? "speech" : "SFX"} first`
@@ -359,7 +425,7 @@ export default function TestPage() {
                 <AudioPlayer
                   audioUrl={mergedAudioUrl}
                   label="Speech + SFX mix"
-                  sublabel="Voice over ambient sound"
+                  sublabel="Voice over ambient sound · browser-mixed WAV"
                 />
               </div>
             )}
