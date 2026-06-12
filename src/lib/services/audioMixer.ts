@@ -9,20 +9,19 @@ export interface MixTrack {
   isLooping: boolean;
 }
 
-// Resolve ffmpeg binary path without require() so webpack never tries to bundle it.
-// Checks FFMPEG_PATH env var first, then the ffmpeg-static binary inside node_modules.
 function getFfmpegPath(): string {
   if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
 
-  const candidates = [
-    path.join(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg"),
-    path.join(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg.exe"),
-    "/usr/bin/ffmpeg",
-    "/usr/local/bin/ffmpeg",
-  ];
+  // Use ffmpeg-static's exported path (works on Windows, Mac, Linux)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const staticPath = require("ffmpeg-static") as string | null;
+    if (staticPath && fs.existsSync(staticPath)) return staticPath;
+  } catch { /* not installed */ }
 
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
+  // System ffmpeg fallback
+  for (const p of ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg"]) {
+    if (fs.existsSync(p)) return p;
   }
 
   throw new Error(
