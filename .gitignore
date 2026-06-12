@@ -34,7 +34,7 @@ yarn-error.log*
 next-env.d.ts
 
 # design mockups
-design-concepts.html
+design-concepts*.html
 /data/
 /public/output/
 /tmp/
