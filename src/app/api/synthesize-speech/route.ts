@@ -103,13 +103,29 @@ async function callGeminiTTS(
   };
 
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 25_000);
 
-    if (res.status === 500 && attempt < 3) {
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      const isTimeout = (err as { name?: string }).name === "AbortError";
+      if (isTimeout && attempt < 3) {
+        await new Promise((r) => setTimeout(r, attempt * 1000));
+        continue;
+      }
+      throw new Error(isTimeout ? "Gemini TTS timed out after 25s" : `Gemini TTS network error: ${String(err)}`);
+    }
+    clearTimeout(timer);
+
+    if ((res.status === 500 || res.status === 503) && attempt < 3) {
       await new Promise((r) => setTimeout(r, attempt * 800));
       continue;
     }

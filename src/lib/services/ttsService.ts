@@ -60,11 +60,25 @@ export async function synthesizeLine(
   for (const body of payloads) {
     // Up to 5 attempts per payload with backoff for rate limits
     for (let attempt = 1; attempt <= 5; attempt++) {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 25_000);
+
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+      } catch (err) {
+        clearTimeout(timer);
+        const isTimeout = (err as { name?: string }).name === "AbortError";
+        if (attempt < 5) { await sleep(attempt * 1000); continue; }
+        lastError = isTimeout ? "TTS timed out" : `TTS network error: ${String(err)}`;
+        break;
+      }
+      clearTimeout(timer);
 
       // Rate limited — wait and retry same payload
       if (res.status === 429) {
