@@ -211,14 +211,40 @@ function RecordingModal({
 // ─── Voices page ──────────────────────────────────────────────────────────────
 
 async function generatePreview(text: string, characterName: string): Promise<string> {
-  const res = await fetch("/api/synthesize-speech", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, characterName }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "TTS failed");
-  const bytes = Uint8Array.from(atob(data.audioData), (c) => c.charCodeAt(0));
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+
+  let res: Response;
+  try {
+    res = await fetch("/api/synthesize-speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, characterName }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if ((err as { name?: string }).name === "AbortError") {
+      throw new Error("Voice generation timed out — try again");
+    }
+    throw new Error(`Network error: ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  let data: { audioData?: string; mimeType?: string; error?: string };
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Server error (${res.status}) — check that the dev server is running`);
+  }
+
+  if (!res.ok) throw new Error(data.error ?? `TTS failed (${res.status})`);
+  if (!data.audioData) throw new Error("No audio returned from server");
+
+  // Decode base64 → Uint8Array robustly
+  const binaryStr = atob(data.audioData);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
   const blob = new Blob([bytes], { type: data.mimeType ?? "audio/wav" });
   return URL.createObjectURL(blob);
 }
