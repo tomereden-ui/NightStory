@@ -32,17 +32,20 @@ interface ScriptBlockCardProps {
 
 function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "block" | "onTextChange" | "onDelete">) {
   const sfx = parseSfxPayload(block.textPayload);
-  const [desc, setDesc]   = useState(sfx?.description ?? "");
-  const [dur, setDur]     = useState(sfx?.durationSec ?? 3);
+  const [desc, setDesc]           = useState(sfx?.description ?? "");
+  const [dur, setDur]             = useState(sfx?.durationSec ?? 3);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioError, setAudioError]         = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const audioRef    = useRef<HTMLAudioElement | null>(null);
+  const blobUrlRef  = useRef<string | null>(null);
 
-  // Keep local state synced if block changes externally
   useEffect(() => {
     const parsed = parseSfxPayload(block.textPayload);
     if (parsed) { setDesc(parsed.description); setDur(parsed.durationSec); }
   }, [block.textPayload]);
 
-  // Auto-resize
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -50,8 +53,48 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
     el.style.height = `${el.scrollHeight}px`;
   }, [desc]);
 
+  // Cleanup audio on unmount
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+  }, []);
+
   const commit = (newDesc = desc, newDur = dur) => {
     onTextChange(block.id, buildSfxPayload(newDesc, newDur));
+  };
+
+  const handlePlay = async () => {
+    // Stop if already playing
+    if (isPlayingAudio) {
+      audioRef.current?.pause();
+      setIsPlayingAudio(false);
+      return;
+    }
+    if (!desc.trim()) return;
+
+    setAudioError(null);
+    setIsLoadingAudio(true);
+    try {
+      const res  = await fetch("/api/preview-sfx", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description: desc, durationSec: dur }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "SFX generation failed");
+
+      const bytes  = Uint8Array.from(atob(data.audioData), (c) => c.charCodeAt(0));
+      const blob   = new Blob([bytes], { type: data.mimeType ?? "audio/mpeg" });
+      const url    = URL.createObjectURL(blob);
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = url;
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onplay  = () => { setIsLoadingAudio(false); setIsPlayingAudio(true); };
+      audio.onended = () => { setIsPlayingAudio(false); URL.revokeObjectURL(url); blobUrlRef.current = null; };
+      audio.onerror = () => { setIsPlayingAudio(false); setIsLoadingAudio(false); setAudioError("Playback failed"); };
+      await audio.play();
+    } catch (err: unknown) {
+      setAudioError(err instanceof Error ? err.message : "Failed");
+      setIsLoadingAudio(false);
+    }
   };
 
   return (
@@ -65,10 +108,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
       {/* Header */}
       <div className="flex items-center gap-2">
         <span className="text-sm">🔊</span>
-        <span
-          className="text-[10px] font-bold uppercase tracking-widest flex-1"
-          style={{ color: "rgba(245,158,11,0.7)" }}
-        >
+        <span className="text-[10px] font-bold uppercase tracking-widest flex-1" style={{ color: "rgba(245,158,11,0.7)" }}>
           SFX
         </span>
 
@@ -96,10 +136,31 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
           <span className="text-[10px] text-white/30">s</span>
         </div>
 
+        {/* Play/Stop preview */}
+        <button
+          onClick={handlePlay}
+          disabled={isLoadingAudio || !desc.trim()}
+          className="w-6 h-6 rounded-full flex items-center justify-center transition-all ml-1"
+          style={
+            isPlayingAudio
+              ? { background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.5)" }
+              : { background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }
+          }
+          title={isPlayingAudio ? "Stop preview" : "Preview this sound"}
+        >
+          {isLoadingAudio ? (
+            <span className="w-2.5 h-2.5 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#F59E0B", borderTopColor: "transparent" }} />
+          ) : isPlayingAudio ? (
+            <span className="text-[8px]" style={{ color: "#F59E0B" }}>■</span>
+          ) : (
+            <span className="text-[9px] ml-px" style={{ color: "rgba(245,158,11,0.6)" }}>▶</span>
+          )}
+        </button>
+
         {/* Delete */}
         <button
           onClick={() => onDelete(block.id)}
-          className="w-6 h-6 rounded-full flex items-center justify-center text-white/25 hover:text-red-400 transition-colors ml-1"
+          className="w-6 h-6 rounded-full flex items-center justify-center text-white/25 hover:text-red-400 transition-colors"
           style={{ background: "rgba(255,255,255,0.04)" }}
           title="Remove SFX"
         >
@@ -111,15 +172,16 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
       <textarea
         ref={textareaRef}
         value={desc}
-        onChange={(e) => {
-          setDesc(e.target.value);
-          commit(e.target.value, dur);
-        }}
+        onChange={(e) => { setDesc(e.target.value); commit(e.target.value, dur); }}
         rows={1}
         placeholder="Describe the sound effect…"
         className="w-full bg-transparent text-sm leading-relaxed resize-none outline-none overflow-hidden"
         style={{ color: "rgba(255,255,255,0.65)", minHeight: "22px" }}
       />
+
+      {audioError && (
+        <p className="text-[10px]" style={{ color: "rgba(245,158,11,0.6)" }}>⚠ {audioError}</p>
+      )}
     </div>
   );
 }

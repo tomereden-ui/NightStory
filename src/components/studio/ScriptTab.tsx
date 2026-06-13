@@ -147,8 +147,11 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const [isPlaying, setIsPlaying]         = useState(false);
   const [isPaused, setIsPaused]           = useState(false);
   const [speechError, setSpeechError]     = useState<string | null>(null);
-  // insertingAt: index to insert BEFORE (0 = before first block, blocks.length = after last)
   const [insertingAt, setInsertingAt]     = useState<number | null>(null);
+  // Regenerate / validate state
+  const [isDirty, setIsDirty]             = useState(false);
+  const [isValidating, setIsValidating]   = useState(false);
+  const [validationIssues, setValidationIssues] = useState<string[] | null>(null);
 
   const audioRef     = useRef<HTMLAudioElement | null>(null);
   const audioBlobUrl = useRef<string | null>(null);
@@ -206,22 +209,25 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
   // ─── Block mutations ────────────────────────────────────────────────────────
 
+  const markDirty = useCallback(() => { setIsDirty(true); setValidationIssues(null); }, []);
+
   const handleTextChange = useCallback(
-    (id: string, text: string) => onBlocksChange(blocks.map((b) => b.id === id ? { ...b, textPayload: text } : b)),
-    [blocks, onBlocksChange],
+    (id: string, text: string) => { onBlocksChange(blocks.map((b) => b.id === id ? { ...b, textPayload: text } : b)); markDirty(); },
+    [blocks, onBlocksChange, markDirty],
   );
 
   const handleVoiceChange = useCallback(
-    (id: string, voiceId: string) => onBlocksChange(blocks.map((b) => b.id === id ? { ...b, assignedVoiceId: voiceId } : b)),
-    [blocks, onBlocksChange],
+    (id: string, voiceId: string) => { onBlocksChange(blocks.map((b) => b.id === id ? { ...b, assignedVoiceId: voiceId } : b)); markDirty(); },
+    [blocks, onBlocksChange, markDirty],
   );
 
   const handleDelete = useCallback(
     (id: string) => {
       if (activeBlockId === id) handleStop();
       onBlocksChange(blocks.filter((b) => b.id !== id));
+      markDirty();
     },
-    [blocks, onBlocksChange, activeBlockId, handleStop],
+    [blocks, onBlocksChange, activeBlockId, handleStop, markDirty],
   );
 
   const handleInsertSfx = useCallback(
@@ -235,12 +241,44 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
       };
       const updated = [...blocks];
       updated.splice(insertIdx, 0, newBlock);
-      // Re-number blockOrder
       onBlocksChange(updated.map((b, i) => ({ ...b, blockOrder: i + 1 })));
       setInsertingAt(null);
+      markDirty();
     },
-    [blocks, onBlocksChange],
+    [blocks, onBlocksChange, markDirty],
   );
+
+  // ─── Validate / regenerate ──────────────────────────────────────────────────
+
+  const handleRegenerate = useCallback(async () => {
+    setIsValidating(true);
+    setValidationIssues(null);
+    try {
+      const res  = await fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Validation failed");
+
+      if (data.ok) {
+        // Apply the reviewed/corrected blocks from Gemini
+        const corrected = (data.blocks as Array<{ characterName: string; textPayload: string }>).map(
+          (b, i) => ({
+            ...(blocks[i] ?? { id: makeId(), assignedVoiceId: "" }),
+            characterName: b.characterName,
+            textPayload: b.textPayload,
+            blockOrder: i + 1,
+          }),
+        );
+        onBlocksChange(corrected);
+        setIsDirty(false);
+      } else {
+        setValidationIssues(data.issues ?? ["Unknown issue"]);
+      }
+    } catch (err: unknown) {
+      setValidationIssues([err instanceof Error ? err.message : "Validation request failed"]);
+    } finally {
+      setIsValidating(false);
+    }
+  }, [blocks, onBlocksChange]);
 
   // ─── Empty state ────────────────────────────────────────────────────────────
 
@@ -317,6 +355,46 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         )}
 
         <div className="h-px my-3" style={{ background: "rgba(255,255,255,0.07)" }} />
+
+        {/* Regenerate / validation panel */}
+        {isDirty && (
+          <div className="mb-3 flex flex-col gap-2">
+            <button
+              onClick={handleRegenerate}
+              disabled={isValidating}
+              className="w-full py-3 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
+              style={
+                isValidating
+                  ? { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.25)" }
+                  : { background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.35)", color: "#A78BFA" }
+              }
+            >
+              {isValidating ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#A78BFA" }} />
+                  Reviewing with AI…
+                </>
+              ) : (
+                <>✦ Regenerate &amp; Review</>
+              )}
+            </button>
+
+            {validationIssues && (
+              <div className="rounded-2xl p-3 flex flex-col gap-2" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(239,68,68,0.7)" }}>
+                  ⚠ Script needs changes
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {validationIssues.map((issue, i) => (
+                    <li key={i} className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      • {issue}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Produce button */}
         <button
