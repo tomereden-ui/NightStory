@@ -119,18 +119,22 @@ function SfxSeparator({ onAdd }: { onAdd: () => void }) {
   return (
     <button
       onClick={onAdd}
-      className="w-full flex items-center gap-2 py-1 px-2 group transition-opacity opacity-0 hover:opacity-100 focus:opacity-100"
+      className="w-full flex items-center gap-2 py-1 px-2 group transition-all"
       style={{ outline: "none" }}
       aria-label="Add sound effect here"
     >
-      <div className="flex-1 h-px" style={{ background: "rgba(245,158,11,0.15)" }} />
+      <div className="flex-1 h-px transition-all" style={{ background: "rgba(245,158,11,0.12)" }} />
       <span
-        className="text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all"
-        style={{ color: "rgba(245,158,11,0.5)", border: "1px dashed rgba(245,158,11,0.3)" }}
+        className="text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all group-hover:scale-105"
+        style={{
+          color: "rgba(245,158,11,0.45)",
+          border: "1px dashed rgba(245,158,11,0.25)",
+          background: "rgba(245,158,11,0.04)",
+        }}
       >
-        + sfx
+        + add sfx
       </span>
-      <div className="flex-1 h-px" style={{ background: "rgba(245,158,11,0.15)" }} />
+      <div className="flex-1 h-px transition-all" style={{ background: "rgba(245,158,11,0.12)" }} />
     </button>
   );
 }

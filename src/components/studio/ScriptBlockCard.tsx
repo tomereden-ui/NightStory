@@ -126,8 +126,6 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
 
 // ─── Speech / narration card ──────────────────────────────────────────────────
 
-// ─── Speech / narration card ──────────────────────────────────────────────────
-
 function SpeechCard({
   block,
   voices,
@@ -169,7 +167,7 @@ function SpeechCard({
       />
 
       {/* Voice avatar — click to change voice */}
-      <div className="relative flex-shrink-0 pt-0.5">
+      <div className="relative flex-shrink-0 pt-0.5 group/voice">
         <button
           onClick={() => setShowPicker((p) => !p)}
           className={`w-9 h-9 rounded-full flex items-center justify-center text-base border transition-all ${
@@ -180,6 +178,15 @@ function SpeechCard({
         >
           {assignedVoice?.avatarEmoji ?? "🎙️"}
         </button>
+        {/* "change voice" tooltip under avatar */}
+        {!showPicker && (
+          <span
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-[8px] font-semibold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover/voice:opacity-100 transition-opacity pointer-events-none"
+            style={{ color: "rgba(79,195,247,0.5)" }}
+          >
+            change
+          </span>
+        )}
 
         {showPicker && (
           <VoicePicker
@@ -200,6 +207,7 @@ function SpeechCard({
           {assignedVoice && (
             <span className="text-white/15 text-[9px]">· {assignedVoice.name}</span>
           )}
+          <span className="ml-auto text-[8px] text-white/20 italic">tap to edit</span>
         </div>
         <textarea
           ref={textareaRef}
@@ -209,8 +217,12 @@ function SpeechCard({
           onBlur={() => setIsFocused(false)}
           rows={1}
           placeholder="Enter dialogue or narration…"
-          className="w-full bg-transparent text-white/85 text-sm leading-relaxed resize-none outline-none placeholder-white/15 overflow-hidden"
-          style={{ minHeight: "22px" }}
+          className="w-full text-white/85 text-sm leading-relaxed resize-none outline-none placeholder-white/15 overflow-hidden rounded-lg px-2 py-1 transition-all"
+          style={{
+            minHeight: "22px",
+            background: isFocused ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
+            border: isFocused ? "1px solid rgba(79,195,247,0.25)" : "1px solid rgba(255,255,255,0.05)",
+          }}
         />
       </div>
 
