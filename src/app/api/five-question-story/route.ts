@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/utils/buildStoryPrompt";
 import type { StorySeeds } from "@/utils/buildStoryPrompt";
 
@@ -7,10 +8,10 @@ export interface FiveQuestionStoryRequest {
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured." },
+      { error: "GEMINI_API_KEY is not configured." },
       { status: 500 }
     );
   }
@@ -29,63 +30,23 @@ export async function POST(req: NextRequest) {
 
   const userPrompt = buildUserPrompt(seeds);
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 90_000);
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: SYSTEM_PROMPT,
+    });
 
-    let res: Response;
-    try {
-      res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 4096,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: userPrompt }],
-        }),
-        signal: controller.signal,
-      });
-    } catch (err) {
-      clearTimeout(timer);
-      const isTimeout = (err as { name?: string }).name === "AbortError";
-      if (attempt < 3) {
-        await new Promise((r) => setTimeout(r, attempt * 2000));
-        continue;
-      }
-      return NextResponse.json(
-        { error: isTimeout ? "Story generation timed out — please try again." : `Network error: ${String(err)}` },
-        { status: 504 }
-      );
-    }
-    clearTimeout(timer);
+    const result = await model.generateContent(userPrompt);
+    const story = result.response.text().trim();
 
-    if ((res.status === 529 || res.status === 503 || res.status === 500) && attempt < 3) {
-      await new Promise((r) => setTimeout(r, attempt * 2000));
-      continue;
-    }
-
-    if (!res.ok) {
-      const errText = await res.text();
-      return NextResponse.json(
-        { error: `Anthropic API ${res.status}: ${errText.slice(0, 200)}` },
-        { status: res.status }
-      );
-    }
-
-    const data = await res.json();
-    const story: string = data.content?.[0]?.text ?? "";
-
-    if (!story.trim()) {
+    if (!story) {
       return NextResponse.json({ error: "Empty story returned." }, { status: 502 });
     }
 
     return NextResponse.json({ story });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  return NextResponse.json({ error: "Story generation failed after 3 attempts." }, { status: 502 });
 }
