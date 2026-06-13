@@ -126,7 +126,9 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
 
 // ─── Speech / narration card ──────────────────────────────────────────────────
 
-export default function ScriptBlockCard({
+// ─── Speech / narration card ──────────────────────────────────────────────────
+
+function SpeechCard({
   block,
   voices,
   isPlaying,
@@ -135,11 +137,6 @@ export default function ScriptBlockCard({
   onPlayPreview,
   onDelete,
 }: ScriptBlockCardProps) {
-  // Render SFX variant
-  if (block.characterName === "SFX") {
-    return <SfxCard block={block} onTextChange={onTextChange} onDelete={onDelete} />;
-  }
-
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [isFocused, setIsFocused]   = useState(false);
@@ -171,17 +168,17 @@ export default function ScriptBlockCard({
         style={{ background: isFocused ? "linear-gradient(180deg,#4fc3f7,#8B5CF6)" : "transparent" }}
       />
 
-      {/* Voice avatar */}
+      {/* Voice avatar — click to change voice */}
       <div className="relative flex-shrink-0 pt-0.5">
         <button
           onClick={() => setShowPicker((p) => !p)}
           className={`w-9 h-9 rounded-full flex items-center justify-center text-base border transition-all ${
             showPicker ? "border-teal bg-teal/15 shadow-teal-sm" : "border-bg-border bg-bg-elevated hover:border-teal/40"
           }`}
-          aria-label={`Voice: ${assignedVoice.name}. Tap to change.`}
+          aria-label={`Voice: ${assignedVoice?.name ?? ""}. Tap to change.`}
           title="Change voice"
         >
-          {assignedVoice.avatarEmoji}
+          {assignedVoice?.avatarEmoji ?? "🎙️"}
         </button>
 
         {showPicker && (
@@ -194,13 +191,15 @@ export default function ScriptBlockCard({
         )}
       </div>
 
-      {/* Text area */}
+      {/* Editable text area */}
       <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div className="flex items-center gap-1.5">
           <span className={`text-[10px] font-semibold uppercase tracking-widest ${isNarrator ? "text-purple-bright/60" : "text-teal/70"}`}>
             {block.characterName}
           </span>
-          <span className="text-white/15 text-[9px]">· {assignedVoice.name}</span>
+          {assignedVoice && (
+            <span className="text-white/15 text-[9px]">· {assignedVoice.name}</span>
+          )}
         </div>
         <textarea
           ref={textareaRef}
@@ -250,4 +249,13 @@ export default function ScriptBlockCard({
       </div>
     </div>
   );
+}
+
+// ─── Router ───────────────────────────────────────────────────────────────────
+
+export default function ScriptBlockCard(props: ScriptBlockCardProps) {
+  if (props.block.characterName === "SFX") {
+    return <SfxCard block={props.block} onTextChange={props.onTextChange} onDelete={props.onDelete} />;
+  }
+  return <SpeechCard {...props} />;
 }
