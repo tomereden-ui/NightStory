@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import type { ScriptBlock, Voice } from "@/types";
 import ScriptBlockCard, { buildSfxPayload } from "./ScriptBlockCard";
 import SpeechPlayerModal from "./SpeechPlayerModal";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ScriptTabProps {
   blocks: ScriptBlock[];
@@ -32,11 +33,11 @@ function SfxInsertForm({
   onInsert: (description: string, durationSec: number) => void;
   onCancel: () => void;
 }) {
+  const { t } = useLanguage();
   const [desc, setDesc] = useState("");
   const [dur, setDur]   = useState(3);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus the input when the form mounts
   useState(() => { setTimeout(() => inputRef.current?.focus(), 50); });
 
   const handleInsert = () => {
@@ -47,18 +48,15 @@ function SfxInsertForm({
   return (
     <div
       className="rounded-2xl p-3 flex flex-col gap-3 my-1"
-      style={{
-        background: "rgba(245,158,11,0.07)",
-        border: "1.5px dashed rgba(245,158,11,0.35)",
-      }}
+      style={{ background: "rgba(245,158,11,0.07)", border: "1.5px dashed rgba(245,158,11,0.35)" }}
     >
       <div className="flex items-center gap-2">
         <span className="text-sm">🔊</span>
         <span className="text-[10px] font-bold uppercase tracking-widest flex-1" style={{ color: "rgba(245,158,11,0.7)" }}>
-          New Sound Effect
+          {t("newSoundEffect")}
         </span>
         <button onClick={onCancel} className="text-white/30 text-xs hover:text-white/60 transition-colors">
-          Cancel
+          {t("cancel")}
         </button>
       </div>
 
@@ -68,18 +66,14 @@ function SfxInsertForm({
         value={desc}
         onChange={(e) => setDesc(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") handleInsert(); if (e.key === "Escape") onCancel(); }}
-        placeholder="Describe the sound (e.g. gentle rain on a window, soft and steady)"
+        placeholder={t("sfxPlaceholder")}
         className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(245,158,11,0.3)",
-          color: "rgba(255,255,255,0.8)",
-        }}
+        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(245,158,11,0.3)", color: "rgba(255,255,255,0.8)" }}
       />
 
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 flex-1">
-          <span className="text-[10px] text-white/30 whitespace-nowrap">Duration</span>
+          <span className="text-[10px] text-white/30 whitespace-nowrap">{t("duration")}</span>
           <input
             type="number"
             min={0.5}
@@ -88,13 +82,9 @@ function SfxInsertForm({
             value={dur}
             onChange={(e) => setDur(Math.min(22, Math.max(0.5, parseFloat(e.target.value) || 0.5)))}
             className="w-14 text-xs text-center rounded-lg px-2 py-1 outline-none"
-            style={{
-              background: "rgba(245,158,11,0.1)",
-              border: "1px solid rgba(245,158,11,0.3)",
-              color: "#F59E0B",
-            }}
+            style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", color: "#F59E0B" }}
           />
-          <span className="text-[10px] text-white/30">sec</span>
+          <span className="text-[10px] text-white/30">s</span>
         </div>
 
         <button
@@ -106,7 +96,7 @@ function SfxInsertForm({
             : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
           }
         >
-          + Insert SFX
+          {t("insertSfx")}
         </button>
       </div>
     </div>
@@ -116,6 +106,7 @@ function SfxInsertForm({
 // ─── Add-SFX separator button ─────────────────────────────────────────────────
 
 function SfxSeparator({ onAdd }: { onAdd: () => void }) {
+  const { t } = useLanguage();
   return (
     <button
       onClick={onAdd}
@@ -132,7 +123,7 @@ function SfxSeparator({ onAdd }: { onAdd: () => void }) {
           background: "rgba(245,158,11,0.04)",
         }}
       >
-        + add sfx
+        {t("addSfx")}
       </span>
       <div className="flex-1 h-px transition-all" style={{ background: "rgba(245,158,11,0.12)" }} />
     </button>
@@ -142,6 +133,7 @@ function SfxSeparator({ onAdd }: { onAdd: () => void }) {
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
 export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing }: ScriptTabProps) {
+  const { t } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
   const [isPlaying, setIsPlaying]         = useState(false);
@@ -286,7 +278,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     return (
       <div className="flex flex-col items-center py-20 text-center">
         <span className="text-5xl mb-3 opacity-40">📜</span>
-        <p className="text-white/25 text-sm">Generate a story first to see the script</p>
+        <p className="text-white/25 text-sm">{t("scriptEmpty")}</p>
       </div>
     );
   }
@@ -312,7 +304,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </p>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-            <span className="text-teal text-[10px] font-semibold tracking-widest">READY</span>
+            <span className="text-teal text-[10px] font-semibold tracking-widest">{t("ready")}</span>
           </div>
         </div>
 
@@ -372,17 +364,17 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               {isValidating ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#A78BFA" }} />
-                  Reviewing with AI…
+                  {t("reviewing")}
                 </>
               ) : (
-                <>✦ Regenerate &amp; Review</>
+                <>✦ {t("regenerate")}</>
               )}
             </button>
 
             {validationIssues && (
               <div className="rounded-2xl p-3 flex flex-col gap-2" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)" }}>
                 <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(239,68,68,0.7)" }}>
-                  ⚠ Script needs changes
+                  ⚠ {t("scriptIssues")}
                 </p>
                 <ul className="flex flex-col gap-1">
                   {validationIssues.map((issue, i) => (
@@ -405,9 +397,9 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           }`}
         >
           {isProducing ? (
-            <span className="flex items-center justify-center gap-2"><span className="animate-pulse-slow">🎙️</span>Mixing audio tracks…</span>
+            <span className="flex items-center justify-center gap-2"><span className="animate-pulse-slow">🎙️</span>{t("mixingAudio")}</span>
           ) : (
-            <span className="flex items-center justify-center gap-2">🎙️ Produce Story</span>
+            <span className="flex items-center justify-center gap-2">🎙️ {t("produceStory")}</span>
           )}
         </button>
       </div>

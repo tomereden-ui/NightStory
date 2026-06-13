@@ -18,11 +18,11 @@ type ActiveTab = "prompt" | "five-question" | "script" | "producing" | "drama";
 function PromptTab({
   promptText, setPromptText,
   generating, onGenerate,
-  language,
+  t,
 }: {
   promptText: string; setPromptText: (v: string) => void;
   generating: boolean; onGenerate: () => void;
-  language: string;
+  t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
 }) {
   const canGenerate = promptText.trim().length > 0;
 
@@ -30,14 +30,10 @@ function PromptTab({
     <div className="flex flex-col gap-6">
       <div>
         <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">
-          {language === "he" ? "ספר לי על הסיפור" : "Describe the story"}
+          {t("describeStory")}
         </label>
         <textarea
-          placeholder={
-            language === "he"
-              ? "כתוב כל מה שרוצים — דמויות, מקום, מצב רוח, סוף…"
-              : "Characters, setting, mood, how it ends — anything goes…"
-          }
+          placeholder={t("storyPlaceholder")}
           value={promptText}
           onChange={(e) => setPromptText(e.target.value)}
           rows={10}
@@ -50,7 +46,7 @@ function PromptTab({
           onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
         />
         <p className="text-white/15 text-[10px] mt-1 text-right">
-          {promptText.trim().split(/\s+/).filter(Boolean).length} words
+          {promptText.trim().split(/\s+/).filter(Boolean).length} {t("wordCount")}
         </p>
       </div>
 
@@ -65,8 +61,8 @@ function PromptTab({
         }
       >
         {generating
-          ? <span className="flex items-center justify-center gap-2"><span className="animate-pulse">✨</span>Generating…</span>
-          : language === "he" ? "צור סיפור" : "GENERATE STORY"}
+          ? <span className="flex items-center justify-center gap-2"><span className="animate-pulse">✨</span>{t("generating")}</span>
+          : t("generateStory")}
       </button>
     </div>
   );
@@ -75,7 +71,7 @@ function PromptTab({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CreatePage() {
-  const { language, isRTL } = useLanguage();
+  const { language, isRTL, t } = useLanguage();
   const router = useRouter();
 
   const [promptText, setPromptText]       = useState("");
@@ -165,10 +161,8 @@ export default function CreatePage() {
             <span className="relative text-5xl animate-pulse">✨</span>
           </div>
           <div>
-            <h2 className="text-white text-xl font-bold mb-2">
-              {language === "he" ? "יוצר את הסיפור שלך…" : "Crafting your story…"}
-            </h2>
-            <p className="text-white/35 text-sm">Weaving words into magic…</p>
+            <h2 className="text-white text-xl font-bold mb-2">{t("craftingStory")}</h2>
+            <p className="text-white/35 text-sm">{t("weavingMagic")}</p>
           </div>
           <div className="flex gap-2">
             {[0, 1, 2, 3].map((i) => (
@@ -188,7 +182,7 @@ export default function CreatePage() {
           <div className="flex items-center mb-7">
             <button onClick={() => { setActiveTab("script"); setIsProducing(false); setProductionJobId(null); }}
               className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
-            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Producing Drama</h1>
+            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{t("producingDrama")}</h1>
             <div className="w-8" />
           </div>
           <ProductionProgress jobId={productionJobId} onDone={handleProductionDone} onError={handleProductionError} />
@@ -203,7 +197,7 @@ export default function CreatePage() {
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
             <button onClick={handleReset} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
-            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Drama Ready</h1>
+            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{t("dramaReady")}</h1>
             <div className="w-8" />
           </div>
           <DramaPlayer job={completedJob} onGenerateAnother={handleReset} />
@@ -215,9 +209,9 @@ export default function CreatePage() {
   // ─── Main tab shell ───────────────────────────────────────────────────────
 
   const TABS: { id: ActiveTab; label: string; emoji: string }[] = [
-    { id: "prompt",        label: language === "he" ? "פרומפט" : "Prompt",      emoji: "💬" },
-    { id: "five-question", label: language === "he" ? "5 שאלות" : "5 Questions", emoji: "🧚" },
-    { id: "script",        label: language === "he" ? "סקריפט" : "Script",       emoji: "📄" },
+    { id: "prompt",        label: t("promptTab"),        emoji: "💬" },
+    { id: "five-question", label: t("fiveQuestionsTab"), emoji: "🧚" },
+    { id: "script",        label: t("scriptTab"),        emoji: "📄" },
   ];
 
   return (
@@ -227,7 +221,7 @@ export default function CreatePage() {
         <div className="flex items-center mb-7">
           <a href="/library" className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</a>
           <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">
-            {language === "he" ? "יוצר סיפורים" : "Story Creator"}
+            {t("storyCreator")}
           </h1>
           <div className="w-8" />
         </div>
@@ -280,7 +274,7 @@ export default function CreatePage() {
           <PromptTab
             promptText={promptText} setPromptText={setPromptText}
             generating={generating} onGenerate={handleGenerate}
-            language={language}
+            t={t}
           />
         )}
         {activeTab === "script" && (

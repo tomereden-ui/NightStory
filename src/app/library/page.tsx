@@ -22,7 +22,7 @@ function durationLabel(seconds: number): string {
 }
 
 export default function LibraryPage() {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trashCount, setTrashCount] = useState(0);
@@ -88,7 +88,7 @@ export default function LibraryPage() {
               filter: "drop-shadow(0 0 12px rgba(79,195,247,0.3))",
             }}
           >
-            {language === "he" ? "הסיפורים שלי" : "NightStory"}
+            {t("myStories")}
           </h1>
           <div className="w-9" />
         </div>
@@ -96,7 +96,7 @@ export default function LibraryPage() {
           className="text-center text-xs tracking-widest uppercase mb-6"
           style={{ color: "rgba(79,195,247,0.6)", letterSpacing: "0.25em" }}
         >
-          {language === "he" ? "הספרייה שלי" : "My Stories"}
+          {t("myLibrary")}
         </p>
       </div>
 
@@ -109,10 +109,10 @@ export default function LibraryPage() {
           <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
             <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>🌙</span>
             <p className="text-white/40 text-sm font-light tracking-wide">
-              {language === "he" ? "עדיין אין סיפורים" : "No stories yet"}
+              {t("noStories")}
             </p>
             <p className="text-white/20 text-xs">
-              {language === "he" ? "צור סיפור ראשון כדי להתחיל" : "Create your first story to get started"}
+              {t("createFirstStory")}
             </p>
           </div>
         ) : (
@@ -138,10 +138,10 @@ export default function LibraryPage() {
                     /* Confirm delete state */
                     <div className="flex flex-col gap-3 px-4 py-4">
                       <p className="text-sm text-white/70">
-                        Move <span className="text-white font-medium">"{entry.title}"</span> to trash?
+                        {t("moveToTrash")} <span className="text-white font-medium">"{entry.title}"</span>?
                       </p>
                       <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                        Kept for 30 days, then deleted permanently.
+                        {t("keptFor30Days")}
                       </p>
                       <div className="flex gap-2">
                         <button
@@ -153,7 +153,7 @@ export default function LibraryPage() {
                             color: "rgba(255,255,255,0.5)",
                           }}
                         >
-                          Cancel
+                          {t("cancel")}
                         </button>
                         <button
                           onClick={() => handleDeleteConfirm(entry.id)}
@@ -165,7 +165,7 @@ export default function LibraryPage() {
                             color: "#EC4899",
                           }}
                         >
-                          {isDeleting ? "Moving…" : "Move to trash"}
+                          {isDeleting ? "…" : t("moveToTrash")}
                         </button>
                       </div>
                     </div>

@@ -61,9 +61,7 @@ export default function ProfilePage() {
           >
             <span>{tier.emoji}</span>
             <span className="text-xs font-semibold capitalize">
-              {language === "he"
-                ? user.subscriptionTier === "premium" ? "פרימיום" : user.subscriptionTier
-                : tier.label}
+              {user.subscriptionTier === "premium" ? t("premiumBadge") : tier.label}
             </span>
           </div>
         </div>
@@ -71,7 +69,7 @@ export default function ProfilePage() {
         {/* Child profiles */}
         <div className="mb-6">
           <h3 className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-3">
-            {language === "he" ? "פרופילי ילדים" : "Child Profiles"}
+            {t("childProfiles")}
           </h3>
           <div className="flex gap-3">
             {user.childProfiles.map((child) => (
@@ -91,7 +89,7 @@ export default function ProfilePage() {
                   className="text-[10px] px-2 py-0.5 rounded-full"
                   style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)" }}
                 >
-                  {child.ageGroup} {language === "he" ? "שנים" : "yrs"}
+                  {child.ageGroup} {t("yrs")}
                 </span>
               </div>
             ))}
@@ -101,13 +99,13 @@ export default function ProfilePage() {
         {/* Stats */}
         <div className="mb-6">
           <h3 className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-3">
-            {language === "he" ? "סטטיסטיקות" : "Stats"}
+            {t("stats")}
           </h3>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { value: user.favoriteStoryIds.length, label: language === "he" ? "מועדפים" : "Favorites", color: "#EC4899" },
-              { value: user.recentlyPlayedIds.length, label: language === "he" ? "הושמעו" : "Played",    color: "#4fc3f7" },
-              { value: user.childProfiles.length,     label: language === "he" ? "ילדים" : "Children",   color: "#8B5CF6" },
+              { value: user.favoriteStoryIds.length, label: t("favorites"), color: "#EC4899" },
+              { value: user.recentlyPlayedIds.length, label: t("played"),    color: "#4fc3f7" },
+              { value: user.childProfiles.length,     label: t("children"),  color: "#8B5CF6" },
             ].map((stat) => (
               <div
                 key={stat.label}
@@ -124,12 +122,12 @@ export default function ProfilePage() {
         {/* Settings */}
         <div>
           <h3 className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-3">
-            {language === "he" ? "הגדרות" : "Settings"}
+            {t("settings")}
           </h3>
           <div className="flex flex-col gap-1.5">
-            <Row icon="🔔" label={language === "he" ? "התראות" : "Notifications"} value={language === "he" ? "פעיל" : "On"} />
-            <Row icon="🌙" label={language === "he" ? "מצב לילה" : "Night Mode"} value={language === "he" ? "תמיד" : "Always"} />
-            <Row icon="🔊" label={language === "he" ? "עוצמת קול" : "Volume"} value="80%" />
+            <Row icon="🔔" label={t("notifications")} value={t("on")} />
+            <Row icon="🌙" label={t("nightMode")} value={t("always")} />
+            <Row icon="🔊" label={t("volume")} value="80%" />
           </div>
         </div>
       </div>

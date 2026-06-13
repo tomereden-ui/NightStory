@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 // Speech Recognition API types (not always in TS dom lib)
 interface ISpeechRecognitionEvent {
@@ -32,7 +33,6 @@ function getSpeechRecognitionAPI(): ISpeechRecognitionConstructor | null {
 interface QuickCreateTabProps {
   onGenerate: (promptText: string, durationMinutes: number) => void;
   generating: boolean;
-  language: string;
 }
 
 interface WorldCard {
@@ -90,7 +90,8 @@ function StepDots({ step }: { step: number }) {
   );
 }
 
-export default function QuickCreateTab({ onGenerate, generating, language }: QuickCreateTabProps) {
+export default function QuickCreateTab({ onGenerate, generating }: QuickCreateTabProps) {
+  const { t, language } = useLanguage();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedWorld, setSelectedWorld] = useState<WorldCard | null>(null);
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
@@ -158,7 +159,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
       <div className="flex flex-col">
         <StepDots step={1} />
         <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest text-center mb-5">
-          {language === "he" ? "בחר עולם" : "Pick a World"}
+          {t("pickWorld")}
         </p>
         <div className="grid grid-cols-2 gap-3">
           {WORLDS.map((world) => (
@@ -224,7 +225,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
             ←
           </button>
           <p className="flex-1 text-center text-white/40 text-[11px] font-bold uppercase tracking-widest">
-            {language === "he" ? "בחר מצב רוח" : "Pick a Mood"}
+            {t("pickMood")}
           </p>
           <div className="w-8" />
         </div>
@@ -283,7 +284,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
           ←
         </button>
         <p className="flex-1 text-center text-white/40 text-[11px] font-bold uppercase tracking-widest">
-          {language === "he" ? "הוסף נגיעה אישית" : "Add Your Stamp"}
+          {t("addYourStamp")}
         </p>
         <div className="w-8" />
       </div>
@@ -328,7 +329,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
               {isRecording ? "🔴" : "🎙️"}
             </button>
             <span className="text-white/30 text-[10px]">
-              {language === "he" ? "לחץ לדיבור · או הקלד למטה" : "Hold to speak · or type below"}
+              {t("holdToSpeak")}
             </span>
           </div>
         )}
@@ -336,7 +337,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
         {/* Text input */}
         <input
           type="text"
-          placeholder={language === "he" ? "כתוב את תשובתך…" : "Type your answer…"}
+          placeholder={t("typeAnswer")}
           value={personalStamp}
           onChange={(e) => setPersonalStamp(e.target.value)}
           className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none text-center transition-colors"
@@ -377,12 +378,10 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
         {generating ? (
           <span className="flex items-center justify-center gap-2">
             <span className="animate-pulse">✨</span>
-            {language === "he" ? "יוצר סיפור…" : "Generating story…"}
+            {t("generatingStory")}
           </span>
-        ) : language === "he" ? (
-          "צור סיפור"
         ) : (
-          "CREATE MY STORY"
+          t("generateStory")
         )}
       </button>
     </div>

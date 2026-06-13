@@ -1,4 +1,4 @@
-export type Language = "en" | "he";
+export type Language = "en" | "he" | "es" | "fr" | "de" | "pt" | "ar" | "zh" | "ja" | "it";
 
 export type AgeGroup = "2-4" | "4-6" | "6-8" | "8-10" | "10-12";
 

@@ -9,7 +9,7 @@ function durationLabel(seconds: number) {
 }
 
 export default function QuickPickSection() {
-  const { t, language } = useLanguage();
+  const { t, language } = useLanguage(); // language still used for story title/desc fallback
   const picks = STORIES.slice(0, 4);
 
   return (
@@ -17,7 +17,7 @@ export default function QuickPickSection() {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-white/80 font-semibold text-sm tracking-wide">{t("forYou")}</h2>
         <Link href="/library" className="text-white/25 text-xs">
-          {language === "he" ? "הכל →" : "See all →"}
+          {t("seeAll")}
         </Link>
       </div>
 

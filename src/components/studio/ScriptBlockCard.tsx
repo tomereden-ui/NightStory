@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import type { ScriptBlock, Voice } from "@/types";
 import VoicePicker from "./VoicePicker";
+import { useLanguage } from "@/context/LanguageContext";
 
 // ─── SFX payload helpers ──────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ interface ScriptBlockCardProps {
 // ─── SFX card ─────────────────────────────────────────────────────────────────
 
 function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "block" | "onTextChange" | "onDelete">) {
+  const { t } = useLanguage();
   const sfx = parseSfxPayload(block.textPayload);
   const [desc, setDesc]           = useState(sfx?.description ?? "");
   const [dur, setDur]             = useState(sfx?.durationSec ?? 3);
@@ -114,7 +116,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
 
         {/* Duration control */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-white/30">Duration</span>
+          <span className="text-[10px] text-white/30">{t("duration")}</span>
           <input
             type="number"
             min={0.5}
@@ -174,7 +176,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
         value={desc}
         onChange={(e) => { setDesc(e.target.value); commit(e.target.value, dur); }}
         rows={1}
-        placeholder="Describe the sound effect…"
+        placeholder={t("sfxPlaceholder")}
         className="w-full bg-transparent text-sm leading-relaxed resize-none outline-none overflow-hidden"
         style={{ color: "rgba(255,255,255,0.65)", minHeight: "22px" }}
       />
@@ -197,6 +199,7 @@ function SpeechCard({
   onPlayPreview,
   onDelete,
 }: ScriptBlockCardProps) {
+  const { t } = useLanguage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [isFocused, setIsFocused]   = useState(false);
@@ -246,7 +249,7 @@ function SpeechCard({
             className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-[8px] font-semibold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover/voice:opacity-100 transition-opacity pointer-events-none"
             style={{ color: "rgba(79,195,247,0.5)" }}
           >
-            change
+            {t("changeVoice")}
           </span>
         )}
 
@@ -269,7 +272,7 @@ function SpeechCard({
           {assignedVoice && (
             <span className="text-white/15 text-[9px]">· {assignedVoice.name}</span>
           )}
-          <span className="ml-auto text-[8px] text-white/20 italic">tap to edit</span>
+          <span className="ml-auto text-[8px] text-white/20 italic">{t("tapToEdit")}</span>
         </div>
         <textarea
           ref={textareaRef}
