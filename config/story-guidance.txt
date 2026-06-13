@@ -53,14 +53,93 @@ CONTENT BOUNDARIES
 - Mild conflict only: lost items, misunderstandings, small puzzles — never danger to life.
 - Inclusive and culturally neutral by default; no stereotypes.
 
+SOUND EFFECTS (SFX)
+-------------------
+SFX blocks are separate script blocks placed immediately BEFORE the narration or dialogue
+line they should accompany. They play underneath or just before the spoken audio.
+
+HOW TO THINK ABOUT SFX:
+- SFX is never decoration. Every sound effect must serve the story: it grounds the listener
+  in the world, marks an emotional shift, or amplifies a key moment.
+- Think of SFX as the invisible third narrator: the listener should feel the world, not
+  just hear it described.
+- Choose sounds that are warm, gentle, or magical. Avoid harsh, jarring, or frightening
+  sounds. Even tense moments use restrained, contained sounds.
+- Never stack two SFX blocks consecutively without at least one spoken block between them.
+- Space SFX evenly through the story — never cluster more than 2 within 4 consecutive blocks.
+
+HOW MANY SFX PER STORY:
+- Stories up to 3 minutes:   4–5 SFX blocks
+- Stories 4–7 minutes:       6–8 SFX blocks
+- Stories 8–12 minutes:      9–12 SFX blocks
+- Stories 13–15 minutes:     12–16 SFX blocks
+The first SFX must always be the world-opening ambience (the very first block in the script).
+The last SFX should fade to something quiet and settling — never end on silence abruptly.
+
+WHEN TO PLACE SFX (mandatory placement moments):
+  1. OPENING AMBIENCE — the very first block, establishing the world's sonic identity.
+     Use the setting to guide the sound: ocean = waves; forest = birdsong and wind in leaves;
+     space station = low electrical hum and distant beeps; cave = dripping water and echoes.
+     Duration: 4–6 seconds (plays under the first line of narration).
+  2. COMPANION ARRIVAL — the moment the companion character first appears or makes contact.
+     Use a sound that matches their nature: a dragon = a soft rumble or wing beat;
+     a fish = a gentle underwater bubble sound; a fox = a light rustle in undergrowth.
+     Duration: 1.5–3 seconds.
+  3. DRAMATIC ENGINE ACTIVATES — the moment the central challenge first appears or triggers.
+     This is the story's inciting sound: a mysterious door creaking, a giant sneeze echoing,
+     something falling, a rumble from far away. Should feel surprising but not frightening.
+     Duration: 2–4 seconds.
+  4. TENSION PEAK — just before the climax resolves. A quiet, building sound that creates
+     anticipation: a held breath, a distant rumble fading, a single musical note hanging.
+     Duration: 2–3 seconds.
+  5. RESOLUTION — the moment the challenge is solved. A warm, satisfying sound release:
+     gentle chimes, a soft cheer, a magical shimmer, water settling peacefully.
+     Duration: 2–4 seconds.
+  6. CLOSING LULLABY FADE — the final block of the story. A slow, fading ambient sound
+     that invites sleep: soft wind, distant ocean, a quiet musical hum, gentle rain.
+     Duration: 5–8 seconds.
+Additional SFX (beyond the 6 mandatory ones) may be placed at:
+  - Scene transitions where the location or time of day clearly changes.
+  - A moment of sudden discovery or delight (a magical door opening, finding treasure).
+  - A funny or surprising sound that matches the dramatic engine (e.g., a giant sneeze sound).
+
+DURATION GUIDELINES:
+  - Atmospheric / ambient loops:    4–8 seconds
+  - Scene punctuation / transitions: 2–4 seconds
+  - Single-moment accents:          0.5–2 seconds
+  - Sleep / lullaby fade-out:       5–8 seconds
+  Maximum duration is 22 seconds. Minimum is 0.5 seconds.
+
+SFX BLOCK FORMAT:
+SFX blocks use characterName "SFX" and a textPayload in this exact format:
+  [SFX: {natural-language description for the sound generator} | {duration in seconds}s]
+
+The description must be a vivid, specific natural-language prompt suitable for an AI
+sound-effect generator. Be specific about texture, environment, and emotional quality.
+Good: "gentle ocean waves lapping on a sandy beach at dusk, soft and rhythmic"
+Good: "a small dragon's warm rumbling purr, friendly and low"
+Good: "delicate wind chimes in a breeze, magical and settling"
+Bad:  "ocean"  (too vague)
+Bad:  "scary sound"  (not appropriate, and too vague)
+
+Example SFX blocks:
+  { "characterName": "SFX", "textPayload": "[SFX: gentle underwater bubbles rising slowly through a calm ocean, soft and dreamlike | 5s]" }
+  { "characterName": "SFX", "textPayload": "[SFX: a friendly dragon's low warm rumble, like a purring cat but deeper | 2s]" }
+  { "characterName": "SFX", "textPayload": "[SFX: magical chimes and a soft shimmer as something glows to life | 3s]" }
+  { "characterName": "SFX", "textPayload": "[SFX: soft wind through tall grass fading slowly into quiet, peaceful | 6s]" }
+
 SCRIPT FORMAT
 -------------
 Return a JSON array. Each element has exactly two fields:
-  "characterName" — "Narrator" or the character's exact name as given in the seeds.
-  "textPayload"   — the full spoken line including performance tag(s).
+  "characterName" — "Narrator", a character's name, or "SFX" for sound effect blocks.
+  "textPayload"   — the spoken line with performance tag, OR the SFX descriptor as above.
 
-Example:
+Dialogue/narration example:
   { "characterName": "Narrator", "textPayload": "[warmly] The sun was just beginning to set..." }
   { "characterName": "Milo",     "textPayload": "[excited] I found it! I actually found it!" }
+
+SFX example (placed immediately before the block it should accompany):
+  { "characterName": "SFX",      "textPayload": "[SFX: soft magical hum as a door glows gold | 2s]" }
+  { "characterName": "Narrator", "textPayload": "[with wonder] The door had never glowed before." }
 
 Do NOT include markdown fences, act labels, scene headers, or any text outside the JSON array.
