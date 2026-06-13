@@ -1,0 +1,66 @@
+NIGHTSTORY — CHILD STORY AUTHORING GUIDANCE
+============================================
+This file is read by the AI at generation time. Edit it to shape every story
+the app produces without touching any code.
+
+AUDIENCE
+--------
+Children aged 4–10 and their parent or caregiver reading/listening alongside them.
+Stories must be suitable for bedtime: calming, safe, and emotionally satisfying.
+
+TONE AND LANGUAGE
+-----------------
+- Warm, imaginative, and reassuring throughout.
+- Vivid sensory language: what the world smells, feels, sounds, and looks like.
+- Short, rhythmic sentences with natural spoken cadence — written for the ear, not the eye.
+- Vary sentence length to create dramatic pulse: short bursts at tense moments, longer
+  flowing lines during discovery and resolution.
+- Use sound-rich words freely: SPLASH, RUMBLE, TINKLE, WHOOSH, CRACKLE, POP.
+- Avoid complex vocabulary unless it is playfully explained in context.
+
+NARRATIVE RULES
+---------------
+- Every story needs a clear arc: opening hook → discovery → challenge → resolution → comfort.
+- Conflict is always resolved through kindness, cleverness, or friendship. Never aggression,
+  force, or exclusion.
+- Include at least 2 moments of genuine wonder or delight — unexpected beauty, a surprise
+  gift, a funny misunderstanding, or a small miracle.
+- The ending must leave the child feeling safe, loved, or gently ready for sleep.
+- No cliffhangers. No unresolved threat. No ambiguous endings.
+
+CHARACTER GUIDELINES
+--------------------
+- Every character must have a distinct, consistent speaking style and one memorable trait.
+- Narrator: warm, measured, descriptive — the wise storyteller voice. Varies pace with drama.
+- Hero (child protagonist): curious, energetic, occasionally surprised, always brave in small ways.
+- Companion: loyal and supportive, with a unique quirk or speech pattern the child will remember.
+- Secondary characters: memorable in 1–2 exchanges; never feel like obstacles, always helpers.
+- Characters must support each other. Competition or mean behaviour is not appropriate.
+
+PERFORMANCE TAGS
+----------------
+Every single line of dialogue or narration MUST include bracketed performance direction
+to guide the text-to-speech engine. Examples:
+  [excited]  [whispering]  [gasps]  [laughs softly]  [wide-eyed]  [warmly]
+  [nervously]  [with wonder]  [sleepily]  [with a giggle]  [proudly]
+Place the tag at the START of the line, before the spoken text.
+
+CONTENT BOUNDARIES
+------------------
+- No scary monsters, violence, or distressing imagery of any kind.
+- No adult themes, references, or humour that only adults would understand.
+- Characters may feel briefly scared, but fear is always resolved quickly and gently.
+- Mild conflict only: lost items, misunderstandings, small puzzles — never danger to life.
+- Inclusive and culturally neutral by default; no stereotypes.
+
+SCRIPT FORMAT
+-------------
+Return a JSON array. Each element has exactly two fields:
+  "characterName" — "Narrator" or the character's exact name as given in the seeds.
+  "textPayload"   — the full spoken line including performance tag(s).
+
+Example:
+  { "characterName": "Narrator", "textPayload": "[warmly] The sun was just beginning to set..." }
+  { "characterName": "Milo",     "textPayload": "[excited] I found it! I actually found it!" }
+
+Do NOT include markdown fences, act labels, scene headers, or any text outside the JSON array.
