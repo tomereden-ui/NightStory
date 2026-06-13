@@ -32,11 +32,10 @@ function readGuidance(): string {
   }
 }
 
-// ─── System instruction ───────────────────────────────────────────────────────
+// ─── System instruction — guidance file + runtime numbers only ────────────────
 
 function buildSystemInstruction(guidance: string, durationMinutes: number): string {
   const targetWords = Math.round(durationMinutes * 140);
-  const wordRange   = `${targetWords - 60}–${targetWords + 60}`;
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
 
@@ -44,43 +43,22 @@ function buildSystemInstruction(guidance: string, durationMinutes: number): stri
 
 RUNTIME TARGETS FOR THIS STORY
 -------------------------------
-- Target duration: ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}
-- Target spoken word count: ${wordRange} words (speech blocks only; SFX blocks do not count)
-- Target block count: ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)
-- Characters: Narrator + exactly 2 named characters (child or animal)
-
-LANGUAGE RULE
--------------
-Determine the story language from the PROSE TEXT of the user's description — sentences and plot
-descriptions. Character names are proper nouns and must NOT be used to infer language.
-If the prose is in English → write entirely in English.
-If the prose is in Hebrew → write entirely in Hebrew.
-Never mix languages.`;
+Target duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}
+Target word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)
+Target blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)`;
 }
 
-// ─── Prompt builder ───────────────────────────────────────────────────────────
+// ─── User prompt — story description only ────────────────────────────────────
 
-function buildPrompt(body: GenerateStoryRequest): string {
-  let storyDef = "";
+function buildUserPrompt(body: GenerateStoryRequest): string {
   if (body.mode === "prompt" && body.promptText) {
-    storyDef = `\n\nStory description:\n${body.promptText}`;
-  } else {
-    const parts: string[] = [];
-    if (body.hero)    parts.push(`Main character: ${body.hero}`);
-    if (body.setting) parts.push(`Setting: ${body.setting}`);
-    if (body.plot)    parts.push(`Plot: ${body.plot}`);
-    if (parts.length) storyDef = "\n\n" + parts.join("\n");
+    return `Story description:\n${body.promptText}`;
   }
-
-  const format =
-    `\n\nReturn the story as a JSON array of script blocks. Each block has exactly two fields:\n` +
-    `- "characterName": "Narrator" (in the story language) for narration, the character's name for dialogue, or "SFX" for sound effect blocks\n` +
-    `- "textPayload": spoken text with performance tags for speech blocks (e.g., "[excited] Wow!"), or SFX descriptor for SFX blocks (e.g., "[SFX: gentle ocean waves | 5s]")\n\n` +
-    `SFX blocks use this exact format: [SFX: {vivid natural-language description} | {duration}s]\n` +
-    `Follow the SFX placement and quantity rules from the system guidance exactly.\n\n` +
-    `Return ONLY the raw JSON array — no markdown fences, no explanation, nothing else.`;
-
-  return storyDef + format;
+  const parts: string[] = [];
+  if (body.hero)    parts.push(`Main character: ${body.hero}`);
+  if (body.setting) parts.push(`Setting: ${body.setting}`);
+  if (body.plot)    parts.push(`Plot: ${body.plot}`);
+  return parts.join("\n");
 }
 
 function assignVoice(characterName: string, primaryVoiceId: string, heroName: string): string {
@@ -105,7 +83,7 @@ export async function POST(req: NextRequest) {
 
   const durationMinutes = Math.min(15, Math.max(1, body.durationMinutes ?? 5));
   const guidance = readGuidance();
-  const prompt = buildPrompt(body);
+  const prompt = buildUserPrompt(body);
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);

@@ -29,47 +29,35 @@ function readGuidance(): string {
 
 function buildSystemInstruction(guidance: string, durationMinutes: number): string {
   const targetWords = Math.round(durationMinutes * 140);
-  const minBlocks = Math.max(4, Math.round(durationMinutes * 2.5));
-  const maxBlocks = Math.max(8, Math.round(durationMinutes * 3.6));
+  const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
+  const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
 
   return `${guidance}
 
-RUNTIME TARGET
---------------
-The final audio run-time must be exactly ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}.
-Aim for ${targetWords - 60}–${targetWords + 60} total spoken words across all blocks.
-Use ${minBlocks}–${maxBlocks} script blocks to fill the full runtime.
-Balance dialogue evenly between the hero, the companion, and the Narrator.`;
+RUNTIME TARGETS FOR THIS STORY
+-------------------------------
+Target duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}
+Target word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)
+Target blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)`;
 }
 
 function buildUserPrompt(seeds: StorySeeds): string {
-  const ability = inferCompanionAbility(seeds.q3_companion);
+  const ability   = inferCompanionAbility(seeds.q3_companion);
   const moodLabel = MOOD_LABELS[seeds.q5_mood] ?? seeds.q5_mood;
 
-  return `Generate a children's audio drama script using these 5 seeds:
+  return `Story seeds:
+HERO      : ${seeds.q1_hero}
+WORLD     : ${seeds.q2_world}
+COMPANION : ${seeds.q3_companion}
+CHALLENGE : ${seeds.q4_engine}
+ENDING MOOD: ${moodLabel}
 
-HERO: ${seeds.q1_hero}
-WORLD: ${seeds.q2_world}
-COMPANION: ${seeds.q3_companion}
-DRAMATIC ENGINE (the central challenge): ${seeds.q4_engine}
-RESOLUTION MOOD: ${moodLabel}
-
-COMPANION'S SPECIAL ABILITY — use this as the exact mechanism that resolves the dramatic engine:
+The companion's special ability (use as the resolution mechanism):
 ${ability}
 
-CHARACTERS TO USE:
-- Narrator (narration only)
-- ${seeds.q1_hero} (the hero — all their lines use their exact name)
-- ${seeds.q3_companion} (the companion — use their exact name or description)
-- Add 1–2 minor supporting characters only if the story naturally calls for them
-
-STORY RULES:
-- Resolve the challenge (${seeds.q4_engine}) through cleverness or kindness, never force
-- The companion's special ability must appear twice: imperfectly first, then perfectly at the climax
-- End with ${seeds.q1_hero} feeling ${moodLabel}
-- Every line must begin with a performance tag like [excited], [whispering], [warmly], etc.
-
-Return ONLY the raw JSON array of script blocks. No markdown fences, no explanation.`;
+Story rules:
+- Resolve the challenge through the companion's ability — first imperfectly, then perfectly at the climax
+- End with ${seeds.q1_hero} feeling ${moodLabel}`;
 }
 
 function assignVoice(characterName: string, heroName: string): string {
