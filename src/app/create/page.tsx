@@ -518,6 +518,38 @@ export default function CreatePage() {
           <div className="w-8" />
         </div>
 
+        {/* 5-Question mode card */}
+        <a
+          href="/create/five-question"
+          className="flex items-center gap-4 rounded-2xl px-4 py-4 mb-6 transition-all active:scale-[0.98] block"
+          style={{
+            background: "linear-gradient(135deg, rgba(79,195,247,0.10) 0%, rgba(139,92,246,0.10) 100%)",
+            border: "1px solid rgba(79,195,247,0.25)",
+          }}
+        >
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+            style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.2)" }}
+          >
+            🧚
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-white text-sm font-semibold">5 Questions</span>
+              <span
+                className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                style={{ background: "rgba(79,195,247,0.12)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.25)" }}
+              >
+                ~2 min setup
+              </span>
+            </div>
+            <p className="text-white/40 text-xs leading-snug">
+              Answer 5 questions with Bluebell and get a 15-minute story
+            </p>
+          </div>
+          <span className="text-white/25 text-base flex-shrink-0">→</span>
+        </a>
+
         {/* Tab bar */}
         <div className="flex mb-7" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           {TABS.map(({ id, label }) => {
