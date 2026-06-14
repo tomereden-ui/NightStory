@@ -85,37 +85,32 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    for (let i = 0; i < dialogueTracks.length; i += 2) {
-      const batch = dialogueTracks.slice(i, i + 2);
-      await Promise.all(
-        batch.map(async (track) => {
-          const outPath = path.join(jobTmp, `${track.id}.wav`);
-          const line = track.line?.trim() ?? "";
-          if (!line) {
-            writeSilence(500, outPath);
-            dialogueDone++;
-            return;
-          }
-          const charName = track.character ?? "Narrator";
-          const profile = voiceProfiles[charName];
-          const voice = profile?.voiceName ?? voiceMap.assign(charName, track.voice_style);
-          const persona = profile?.persona;
-          try {
-            await synthesizeLine(line, voice, geminiKey, outPath, persona);
-          } catch (err) {
-            console.warn(`[TTS] Skipping ${track.id}:`, err);
-            skippedLines.push(track.id);
-            writeSilence(2000, outPath);
-          }
-          dialogueDone++;
-          updateJob(jobId, {
-            step: `🎙️ Recording dialogue (${dialogueDone}/${dialogueTracks.length})…`,
-            progress: 20 + Math.round((dialogueDone / dialogueTracks.length) * 35),
-          });
-        }),
-      );
-      // Small pause between batches to stay within Gemini TTS RPM quota
-      if (i + 2 < dialogueTracks.length) await new Promise((r) => setTimeout(r, 400));
+    for (let i = 0; i < dialogueTracks.length; i++) {
+      const track = dialogueTracks[i];
+      const outPath = path.join(jobTmp, `${track.id}.wav`);
+      const line = track.line?.trim() ?? "";
+      if (!line) {
+        writeSilence(500, outPath);
+      } else {
+        const charName = track.character ?? "Narrator";
+        const profile = voiceProfiles[charName];
+        const voice = profile?.voiceName ?? voiceMap.assign(charName, track.voice_style);
+        const persona = profile?.persona;
+        try {
+          await synthesizeLine(line, voice, geminiKey, outPath, persona);
+        } catch (err) {
+          console.warn(`[TTS] Skipping ${track.id}:`, err);
+          skippedLines.push(track.id);
+          writeSilence(2000, outPath);
+        }
+      }
+      dialogueDone++;
+      updateJob(jobId, {
+        step: `🎙️ Recording dialogue (${dialogueDone}/${dialogueTracks.length})…`,
+        progress: 20 + Math.round((dialogueDone / dialogueTracks.length) * 35),
+      });
+      // 3s gap between TTS calls to stay comfortably under Gemini RPM quota
+      if (i + 1 < dialogueTracks.length) await new Promise((r) => setTimeout(r, 3000));
     }
 
     // ── Step 3: SFX generation ────────────────────────────────────────────
