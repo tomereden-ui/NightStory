@@ -681,15 +681,15 @@ export default function FiveQuestionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, summary: storySummary }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.imageData) {
-          const url = `data:${data.mimeType ?? "image/jpeg"};base64,${data.imageData}`;
-          setCoverUrl(url);
-        }
+      const data = await res.json();
+      if (res.ok && data.imageData) {
+        const url = `data:${data.mimeType ?? "image/jpeg"};base64,${data.imageData}`;
+        setCoverUrl(url);
+      } else {
+        console.error("[fetchCover] API error:", data);
       }
-    } catch {
-      // non-fatal — cover is optional
+    } catch (err) {
+      console.error("[fetchCover] Fetch error:", err);
     } finally {
       setIsFetchingCover(false);
     }

@@ -61,19 +61,12 @@ Write ONLY the image prompt. No labels, no quotes.`,
     console.warn("[CoverGen] Enhancement failed, using raw prompt");
   }
 
-  // ── Step 2: build final prompt — characters first, style wraps around ──────
-  const fullPrompt = `Children's book cover illustration.
+  // ── Step 2: natural language prompt — character description first ────────────
+  const fullPrompt = `${scenePrompt}
 
-FOREGROUND SUBJECT (draw this first, largest, most detailed):
-${scenePrompt}
+Illustrated in a soft watercolor style for a children's bedtime book cover. The characters described above are the main subject, large and centered in the lower two-thirds of the image, warmly lit by a gentle amber glow (from a lantern, fireflies, or glowing flowers nearby). Behind them, a soft dark indigo night sky with scattered stars forms the background — the sky fills only the upper portion and never replaces the characters. Square composition, painterly brush strokes, cozy and dreamy mood. No text, no letters, no numbers anywhere in the image.`;
 
-REQUIRED: The characters above MUST be the primary subject filling the lower 2/3 of the image. They must be clearly visible, warmly lit, and rendered with expressive detail.
-
-ART STYLE: Soft watercolor painting, luminous brush strokes, painterly depth. Warm amber or teal glow from a nearby light source (lantern, fireflies, glowing flowers) illuminating the characters from the front. Background fades into a soft dark indigo night with scattered stars — background stays behind characters, never replacing them.
-
-AVOID: empty sky as the main subject, plain moon without characters, atmospheric-only compositions with no characters visible, landscapes without the story characters present.
-
-NO text, NO words, NO letters, NO numbers anywhere in the image. Square composition.`;
+  console.log("[CoverGen] Final image prompt:", fullPrompt.slice(0, 300));
 
   try {
     const res = await fetch(
@@ -89,6 +82,12 @@ NO text, NO words, NO letters, NO numbers anywhere in the image. Square composit
     );
 
     const data = await res.json();
+    console.log("[CoverGen] Gemini status:", res.status, "| finishReason:", data?.candidates?.[0]?.finishReason, "| parts:", data?.candidates?.[0]?.content?.parts?.length ?? 0);
+    if (!res.ok) {
+      console.error("[CoverGen] Gemini error body:", JSON.stringify(data).slice(0, 500));
+      return NextResponse.json({ error: data?.error?.message ?? "Gemini error", geminiStatus: res.status }, { status: 502 });
+    }
+
     const parts = data?.candidates?.[0]?.content?.parts ?? [];
     for (const part of parts) {
       if (part.inlineData?.data) {
@@ -98,8 +97,13 @@ NO text, NO words, NO letters, NO numbers anywhere in the image. Square composit
         });
       }
     }
-    return NextResponse.json({ error: "No image in response" }, { status: 502 });
+
+    // Log what we actually got back
+    const textParts = parts.filter((p: { text?: string }) => p.text).map((p: { text: string }) => p.text?.slice(0, 100));
+    console.warn("[CoverGen] No image part. Text parts:", textParts, "| safetyRatings:", JSON.stringify(data?.candidates?.[0]?.safetyRatings ?? []));
+    return NextResponse.json({ error: "No image in response", detail: textParts }, { status: 502 });
   } catch (err: unknown) {
+    console.error("[CoverGen] Fetch threw:", err);
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });
   }
 }
