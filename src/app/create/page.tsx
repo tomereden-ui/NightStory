@@ -87,6 +87,7 @@ export default function CreatePage() {
   const [coverUrl, setCoverUrl]           = useState("");
   const [coverPrompt, setCoverPrompt]     = useState("");
   const [isFetchingCover, setIsFetchingCover] = useState(false);
+  const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
 
   // Restore draft on mount
   useEffect(() => {
@@ -97,14 +98,15 @@ export default function CreatePage() {
       setSummary(draft.summary ?? "");
       setCoverUrl(draft.coverUrl ?? "");
       setCoverPrompt(draft.coverPrompt ?? "");
+      setEditingStoryId(draft.editingStoryId ?? null);
       setActiveTab("script");
     }
   }, []);
 
   // Persist draft on change
   useEffect(() => {
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt });
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined });
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId]);
 
   const hasScript = scriptBlocks.length > 0;
 
@@ -143,7 +145,10 @@ export default function CreatePage() {
     setGenerateError(null);
     setActiveTab("producing");
     try {
-      const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks }) });
+      const produceBody: Record<string, unknown> = { blocks };
+      if (editingStoryId) produceBody.editingStoryId = editingStoryId;
+      if (summary) produceBody.summary = summary;
+      const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(produceBody) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};
       try { data = JSON.parse(text); } catch { throw new Error(`Server error (${res.status}): ${text.slice(0, 300)}`); }
@@ -154,7 +159,7 @@ export default function CreatePage() {
       setIsProducing(false);
       setActiveTab("script");
     }
-  }, []);
+  }, [editingStoryId, summary]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job);
@@ -173,6 +178,7 @@ export default function CreatePage() {
     setPromptText(""); setScriptBlocks([]); setActiveTab("prompt");
     setGenerateError(null); setProductionJobId(null); setCompletedJob(null);
     setIsProducing(false); setSummary(""); setCoverUrl(""); setCoverPrompt("");
+    setEditingStoryId(null);
     clearDraft();
   };
 

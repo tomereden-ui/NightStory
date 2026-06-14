@@ -39,7 +39,9 @@ function cleanTempDir(jobId: string) {
 
 async function runProduction(
   jobId: string,
+  storyId: string,
   blocks: ScriptBlock[],
+  summaryOverride: string,
   geminiKey: string,
   elevenKey: string | null,
 ) {
@@ -211,9 +213,9 @@ async function runProduction(
     const coverUrl = coverOk ? `/output/${coverFilename}` : undefined;
 
     addEntry({
-      id: jobId,
+      id: storyId,
       title: drama.title,
-      summary: generateSummary(blocks),
+      summary: summaryOverride || generateSummary(blocks),
       audioUrl,
       coverUrl,
       durationSeconds: drama.duration_estimate_seconds,
@@ -246,7 +248,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
   }
 
-  let body: { blocks: ScriptBlock[] };
+  let body: { blocks: ScriptBlock[]; editingStoryId?: string; summary?: string };
   try {
     body = await req.json();
   } catch {
@@ -261,12 +263,13 @@ export async function POST(req: NextRequest) {
   pruneJobs();
 
   const jobId = crypto.randomUUID();
+  const storyId = body.editingStoryId ?? jobId;
   createJob(jobId);
 
   const elevenKey = process.env.ELEVENLABS_API_KEY ?? null;
 
   // Fire-and-forget background processing
-  runProduction(jobId, body.blocks, geminiKey, elevenKey);
+  runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey);
 
   return NextResponse.json({ jobId });
 }
