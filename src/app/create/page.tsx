@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { readDraft, writeDraft, clearDraft } from "@/lib/draftStore";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import ScriptTab from "@/components/studio/ScriptTab";
@@ -82,6 +83,28 @@ export default function CreatePage() {
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob]   = useState<Job | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [summary, setSummary]             = useState("");
+  const [coverUrl, setCoverUrl]           = useState("");
+  const [coverPrompt, setCoverPrompt]     = useState("");
+  const [isFetchingCover, setIsFetchingCover] = useState(false);
+
+  // Restore draft on mount
+  useEffect(() => {
+    const draft = readDraft();
+    if (draft?.scriptBlocks?.length) {
+      setScriptBlocks(draft.scriptBlocks);
+      setPromptText(draft.promptText ?? "");
+      setSummary(draft.summary ?? "");
+      setCoverUrl(draft.coverUrl ?? "");
+      setCoverPrompt(draft.coverPrompt ?? "");
+      setActiveTab("script");
+    }
+  }, []);
+
+  // Persist draft on change
+  useEffect(() => {
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt });
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt]);
 
   const hasScript = scriptBlocks.length > 0;
 
@@ -102,7 +125,12 @@ export default function CreatePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
       setScriptBlocks(data.blocks as ScriptBlock[]);
+      setSummary(data.summary ?? "");
+      const cp = data.coverPrompt ?? "";
+      setCoverPrompt(cp);
+      setCoverUrl(""); // reset while we fetch
       setActiveTab("script");
+      if (cp) fetchCover(cp);
     } catch (err: unknown) {
       setGenerateError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -144,8 +172,32 @@ export default function CreatePage() {
   const handleReset = () => {
     setPromptText(""); setScriptBlocks([]); setActiveTab("prompt");
     setGenerateError(null); setProductionJobId(null); setCompletedJob(null);
-    setIsProducing(false);
+    setIsProducing(false); setSummary(""); setCoverUrl(""); setCoverPrompt("");
+    clearDraft();
   };
+
+  const fetchCover = useCallback(async (prompt: string) => {
+    if (!prompt) return;
+    setIsFetchingCover(true);
+    try {
+      const res = await fetch("/api/generate-cover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.imageData) {
+          const url = `data:${data.mimeType ?? "image/jpeg"};base64,${data.imageData}`;
+          setCoverUrl(url);
+        }
+      }
+    } catch {
+      // non-fatal — cover is optional
+    } finally {
+      setIsFetchingCover(false);
+    }
+  }, []);
 
   // ─── Full-screen states ───────────────────────────────────────────────────
 
@@ -282,6 +334,9 @@ export default function CreatePage() {
             blocks={scriptBlocks} voices={VOICES}
             onBlocksChange={setScriptBlocks}
             onProduce={handleProduce} isProducing={isProducing}
+            summary={summary}
+            coverUrl={coverUrl}
+            isFetchingCover={isFetchingCover}
           />
         )}
       </div>

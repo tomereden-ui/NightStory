@@ -12,6 +12,9 @@ interface ScriptTabProps {
   onBlocksChange: (blocks: ScriptBlock[]) => void;
   onProduce: (blocks: ScriptBlock[]) => void;
   isProducing: boolean;
+  summary?: string;
+  coverUrl?: string;
+  isFetchingCover?: boolean;
 }
 
 function makeId() {
@@ -132,7 +135,7 @@ function SfxSeparator({ onAdd }: { onAdd: () => void }) {
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false }: ScriptTabProps) {
   const { t } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -297,6 +300,44 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   return (
     <>
       <div className="flex flex-col gap-0">
+        {/* Story header — cover + summary */}
+        {(summary || isFetchingCover) && (
+          <div className="mb-5 rounded-2xl overflow-hidden"
+            style={{
+              border: "1px solid rgba(79,195,247,0.12)",
+              boxShadow: "0 4px 20px rgba(79,195,247,0.06)",
+            }}>
+            {/* Cover image */}
+            <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
+              {coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverUrl} alt="Story cover" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{
+                    background: "radial-gradient(ellipse at 35% 45%, rgba(26,58,110,0.9) 0%, rgba(45,27,78,0.95) 60%, rgba(10,12,20,1) 100%)",
+                    minHeight: 180,
+                  }}
+                >
+                  <span className="text-5xl animate-pulse opacity-30">🌙</span>
+                </div>
+              )}
+              {/* Dark gradient at bottom for text overlap */}
+              <div
+                className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none"
+                style={{ background: "linear-gradient(to top, rgba(10,12,20,0.95), transparent)" }}
+              />
+            </div>
+            {/* Summary text */}
+            {summary && (
+              <div className="px-4 py-3" style={{ background: "rgba(10,12,20,0.95)" }}>
+                <p className="text-white/45 text-xs leading-relaxed font-light">{summary}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats row */}
         <div className="flex items-center justify-between mb-3">
           <p className="text-white/30 text-xs">

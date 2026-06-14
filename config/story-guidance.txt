@@ -160,20 +160,33 @@ about texture, environment, and emotional quality.
 
 SCRIPT FORMAT
 =============
-Return a JSON array. Each element has exactly two fields:
+Return a JSON object with exactly three top-level fields:
 
-  "characterName" — one of: "Narrator" (in story language), a character name, or "SFX"
-  "textPayload"   — for speech: the line starting with a performance tag
-                    for SFX: the descriptor in the format below
+  "summary"     — 2–3 engaging sentences describing the story for display as a subtitle.
+                  Written in the story language. No spoilers for the ending. Child-friendly tone.
+
+  "coverPrompt" — A single vivid sentence (no quotes, no labels) describing the KEY visual
+                  moment of the story, for use as an AI image generation prompt.
+                  Focus on setting, mood, and main characters. No text or words in the image.
+                  Example: "A small child and a glowing firefly standing at the entrance of a crystal cave under a starry sky"
+
+  "blocks"      — The ordered array of script blocks, each with:
+                    "characterName" — one of: "Narrator" (in story language), a character name, or "SFX"
+                    "textPayload"   — for speech: the line starting with a performance tag
+                                      for SFX: the descriptor in the format below
 
 SFX block format (exact):
   [SFX: {natural-language description} | {duration}s]
 
-Example script fragment:
-  { "characterName": "SFX",      "textPayload": "[SFX: gentle underwater bubbles rising slowly, soft and dreamlike | 5s]" }
-  { "characterName": "Narrator", "textPayload": "[warmly] Deep beneath the waves, where the light turns silver..." }
-  { "characterName": "SFX",      "textPayload": "[SFX: a friendly dragon's low warm rumble, like a purring cat but deeper | 2s]" }
-  { "characterName": "Milo",     "textPayload": "[excited] I found it! I actually found it!" }
-  { "characterName": "SFX",      "textPayload": "[SFX: soft wind through tall grass fading slowly into silence, peaceful | 6s]" }
+Example response:
+{
+  "summary": "Milo and his dragon Pip discover a lost star that has fallen into the Whispering Woods. Together they must carry it back to the sky before sunrise.",
+  "coverPrompt": "A small brave child and a tiny glowing dragon carrying a fallen star through a dark magical forest, warm golden light, ethereal atmosphere",
+  "blocks": [
+    { "characterName": "SFX",      "textPayload": "[SFX: gentle underwater bubbles rising slowly, soft and dreamlike | 5s]" },
+    { "characterName": "Narrator", "textPayload": "[warmly] Deep beneath the waves, where the light turns silver..." },
+    { "characterName": "SFX",      "textPayload": "[SFX: soft wind through tall grass fading slowly into silence, peaceful | 6s]" }
+  ]
+}
 
-Do NOT include markdown fences, act labels, scene headers, or any text outside the JSON array.
+Do NOT include markdown fences, act labels, scene headers, or any text outside the JSON object.

@@ -22,6 +22,12 @@ interface RawBlock {
   textPayload: string;
 }
 
+interface RawResponse {
+  summary: string;
+  coverPrompt: string;
+  blocks: RawBlock[];
+}
+
 // ─── Load external story guidance ────────────────────────────────────────────
 
 function readGuidance(): string {
@@ -96,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
 
-    let raw: RawBlock[];
+    let raw: RawResponse;
     try {
       raw = JSON.parse(json);
     } catch {
@@ -104,7 +110,7 @@ export async function POST(req: NextRequest) {
     }
 
     const heroName = body.hero ?? "";
-    const blocks = raw.map((block, i) => ({
+    const blocks = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,
       characterName: block.characterName,
@@ -112,7 +118,7 @@ export async function POST(req: NextRequest) {
       textPayload: block.textPayload,
     }));
 
-    return NextResponse.json({ blocks });
+    return NextResponse.json({ blocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

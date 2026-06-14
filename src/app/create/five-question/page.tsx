@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { BLUEBELL, MOOD_LABELS } from "@/constants/bluebellScripts";
 import { WORLD_OPTIONS } from "@/constants/worldOptions";
 import {
@@ -11,6 +12,7 @@ import {
   pickRandom,
 } from "@/constants/surprisePicks";
 import ScriptTab from "@/components/studio/ScriptTab";
+import { writeDraft } from "@/lib/draftStore";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
 import { VOICES } from "@/lib/mockData";
@@ -582,7 +584,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, onError }: {
   heroName: string; worldName: string;
   seeds: StorySeeds; durationMinutes: number;
-  onDone: (blocks: ScriptBlock[]) => void;
+  onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string) => void;
   onError: (msg: string) => void;
 }) {
   const messages = BLUEBELL.generating(heroName, worldName);
@@ -607,7 +609,7 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Generation failed");
-        onDoneRef.current(data.blocks as ScriptBlock[]);
+        onDoneRef.current(data.blocks as ScriptBlock[], data.summary ?? "", data.coverPrompt ?? "");
       })
       .catch((err) => {
         if ((err as { name?: string }).name === "AbortError") return;
@@ -643,6 +645,8 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
 const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", q4_engine: "", q5_mood: null };
 
 export default function FiveQuestionPage() {
+  const router = useRouter();
+
   const [step, setStep]                   = useState<Step>("q1");
   const [answers, setAnswers]             = useState<Answers>(INITIAL_ANSWERS);
   const [durationMinutes, setDuration]    = useState(5);
@@ -652,6 +656,11 @@ export default function FiveQuestionPage() {
   const [isProducing, setIsProducing]     = useState(false);
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob]   = useState<Job | null>(null);
+  // Story summary + cover
+  const [summary, setSummary]             = useState("");
+  const [coverUrl, setCoverUrl]           = useState("");
+  const [coverPrompt, setCoverPrompt]     = useState("");
+  const [isFetchingCover, setIsFetchingCover] = useState(false);
 
   const setAnswer = <K extends keyof Answers>(key: K, value: Answers[K]) =>
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -660,7 +669,31 @@ export default function FiveQuestionPage() {
     setStep("q1"); setAnswers(INITIAL_ANSWERS); setDuration(5);
     setScriptBlocks([]); setError(null);
     setIsProducing(false); setProductionJobId(null); setCompletedJob(null);
+    setSummary(""); setCoverUrl(""); setCoverPrompt("");
   };
+
+  const fetchCover = useCallback(async (prompt: string) => {
+    if (!prompt) return;
+    setIsFetchingCover(true);
+    try {
+      const res = await fetch("/api/generate-cover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.imageData) {
+          const url = `data:${data.mimeType ?? "image/jpeg"};base64,${data.imageData}`;
+          setCoverUrl(url);
+        }
+      }
+    } catch {
+      // non-fatal — cover is optional
+    } finally {
+      setIsFetchingCover(false);
+    }
+  }, []);
 
   const handleBack = () => {
     const order: Step[] = ["q1", "q2", "q3", "q4", "q5", "summary"];
@@ -671,10 +704,15 @@ export default function FiveQuestionPage() {
 
   const handleLaunch = useCallback(() => { setStep("generating"); setError(null); }, []);
 
-  const handleDone = useCallback((blocks: ScriptBlock[]) => {
+  const handleDone = useCallback((blocks: ScriptBlock[], incomingSummary: string, incomingCoverPrompt: string) => {
     setScriptBlocks(blocks);
+    setSummary(incomingSummary);
+    setCoverPrompt(incomingCoverPrompt);
+    setCoverUrl(""); // reset while we fetch
+    writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "" });
     setStep("done");
-  }, []);
+    if (incomingCoverPrompt) fetchCover(incomingCoverPrompt);
+  }, [fetchCover]);
 
   const handleGenError = useCallback((msg: string) => {
     setError(msg);
@@ -718,7 +756,7 @@ export default function FiveQuestionPage() {
 
   // ─── Step routing ───────────────────────────────────────────────────────────
 
-  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={handleReset} />;
+  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={() => router.push("/create")} />;
   if (step === "q2") return <Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} />;
   if (step === "q3") return <Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} />;
   if (step === "q4") return <Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} />;
@@ -786,6 +824,9 @@ export default function FiveQuestionPage() {
             onBlocksChange={setScriptBlocks}
             onProduce={handleProduce}
             isProducing={isProducing}
+            summary={summary}
+            coverUrl={coverUrl}
+            isFetchingCover={isFetchingCover}
           />
         </div>
       </div>
