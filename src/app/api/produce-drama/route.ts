@@ -54,26 +54,25 @@ async function runProduction(
     const { supabase, ensureBuckets } = await import("@/lib/supabase");
     await ensureBuckets();
 
-    // ── Step 1: Drama planning ─────────────────────────────────────────────
+    // ── Step 1: Drama planning + voice profiling (parallel) ───────────────
     updateJob(jobId, {
       status: "planning",
       step: "🗺️ Planning audio timeline…",
       progress: 5,
     });
 
-    const drama = await planDrama(blocks, geminiKey, durationMinutes);
-    updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 12 });
-
-    // ── Step 1b: Voice profiling ───────────────────────────────────────────
-    updateJob(jobId, {
-      step: "🎭 Casting character voices…",
-      progress: 15,
-    });
-    const voiceProfiles = await profileCharacters(blocks, geminiKey);
+    const [drama, voiceProfiles] = await Promise.all([
+      planDrama(blocks, geminiKey, durationMinutes),
+      profileCharacters(blocks, geminiKey),
+    ]);
+    updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 18 });
 
     const dialogueTracks = drama.tracks.filter((t) => t.type === "dialogue");
     const sfxTracks = drama.tracks.filter((t) => t.type === "sfx");
     const totalDurationMs = drama.duration_estimate_seconds * 1000;
+
+    // Start cover image in background — runs while TTS is happening
+    const coverPromise = generateCoverImage(drama.title, blocks, geminiKey);
 
     // ── Step 2: TTS for each dialogue line ────────────────────────────────
     updateJob(jobId, {
@@ -222,15 +221,15 @@ async function runProduction(
 
     if (!audioUrl) throw new Error("No audio produced");
 
-    // ── Step 5: Cover image ───────────────────────────────────────────────
+    // ── Step 5: Cover image (was started earlier, just await it now) ──────
     updateJob(jobId, {
       status: "mixing",
-      step: "🎨 Generating cover image…",
+      step: "🎨 Finishing cover image…",
       progress: 88,
     });
 
     let coverUrl: string | undefined;
-    const coverBuf = await generateCoverImage(drama.title, blocks, geminiKey);
+    const coverBuf = await coverPromise;
     if (coverBuf) {
       const { error: coverErr } = await supabase.storage
         .from("covers")
