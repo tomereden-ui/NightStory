@@ -527,8 +527,9 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             </div>
             {/* Summary text */}
             {summary && (
-              <div className="px-4 py-3" style={{ background: "rgba(10,12,20,0.95)" }}>
-                <p className="text-white/45 text-xs leading-relaxed font-light">{summary}</p>
+              <div className="px-4 pt-3 pb-4" style={{ background: "rgba(10,12,20,0.97)" }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
+                <p className="text-sm leading-relaxed italic" style={{ color: "rgba(255,255,255,0.82)" }}>{summary}</p>
               </div>
             )}
           </div>
