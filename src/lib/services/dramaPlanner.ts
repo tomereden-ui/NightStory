@@ -82,23 +82,42 @@ export async function planDrama(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 4096, responseMimeType: "application/json" },
+        generationConfig: { temperature: 0.4, maxOutputTokens: 8192, responseMimeType: "application/json" },
       }),
     }
   );
 
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Drama planner API error ${res.status}: ${errText.slice(0, 300)}`);
+  }
+
   const data = await res.json();
+
+  // Surface API-level errors (e.g. quota exceeded, invalid key)
+  if (data.error) {
+    throw new Error(`Drama planner API error: ${data.error.message ?? JSON.stringify(data.error)}`);
+  }
+
   const raw = (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "")
     .trim()
     .replace(/^```(?:json)?\n?/, "")
     .replace(/\n?```$/, "")
     .trim();
 
+  if (!raw) {
+    const finishReason = data?.candidates?.[0]?.finishReason ?? "unknown";
+    const blocked = data?.promptFeedback?.blockReason;
+    throw new Error(
+      `Drama planner returned empty response. finishReason=${finishReason}${blocked ? `, blockReason=${blocked}` : ""}`
+    );
+  }
+
   let parsed: DramaScript;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`Drama planner returned invalid JSON: ${raw.slice(0, 200)}`);
+    throw new Error(`Drama planner returned invalid JSON: ${raw.slice(0, 300)}`);
   }
 
   parsed.tracks = parsed.tracks
