@@ -20,9 +20,9 @@ export interface DramaScript {
   tracks: DramaTrack[];
 }
 
-const SYSTEM_INSTRUCTION = `You are an expert audio drama director and sound designer.
-Your job is to take a written story script and produce a precise audio drama timeline
-with character timing, sound effects, and ambient audio cues.`;
+const SYSTEM_INSTRUCTION = `You are a children's audio drama producer creating a warm, imaginative bedtime story experience.
+Your job is to take a written children's story script and produce a precise audio drama timeline
+with character timing, gentle sound effects, and ambient audio cues suitable for young listeners.`;
 
 const FORMAT_RULES = `
 TIMING RULES:
@@ -32,9 +32,9 @@ TIMING RULES:
 - Start first dialogue at 1500ms to let the opening ambient SFX establish
 
 SFX RULES:
-- First track MUST be an ambient background loop (start_ms: 0, loop: true, duration_hint_ms: 12000). Its description must be a rich, evocative soundscape that matches the story's setting exactly — include the environment, texture, mood, and subtle details (e.g. "a dense enchanted forest at night, with soft cricket chirps, distant owl hoots, leaves rustling in a light breeze, and a faint magical shimmer — peaceful and mysterious").
-- Add 2–4 event SFX at emotionally significant moments (a discovery, a scare, a magical moment, a surprise).
-- Each SFX description must be detailed and cinematic — 2–3 sentences describing the exact sound, its texture, intensity, and emotional tone so the sound generator can produce it precisely. Example: "A single wooden door creaking open slowly, old and heavy, with a deep groan that echoes in a stone corridor. Tense and eerie."
+- First track MUST be an ambient background loop (start_ms: 0, loop: true, duration_hint_ms: 12000). Its description must be a rich, gentle soundscape that matches the story's setting — include the environment, texture, and mood (e.g. "a sunny garden with soft birdsong, a gentle breeze rustling leaves, and cheerful crickets — warm, peaceful and inviting").
+- Add 2–4 event SFX at emotionally significant moments (a discovery, a magical moment, a surprise, a joyful reunion).
+- Each SFX description should be warm and child-friendly — 1–2 sentences describing the sound and its cheerful or gentle emotional tone. Example: "Soft wind chimes tinkling in a gentle breeze, magical and light, like fairy bells announcing something wonderful."
 - Non-looping SFX duration_hint_ms: typically 1500–4000ms
 
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no explanation:
@@ -71,12 +71,12 @@ export async function planDrama(
 
   const prompt =
     `${SYSTEM_INSTRUCTION}\n\n` +
-    `Convert this children's story script into a complete audio drama timeline.\n\n` +
-    `STORY SCRIPT:\n${scriptText}\n\n` +
+    `Create a warm, child-friendly audio drama timeline for this bedtime story.\n\n` +
+    `STORY SCRIPT (may be in any language — preserve the original language in all dialogue lines):\n${scriptText}\n\n` +
     FORMAT_RULES;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
