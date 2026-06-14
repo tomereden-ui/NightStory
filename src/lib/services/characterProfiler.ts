@@ -1,14 +1,14 @@
 import type { ScriptBlock } from "@/types";
 
 export const AVAILABLE_VOICES = [
-  { name: "Charon",  desc: "deep, warm baritone male — authoritative, trustworthy narrator quality" },
-  { name: "Kore",    desc: "soft, gentle female — nurturing, calm, reassuring" },
-  { name: "Fenrir",  desc: "strong, bold male — energetic, adventurous, determined" },
-  { name: "Aoede",   desc: "warm, expressive female — emotional, storyteller quality, heartfelt" },
-  { name: "Puck",    desc: "bright, playful — child-like, mischievous, light and bouncy" },
-  { name: "Leda",    desc: "youthful female — curious, spirited, quick" },
-  { name: "Orbit",   desc: "measured, mature — wise elder, deliberate pacing, thoughtful" },
-  { name: "Zephyr",  desc: "airy, light — ethereal, whimsical, gentle and dreamy" },
+  { name: "pNInz6obpgDQGcFmaJgB", label: "Adam",    desc: "deep, warm baritone male — authoritative, trustworthy narrator quality" },
+  { name: "LcfcDJNUP1GQjkzn1xUU", label: "Emily",   desc: "soft, gentle female — nurturing, calm, reassuring" },
+  { name: "VR6AewLTigWG4xSOukaG", label: "Arnold",  desc: "strong, bold male — energetic, adventurous, determined" },
+  { name: "21m00Tcm4TlvDq8ikWAM", label: "Rachel",  desc: "warm, expressive female — emotional, storyteller quality, heartfelt" },
+  { name: "SOYHLrjzK2X1ezoPC6cr", label: "Harry",   desc: "bright, playful young male — child-like, mischievous, light and bouncy" },
+  { name: "MF3mGyEYCl7XYWbV9V6O", label: "Elli",    desc: "youthful female — curious, spirited, quick" },
+  { name: "GBv7mTt0atIp3Br8iCZE", label: "Thomas",  desc: "measured, mature male — wise elder, deliberate pacing, thoughtful" },
+  { name: "ThT5KcBeYPX3keUQqHPh", label: "Dorothy", desc: "airy, light female — ethereal, whimsical, gentle and dreamy" },
 ];
 
 export interface CharacterVoiceProfile {
@@ -32,7 +32,7 @@ export async function profileCharacters(
     .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
     .join("\n");
 
-  const voiceList = AVAILABLE_VOICES.map((v) => `- "${v.name}": ${v.desc}`).join("\n");
+  const voiceList = AVAILABLE_VOICES.map((v) => `- id="${v.name}" (${v.label}): ${v.desc}`).join("\n");
 
   const prompt =
     `You are a voice casting director for a children's audio drama.\n\n` +
@@ -48,8 +48,9 @@ export async function profileCharacters(
     `- Narrator almost always uses "Charon" unless the prose clearly implies a female narrator.\n` +
     `- Give child characters child-appropriate voices (Puck or Leda).\n` +
     `- Each character MUST get a different voice where possible.\n\n` +
-    `Return ONLY valid JSON, no markdown, no explanation:\n` +
-    `{ "CharacterName": { "voiceName": "...", "persona": "You are ..." }, ... }`;
+    `Return ONLY valid JSON, no markdown, no explanation.\n` +
+    `Use the exact voice id string (the value after id=) as voiceName:\n` +
+    `{ "CharacterName": { "voiceName": "<exact-id>", "persona": "You are ..." }, ... }`;
 
   try {
     const res = await fetch(
@@ -95,19 +96,10 @@ export async function profileCharacters(
 function fallbackProfile(characterName: string): CharacterVoiceProfile {
   const name = characterName.toLowerCase();
   if (/narrator|storyteller/.test(name)) {
-    return {
-      voiceName: "Charon",
-      persona: "You are a warm, engaging storyteller. Speak clearly, with varied pacing and gentle expressiveness.",
-    };
+    return { voiceName: "pNInz6obpgDQGcFmaJgB", persona: "Warm, engaging storyteller. Clear, varied pacing." };
   }
   if (/child|kid|little|young/.test(name)) {
-    return {
-      voiceName: "Puck",
-      persona: "You are a lively, curious child. Speak with energy, wonder, and natural enthusiasm.",
-    };
+    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", persona: "Lively, curious child. Energetic and enthusiastic." };
   }
-  return {
-    voiceName: "Aoede",
-    persona: "You are an expressive, friendly character. Speak warmly and with clear emotion.",
-  };
+  return { voiceName: "21m00Tcm4TlvDq8ikWAM", persona: "Expressive, friendly character. Warm and clear." };
 }

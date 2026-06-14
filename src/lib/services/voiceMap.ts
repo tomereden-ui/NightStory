@@ -1,13 +1,16 @@
-const POOL = [
-  "Charon",  // deep, warm male — good for narrators / wise characters
-  "Kore",    // soft, gentle female
-  "Fenrir",  // strong, expressive male
-  "Aoede",   // warm, expressive female
-  "Puck",    // bright, playful — good for children
-  "Leda",    // youthful female
-  "Orbit",   // measured, elder
-  "Zephyr",  // airy, light
-];
+// ElevenLabs voice IDs
+const EL = {
+  adam:    "pNInz6obpgDQGcFmaJgB", // deep warm male — narrator
+  rachel:  "21m00Tcm4TlvDq8ikWAM", // warm expressive female
+  arnold:  "VR6AewLTigWG4xSOukaG", // strong bold male
+  emily:   "LcfcDJNUP1GQjkzn1xUU", // soft gentle female
+  harry:   "SOYHLrjzK2X1ezoPC6cr", // young playful male
+  elli:    "MF3mGyEYCl7XYWbV9V6O", // youthful female
+  thomas:  "GBv7mTt0atIp3Br8iCZE", // wise elder male
+  dorothy: "ThT5KcBeYPX3keUQqHPh", // airy light female
+};
+
+const POOL = Object.values(EL);
 
 export class VoiceMap {
   private readonly map = new Map<string, string>();
@@ -21,16 +24,16 @@ export class VoiceMap {
     let voice: string;
 
     if (/narrator|storyteller/.test(hint)) {
-      voice = "Charon";
+      voice = EL.adam;
     } else if (/child|kid|young|little|boy|girl/.test(hint)) {
-      voice = "Puck";
+      voice = EL.harry;
     } else if (/grandpa|grandma|elder|old|wise/.test(hint)) {
-      voice = "Orbit";
+      voice = EL.thomas;
     } else if (/female|woman|girl|she|her/.test(hint)) {
-      voice = this.idx % 2 === 0 ? "Kore" : "Aoede";
+      voice = this.idx % 2 === 0 ? EL.emily : EL.rachel;
       this.idx++;
     } else if (/male|man|boy|he|him/.test(hint)) {
-      voice = this.idx % 2 === 0 ? "Charon" : "Fenrir";
+      voice = this.idx % 2 === 0 ? EL.adam : EL.arnold;
       this.idx++;
     } else {
       voice = POOL[this.idx % POOL.length];

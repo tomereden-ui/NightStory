@@ -96,8 +96,10 @@ async function runProduction(
         const profile = voiceProfiles[charName];
         const voice = profile?.voiceName ?? voiceMap.assign(charName, track.voice_style);
         const persona = profile?.persona;
+        const useEL = !!elevenKey;
+        const ttsKey = useEL ? elevenKey! : geminiKey;
         try {
-          await synthesizeLine(line, voice, geminiKey, outPath, persona);
+          await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL);
         } catch (err) {
           console.warn(`[TTS] Skipping ${track.id}:`, err);
           skippedLines.push(track.id);
@@ -109,8 +111,6 @@ async function runProduction(
         step: `🎙️ Recording dialogue (${dialogueDone}/${dialogueTracks.length})…`,
         progress: 20 + Math.round((dialogueDone / dialogueTracks.length) * 35),
       });
-      // 3s gap between TTS calls to stay comfortably under Gemini RPM quota
-      if (i + 1 < dialogueTracks.length) await new Promise((r) => setTimeout(r, 3000));
     }
 
     // ── Step 3: SFX generation ────────────────────────────────────────────
