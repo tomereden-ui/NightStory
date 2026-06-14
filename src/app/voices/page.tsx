@@ -753,15 +753,20 @@ export default function VoicesPage() {
   // Load voices
   useEffect(() => {
     fetch("/api/voices")
-      .then((r) => r.json())
-      .then((data: unknown) => {
+      .then(async (r) => {
+        const data: unknown = await r.json();
+        if (!r.ok) {
+          const msg = (data as { error?: string })?.error ?? `Server error ${r.status}`;
+          setLoadError(`${msg} — run the voices table SQL in Supabase if not yet done.`);
+          return;
+        }
         if (Array.isArray(data)) {
           setVoices(data as VoiceRecord[]);
         } else {
-          setLoadError("Failed to load voices.");
+          setLoadError("Unexpected response from server.");
         }
       })
-      .catch(() => setLoadError("Network error loading voices."));
+      .catch((err: unknown) => setLoadError(`Load failed: ${err instanceof Error ? err.message : String(err)}`));
   }, []);
 
   const stopAudio = useCallback(() => {

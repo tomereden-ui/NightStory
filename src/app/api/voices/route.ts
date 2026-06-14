@@ -4,16 +4,22 @@ import { supabase, ensureBuckets } from "@/lib/supabase";
 // ─── GET: list all voices ─────────────────────────────────────────────────────
 
 export async function GET() {
-  const { data, error } = await supabase
-    .from("voices")
-    .select("*")
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("voices")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[voices GET]", error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data ?? []);
+  } catch (err) {
+    console.error("[voices GET] unexpected:", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
-
-  return NextResponse.json(data ?? []);
 }
 
 // ─── POST: create a voice ─────────────────────────────────────────────────────
