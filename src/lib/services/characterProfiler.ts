@@ -32,25 +32,20 @@ export async function profileCharacters(
     .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
     .join("\n");
 
-  const voiceList = AVAILABLE_VOICES.map((v) => `- id="${v.name}" (${v.label}): ${v.desc}`).join("\n");
+  const voiceList = AVAILABLE_VOICES.map((v) => `- "${v.label}": ${v.desc}`).join("\n");
 
   const prompt =
     `You are a voice casting director for a children's audio drama.\n\n` +
     `Characters: ${characters.join(", ")}\n\n` +
     `Script sample:\n${scriptSample}\n\n` +
-    `Available TTS voices:\n${voiceList}\n\n` +
-    `For each character:\n` +
-    `1. Choose the single best-matching voice from the list above.\n` +
-    `2. Write a concise persona instruction (2–3 sentences) that tells the TTS engine ` +
-    `exactly how to perform this character — covering age, energy, emotion, accent hint, ` +
-    `and any distinctive speech quirks visible in the script.\n\n` +
+    `Available voices:\n${voiceList}\n\n` +
+    `For each character, choose the best-matching voice and write a 1-2 sentence persona.\n\n` +
     `Rules:\n` +
-    `- Narrator almost always uses "Charon" unless the prose clearly implies a female narrator.\n` +
-    `- Give child characters child-appropriate voices (Puck or Leda).\n` +
+    `- Narrator uses "Adam" unless the story clearly implies a female narrator.\n` +
+    `- Child characters use "Harry" (boy) or "Elli" (girl).\n` +
     `- Each character MUST get a different voice where possible.\n\n` +
-    `Return ONLY valid JSON, no markdown, no explanation.\n` +
-    `Use the exact voice id string (the value after id=) as voiceName:\n` +
-    `{ "CharacterName": { "voiceName": "<exact-id>", "persona": "You are ..." }, ... }`;
+    `Return ONLY valid JSON (all keys double-quoted), no markdown:\n` +
+    `{ "CharacterName": { "voiceName": "Adam", "persona": "..." }, ... }`;
 
   try {
     const res = await fetch(
@@ -79,10 +74,17 @@ export async function profileCharacters(
 
     const parsed: Record<string, CharacterVoiceProfile> = JSON.parse(raw);
 
-    // Validate every character has an entry and a valid voice name
-    const validNames = new Set(AVAILABLE_VOICES.map((v) => v.name));
+    // Resolve label names ("Adam") → EL voice IDs, validate entries
+    const labelToId = Object.fromEntries(AVAILABLE_VOICES.map((v) => [v.label.toLowerCase(), v.name]));
+    const validIds = new Set(AVAILABLE_VOICES.map((v) => v.name));
     for (const char of characters) {
-      if (!parsed[char] || !validNames.has(parsed[char].voiceName)) {
+      const entry = parsed[char];
+      if (!entry) { parsed[char] = fallbackProfile(char); continue; }
+      // If voiceName is a label, resolve to ID
+      const resolved = labelToId[entry.voiceName.toLowerCase()];
+      if (resolved) {
+        parsed[char].voiceName = resolved;
+      } else if (!validIds.has(entry.voiceName)) {
         parsed[char] = fallbackProfile(char);
       }
     }

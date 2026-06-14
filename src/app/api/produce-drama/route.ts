@@ -98,6 +98,7 @@ async function runProduction(
         const persona = profile?.persona;
         const useEL = !!elevenKey;
         const ttsKey = useEL ? elevenKey! : geminiKey;
+        if (i === 0) console.log(`[TTS] Provider: ${useEL ? "ElevenLabs" : "Gemini"}`);
         try {
           await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL);
         } catch (err) {
