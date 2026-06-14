@@ -38,3 +38,6 @@ design-concepts*.html
 /data/
 /public/output/
 /tmp/
+
+# claude code
+.claude/
