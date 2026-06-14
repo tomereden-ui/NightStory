@@ -34,12 +34,25 @@ export async function synthesizeLine(
   outputPath: string,
   systemInstruction?: string,
 ): Promise<void> {
+  // Extract [performance tags] as style hints, remove them from spoken text
+  const tagMatches: string[] = [];
+  const tagRe = /\[([^\]]+)\]/g;
+  let tagMatch: RegExpExecArray | null;
+  while ((tagMatch = tagRe.exec(line)) !== null) tagMatches.push(tagMatch[1]);
+  const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
+
+  // Merge persona instruction + performance tags into one system instruction
+  const styleHints = tagMatches.length > 0
+    ? `Deliver this line with the following emotion/style: ${tagMatches.join(", ")}.`
+    : "";
+  const fullInstruction = [systemInstruction, styleHints].filter(Boolean).join(" ");
+
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
   const basePayload = {
-    contents: [{ role: "user", parts: [{ text: line }] }],
+    contents: [{ role: "user", parts: [{ text: spokenText || line }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
@@ -47,9 +60,9 @@ export async function synthesizeLine(
   };
 
   // Try with systemInstruction first; fall back to without it if the model rejects it
-  const payloads: Record<string, unknown>[] = systemInstruction
+  const payloads: Record<string, unknown>[] = fullInstruction
     ? [
-        { systemInstruction: { parts: [{ text: systemInstruction }] }, ...basePayload },
+        { systemInstruction: { parts: [{ text: fullInstruction }] }, ...basePayload },
         basePayload,
       ]
     : [basePayload];
