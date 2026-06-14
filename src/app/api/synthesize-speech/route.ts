@@ -5,57 +5,19 @@ export interface SynthesizeRequest {
   characterName: string;
 }
 
-// ─── Voice + persona selection ────────────────────────────────────────────────
-
-interface VoiceProfile {
-  voiceName: string;
-  persona: string;
-}
-
-function getVoiceProfile(characterName: string): VoiceProfile {
+function getVoiceId(characterName: string): string {
   const n = (characterName ?? "").toLowerCase();
-
-  if (n === "narrator") {
-    return {
-      voiceName: "Charon",
-      persona: "Speak as a warm, unhurried bedtime story narrator. Use a gentle, soothing tone — like a parent reading to a beloved child. Pace yourself slowly, let each sentence breathe, and convey wonder and calm.",
-    };
-  }
-  if (/child|kid|boy|girl|little|young|pixel|toby|mia|leo|lily|pip/.test(n)) {
-    return {
-      voiceName: "Puck",
-      persona: "Speak as a bright, curious child character. Sound genuinely playful and full of wonder — light, a little breathless with excitement. Be natural and spontaneous.",
-    };
-  }
-  if (/fairy|faerie|sprite|elf|pixie|nova|magic|wizard|witch|enchant|star|moon|dream/.test(n)) {
-    return {
-      voiceName: "Kore",
-      persona: "Speak as an ethereal, magical being. Your voice should feel soft and otherworldly — gentle and warm, with a hint of mystery. Never scary, always kind.",
-    };
-  }
-  if (/dragon|beast|monster|giant|troll|wolf|bear/.test(n)) {
-    return {
-      voiceName: "Fenrir",
-      persona: "Speak as a vivid creature character in a children's story. Sound expressive and characterful — rumbling, but NOT frightening. Keep warmth even in dramatic moments.",
-    };
-  }
-  if (/grandpa|grandma|elder|old|wise|sage|king|queen|master/.test(n)) {
-    return {
-      voiceName: "Orbit",
-      persona: "Speak as a wise, measured elder. Your voice carries quiet authority and warmth — unhurried, thoughtful, like someone who has lived many wonderful stories.",
-    };
-  }
-  return {
-    voiceName: "Aoede",
-    persona: "Speak as a warm, expressive character in a children's bedtime story. Sound natural and full of personality — gentle, clear, and engaging.",
-  };
+  if (n === "narrator")                                                     return "pNInz6obpgDQGcFmaJgB"; // Adam
+  if (/child|kid|boy|little|young|toby|leo|pip/.test(n))                   return "SOYHLrjzK2X1ezoPC6cr"; // Harry
+  if (/girl|mia|lily|luna|fairy|sprite|elf|pixie/.test(n))                 return "MF3mGyEYCl7XYWbV9V6O"; // Elli
+  if (/fairy|magic|wizard|witch|enchant|star|moon|dream|nova/.test(n))     return "ThT5KcBeYPX3keUQqHPh"; // Dorothy
+  if (/dragon|beast|monster|giant|troll|wolf|bear/.test(n))                return "VR6AewLTigWG4xSOukaG"; // Arnold
+  if (/grandpa|grandma|elder|old|wise|sage|king|master/.test(n))           return "GBv7mTt0atIp3Br8iCZE"; // Thomas
+  if (/queen|mother|mom|mama/.test(n))                                      return "LcfcDJNUP1GQjkzn1xUU"; // Emily
+  return "21m00Tcm4TlvDq8ikWAM"; // Rachel — default
 }
 
-// ─── PCM → WAV helper (Gemini TTS returns raw 16-bit PCM at 24 kHz) ──────────
-
-function pcmToWav(pcmBase64: string): Buffer {
-  const pcm = Buffer.from(pcmBase64, "base64");
-  const sampleRate = 24000;
+function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
   const numChannels = 1;
   const bitsPerSample = 16;
   const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
@@ -80,131 +42,75 @@ function pcmToWav(pcmBase64: string): Buffer {
   return wav;
 }
 
-// ─── Direct REST call with retry ─────────────────────────────────────────────
-
-async function callGeminiTTS(
-  apiKey: string,
-  model: string,
-  promptText: string,
-  voiceName: string,
-): Promise<{ audioBase64: string; mimeType: string }> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-  const body = {
-    contents: [{ role: "user", parts: [{ text: promptText }] }],
-    generationConfig: {
-      responseModalities: ["AUDIO"],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName },
-        },
-      },
-    },
-  };
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 25_000);
-
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-    } catch (err) {
-      clearTimeout(timer);
-      const isTimeout = (err as { name?: string }).name === "AbortError";
-      if (isTimeout && attempt < 3) {
-        await new Promise((r) => setTimeout(r, attempt * 1000));
-        continue;
-      }
-      throw new Error(isTimeout ? "Gemini TTS timed out after 25s" : `Gemini TTS network error: ${String(err)}`);
-    }
-    clearTimeout(timer);
-
-    if ((res.status === 500 || res.status === 503) && attempt < 3) {
-      await new Promise((r) => setTimeout(r, attempt * 800));
-      continue;
-    }
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Gemini TTS ${res.status}: ${err.slice(0, 200)}`);
-    }
-
-    const json = await res.json();
-    const part = json.candidates?.[0]?.content?.parts?.[0];
-    const inlineData = part?.inlineData as { mimeType: string; data: string } | undefined;
-
-    console.log("[TTS] candidate part keys:", part ? Object.keys(part) : "none");
-    console.log("[TTS] inlineData mimeType:", inlineData?.mimeType, "data length:", inlineData?.data?.length ?? 0);
-
-    if (!inlineData?.data) {
-      console.error("[TTS] Full response:", JSON.stringify(json).slice(0, 500));
-      throw new Error("No audio data in Gemini response");
-    }
-
-    return { audioBase64: inlineData.data, mimeType: inlineData.mimeType };
-  }
-
-  throw new Error("Gemini TTS failed after 3 attempts");
-}
-
-// ─── Route ────────────────────────────────────────────────────────────────────
-
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
-  }
+  const elKey   = process.env.ELEVENLABS_API_KEY;
+  const gemKey  = process.env.GEMINI_API_KEY;
 
   let body: SynthesizeRequest;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid request body." }, { status: 400 }); }
 
   const { text, characterName } = body;
-  if (!text?.trim()) {
-    return NextResponse.json({ error: "text is required." }, { status: 400 });
+  if (!text?.trim()) return NextResponse.json({ error: "text is required." }, { status: 400 });
+
+  const spokenText = text.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim() || text;
+
+  // ── ElevenLabs TTS (preferred) ────────────────────────────────────────────
+  if (elKey) {
+    const voiceId = getVoiceId(characterName ?? "");
+    try {
+      const res = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=pcm_24000`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "xi-api-key": elKey },
+          body: JSON.stringify({
+            text: spokenText,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true },
+          }),
+        },
+      );
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`EL TTS ${res.status}: ${errText.slice(0, 200)}`);
+      }
+      const pcm = Buffer.from(await res.arrayBuffer());
+      const wav = pcmToWav(pcm);
+      return NextResponse.json({ audioData: wav.toString("base64"), mimeType: "audio/wav", voiceName: voiceId });
+    } catch (err) {
+      console.error("[synthesize-speech] EL failed:", err);
+      if (!gemKey) return NextResponse.json({ error: String(err) }, { status: 500 });
+      // fall through to Gemini
+    }
   }
 
-  const profile = getVoiceProfile(characterName ?? "");
+  // ── Gemini TTS fallback ───────────────────────────────────────────────────
+  if (!gemKey) return NextResponse.json({ error: "No TTS provider configured." }, { status: 500 });
 
-  // Embed persona as a speaking instruction in the prompt itself
-  // (TTS models don't support systemInstruction)
-  const promptText = `[${profile.persona}]\n\n${text}`;
+  const GEMINI_VOICES: Record<string, string> = {
+    narrator: "Charon", child: "Puck", fairy: "Kore", dragon: "Fenrir", elder: "Orbit",
+  };
+  const voiceName = GEMINI_VOICES[Object.keys(GEMINI_VOICES).find((k) => (characterName ?? "").toLowerCase().includes(k)) ?? ""] ?? "Aoede";
 
   try {
-    const { audioBase64, mimeType } = await callGeminiTTS(
-      apiKey,
-      "gemini-2.5-flash-preview-tts",
-      promptText,
-      profile.voiceName,
-    );
-
-    // Convert PCM to WAV if the model returned raw audio
-    let finalBase64 = audioBase64;
-    let finalMime = "audio/wav";
-
-    if (mimeType.includes("L16") || mimeType.includes("pcm")) {
-      finalBase64 = pcmToWav(audioBase64).toString("base64");
-    } else {
-      finalMime = mimeType;
-    }
-
-    console.log("[TTS] Returning mimeType:", finalMime, "base64 length:", finalBase64.length);
-    return NextResponse.json({
-      audioData: finalBase64,
-      mimeType: finalMime,
-      voiceName: profile.voiceName,
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${gemKey}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: spokenText }] }],
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } } },
+      }),
     });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (!res.ok) throw new Error(`Gemini TTS ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const json = await res.json();
+    const inlineData = json.candidates?.[0]?.content?.parts?.[0]?.inlineData as { mimeType: string; data: string } | undefined;
+    if (!inlineData?.data) throw new Error("No audio in Gemini response");
+    const isBuf = Buffer.from(inlineData.data, "base64");
+    const wav   = inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm") ? pcmToWav(isBuf) : isBuf;
+    return NextResponse.json({ audioData: wav.toString("base64"), mimeType: "audio/wav", voiceName });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
