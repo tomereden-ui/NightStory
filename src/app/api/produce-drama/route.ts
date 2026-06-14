@@ -85,8 +85,8 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    for (let i = 0; i < dialogueTracks.length; i += 5) {
-      const batch = dialogueTracks.slice(i, i + 5);
+    for (let i = 0; i < dialogueTracks.length; i += 2) {
+      const batch = dialogueTracks.slice(i, i + 2);
       await Promise.all(
         batch.map(async (track) => {
           const outPath = path.join(jobTmp, `${track.id}.wav`);
@@ -114,6 +114,8 @@ async function runProduction(
           });
         }),
       );
+      // Small pause between batches to stay within Gemini TTS RPM quota
+      if (i + 2 < dialogueTracks.length) await new Promise((r) => setTimeout(r, 400));
     }
 
     // ── Step 3: SFX generation ────────────────────────────────────────────
