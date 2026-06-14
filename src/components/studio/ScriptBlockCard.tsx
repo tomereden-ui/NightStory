@@ -39,6 +39,8 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioError, setAudioError]         = useState<string | null>(null);
+  const [sfxWarning, setSfxWarning]         = useState<string | null>(null);
+  const [isValidating, setIsValidating]     = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const audioRef    = useRef<HTMLAudioElement | null>(null);
   const blobUrlRef  = useRef<string | null>(null);
@@ -63,6 +65,25 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
 
   const commit = (newDesc = desc, newDur = dur) => {
     onTextChange(block.id, buildSfxPayload(newDesc, newDur));
+  };
+
+  const validateSfx = async (value: string) => {
+    if (value.trim().length < 4) return;
+    setIsValidating(true);
+    setSfxWarning(null);
+    try {
+      const res = await fetch("/api/validate-sfx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: value.trim() }),
+      });
+      const data = await res.json();
+      if (!data.valid && data.reason) setSfxWarning(data.reason);
+    } catch {
+      // non-fatal
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handlePlay = async () => {
@@ -174,14 +195,36 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
       <textarea
         ref={textareaRef}
         value={desc}
-        onChange={(e) => { setDesc(e.target.value); commit(e.target.value, dur); }}
+        onChange={(e) => {
+          setDesc(e.target.value);
+          commit(e.target.value, dur);
+          if (sfxWarning) setSfxWarning(null);
+        }}
+        onBlur={() => validateSfx(desc)}
         rows={1}
         placeholder={t("sfxPlaceholder")}
         className="w-full bg-transparent text-sm leading-relaxed resize-none outline-none overflow-hidden"
         style={{ color: "rgba(255,255,255,0.65)", minHeight: "22px" }}
       />
 
-      {audioError && (
+      {isValidating && (
+        <p className="text-[10px] flex items-center gap-1" style={{ color: "rgba(245,158,11,0.45)" }}>
+          <span className="w-2 h-2 border border-t-transparent rounded-full animate-spin inline-block" style={{ borderColor: "rgba(245,158,11,0.5)", borderTopColor: "transparent" }} />
+          Checking…
+        </p>
+      )}
+
+      {sfxWarning && !isValidating && (
+        <div
+          className="flex items-start gap-1.5 px-2.5 py-2 rounded-xl text-[11px] leading-snug"
+          style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "rgba(245,158,11,0.85)" }}
+        >
+          <span className="flex-shrink-0 mt-px">⚠</span>
+          <span>This doesn&apos;t sound like a specific effect. {sfxWarning}</span>
+        </div>
+      )}
+
+      {audioError && !sfxWarning && (
         <p className="text-[10px]" style={{ color: "rgba(245,158,11,0.6)" }}>⚠ {audioError}</p>
       )}
     </div>
