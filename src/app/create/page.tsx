@@ -344,6 +344,7 @@ export default function CreatePage() {
             summary={summary}
             coverUrl={coverUrl}
             isFetchingCover={isFetchingCover}
+            onRegenerateCover={coverPrompt ? () => { setCoverUrl(""); fetchCover(coverPrompt, summary); } : undefined}
           />
         )}
       </div>

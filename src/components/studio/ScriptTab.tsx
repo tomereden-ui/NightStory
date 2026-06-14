@@ -15,6 +15,7 @@ interface ScriptTabProps {
   summary?: string;
   coverUrl?: string;
   isFetchingCover?: boolean;
+  onRegenerateCover?: () => void;
 }
 
 function makeId() {
@@ -306,7 +307,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover }: ScriptTabProps) {
   const { t } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -524,6 +525,34 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none"
                 style={{ background: "linear-gradient(to top, rgba(10,12,20,0.95), transparent)" }}
               />
+              {/* Regenerate cover button */}
+              {onRegenerateCover && !isFetchingCover && (
+                <button
+                  onClick={onRegenerateCover}
+                  className="absolute top-2 right-2 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95"
+                  style={{
+                    background: "rgba(10,12,20,0.72)",
+                    border: "1px solid rgba(79,195,247,0.3)",
+                    color: "rgba(79,195,247,0.8)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  ↺ Cover
+                </button>
+              )}
+              {isFetchingCover && (
+                <div
+                  className="absolute top-2 right-2 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                  style={{
+                    background: "rgba(10,12,20,0.72)",
+                    border: "1px solid rgba(79,195,247,0.2)",
+                    color: "rgba(79,195,247,0.45)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  <span className="animate-pulse">✦</span> Generating…
+                </div>
+              )}
             </div>
             {/* Summary text */}
             {summary && (

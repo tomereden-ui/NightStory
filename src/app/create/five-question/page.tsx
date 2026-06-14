@@ -827,6 +827,7 @@ export default function FiveQuestionPage() {
             summary={summary}
             coverUrl={coverUrl}
             isFetchingCover={isFetchingCover}
+            onRegenerateCover={coverPrompt ? () => { setCoverUrl(""); fetchCover(coverPrompt, summary); } : undefined}
           />
         </div>
       </div>
