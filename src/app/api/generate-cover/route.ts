@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const IMAGE_STYLE = `
-Visual style (apply on top of the scene — do NOT override the characters or setting):
-- Dark magical nighttime palette: deep navy, indigo, and cosmic purple sky
-- Pockets of warm amber or teal glow from practical light sources (lanterns, fireflies, moonbeams, glowing flowers)
-- Characters are the FOCAL POINT — rendered in the foreground, warmly lit, clearly visible
-- Soft painterly watercolor style with luminous brush strokes and atmospheric depth
-- Rich layered background: foreground details → midground setting → starlit sky
-- Mood: cozy, wondrous, safe, dreamlike — a child should feel safe looking at it
-- Square composition, main characters centered with night sky above
-- NO text, NO words, NO letters, NO numbers anywhere in the image`;
-
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
@@ -23,14 +12,13 @@ export async function POST(req: NextRequest) {
   }
   if (!prompt) return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
-  // Build story context — combine coverPrompt + summary for richer input
   const storyContext = [
-    `Key scene: ${prompt}`,
-    summary ? `Story summary: ${summary}` : "",
+    `Cover hint: ${prompt}`,
+    summary ? `Full story: ${summary}` : "",
   ].filter(Boolean).join("\n");
 
-  // ── Step 1: ask Gemini text to write a character-specific scene description ──
-  let scenePrompt = prompt; // fallback = raw coverPrompt (already story-specific)
+  // ── Step 1: Gemini text → vivid character-first scene description ──────────
+  let scenePrompt = prompt;
   try {
     const enhanceRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -41,36 +29,51 @@ export async function POST(req: NextRequest) {
           contents: [{
             role: "user",
             parts: [{
-              text: `You are a children's book art director. Write a 2-sentence image generation prompt for the cover of this bedtime story.
+              text: `You are a children's book illustrator writing an image prompt. Describe ONLY what a camera would see in the foreground of this book cover — the characters, their expressions, what they are doing, and where they are standing.
 
-REQUIREMENTS — your prompt MUST describe:
-1. The main character(s) by name with specific physical details (size, color, animal/human, what they wear or look like)
-2. Exactly what action they are doing in the key emotional moment
-3. The specific setting (garden, forest, bedroom, cave, etc.) with 2–3 concrete visual details
-4. The lighting and mood (glowing, sparkling, moonlit, warm, etc.)
-
-Do NOT just describe the atmosphere or sky. The characters must be clearly present in the foreground.
+RULES:
+- START with the main character(s): their species/appearance, clothing or fur color, size, emotion
+- Then describe the action they are doing right now (playing, hugging, reaching, looking at something)
+- Then the setting behind them (garden path, cozy bedroom, forest clearing, etc.) with 2 specific details
+- End with one lighting detail (warm glow from a lantern, soft moonlight falling on them, firefly light, etc.)
+- DO NOT mention the sky, clouds, or moon as the subject — they may exist in the background only
+- DO NOT write about atmosphere without characters in it
+- 3 sentences maximum
 
 ${storyContext}
 
-Return ONLY the 2-sentence image prompt. No labels, no quotes, no explanation.`,
+Write ONLY the image prompt. No labels, no quotes.`,
             }],
           }],
-          generationConfig: { temperature: 0.6, maxOutputTokens: 150 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 200 },
         }),
       }
     );
     if (enhanceRes.ok) {
       const enhanceData = await enhanceRes.json();
       const enhanced = enhanceData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (enhanced && enhanced.length > 20) scenePrompt = enhanced;
+      if (enhanced && enhanced.length > 20) {
+        scenePrompt = enhanced;
+        console.log("[CoverGen] Enhanced scene prompt:", scenePrompt);
+      }
     }
   } catch {
-    // fall back to raw coverPrompt
+    console.warn("[CoverGen] Enhancement failed, using raw prompt");
   }
 
-  // ── Step 2: generate image — scene description leads, style follows ────────
-  const fullPrompt = `${scenePrompt}\n${IMAGE_STYLE}`;
+  // ── Step 2: build final prompt — characters first, style wraps around ──────
+  const fullPrompt = `Children's book cover illustration.
+
+FOREGROUND SUBJECT (draw this first, largest, most detailed):
+${scenePrompt}
+
+REQUIRED: The characters above MUST be the primary subject filling the lower 2/3 of the image. They must be clearly visible, warmly lit, and rendered with expressive detail.
+
+ART STYLE: Soft watercolor painting, luminous brush strokes, painterly depth. Warm amber or teal glow from a nearby light source (lantern, fireflies, glowing flowers) illuminating the characters from the front. Background fades into a soft dark indigo night with scattered stars — background stays behind characters, never replacing them.
+
+AVOID: empty sky as the main subject, plain moon without characters, atmospheric-only compositions with no characters visible, landscapes without the story characters present.
+
+NO text, NO words, NO letters, NO numbers anywhere in the image. Square composition.`;
 
   try {
     const res = await fetch(
