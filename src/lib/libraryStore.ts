@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import { supabase, ensureBuckets } from "./supabase";
 import type { ScriptBlock } from "@/types";
 
 export interface LibraryEntry {
@@ -17,107 +16,98 @@ export interface TrashEntry extends LibraryEntry {
   deletedAt: number;
 }
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const LIBRARY_FILE = path.join(DATA_DIR, "library.json");
-const TRASH_FILE = path.join(DATA_DIR, "trash.json");
-const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function toEntry(row: any): LibraryEntry { // eslint-disable-line
+  return {
+    id: row.id,
+    title: row.title,
+    summary: row.summary ?? "",
+    audioUrl: row.audio_url,
+    coverUrl: row.cover_url ?? undefined,
+    durationSeconds: row.duration_seconds,
+    createdAt: row.created_at,
+    blocks: row.blocks ?? [],
+  };
+}
+
+function toTrashEntry(row: any): TrashEntry { // eslint-disable-line
+  return { ...toEntry(row), deletedAt: row.deleted_at };
+}
 
 // ─── Library ──────────────────────────────────────────────────────────────────
 
-function readAll(): LibraryEntry[] {
-  try {
-    if (!fs.existsSync(LIBRARY_FILE)) return [];
-    return JSON.parse(fs.readFileSync(LIBRARY_FILE, "utf-8"));
-  } catch {
-    return [];
-  }
+export async function addEntry(entry: LibraryEntry): Promise<void> {
+  await ensureBuckets();
+  const { error } = await supabase.from("stories").upsert({
+    id: entry.id,
+    title: entry.title,
+    summary: entry.summary,
+    audio_url: entry.audioUrl,
+    cover_url: entry.coverUrl ?? null,
+    duration_seconds: entry.durationSeconds,
+    created_at: entry.createdAt,
+    blocks: entry.blocks,
+  });
+  if (error) throw new Error(`addEntry: ${error.message}`);
 }
 
-function writeAll(entries: LibraryEntry[]): void {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(LIBRARY_FILE, JSON.stringify(entries, null, 2));
+export async function getEntries(): Promise<LibraryEntry[]> {
+  const { data, error } = await supabase
+    .from("stories")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`getEntries: ${error.message}`);
+  return (data ?? []).map(toEntry);
 }
 
-export function addEntry(entry: LibraryEntry): void {
-  const entries = readAll();
-  const idx = entries.findIndex((e) => e.id === entry.id);
-  if (idx >= 0) entries[idx] = entry;
-  else entries.unshift(entry);
-  writeAll(entries);
-}
-
-export function getEntries(): LibraryEntry[] {
-  return readAll();
-}
-
-export function getEntry(id: string): LibraryEntry | undefined {
-  return readAll().find((e) => e.id === id);
+export async function getEntry(id: string): Promise<LibraryEntry | undefined> {
+  const { data, error } = await supabase
+    .from("stories")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(`getEntry: ${error.message}`);
+  return data ? toEntry(data) : undefined;
 }
 
 // ─── Trash ────────────────────────────────────────────────────────────────────
 
-function readTrash(): TrashEntry[] {
-  try {
-    if (!fs.existsSync(TRASH_FILE)) return [];
-    return JSON.parse(fs.readFileSync(TRASH_FILE, "utf-8"));
-  } catch {
-    return [];
-  }
+export async function getTrash(): Promise<TrashEntry[]> {
+  const cutoff = Date.now() - TRASH_TTL_MS;
+  await supabase.from("trash").delete().lt("deleted_at", cutoff);
+  const { data, error } = await supabase
+    .from("trash")
+    .select("*")
+    .order("deleted_at", { ascending: false });
+  if (error) throw new Error(`getTrash: ${error.message}`);
+  return (data ?? []).map(toTrashEntry);
 }
 
-function writeTrash(entries: TrashEntry[]): void {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(TRASH_FILE, JSON.stringify(entries, null, 2));
-}
-
-function purgeExpiredTrash(entries: TrashEntry[]): TrashEntry[] {
-  return entries.filter((e) => Date.now() - e.deletedAt < TRASH_TTL_MS);
-}
-
-export function getTrash(): TrashEntry[] {
-  const entries = readTrash();
-  const live = purgeExpiredTrash(entries);
-  if (live.length !== entries.length) writeTrash(live);
-  return live;
-}
-
-export function moveToTrash(id: string): boolean {
-  const entries = readAll();
-  const idx = entries.findIndex((e) => e.id === id);
-  if (idx < 0) return false;
-
-  const [entry] = entries.splice(idx, 1);
-  writeAll(entries);
-
-  const trash = purgeExpiredTrash(readTrash());
-  trash.unshift({ ...entry, deletedAt: Date.now() });
-  writeTrash(trash);
+export async function moveToTrash(id: string): Promise<boolean> {
+  const { data } = await supabase.from("stories").select("*").eq("id", id).maybeSingle();
+  if (!data) return false;
+  await supabase.from("trash").upsert({ ...data, deleted_at: Date.now() });
+  await supabase.from("stories").delete().eq("id", id);
   return true;
 }
 
-export function restoreFromTrash(id: string): boolean {
-  const trash = purgeExpiredTrash(readTrash());
-  const idx = trash.findIndex((e) => e.id === id);
-  if (idx < 0) return false;
-
-  const [entry] = trash.splice(idx, 1);
-  writeTrash(trash);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { deletedAt: _, ...restored } = entry;
-  addEntry(restored as LibraryEntry);
+export async function restoreFromTrash(id: string): Promise<boolean> {
+  const { data } = await supabase.from("trash").select("*").eq("id", id).maybeSingle();
+  if (!data) return false;
+  const { deleted_at: _del, ...rest } = data; // eslint-disable-line
+  await supabase.from("stories").upsert(rest);
+  await supabase.from("trash").delete().eq("id", id);
   return true;
 }
 
-export function deleteFromTrashForever(id: string): boolean {
-  const trash = purgeExpiredTrash(readTrash());
-  const idx = trash.findIndex((e) => e.id === id);
-  if (idx < 0) return false;
-  trash.splice(idx, 1);
-  writeTrash(trash);
+export async function deleteFromTrashForever(id: string): Promise<boolean> {
+  const { data } = await supabase.from("trash").select("id").eq("id", id).maybeSingle();
+  if (!data) return false;
+  await supabase.from("trash").delete().eq("id", id);
   return true;
 }
 
-export function emptyTrash(): void {
-  writeTrash([]);
+export async function emptyTrash(): Promise<void> {
+  await supabase.from("trash").delete().neq("id", "");
 }

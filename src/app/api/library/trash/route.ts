@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getTrash, emptyTrash } from "@/lib/libraryStore";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return NextResponse.json(getTrash());
+  return NextResponse.json(await getTrash());
 }
 
 export async function DELETE() {
-  emptyTrash();
+  await emptyTrash();
   return NextResponse.json({ ok: true });
 }

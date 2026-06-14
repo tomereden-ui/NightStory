@@ -14,8 +14,7 @@ function getFfmpegPath(): string {
 
   // Use ffmpeg-static's exported path (works on Windows, Mac, Linux)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const staticPath = require("ffmpeg-static") as string | null;
+    const staticPath = require("ffmpeg-static") as string | null; // eslint-disable-line
     if (staticPath && fs.existsSync(staticPath)) return staticPath;
   } catch { /* not installed */ }
 

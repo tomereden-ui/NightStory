@@ -10,6 +10,7 @@ import { VoiceMap } from "@/lib/services/voiceMap";
 import { addEntry } from "@/lib/libraryStore";
 import { generateCoverImage } from "@/lib/services/imageService";
 import { profileCharacters } from "@/lib/services/characterProfiler";
+import { supabase, ensureBuckets } from "@/lib/supabase";
 import type { ScriptBlock } from "@/types";
 
 function generateSummary(blocks: ScriptBlock[]): string {
@@ -21,11 +22,9 @@ function generateSummary(blocks: ScriptBlock[]): string {
 }
 
 const TMP_DIR = path.join(process.cwd(), "tmp", "audio");
-const OUT_DIR = path.join(process.cwd(), "public", "output");
 
 function ensureDirs() {
   fs.mkdirSync(TMP_DIR, { recursive: true });
-  fs.mkdirSync(OUT_DIR, { recursive: true });
 }
 
 function cleanTempDir(jobId: string) {
@@ -49,6 +48,8 @@ async function runProduction(
   fs.mkdirSync(jobTmp, { recursive: true });
 
   try {
+    await ensureBuckets();
+
     // ── Step 1: Drama planning ─────────────────────────────────────────────
     updateJob(jobId, {
       status: "planning",
@@ -81,7 +82,6 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    // Generate TTS in batches of 2 to stay within rate limits
     for (let i = 0; i < dialogueTracks.length; i += 2) {
       const batch = dialogueTracks.slice(i, i + 2);
       await Promise.all(
@@ -126,7 +126,7 @@ async function runProduction(
         sfxTracks.map(async (track) => {
           const outPath = path.join(jobTmp, `${track.id}.mp3`);
           const durationHint = track.loop
-            ? Math.min(22000, totalDurationMs) // request full duration for ambient
+            ? Math.min(22000, totalDurationMs)
             : (track.duration_hint_ms ?? 3000);
 
           const sfxResult = await generateSfx(
@@ -146,27 +146,25 @@ async function runProduction(
       );
     }
 
-    // ── Step 4: FFmpeg mix ────────────────────────────────────────────────
+    // ── Step 4: Audio mixing ──────────────────────────────────────────────
     updateJob(jobId, {
       status: "mixing",
       step: "🎚️ Mixing audio tracks…",
       progress: 75,
     });
 
-    const outputFilename = `drama_${jobId}.mp3`;
-    const outputPath = path.join(OUT_DIR, outputFilename);
-    let audioUrl = `/output/${outputFilename}`;
+    const tmpMp3Path = path.join(jobTmp, `output.mp3`);
+    const tmpWavPath = path.join(jobTmp, `output.wav`);
+    let localAudioPath = tmpMp3Path;
+    let audioExt = "mp3";
 
     const dialoguePaths = dialogueTracks
       .map((t) => path.join(jobTmp, `${t.id}.wav`))
       .filter((p) => fs.existsSync(p));
 
-    // Build the track list for the mixer
     const mixTrackList = drama.tracks
       .filter((t) => {
-        if (t.type === "dialogue") {
-          return fs.existsSync(path.join(jobTmp, `${t.id}.wav`));
-        }
+        if (t.type === "dialogue") return fs.existsSync(path.join(jobTmp, `${t.id}.wav`));
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);
         const wav = path.join(jobTmp, `${t.id}.wav`);
         return fs.existsSync(mp3) || fs.existsSync(wav);
@@ -183,22 +181,42 @@ async function runProduction(
       });
 
     try {
-      // Level 1: full mix with SFX + timing
-      await mixTracks(mixTrackList, outputPath, totalDurationMs);
+      await mixTracks(mixTrackList, tmpMp3Path, totalDurationMs);
     } catch (mixErr) {
       console.warn("[Mixer] ffmpeg mix failed:", mixErr);
       try {
-        // Level 2: ffmpeg concat (dialogue only, no timing/SFX)
-        await concatenateTracks(dialoguePaths, outputPath);
+        await concatenateTracks(dialoguePaths, tmpMp3Path);
       } catch (concatErr) {
         console.warn("[Mixer] ffmpeg concat failed, using pure-JS WAV fallback:", concatErr);
-        // Level 3: pure-JS WAV — works with zero native dependencies
-        const wavFilename = `drama_${jobId}.wav`;
-        const wavOutputPath = path.join(OUT_DIR, wavFilename);
-        concatenateWavFilesPureJS(dialoguePaths, wavOutputPath);
-        audioUrl = `/output/${wavFilename}`;
+        concatenateWavFilesPureJS(dialoguePaths, tmpWavPath);
+        localAudioPath = tmpWavPath;
+        audioExt = "wav";
       }
     }
+
+    // Upload audio to Supabase Storage
+    let audioUrl = "";
+    if (fs.existsSync(localAudioPath)) {
+      const audioBuf = fs.readFileSync(localAudioPath);
+      const storageKey = `${storyId}.${audioExt}`;
+      const contentType = audioExt === "wav" ? "audio/wav" : "audio/mpeg";
+      const { error: uploadErr } = await supabase.storage
+        .from("audio")
+        .upload(storageKey, audioBuf, { contentType, upsert: true });
+      if (!uploadErr) {
+        audioUrl = supabase.storage.from("audio").getPublicUrl(storageKey).data.publicUrl;
+      } else {
+        console.warn("[Storage] Audio upload failed:", uploadErr.message);
+        // Copy to public/output as fallback
+        const OUT_DIR_FALLBACK = path.join(process.cwd(), "public", "output");
+        fs.mkdirSync(OUT_DIR_FALLBACK, { recursive: true });
+        const fallbackName = `drama_${storyId}.${audioExt}`;
+        fs.copyFileSync(localAudioPath, path.join(OUT_DIR_FALLBACK, fallbackName));
+        audioUrl = `/output/${fallbackName}`;
+      }
+    }
+
+    if (!audioUrl) throw new Error("No audio produced");
 
     // ── Step 5: Cover image ───────────────────────────────────────────────
     updateJob(jobId, {
@@ -207,12 +225,20 @@ async function runProduction(
       progress: 88,
     });
 
-    const coverFilename = `cover_${jobId}.jpg`;
-    const coverPath = path.join(OUT_DIR, coverFilename);
-    const coverOk = await generateCoverImage(drama.title, blocks, geminiKey, coverPath);
-    const coverUrl = coverOk ? `/output/${coverFilename}` : undefined;
+    let coverUrl: string | undefined;
+    const coverBuf = await generateCoverImage(drama.title, blocks, geminiKey);
+    if (coverBuf) {
+      const { error: coverErr } = await supabase.storage
+        .from("covers")
+        .upload(`${storyId}.jpg`, coverBuf, { contentType: "image/jpeg", upsert: true });
+      if (!coverErr) {
+        coverUrl = supabase.storage.from("covers").getPublicUrl(`${storyId}.jpg`).data.publicUrl;
+      } else {
+        console.warn("[Storage] Cover upload failed:", coverErr.message);
+      }
+    }
 
-    addEntry({
+    await addEntry({
       id: storyId,
       title: drama.title,
       summary: summaryOverride || generateSummary(blocks),

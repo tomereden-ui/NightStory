@@ -1,13 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import fs from "fs";
 import type { ScriptBlock } from "@/types";
 
 export async function generateCoverImage(
   title: string,
   blocks: ScriptBlock[],
   apiKey: string,
-  outputPath: string,
-): Promise<boolean> {
+): Promise<Buffer | null> {
   const excerpt = blocks
     .slice(0, 6)
     .map((b) => b.textPayload.replace(/\[.*?\]/g, "").trim())
@@ -26,28 +24,24 @@ export async function generateCoverImage(
       model: "gemini-2.0-flash-preview-image-generation",
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (model as any).generateContent({
+    const result = await (model as any).generateContent({ // eslint-disable-line
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { responseModalities: ["IMAGE"] },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parts: any[] =
+    const parts: any[] = // eslint-disable-line
       result?.response?.candidates?.[0]?.content?.parts ?? [];
 
     for (const part of parts) {
       if (part?.inlineData?.mimeType?.startsWith("image/")) {
-        const buf = Buffer.from(part.inlineData.data, "base64");
-        fs.writeFileSync(outputPath, buf);
-        return true;
+        return Buffer.from(part.inlineData.data, "base64");
       }
     }
 
     console.warn("[CoverImage] No image part in Gemini response");
-    return false;
+    return null;
   } catch (err) {
     console.warn("[CoverImage] Generation failed:", err);
-    return false;
+    return null;
   }
 }
