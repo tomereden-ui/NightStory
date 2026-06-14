@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ScriptBlock } from "@/types";
 
 export interface DramaTrack {
@@ -66,24 +65,30 @@ export async function planDrama(
   blocks: ScriptBlock[],
   apiKey: string,
 ): Promise<DramaScript> {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: SYSTEM_INSTRUCTION,
-  });
-
   const scriptText = blocks
     .map((b) => `${b.characterName}: ${b.textPayload}`)
     .join("\n");
 
   const prompt =
+    `${SYSTEM_INSTRUCTION}\n\n` +
     `Convert this children's story script into a complete audio drama timeline.\n\n` +
     `STORY SCRIPT:\n${scriptText}\n\n` +
     FORMAT_RULES;
 
-  const result = await model.generateContent(prompt);
-  const raw = result.response
-    .text()
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 4096, responseMimeType: "application/json" },
+      }),
+    }
+  );
+
+  const data = await res.json();
+  const raw = (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "")
     .trim()
     .replace(/^```(?:json)?\n?/, "")
     .replace(/\n?```$/, "")
@@ -96,7 +101,6 @@ export async function planDrama(
     throw new Error(`Drama planner returned invalid JSON: ${raw.slice(0, 200)}`);
   }
 
-  // Sort by start_ms and ensure IDs are unique
   parsed.tracks = parsed.tracks
     .sort((a, b) => a.start_ms - b.start_ms)
     .map((t, i) => ({ ...t, id: `t${i + 1}` }));

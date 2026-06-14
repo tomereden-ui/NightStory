@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ScriptBlock } from "@/types";
 
 export const AVAILABLE_VOICES = [
@@ -53,11 +52,19 @@ export async function profileCharacters(
     `{ "CharacterName": { "voiceName": "...", "persona": "You are ..." }, ... }`;
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await model.generateContent(prompt);
-    const raw = result.response
-      .text()
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 1024, responseMimeType: "application/json" },
+        }),
+      }
+    );
+    const data = await res.json();
+    const raw = (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "")
       .trim()
       .replace(/^```(?:json)?\n?/, "")
       .replace(/\n?```$/, "")
