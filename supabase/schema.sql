@@ -22,3 +22,16 @@ create table if not exists public.trash (
   deleted_at bigint not null,
   blocks jsonb not null default '[]'::jsonb
 );
+
+create table if not exists public.voices (
+  id text primary key,
+  name text not null,
+  category text not null default 'family',
+  type text not null default 'text',
+  description text,
+  gemini_voice_name text,
+  el_voice_id text,
+  sample_url text,
+  avatar_emoji text not null default '🎙',
+  created_at bigint not null
+);
