@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock } from "@/types";
+import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
 
-// All heavy imports are dynamic (inside runProduction / POST) so a missing
-// package can never prevent the module from loading and returning JSON errors.
-const path = require("path") as typeof import("path");
-const fs   = require("fs")   as typeof import("fs");
+// path/fs via require so no ES-module hoisting issues alongside dynamic imports
+const path = require("path") as typeof import("path"); // eslint-disable-line
+const fs   = require("fs")   as typeof import("fs");   // eslint-disable-line
 
 function generateSummary(blocks: ScriptBlock[]): string {
   const narrator = blocks.find((b) => b.characterName.toLowerCase().includes("narrat"));
@@ -40,19 +40,17 @@ async function runProduction(
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
 
-  // Dynamic imports — isolated from module load so a missing dep returns JSON
-  const { updateJob } = await import("@/lib/jobs");
-  const { planDrama }         = await import("@/lib/services/dramaPlanner");
-  const { synthesizeLine }    = await import("@/lib/services/ttsService");
-  const { generateSfx, writeSilence } = await import("@/lib/services/sfxService");
-  const { mixTracks, concatenateTracks, concatenateWavFilesPureJS } = await import("@/lib/services/audioMixer");
-  const { VoiceMap }          = await import("@/lib/services/voiceMap");
-  const { addEntry }          = await import("@/lib/libraryStore");
-  const { generateCoverImage } = await import("@/lib/services/imageService");
-  const { profileCharacters } = await import("@/lib/services/characterProfiler");
-  const { supabase, ensureBuckets } = await import("@/lib/supabase");
-
+  // Wrap EVERYTHING including dynamic imports so job always gets an error state
   try {
+    const { planDrama }         = await import("@/lib/services/dramaPlanner");
+    const { synthesizeLine }    = await import("@/lib/services/ttsService");
+    const { generateSfx, writeSilence } = await import("@/lib/services/sfxService");
+    const { mixTracks, concatenateTracks, concatenateWavFilesPureJS } = await import("@/lib/services/audioMixer");
+    const { VoiceMap }          = await import("@/lib/services/voiceMap");
+    const { addEntry }          = await import("@/lib/libraryStore");
+    const { generateCoverImage } = await import("@/lib/services/imageService");
+    const { profileCharacters } = await import("@/lib/services/characterProfiler");
+    const { supabase, ensureBuckets } = await import("@/lib/supabase");
     await ensureBuckets();
 
     // ── Step 1: Drama planning ─────────────────────────────────────────────
@@ -296,7 +294,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Cannot create temp directory: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
     }
 
-    const { createJob, pruneJobs } = await import("@/lib/jobs");
     pruneJobs();
 
     const jobId = crypto.randomUUID();
