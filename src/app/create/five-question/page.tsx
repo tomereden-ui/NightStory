@@ -672,14 +672,14 @@ export default function FiveQuestionPage() {
     setSummary(""); setCoverUrl(""); setCoverPrompt("");
   };
 
-  const fetchCover = useCallback(async (prompt: string) => {
+  const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
     if (!prompt) return;
     setIsFetchingCover(true);
     try {
       const res = await fetch("/api/generate-cover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, summary: storySummary }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -711,7 +711,7 @@ export default function FiveQuestionPage() {
     setCoverUrl(""); // reset while we fetch
     writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "" });
     setStep("done");
-    if (incomingCoverPrompt) fetchCover(incomingCoverPrompt);
+    if (incomingCoverPrompt) fetchCover(incomingCoverPrompt, incomingSummary);
   }, [fetchCover]);
 
   const handleGenError = useCallback((msg: string) => {

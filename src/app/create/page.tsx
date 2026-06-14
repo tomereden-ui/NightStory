@@ -127,12 +127,13 @@ export default function CreatePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
       setScriptBlocks(data.blocks as ScriptBlock[]);
-      setSummary(data.summary ?? "");
+      const sm = data.summary ?? "";
+      setSummary(sm);
       const cp = data.coverPrompt ?? "";
       setCoverPrompt(cp);
       setCoverUrl(""); // reset while we fetch
       setActiveTab("script");
-      if (cp) fetchCover(cp);
+      if (cp) fetchCover(cp, sm);
     } catch (err: unknown) {
       setGenerateError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -182,14 +183,14 @@ export default function CreatePage() {
     clearDraft();
   };
 
-  const fetchCover = useCallback(async (prompt: string) => {
+  const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
     if (!prompt) return;
     setIsFetchingCover(true);
     try {
       const res = await fetch("/api/generate-cover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, summary: storySummary }),
       });
       if (res.ok) {
         const data = await res.json();
