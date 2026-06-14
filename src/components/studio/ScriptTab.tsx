@@ -189,7 +189,7 @@ function TextInsertModal({
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
-        className="rounded-t-3xl p-5 flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-md mx-auto rounded-t-3xl p-5 flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
         style={{ background: "#0d1120", border: "1px solid rgba(79,195,247,0.15)", borderBottom: "none" }}
       >
         {/* Header */}
