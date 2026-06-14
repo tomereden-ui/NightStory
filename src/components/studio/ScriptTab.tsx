@@ -16,6 +16,8 @@ interface ScriptTabProps {
   coverUrl?: string;
   isFetchingCover?: boolean;
   onRegenerateCover?: () => void;
+  durationMinutes?: number;
+  onDurationChange?: (v: number) => void;
 }
 
 function makeId() {
@@ -307,9 +309,8 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange }: ScriptTabProps) {
   const { t } = useLanguage();
-  const [durationMinutes, setDurationMinutes] = useState(3);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
   const [isPlaying, setIsPlaying]         = useState(false);
@@ -680,7 +681,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               max={10}
               step={1}
               value={durationMinutes}
-              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+              onChange={(e) => onDurationChange?.(Number(e.target.value))}
               className="w-full accent-teal h-1.5 rounded-full cursor-pointer"
               style={{ accentColor: "#4fc3f7" }}
             />

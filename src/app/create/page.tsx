@@ -16,12 +16,37 @@ type ActiveTab = "prompt" | "five-question" | "script" | "producing" | "drama";
 
 // ─── Prompt tab ───────────────────────────────────────────────────────────────
 
+function DurationSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="rounded-2xl px-4 py-3 flex flex-col gap-2"
+      style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+          Story length
+        </span>
+        <span className="text-sm font-bold" style={{ color: "#4fc3f7" }}>{value} min</span>
+      </div>
+      <input
+        type="range" min={1} max={10} step={1} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-1.5 rounded-full cursor-pointer"
+        style={{ accentColor: "#4fc3f7" }}
+      />
+      <div className="flex justify-between text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>
+        <span>1 min</span><span>5 min</span><span>10 min</span>
+      </div>
+    </div>
+  );
+}
+
 function PromptTab({
   promptText, setPromptText,
+  durationMinutes, setDurationMinutes,
   generating, onGenerate,
   t,
 }: {
   promptText: string; setPromptText: (v: string) => void;
+  durationMinutes: number; setDurationMinutes: (v: number) => void;
   generating: boolean; onGenerate: () => void;
   t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
 }) {
@@ -37,7 +62,7 @@ function PromptTab({
           placeholder={t("storyPlaceholder")}
           value={promptText}
           onChange={(e) => setPromptText(e.target.value)}
-          rows={10}
+          rows={8}
           className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none resize-none leading-relaxed"
           style={{
             background: "rgba(255,255,255,0.04)",
@@ -50,6 +75,8 @@ function PromptTab({
           {promptText.trim().split(/\s+/).filter(Boolean).length} {t("wordCount")}
         </p>
       </div>
+
+      <DurationSlider value={durationMinutes} onChange={setDurationMinutes} />
 
       <button
         onClick={onGenerate}
@@ -88,6 +115,7 @@ export default function CreatePage() {
   const [coverPrompt, setCoverPrompt]     = useState("");
   const [isFetchingCover, setIsFetchingCover] = useState(false);
   const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
+  const [durationMinutes, setDurationMinutes] = useState(3);
 
   // Restore draft on mount
   useEffect(() => {
@@ -332,6 +360,7 @@ export default function CreatePage() {
         {activeTab === "prompt" && (
           <PromptTab
             promptText={promptText} setPromptText={setPromptText}
+            durationMinutes={durationMinutes} setDurationMinutes={setDurationMinutes}
             generating={generating} onGenerate={handleGenerate}
             t={t}
           />
@@ -345,6 +374,8 @@ export default function CreatePage() {
             coverUrl={coverUrl}
             isFetchingCover={isFetchingCover}
             onRegenerateCover={coverPrompt ? () => { setCoverUrl(""); fetchCover(coverPrompt, summary); } : undefined}
+            durationMinutes={durationMinutes}
+            onDurationChange={setDurationMinutes}
           />
         )}
       </div>
