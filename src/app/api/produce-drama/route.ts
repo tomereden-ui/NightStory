@@ -100,7 +100,7 @@ async function runProduction(
         const ttsKey = useEL ? elevenKey! : geminiKey;
         if (i === 0) console.log(`[TTS] Provider: ${useEL ? "ElevenLabs" : "Gemini"}`);
         try {
-          await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL);
+          await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL, profile?.stability, profile?.style);
         } catch (err) {
           console.warn(`[TTS] Skipping ${track.id}:`, err);
           skippedLines.push(track.id);

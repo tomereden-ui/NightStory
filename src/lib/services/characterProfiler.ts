@@ -13,7 +13,9 @@ export const AVAILABLE_VOICES = [
 
 export interface CharacterVoiceProfile {
   voiceName: string;
-  persona: string;
+  persona: string;      // rich voice direction passed to the TTS engine
+  stability: number;    // 0–1: higher = more consistent/calm, lower = more variable/expressive
+  style: number;        // 0–1: higher = more stylized/dramatic delivery
 }
 
 export async function profileCharacters(
@@ -28,24 +30,40 @@ export async function profileCharacters(
   });
 
   const scriptSample = blocks
-    .slice(0, 24)
+    .slice(0, 30)
     .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
     .join("\n");
 
   const voiceList = AVAILABLE_VOICES.map((v) => `- "${v.label}": ${v.desc}`).join("\n");
 
   const prompt =
-    `You are a voice casting director for a children's audio drama.\n\n` +
+    `You are a voice director for a children's audio drama. Study the script and cast each character with a detailed voice profile.\n\n` +
     `Characters: ${characters.join(", ")}\n\n` +
     `Script sample:\n${scriptSample}\n\n` +
     `Available voices:\n${voiceList}\n\n` +
-    `For each character, choose the best-matching voice and write a 1-2 sentence persona.\n\n` +
+    `For EACH character produce:\n` +
+    `1. voiceName — choose from the list above (label name only, e.g. "Adam").\n` +
+    `2. persona — a rich, precise voice direction (4–6 sentences) covering:\n` +
+    `   - Gender, approximate age, and cultural/language background if evident\n` +
+    `   - Personality: is this character confident, shy, curious, wise, mischievous, caring?\n` +
+    `   - Voice quality: pitch (high/mid/low), texture (smooth/raspy/breathy/clear), pace (fast/measured/slow)\n` +
+    `   - Energy level and emotional mood throughout the story\n` +
+    `   - Any distinctive speech patterns visible in their lines (hesitations, exclamations, tenderness)\n` +
+    `   - How their delivery should make the listener FEEL\n` +
+    `3. stability — a number 0.0–1.0:\n` +
+    `   • 0.2–0.4 = highly expressive, variable (excited children, dramatic characters)\n` +
+    `   • 0.5–0.6 = naturally expressive (most characters)\n` +
+    `   • 0.7–0.9 = calm, consistent (narrators, wise elders, soothing characters)\n` +
+    `4. style — a number 0.0–1.0:\n` +
+    `   • 0.0–0.2 = understated, natural delivery\n` +
+    `   • 0.3–0.5 = noticeable personality and colour\n` +
+    `   • 0.6–0.8 = strong stylistic expression (comedic, highly dramatic)\n\n` +
     `Rules:\n` +
-    `- Narrator uses "Adam" unless the story clearly implies a female narrator.\n` +
-    `- Child characters use "Harry" (boy) or "Elli" (girl).\n` +
+    `- Narrator uses "Adam" (or "Rachel" if narrator is female) with stability 0.75, style 0.1.\n` +
+    `- Children use "Harry" (boys) or "Elli" (girls) with stability 0.3, style 0.5.\n` +
     `- Each character MUST get a different voice where possible.\n\n` +
     `Return ONLY valid JSON (all keys double-quoted), no markdown:\n` +
-    `{ "CharacterName": { "voiceName": "Adam", "persona": "..." }, ... }`;
+    `{ "CharacterName": { "voiceName": "Adam", "persona": "...", "stability": 0.7, "style": 0.1 }, ... }`;
 
   try {
     const res = await fetch(
@@ -55,7 +73,7 @@ export async function profileCharacters(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 1024, responseMimeType: "application/json" },
+          generationConfig: { temperature: 0.4, maxOutputTokens: 2048, responseMimeType: "application/json" },
           safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
             { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
@@ -74,19 +92,21 @@ export async function profileCharacters(
 
     const parsed: Record<string, CharacterVoiceProfile> = JSON.parse(raw);
 
-    // Resolve label names ("Adam") → EL voice IDs, validate entries
+    // Resolve label names → EL voice IDs and validate
     const labelToId = Object.fromEntries(AVAILABLE_VOICES.map((v) => [v.label.toLowerCase(), v.name]));
-    const validIds = new Set(AVAILABLE_VOICES.map((v) => v.name));
+    const validIds  = new Set(AVAILABLE_VOICES.map((v) => v.name));
     for (const char of characters) {
       const entry = parsed[char];
       if (!entry) { parsed[char] = fallbackProfile(char); continue; }
-      // If voiceName is a label, resolve to ID
       const resolved = labelToId[entry.voiceName.toLowerCase()];
       if (resolved) {
         parsed[char].voiceName = resolved;
       } else if (!validIds.has(entry.voiceName)) {
         parsed[char] = fallbackProfile(char);
       }
+      // Clamp numeric fields
+      parsed[char].stability = Math.min(1, Math.max(0, parsed[char].stability ?? 0.55));
+      parsed[char].style     = Math.min(1, Math.max(0, parsed[char].style     ?? 0.2));
     }
     return parsed;
   } catch (err) {
@@ -98,10 +118,10 @@ export async function profileCharacters(
 function fallbackProfile(characterName: string): CharacterVoiceProfile {
   const name = characterName.toLowerCase();
   if (/narrator|storyteller/.test(name)) {
-    return { voiceName: "pNInz6obpgDQGcFmaJgB", persona: "Warm, engaging storyteller. Clear, varied pacing." };
+    return { voiceName: "pNInz6obpgDQGcFmaJgB", persona: "A warm, unhurried bedtime story narrator. Speak with gentle authority and wonder — like a parent reading to a beloved child. Vary your pace to match story tension, slow down at magical moments.", stability: 0.75, style: 0.1 };
   }
   if (/child|kid|little|young/.test(name)) {
-    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", persona: "Lively, curious child. Energetic and enthusiastic." };
+    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", persona: "A lively, curious young child. Speak with genuine excitement and natural spontaneity — a little breathless, full of wonder. Let emotions show freely.", stability: 0.3, style: 0.5 };
   }
-  return { voiceName: "21m00Tcm4TlvDq8ikWAM", persona: "Expressive, friendly character. Warm and clear." };
+  return { voiceName: "21m00Tcm4TlvDq8ikWAM", persona: "A warm, expressive character. Speak naturally with personality — let the emotion of each line come through clearly.", stability: 0.55, style: 0.25 };
 }

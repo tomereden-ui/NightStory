@@ -34,6 +34,8 @@ async function synthesizeEL(
   voiceId: string,
   apiKey: string,
   outputPath: string,
+  stability = 0.5,
+  style = 0.3,
 ): Promise<void> {
   for (let attempt = 1; attempt <= 5; attempt++) {
     const controller = new AbortController();
@@ -49,7 +51,7 @@ async function synthesizeEL(
           body: JSON.stringify({
             text,
             model_id: "eleven_multilingual_v2",
-            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true },
+            voice_settings: { stability, similarity_boost: 0.75, style, use_speaker_boost: true },
           }),
           signal: controller.signal,
         },
@@ -146,6 +148,8 @@ export async function synthesizeLine(
   outputPath: string,
   persona?: string,
   useElevenLabs = true,
+  stability?: number,
+  style?: number,
 ): Promise<void> {
   const tagMatches: string[] = [];
   const tagRe = /\[([^\]]+)\]/g;
@@ -154,7 +158,7 @@ export async function synthesizeLine(
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
   if (useElevenLabs) {
-    return synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath);
+    return synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style);
   }
 
   const styleHints = tagMatches.length > 0

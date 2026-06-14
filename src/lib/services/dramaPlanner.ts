@@ -25,10 +25,19 @@ Your job is to take a written children's story script and produce a precise audi
 with character timing, gentle sound effects, and ambient audio cues suitable for young listeners.`;
 
 const FORMAT_RULES = `
-TIMING RULES:
-- Estimate 380ms per word of dialogue (performance tags like [excited] count as 0 words)
-- Add 700ms pause between different characters, 400ms between consecutive lines of the same character
-- Narrator lines are ~10% slower (420ms per word)
+TIMING RULES — make it sound like a live natural performance, NOT a robotic sequence:
+- Estimate spoken word duration: 380ms/word standard; 450ms/word for narrators/elderly/reflective characters; 320ms/word for children/excited characters
+- Performance tags like [excited] or [whispers] count as 0 words but affect delivery, not timing
+- Gaps between DIFFERENT speakers (choose based on dramatic context):
+  • Rapid back-and-forth or argument: 100–200ms
+  • Normal conversational reply: 250–400ms
+  • Thoughtful, emotional, or surprised response: 500–700ms
+  • After narrator sets a scene before first character speaks: 400–600ms
+  • After a dramatic revelation or emotional peak: 700–1000ms
+- Gaps for SAME character continuing:
+  • Natural breath between sentences: 150–250ms
+  • Deliberate pause for dramatic effect: 350–500ms
+- NEVER add mechanical silence where the story flows naturally — every gap must serve the narrative
 - Start first dialogue at 1500ms to let the opening ambient SFX establish
 
 SFX RULES:
