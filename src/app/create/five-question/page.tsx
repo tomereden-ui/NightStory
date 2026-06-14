@@ -719,10 +719,10 @@ export default function FiveQuestionPage() {
     setStep("summary");
   }, []);
 
-  const handleProduce = useCallback(async (blocks: ScriptBlock[]) => {
+  const handleProduce = useCallback(async (blocks: ScriptBlock[], durationMinutes: number) => {
     setIsProducing(true);
     try {
-      const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks }) });
+      const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks, durationMinutes }) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};
       try { data = JSON.parse(text); } catch { throw new Error(`Server error (${res.status})`); }

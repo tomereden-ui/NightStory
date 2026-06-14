@@ -64,6 +64,7 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown, no explanation:
 export async function planDrama(
   blocks: ScriptBlock[],
   apiKey: string,
+  durationMinutes = 3,
 ): Promise<DramaScript> {
   const scriptText = blocks
     .map((b) => `${b.characterName}: ${b.textPayload}`)
@@ -71,7 +72,10 @@ export async function planDrama(
 
   const prompt =
     `${SYSTEM_INSTRUCTION}\n\n` +
-    `Create a warm, child-friendly audio drama timeline for this bedtime story.\n\n` +
+    `Create a warm, child-friendly audio drama timeline for this bedtime story.\n` +
+    `TARGET DURATION: approximately ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""} (${durationMinutes * 60} seconds). ` +
+    `Set duration_estimate_seconds to ${durationMinutes * 60} and pace the dialogue accordingly — ` +
+    `expand descriptions and add natural pauses for shorter scripts, or select key passages for longer ones.\n\n` +
     `STORY SCRIPT (may be in any language — preserve the original language in all dialogue lines):\n${scriptText}\n\n` +
     FORMAT_RULES;
 

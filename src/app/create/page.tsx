@@ -141,12 +141,12 @@ export default function CreatePage() {
     }
   };
 
-  const handleProduce = useCallback(async (blocks: ScriptBlock[]) => {
+  const handleProduce = useCallback(async (blocks: ScriptBlock[], durationMinutes: number) => {
     setIsProducing(true);
     setGenerateError(null);
     setActiveTab("producing");
     try {
-      const produceBody: Record<string, unknown> = { blocks };
+      const produceBody: Record<string, unknown> = { blocks, durationMinutes };
       if (editingStoryId) produceBody.editingStoryId = editingStoryId;
       if (summary) produceBody.summary = summary;
       const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(produceBody) });

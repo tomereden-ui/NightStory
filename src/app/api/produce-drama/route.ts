@@ -36,6 +36,7 @@ async function runProduction(
   summaryOverride: string,
   geminiKey: string,
   elevenKey: string | null,
+  durationMinutes: number,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -60,7 +61,7 @@ async function runProduction(
       progress: 5,
     });
 
-    const drama = await planDrama(blocks, geminiKey);
+    const drama = await planDrama(blocks, geminiKey, durationMinutes);
     updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 12 });
 
     // ── Step 1b: Voice profiling ───────────────────────────────────────────
@@ -278,7 +279,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
     }
 
-    let body: { blocks: ScriptBlock[]; editingStoryId?: string; summary?: string };
+    let body: { blocks: ScriptBlock[]; editingStoryId?: string; summary?: string; durationMinutes?: number };
     try {
       body = await req.json();
     } catch {
@@ -302,8 +303,10 @@ export async function POST(req: NextRequest) {
 
     const elevenKey = process.env.ELEVENLABS_API_KEY ?? null;
 
+    const durationMinutes = Math.min(10, Math.max(1, body.durationMinutes ?? 3));
+
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

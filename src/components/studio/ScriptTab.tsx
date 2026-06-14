@@ -10,7 +10,7 @@ interface ScriptTabProps {
   blocks: ScriptBlock[];
   voices: Voice[];
   onBlocksChange: (blocks: ScriptBlock[]) => void;
-  onProduce: (blocks: ScriptBlock[]) => void;
+  onProduce: (blocks: ScriptBlock[], durationMinutes: number) => void;
   isProducing: boolean;
   summary?: string;
   coverUrl?: string;
@@ -309,6 +309,7 @@ function TextInsertModal({
 
 export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover }: ScriptTabProps) {
   const { t } = useLanguage();
+  const [durationMinutes, setDurationMinutes] = useState(3);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
   const [isPlaying, setIsPlaying]         = useState(false);
@@ -661,9 +662,39 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </div>
         )}
 
+        {/* Duration picker */}
+        {!isProducing && (
+          <div className="mb-3 rounded-2xl px-4 py-3 flex flex-col gap-2"
+            style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+                Story length
+              </span>
+              <span className="text-sm font-bold" style={{ color: "#4fc3f7" }}>
+                {durationMinutes} min
+              </span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+              className="w-full accent-teal h-1.5 rounded-full cursor-pointer"
+              style={{ accentColor: "#4fc3f7" }}
+            />
+            <div className="flex justify-between text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>
+              <span>1 min</span>
+              <span>5 min</span>
+              <span>10 min</span>
+            </div>
+          </div>
+        )}
+
         {/* Produce button */}
         <button
-          onClick={() => onProduce(blocks)}
+          onClick={() => onProduce(blocks, durationMinutes)}
           disabled={isProducing}
           className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
             !isProducing ? "btn-vivid" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
