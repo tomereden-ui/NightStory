@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
-import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
-import { planDrama } from "@/lib/services/dramaPlanner";
-import { synthesizeLine } from "@/lib/services/ttsService";
-import { generateSfx, writeSilence } from "@/lib/services/sfxService";
-import { mixTracks, concatenateTracks, concatenateWavFilesPureJS } from "@/lib/services/audioMixer";
-import { VoiceMap } from "@/lib/services/voiceMap";
-import { addEntry } from "@/lib/libraryStore";
-import { generateCoverImage } from "@/lib/services/imageService";
-import { profileCharacters } from "@/lib/services/characterProfiler";
-import { supabase, ensureBuckets } from "@/lib/supabase";
 import type { ScriptBlock } from "@/types";
+
+// All heavy imports are dynamic (inside runProduction / POST) so a missing
+// package can never prevent the module from loading and returning JSON errors.
+const path = require("path") as typeof import("path");
+const fs   = require("fs")   as typeof import("fs");
 
 function generateSummary(blocks: ScriptBlock[]): string {
   const narrator = blocks.find((b) => b.characterName.toLowerCase().includes("narrat"));
@@ -46,6 +39,18 @@ async function runProduction(
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
+
+  // Dynamic imports — isolated from module load so a missing dep returns JSON
+  const { updateJob } = await import("@/lib/jobs");
+  const { planDrama }         = await import("@/lib/services/dramaPlanner");
+  const { synthesizeLine }    = await import("@/lib/services/ttsService");
+  const { generateSfx, writeSilence } = await import("@/lib/services/sfxService");
+  const { mixTracks, concatenateTracks, concatenateWavFilesPureJS } = await import("@/lib/services/audioMixer");
+  const { VoiceMap }          = await import("@/lib/services/voiceMap");
+  const { addEntry }          = await import("@/lib/libraryStore");
+  const { generateCoverImage } = await import("@/lib/services/imageService");
+  const { profileCharacters } = await import("@/lib/services/characterProfiler");
+  const { supabase, ensureBuckets } = await import("@/lib/supabase");
 
   try {
     await ensureBuckets();
@@ -290,6 +295,8 @@ export async function POST(req: NextRequest) {
       console.error("[produce-drama] ensureDirs failed:", e);
       return NextResponse.json({ error: `Cannot create temp directory: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
     }
+
+    const { createJob, pruneJobs } = await import("@/lib/jobs");
     pruneJobs();
 
     const jobId = crypto.randomUUID();
