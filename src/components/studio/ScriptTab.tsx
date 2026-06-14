@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { ScriptBlock, Voice } from "@/types";
 import ScriptBlockCard, { buildSfxPayload } from "./ScriptBlockCard";
 import SpeechPlayerModal from "./SpeechPlayerModal";
@@ -106,30 +106,201 @@ function SfxInsertForm({
   );
 }
 
-// ─── Add-SFX separator button ─────────────────────────────────────────────────
+// ─── Add-block separator (SFX + Text) ────────────────────────────────────────
 
-function SfxSeparator({ onAdd }: { onAdd: () => void }) {
+function BlockSeparator({ onAddSfx, onAddText }: { onAddSfx: () => void; onAddText: () => void }) {
   const { t } = useLanguage();
   return (
-    <button
-      onClick={onAdd}
-      className="w-full flex items-center gap-2 py-1 px-2 group transition-all"
-      style={{ outline: "none" }}
-      aria-label="Add sound effect here"
-    >
-      <div className="flex-1 h-px transition-all" style={{ background: "rgba(245,158,11,0.12)" }} />
-      <span
-        className="text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all group-hover:scale-105"
-        style={{
-          color: "rgba(245,158,11,0.45)",
-          border: "1px dashed rgba(245,158,11,0.25)",
-          background: "rgba(245,158,11,0.04)",
-        }}
+    <div className="w-full flex items-center gap-2 py-1 px-2">
+      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <button
+        onClick={onAddSfx}
+        className="text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all hover:scale-105"
+        style={{ color: "rgba(245,158,11,0.45)", border: "1px dashed rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.04)" }}
       >
         {t("addSfx")}
-      </span>
-      <div className="flex-1 h-px transition-all" style={{ background: "rgba(245,158,11,0.12)" }} />
-    </button>
+      </button>
+      <button
+        onClick={onAddText}
+        className="text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all hover:scale-105"
+        style={{ color: "rgba(79,195,247,0.45)", border: "1px dashed rgba(79,195,247,0.2)", background: "rgba(79,195,247,0.04)" }}
+      >
+        + Text
+      </button>
+      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+    </div>
+  );
+}
+
+// ─── Text insert modal ───────────────────────────────────────────────────────
+
+function TextInsertModal({
+  voices,
+  existingCharacters,
+  onInsert,
+  onCancel,
+}: {
+  voices: Voice[];
+  existingCharacters: string[];
+  onInsert: (characterName: string, voiceId: string, text: string) => void;
+  onCancel: () => void;
+}) {
+  const [charName, setCharName]         = useState("Narrator");
+  const [voiceId, setVoiceId]           = useState(voices[0]?.id ?? "");
+  const [text, setText]                 = useState("");
+  const [isValidating, setIsValidating] = useState(false);
+  const [error, setError]               = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-focus textarea on mount
+  useEffect(() => { setTimeout(() => textareaRef.current?.focus(), 80); }, []);
+
+  const suggestions = Array.from(new Set(["Narrator", ...existingCharacters])).slice(0, 5);
+
+  const handleSubmit = async () => {
+    if (!text.trim()) return;
+    setError(null);
+    setIsValidating(true);
+    try {
+      const res = await fetch("/api/validate-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text.trim(), characterName: charName }),
+      });
+      const data = await res.json();
+      if (!data.valid) {
+        setError(data.reason || "This text doesn't look like valid story content. Please refine it.");
+        setIsValidating(false);
+        return;
+      }
+    } catch {
+      // fail open — insert anyway
+    }
+    setIsValidating(false);
+    onInsert(charName.trim() || "Narrator", voiceId, text.trim());
+  };
+
+  const selectedVoice = voices.find((v) => v.id === voiceId) ?? voices[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-end"
+      style={{ background: "rgba(5,8,20,0.75)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        className="rounded-t-3xl p-5 flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
+        style={{ background: "#0d1120", border: "1px solid rgba(79,195,247,0.15)", borderBottom: "none" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-white">Add Dialogue</h3>
+          <button onClick={onCancel} className="w-7 h-7 rounded-full flex items-center justify-center text-white/30 hover:text-white/60 transition-colors text-xs"
+            style={{ background: "rgba(255,255,255,0.06)" }}>✕</button>
+        </div>
+
+        {/* Character name */}
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Character</label>
+          <input
+            type="text"
+            value={charName}
+            onChange={(e) => setCharName(e.target.value)}
+            placeholder="Narrator"
+            className="w-full rounded-xl px-3 py-2 text-sm text-white outline-none"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(79,195,247,0.2)" }}
+          />
+          {/* Character suggestions */}
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                onClick={() => setCharName(s)}
+                className="text-[10px] px-2.5 py-0.5 rounded-full transition-colors"
+                style={charName === s
+                  ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+                  : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
+                }
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Voice picker */}
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Voice</label>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {voices.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => setVoiceId(v.id)}
+                className="flex-shrink-0 flex flex-col items-center gap-1 p-2 rounded-2xl transition-all"
+                style={v.id === voiceId
+                  ? { background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.4)" }
+                  : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }
+                }
+              >
+                <span className="text-xl">{v.avatarEmoji}</span>
+                <span className="text-[9px] font-semibold" style={{ color: v.id === voiceId ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>
+                  {v.name.split(" ")[0]}
+                </span>
+              </button>
+            ))}
+          </div>
+          {selectedVoice && (
+            <p className="text-[10px] text-white/20 mt-1">{selectedVoice.name} · {selectedVoice.style}</p>
+          )}
+        </div>
+
+        {/* Text input */}
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Text</label>
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => { setText(e.target.value); if (error) setError(null); }}
+            onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}
+            rows={4}
+            placeholder="Type the dialogue or narration…"
+            className="w-full rounded-xl px-3 py-2.5 text-sm text-white/85 leading-relaxed outline-none resize-none placeholder-white/20"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(79,195,247,0.2)" }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.45)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.2)")}
+          />
+        </div>
+
+        {/* Validation error */}
+        {error && (
+          <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs leading-snug"
+            style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "rgba(239,68,68,0.85)" }}>
+            <span className="flex-shrink-0 mt-px">⚠</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Insert button */}
+        <button
+          onClick={handleSubmit}
+          disabled={!text.trim() || isValidating}
+          className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+          style={text.trim() && !isValidating
+            ? { background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F" }
+            : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }
+          }
+        >
+          {isValidating ? (
+            <>
+              <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#4fc3f7" }} />
+              Checking…
+            </>
+          ) : (
+            "Insert Block"
+          )}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -142,7 +313,8 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const [isPlaying, setIsPlaying]         = useState(false);
   const [isPaused, setIsPaused]           = useState(false);
   const [speechError, setSpeechError]     = useState<string | null>(null);
-  const [insertingAt, setInsertingAt]     = useState<number | null>(null);
+  const [insertingAt, setInsertingAt]         = useState<number | null>(null);
+  const [insertingTextAt, setInsertingTextAt] = useState<number | null>(null);
   // Regenerate / validate state
   const [isDirty, setIsDirty]             = useState(false);
   const [isValidating, setIsValidating]   = useState(false);
@@ -225,6 +397,24 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     [blocks, onBlocksChange, activeBlockId, handleStop, markDirty],
   );
 
+  const handleInsertText = useCallback(
+    (insertIdx: number, characterName: string, voiceId: string, text: string) => {
+      const newBlock: ScriptBlock = {
+        id: makeId(),
+        blockOrder: insertIdx + 1,
+        characterName,
+        assignedVoiceId: voiceId,
+        textPayload: text,
+      };
+      const updated = [...blocks];
+      updated.splice(insertIdx, 0, newBlock);
+      onBlocksChange(updated.map((b, i) => ({ ...b, blockOrder: i + 1 })));
+      setInsertingTextAt(null);
+      markDirty();
+    },
+    [blocks, onBlocksChange, markDirty],
+  );
+
   const handleInsertSfx = useCallback(
     (insertIdx: number, description: string, durationSec: number) => {
       const newBlock: ScriptBlock = {
@@ -295,6 +485,12 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const estMin       = Math.floor(estSecs / 60);
   const estSec       = estSecs % 60;
 
+  // ─── Derived ────────────────────────────────────────────────────────────────
+
+  const existingCharacters = Array.from(
+    new Set(blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName))
+  );
+
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -352,14 +548,17 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {/* Block list with separators */}
         {blocks.map((block, idx) => (
           <div key={block.id}>
-            {/* SFX insert form or separator — BEFORE this block */}
+            {/* Insert form or separator — BEFORE this block */}
             {insertingAt === idx ? (
               <SfxInsertForm
                 onInsert={(desc, dur) => handleInsertSfx(idx, desc, dur)}
                 onCancel={() => setInsertingAt(null)}
               />
             ) : (
-              <SfxSeparator onAdd={() => { setInsertingAt(idx); }} />
+              <BlockSeparator
+                onAddSfx={() => setInsertingAt(idx)}
+                onAddText={() => setInsertingTextAt(idx)}
+              />
             )}
 
             {/* The block card */}
@@ -384,7 +583,10 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             onCancel={() => setInsertingAt(null)}
           />
         ) : (
-          <SfxSeparator onAdd={() => setInsertingAt(blocks.length)} />
+          <BlockSeparator
+            onAddSfx={() => setInsertingAt(blocks.length)}
+            onAddText={() => setInsertingTextAt(blocks.length)}
+          />
         )}
 
         <div className="h-px my-3" style={{ background: "rgba(255,255,255,0.07)" }} />
@@ -456,6 +658,16 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           speechError={speechError}
           onPlayPause={handlePlayPause}
           onStop={handleStop}
+        />
+      )}
+
+      {/* Text insert modal */}
+      {insertingTextAt !== null && (
+        <TextInsertModal
+          voices={voices}
+          existingCharacters={existingCharacters}
+          onInsert={(charName, vid, text) => handleInsertText(insertingTextAt, charName, vid, text)}
+          onCancel={() => setInsertingTextAt(null)}
         />
       )}
     </>
