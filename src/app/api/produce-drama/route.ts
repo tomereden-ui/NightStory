@@ -269,33 +269,42 @@ async function runProduction(
 }
 
 export async function POST(req: NextRequest) {
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
-  }
-
-  let body: { blocks: ScriptBlock[]; editingStoryId?: string; summary?: string };
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+      return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
+    }
+
+    let body: { blocks: ScriptBlock[]; editingStoryId?: string; summary?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    }
+
+    if (!body.blocks?.length) {
+      return NextResponse.json({ error: "No script blocks provided." }, { status: 400 });
+    }
+
+    try { ensureDirs(); } catch (e) {
+      console.error("[produce-drama] ensureDirs failed:", e);
+      return NextResponse.json({ error: `Cannot create temp directory: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
+    }
+    pruneJobs();
+
+    const jobId = crypto.randomUUID();
+    const storyId = body.editingStoryId ?? jobId;
+    createJob(jobId);
+
+    const elevenKey = process.env.ELEVENLABS_API_KEY ?? null;
+
+    // Fire-and-forget background processing
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey);
+
+    return NextResponse.json({ jobId });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[produce-drama] POST handler crash:", msg);
+    return NextResponse.json({ error: `Server error: ${msg}` }, { status: 500 });
   }
-
-  if (!body.blocks?.length) {
-    return NextResponse.json({ error: "No script blocks provided." }, { status: 400 });
-  }
-
-  ensureDirs();
-  pruneJobs();
-
-  const jobId = crypto.randomUUID();
-  const storyId = body.editingStoryId ?? jobId;
-  createJob(jobId);
-
-  const elevenKey = process.env.ELEVENLABS_API_KEY ?? null;
-
-  // Fire-and-forget background processing
-  runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey);
-
-  return NextResponse.json({ jobId });
 }

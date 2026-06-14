@@ -152,7 +152,7 @@ export default function CreatePage() {
       const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(produceBody) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};
-      try { data = JSON.parse(text); } catch { throw new Error(`Server error (${res.status}): ${text.slice(0, 300)}`); }
+      try { data = JSON.parse(text); } catch { throw new Error(`Server error (${res.status}) — check terminal for details`); }
       if (!res.ok) throw new Error(data.error ?? "Production failed");
       setProductionJobId(data.jobId!);
     } catch (err: unknown) {
