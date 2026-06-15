@@ -42,6 +42,7 @@ interface MixClip {
   type: "speech" | "sfx";
   url: string;
   text: string;
+  voice?: string;
   offsetSec: number;
   volume: number;   // 0–1
   loop: boolean;
@@ -200,8 +201,11 @@ function ClipCard({
           <span style={{ color: accent }}>{playing ? "⏸" : "▶"}</span>
         </button>
 
-        {/* Text */}
-        <p className="flex-1 text-white/60 text-xs truncate min-w-0">{clip.text}</p>
+        {/* Voice · text */}
+        <p className="flex-1 text-xs truncate min-w-0">
+          {clip.voice && <span className="font-semibold mr-1" style={{ color: accent }}>{clip.voice}</span>}
+          <span className="text-white/50">{clip.text}</span>
+        </p>
 
         {/* Expand timing */}
         <button
@@ -393,11 +397,15 @@ export default function TestPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
 
+      const voiceName = mode === "tts"
+        ? (ttsProvider === "gemini" ? geminiVoice : (EL_VOICES.find((v) => v.id === elVoiceId)?.name ?? "EL"))
+        : undefined;
       const clip: MixClip = {
         id:        crypto.randomUUID(),
         type:      mode === "tts" ? "speech" : "sfx",
         url:       data.audioUrl,
         text:      currentText.trim(),
+        voice:     voiceName,
         offsetSec: 0,
         volume:    mode === "tts" ? 1.0 : 0.28,
         loop:      mode === "sfx",
