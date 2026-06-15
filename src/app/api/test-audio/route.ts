@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
   }
 
-  let body: { type: "tts" | "sfx"; text: string };
+  let body: { type: "tts" | "sfx"; text: string; provider?: "gemini" | "el"; voice?: string; voiceStyle?: string };
   try {
     body = await req.json();
   } catch {
@@ -27,9 +27,25 @@ export async function POST(req: NextRequest) {
   const id = crypto.randomUUID().slice(0, 8);
 
   if (body.type === "tts") {
+    const useEL = body.provider === "el";
+    const elevenKey = process.env.ELEVENLABS_API_KEY ?? null;
+
+    if (useEL && !elevenKey) {
+      return NextResponse.json({ error: "ELEVENLABS_API_KEY not configured. Add it to .env.local to use ElevenLabs." }, { status: 500 });
+    }
+
+    const apiKey = useEL ? elevenKey! : geminiKey;
+    const defaultVoice = useEL ? "pNInz6obpgDQGcFmaJgB" : "Kore";
+    const voice = body.voice?.trim() || defaultVoice;
+
+    // Performance tag prefix carries style hints into the line
+    const line = body.voiceStyle?.trim()
+      ? `[${body.voiceStyle.trim()}] ${body.text.trim()}`
+      : body.text.trim();
+
     const outPath = path.join(OUT_DIR, `test_tts_${id}.wav`);
     try {
-      await synthesizeLine(body.text, "Kore", geminiKey, outPath);
+      await synthesizeLine(line, voice, apiKey, outPath, undefined, useEL);
     } catch (err) {
       writeSilence(2000, outPath);
       console.warn("[test-audio TTS]", err);

@@ -3,6 +3,39 @@
 import { useState, useRef, useCallback } from "react";
 
 type Mode = "tts" | "sfx";
+type TtsProvider = "gemini" | "el";
+
+const GEMINI_VOICES = [
+  { name: "Zephyr",      trait: "Bright"         },
+  { name: "Puck",        trait: "Upbeat"         },
+  { name: "Charon",      trait: "Informational"  },
+  { name: "Kore",        trait: "Firm"           },
+  { name: "Fenrir",      trait: "Excitable"      },
+  { name: "Aoede",       trait: "Breezy"         },
+  { name: "Leda",        trait: "Youthful"       },
+  { name: "Orus",        trait: "Firm"           },
+  { name: "Perseus",     trait: "Easy-going"     },
+  { name: "Schedar",     trait: "Even"           },
+  { name: "Rasalgethi",  trait: "Informational"  },
+  { name: "Enceladus",   trait: "Breathy"        },
+  { name: "Iapetus",     trait: "Clear"          },
+  { name: "Umbriel",     trait: "Easy-going"     },
+  { name: "Algenib",     trait: "Gravelly"       },
+  { name: "Achernar",    trait: "Soft"           },
+  { name: "Gacrux",      trait: "Mature"         },
+  { name: "Pulcherrima", trait: "Forward"        },
+];
+
+const EL_VOICES = [
+  { id: "pNInz6obpgDQGcFmaJgB", name: "Adam",    trait: "Deep warm"      },
+  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel",  trait: "Warm expressive"},
+  { id: "VR6AewLTigWG4xSOukaG", name: "Arnold",  trait: "Strong bold"    },
+  { id: "LcfcDJNUP1GQjkzn1xUU", name: "Emily",   trait: "Soft gentle"    },
+  { id: "SOYHLrjzK2X1ezoPC6cr", name: "Harry",   trait: "Playful young"  },
+  { id: "MF3mGyEYCl7XYWbV9V6O", name: "Elli",    trait: "Youthful"       },
+  { id: "GBv7mTt0atIp3Br8iCZE", name: "Thomas",  trait: "Wise elder"     },
+  { id: "ThT5KcBeYPX3keUQqHPh", name: "Dorothy", trait: "Airy light"     },
+];
 
 interface MixClip {
   id: string;
@@ -334,6 +367,12 @@ export default function TestPage() {
   const [merging, setMerging]       = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
 
+  // TTS provider controls
+  const [ttsProvider, setTtsProvider]   = useState<TtsProvider>("gemini");
+  const [geminiVoice, setGeminiVoice]   = useState("Kore");
+  const [elVoiceId, setElVoiceId]       = useState(EL_VOICES[0].id);
+  const [elVoiceStyle, setElVoiceStyle] = useState("");
+
   const currentText    = mode === "tts" ? ttsText : sfxText;
   const setCurrentText = mode === "tts" ? setTtsText : setSfxText;
 
@@ -342,9 +381,14 @@ export default function TestPage() {
     setLoading(true);
     setError(null);
     try {
+      const ttsExtras = mode === "tts" ? {
+        provider:   ttsProvider,
+        voice:      ttsProvider === "gemini" ? geminiVoice : elVoiceId,
+        voiceStyle: ttsProvider === "el" ? elVoiceStyle : undefined,
+      } : {};
       const res  = await fetch("/api/test-audio", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: mode, text: currentText.trim() }),
+        body: JSON.stringify({ type: mode, text: currentText.trim(), ...ttsExtras }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
@@ -365,7 +409,7 @@ export default function TestPage() {
     } finally {
       setLoading(false);
     }
-  }, [mode, currentText]);
+  }, [mode, currentText, ttsProvider, geminiVoice, elVoiceId, elVoiceStyle]);
 
   const updateClip = useCallback((id: string, updates: Partial<MixClip>) => {
     setClips((prev) => prev.map((c) => c.id === id ? { ...c, ...updates } : c));
@@ -452,6 +496,99 @@ export default function TestPage() {
           <p className="text-white/20 text-[10px] mb-3">
             Requires <span style={{ color: "rgba(139,92,246,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
           </p>
+        )}
+
+        {/* ── TTS provider + voice controls ── */}
+        {mode === "tts" && (
+          <div className="mt-3 mb-3 flex flex-col gap-3">
+
+            {/* Provider toggle */}
+            <div>
+              <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Model</p>
+              <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                {(["gemini", "el"] as TtsProvider[]).map((p) => (
+                  <button key={p}
+                    onClick={() => setTtsProvider(p)}
+                    className="flex-1 py-2 rounded-[10px] text-[11px] font-bold transition-all"
+                    style={ttsProvider === p ? {
+                      background: p === "gemini" ? "rgba(79,195,247,0.12)" : "rgba(245,158,11,0.12)",
+                      color: p === "gemini" ? "#4fc3f7" : "#F59E0B",
+                      border: `1px solid ${p === "gemini" ? "rgba(79,195,247,0.25)" : "rgba(245,158,11,0.25)"}`,
+                    } : { color: "rgba(255,255,255,0.3)" }}>
+                    {p === "gemini" ? "✦ Gemini TTS" : "⚡ ElevenLabs"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Gemini voice grid */}
+            {ttsProvider === "gemini" && (
+              <div>
+                <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {GEMINI_VOICES.map((v) => {
+                    const active = geminiVoice === v.name;
+                    return (
+                      <button key={v.name}
+                        onClick={() => setGeminiVoice(v.name)}
+                        className="px-2 py-2 rounded-xl text-left transition-all"
+                        style={{
+                          background: active ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.03)",
+                          border: `1px solid ${active ? "rgba(79,195,247,0.35)" : "rgba(255,255,255,0.07)"}`,
+                        }}>
+                        <p className="text-[11px] font-semibold leading-tight" style={{ color: active ? "#4fc3f7" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
+                        <p className="text-[9px] mt-0.5" style={{ color: active ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.25)" }}>{v.trait}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* EL voice grid + style field */}
+            {ttsProvider === "el" && (
+              <>
+                <div>
+                  <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {EL_VOICES.map((v) => {
+                      const active = elVoiceId === v.id;
+                      return (
+                        <button key={v.id}
+                          onClick={() => setElVoiceId(v.id)}
+                          className="px-3 py-2 rounded-xl text-left transition-all"
+                          style={{
+                            background: active ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.03)",
+                            border: `1px solid ${active ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.07)"}`,
+                          }}>
+                          <p className="text-[11px] font-semibold leading-tight" style={{ color: active ? "#F59E0B" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
+                          <p className="text-[9px] mt-0.5" style={{ color: active ? "rgba(245,158,11,0.6)" : "rgba(255,255,255,0.25)" }}>{v.trait}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Voice style <span className="normal-case font-normal text-white/20">(optional — e.g. "warmly", "whispering")</span></p>
+                  <input
+                    type="text"
+                    value={elVoiceStyle}
+                    onChange={(e) => setElVoiceStyle(e.target.value)}
+                    placeholder='e.g. "warmly and gently" or "sleepy and slow"'
+                    className="w-full rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(245,158,11,0.4)")}
+                    onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+                  />
+                </div>
+
+                <p className="text-white/20 text-[10px] -mt-1">
+                  Requires <span style={{ color: "rgba(245,158,11,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
+                </p>
+              </>
+            )}
+          </div>
         )}
 
         <button onClick={handleGenerate} disabled={!canGenerate}

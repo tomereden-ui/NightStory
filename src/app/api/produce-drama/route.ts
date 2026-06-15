@@ -14,6 +14,37 @@ function generateSummary(blocks: ScriptBlock[]): string {
   return words.slice(0, 20).join(" ") + (words.length > 20 ? "…" : "");
 }
 
+async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Promise<string> {
+  const sample = blocks
+    .filter((b) => b.characterName !== "SFX")
+    .slice(0, 6)
+    .map((b) => b.textPayload.replace(/\[.*?\]/g, "").trim())
+    .join(" ")
+    .slice(0, 400);
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: `What language is this text written in? Reply with ONLY the ISO 639-1 two-letter code (e.g. "en", "he", "ar", "fr", "de", "es"). No explanation.\n\n${sample}` }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 5 },
+        }),
+      }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const code = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toLowerCase();
+      if (code && /^[a-z]{2}$/.test(code)) return code;
+    }
+  } catch (err) {
+    console.warn("[TTS] Language detection failed:", err);
+  }
+  return "en";
+}
+
 const TMP_DIR = path.join(process.cwd(), "tmp", "audio");
 
 function ensureDirs() {
@@ -72,6 +103,10 @@ async function runProduction(
     const sfxTracks = drama.tracks.filter((t) => t.type === "sfx");
     const totalDurationMs = drama.duration_estimate_seconds * 1000;
 
+    // Detect script language for TTS
+    const scriptLanguage = await detectScriptLanguage(blocks, geminiKey);
+    console.log(`[TTS] Detected language: ${scriptLanguage}`);
+
     // Start cover image in background — runs while TTS is happening
     const coverPromise = generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
 
@@ -101,7 +136,7 @@ async function runProduction(
         const ttsKey = useEL ? elevenKey! : geminiKey;
         if (i === 0) console.log(`[TTS] Provider: ${useEL ? "ElevenLabs" : "Gemini"}`);
         try {
-          await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL, profile?.stability, profile?.style);
+          await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL, profile?.stability, profile?.style, scriptLanguage);
         } catch (err) {
           console.warn(`[TTS] Skipping ${track.id}:`, err);
           skippedLines.push(track.id);
