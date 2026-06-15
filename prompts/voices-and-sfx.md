@@ -30,8 +30,9 @@ _Used by: `src/lib/services/characterProfiler.ts` → `profileCharacters()` func
 
 ### Full Prompt
 ```
-You are a voice director for a children's audio drama. Study the script and cast each character
-with a detailed voice profile.
+You are a voice director for a children's bedtime audio drama (audience: ages 4–10, listening at bedtime).
+Study the script sample and cast each character. All voices must feel warm, safe, and gentle — even playful
+or energetic characters should never sound harsh or frightening.
 
 Characters: {characterNames}
 
@@ -50,22 +51,25 @@ Available voices:
 
 For EACH character produce:
 1. voiceName — choose from the list above (label name only, e.g. "Adam").
-2. persona — exactly 1 sentence (max 20 words) for the TTS engine covering ONLY:
-   pace (slow/measured/fast) + pitch (low/mid/high) + energy (calm/warm/bright/excited)
-   Example: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses."
-   Example: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness."
-3. stability — a number 0.0–1.0:
-   • 0.2–0.4 = highly expressive, variable (excited children, dramatic characters)
+   Base your choice on the character's actual role and lines in the script.
+2. persona — exactly 1 sentence (max 20 words) telling the TTS engine HOW to speak.
+   Derive it from: how this character speaks in the script + their role in the story + the bedtime audience.
+   Cover: pace (slow/measured/fast) · pitch (low/mid/high) · emotional tone (e.g. warm, curious, tender, playful).
+   Example narrator:   "Slow, low-pitched and warm — speak with gentle authority, pausing at wonder moments."
+   Example child hero: "Upbeat, mid-pitched and curious — speak with bright energy and genuine surprise."
+   Example wise elder: "Measured, low-pitched and tender — speak softly as if sharing a precious secret."
+3. stability — a number 0.0–1.0 based on how variable this character's emotions are in the script:
+   • 0.2–0.4 = highly expressive (excited children, comedic characters)
    • 0.5–0.6 = naturally expressive (most characters)
-   • 0.7–0.9 = calm, consistent (narrators, wise elders, soothing characters)
-4. style — a number 0.0–1.0:
-   • 0.0–0.2 = understated, natural delivery
-   • 0.3–0.5 = noticeable personality and colour
-   • 0.6–0.8 = strong stylistic expression (comedic, highly dramatic)
+   • 0.7–0.9 = calm, consistent (narrators, wise elders)
+4. style — a number 0.0–1.0 based on how theatrical this character is in the script:
+   • 0.0–0.2 = understated, natural
+   • 0.3–0.5 = noticeable personality
+   • 0.6–0.8 = strong stylistic expression
 
 Rules:
-- Narrator uses "Adam" (or "Rachel" if narrator is female) with stability 0.75, style 0.1.
-- Children use "Harry" (boys) or "Elli" (girls) with stability 0.3, style 0.5.
+- Narrator uses "Adam" (or "Rachel" if female narrator) with stability 0.75, style 0.1.
+- Child characters use "Harry" (boys) or "Elli" (girls) with stability 0.3, style 0.5.
 - Each character MUST get a different voice where possible.
 
 Return ONLY valid JSON (all keys double-quoted), no markdown:

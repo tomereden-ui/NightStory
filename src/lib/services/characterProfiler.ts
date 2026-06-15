@@ -37,27 +37,32 @@ export async function profileCharacters(
   const voiceList = AVAILABLE_VOICES.map((v) => `- "${v.label}": ${v.desc}`).join("\n");
 
   const prompt =
-    `You are a voice director for a children's audio drama. Cast each character with a voice profile.\n\n` +
+    `You are a voice director for a children's bedtime audio drama (audience: ages 4–10, listening at bedtime).\n` +
+    `Study the script sample and cast each character. All voices must feel warm, safe, and gentle — even playful\n` +
+    `or energetic characters should never sound harsh or frightening.\n\n` +
     `Characters: ${characters.join(", ")}\n\n` +
     `Script sample:\n${scriptSample}\n\n` +
     `Available voices:\n${voiceList}\n\n` +
     `For EACH character produce:\n` +
     `1. voiceName — choose from the list above (label name only, e.g. "Adam").\n` +
-    `2. persona — exactly 1 sentence (max 20 words) for the TTS engine covering ONLY:\n` +
-    `   pace (slow/measured/fast) + pitch (low/mid/high) + energy (calm/warm/bright/excited)\n` +
-    `   Example: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses."\n` +
-    `   Example: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness."\n` +
-    `3. stability — a number 0.0–1.0:\n` +
+    `   Base your choice on the character's actual role and lines in the script.\n` +
+    `2. persona — exactly 1 sentence (max 20 words) telling the TTS engine HOW to speak.\n` +
+    `   Derive it from: how this character speaks in the script + their role in the story + the bedtime audience.\n` +
+    `   Cover: pace (slow/measured/fast) · pitch (low/mid/high) · emotional tone (e.g. warm, curious, tender, playful).\n` +
+    `   Example narrator: "Slow, low-pitched and warm — speak with gentle authority, pausing at wonder moments."\n` +
+    `   Example child hero: "Upbeat, mid-pitched and curious — speak with bright energy and genuine surprise."\n` +
+    `   Example wise elder: "Measured, low-pitched and tender — speak softly as if sharing a precious secret."\n` +
+    `3. stability — a number 0.0–1.0 based on how variable this character's emotions are in the script:\n` +
     `   • 0.2–0.4 = highly expressive (excited children, comedic characters)\n` +
     `   • 0.5–0.6 = naturally expressive (most characters)\n` +
     `   • 0.7–0.9 = calm, consistent (narrators, wise elders)\n` +
-    `4. style — a number 0.0–1.0:\n` +
+    `4. style — a number 0.0–1.0 based on how theatrical this character is in the script:\n` +
     `   • 0.0–0.2 = understated, natural\n` +
     `   • 0.3–0.5 = noticeable personality\n` +
     `   • 0.6–0.8 = strong stylistic expression\n\n` +
     `Rules:\n` +
     `- Narrator uses "Adam" (or "Rachel" if female narrator) with stability 0.75, style 0.1.\n` +
-    `- Children use "Harry" (boys) or "Elli" (girls) with stability 0.3, style 0.5.\n` +
+    `- Child characters use "Harry" (boys) or "Elli" (girls) with stability 0.3, style 0.5.\n` +
     `- Each character MUST get a different voice where possible.\n\n` +
     `Return ONLY valid JSON (all keys double-quoted), no markdown:\n` +
     `{ "CharacterName": { "voiceName": "Adam", "persona": "...", "stability": 0.7, "style": 0.1 }, ... }`;
