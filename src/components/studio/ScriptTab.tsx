@@ -41,7 +41,7 @@ function SfxInsertForm({
 }) {
   const { t } = useLanguage();
   const [desc, setDesc] = useState("");
-  const [dur, setDur]   = useState(3);
+  const dur = 3;
   const inputRef = useRef<HTMLInputElement>(null);
 
   useState(() => { setTimeout(() => inputRef.current?.focus(), 50); });
@@ -77,34 +77,17 @@ function SfxInsertForm({
         style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(245,158,11,0.3)", color: "rgba(255,255,255,0.8)" }}
       />
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-[10px] text-white/30 whitespace-nowrap">{t("duration")}</span>
-          <input
-            type="number"
-            min={0.5}
-            max={22}
-            step={0.5}
-            value={dur}
-            onChange={(e) => setDur(Math.min(22, Math.max(0.5, parseFloat(e.target.value) || 0.5)))}
-            className="w-14 text-xs text-center rounded-lg px-2 py-1 outline-none"
-            style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", color: "#F59E0B" }}
-          />
-          <span className="text-[10px] text-white/30">s</span>
-        </div>
-
-        <button
-          onClick={handleInsert}
-          disabled={!desc.trim()}
-          className="px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
-          style={desc.trim()
-            ? { background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.5)", color: "#F59E0B" }
-            : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
-          }
-        >
-          {t("insertSfx")}
-        </button>
-      </div>
+      <button
+        onClick={handleInsert}
+        disabled={!desc.trim()}
+        className="w-full px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
+        style={desc.trim()
+          ? { background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.5)", color: "#F59E0B" }
+          : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
+        }
+      >
+        {t("insertSfx")}
+      </button>
     </div>
   );
 }
@@ -112,25 +95,41 @@ function SfxInsertForm({
 // ─── Add-block separator (SFX + Text) ────────────────────────────────────────
 
 function BlockSeparator({ onAddSfx, onAddText }: { onAddSfx: () => void; onAddText: () => void }) {
-  const { t } = useLanguage();
+  const [expanded, setExpanded] = useState(false);
   return (
     <div className="w-full flex items-center gap-2 py-1 px-2">
-      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
-      <button
-        onClick={onAddSfx}
-        className="text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all hover:scale-105"
-        style={{ color: "rgba(245,158,11,0.45)", border: "1px dashed rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.04)" }}
-      >
-        {t("addSfx")}
-      </button>
-      <button
-        onClick={onAddText}
-        className="text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full transition-all hover:scale-105"
-        style={{ color: "rgba(79,195,247,0.45)", border: "1px dashed rgba(79,195,247,0.2)", background: "rgba(79,195,247,0.04)" }}
-      >
-        + Text
-      </button>
-      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
+      {expanded ? (
+        <>
+          <button
+            onClick={() => { setExpanded(false); onAddSfx(); }}
+            className="text-[10px] font-semibold px-3 py-1 rounded-full transition-all"
+            style={{ color: "rgba(245,158,11,0.7)", border: "1px solid rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.06)" }}
+          >
+            🔊 Sound
+          </button>
+          <button
+            onClick={() => { setExpanded(false); onAddText(); }}
+            className="text-[10px] font-semibold px-3 py-1 rounded-full transition-all"
+            style={{ color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.2)", background: "rgba(79,195,247,0.05)" }}
+          >
+            💬 Dialogue
+          </button>
+          <button
+            onClick={() => setExpanded(false)}
+            className="text-[10px] text-white/20 hover:text-white/40"
+          >✕</button>
+        </>
+      ) : (
+        <button
+          onClick={() => setExpanded(true)}
+          className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-light transition-all"
+          style={{ color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}
+        >
+          +
+        </button>
+      )}
+      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
     </div>
   );
 }

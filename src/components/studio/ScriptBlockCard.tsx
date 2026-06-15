@@ -36,6 +36,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
   const sfx = parseSfxPayload(block.textPayload);
   const [desc, setDesc]           = useState(sfx?.description ?? "");
   const [dur, setDur]             = useState(sfx?.durationSec ?? 3);
+  const [editingDur, setEditingDur] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioError, setAudioError]         = useState<string | null>(null);
@@ -122,48 +123,104 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
 
   return (
     <div
-      className="rounded-2xl p-3 flex flex-col gap-2"
+      className="rounded-2xl p-3 flex gap-3"
       style={{
-        background: "rgba(245,158,11,0.05)",
-        border: "1px solid rgba(245,158,11,0.22)",
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(245,158,11,0.2)",
       }}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm">🔊</span>
-        <span className="text-[10px] font-bold uppercase tracking-widest flex-1" style={{ color: "rgba(245,158,11,0.7)" }}>
-          SFX
-        </span>
+      {/* Left col — amber icon circle */}
+      <div
+        className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+        style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}
+      >
+        <span className="text-base">🔊</span>
+      </div>
 
-        {/* Duration control */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-white/30">{t("duration")}</span>
-          <input
-            type="number"
-            min={0.5}
-            max={22}
-            step={0.5}
-            value={dur}
-            onChange={(e) => {
-              const v = Math.min(22, Math.max(0.5, parseFloat(e.target.value) || 0.5));
-              setDur(v);
-              commit(desc, v);
-            }}
-            className="w-12 text-xs text-center rounded-lg px-1 py-0.5 outline-none"
-            style={{
-              background: "rgba(245,158,11,0.1)",
-              border: "1px solid rgba(245,158,11,0.3)",
-              color: "#F59E0B",
-            }}
-          />
-          <span className="text-[10px] text-white/30">s</span>
+      {/* Center col */}
+      <div className="flex-1 flex flex-col gap-1 min-w-0">
+        {/* Top row: SFX label + duration pill/stepper */}
+        <div className="flex items-center">
+          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(245,158,11,0.7)" }}>
+            SFX
+          </span>
+
+          {editingDur ? (
+            <div className="flex items-center gap-1 ml-auto">
+              <button
+                onClick={() => { const v = Math.max(0.5, dur - 0.5); setDur(v); commit(desc, v); }}
+                className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                style={{ background: "rgba(245,158,11,0.1)", color: "rgba(245,158,11,0.7)" }}
+              >−</button>
+              <span className="text-[11px] min-w-[24px] text-center" style={{ color: "#F59E0B" }}>{dur}s</span>
+              <button
+                onClick={() => { const v = Math.min(22, dur + 0.5); setDur(v); commit(desc, v); }}
+                className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                style={{ background: "rgba(245,158,11,0.1)", color: "rgba(245,158,11,0.7)" }}
+              >+</button>
+              <button
+                onClick={() => setEditingDur(false)}
+                className="text-[9px] ml-1"
+                style={{ color: "rgba(255,255,255,0.2)" }}
+              >✓</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditingDur(true)}
+              className="text-[10px] px-2 py-0.5 rounded-full ml-auto"
+              style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "rgba(245,158,11,0.7)" }}
+            >
+              {dur}s
+            </button>
+          )}
         </div>
 
+        {/* Description textarea */}
+        <textarea
+          ref={textareaRef}
+          value={desc}
+          onChange={(e) => {
+            setDesc(e.target.value);
+            commit(e.target.value, dur);
+            if (sfxWarning) setSfxWarning(null);
+          }}
+          onBlur={() => validateSfx(desc)}
+          rows={1}
+          placeholder={t("sfxPlaceholder")}
+          className="w-full bg-transparent text-sm leading-relaxed resize-none outline-none text-white/75 overflow-hidden"
+          style={{ minHeight: "22px" }}
+        />
+
+        {/* Validation states */}
+        {isValidating && (
+          <p className="text-[10px] flex items-center gap-1" style={{ color: "rgba(245,158,11,0.45)" }}>
+            <span className="w-2 h-2 border border-t-transparent rounded-full animate-spin inline-block" style={{ borderColor: "rgba(245,158,11,0.5)", borderTopColor: "transparent" }} />
+            Checking…
+          </p>
+        )}
+
+        {sfxWarning && !isValidating && (
+          <div
+            className="flex items-start gap-1.5 px-2.5 py-2 rounded-xl text-[11px] leading-snug"
+            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "rgba(245,158,11,0.85)" }}
+          >
+            <span className="flex-shrink-0 mt-px">⚠</span>
+            <span>This doesn&apos;t sound like a specific effect. {sfxWarning}</span>
+          </div>
+        )}
+
+        {audioError && !sfxWarning && (
+          <p className="text-[10px]" style={{ color: "rgba(245,158,11,0.6)" }}>⚠ {audioError}</p>
+        )}
+      </div>
+
+      {/* Right col — play + delete */}
+      <div className="flex flex-col items-center gap-2 flex-shrink-0">
         {/* Play/Stop preview */}
         <button
           onClick={handlePlay}
           disabled={isLoadingAudio || !desc.trim()}
-          className="w-6 h-6 rounded-full flex items-center justify-center transition-all ml-1"
+          className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
           style={
             isPlayingAudio
               ? { background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.5)" }
@@ -183,50 +240,13 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
         {/* Delete */}
         <button
           onClick={() => onDelete(block.id)}
-          className="w-6 h-6 rounded-full flex items-center justify-center text-white/25 hover:text-red-400 transition-colors"
-          style={{ background: "rgba(255,255,255,0.04)" }}
+          className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 transition-colors"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
           title="Remove SFX"
         >
-          ✕
+          <span className="text-[10px]">✕</span>
         </button>
       </div>
-
-      {/* Description textarea */}
-      <textarea
-        ref={textareaRef}
-        value={desc}
-        onChange={(e) => {
-          setDesc(e.target.value);
-          commit(e.target.value, dur);
-          if (sfxWarning) setSfxWarning(null);
-        }}
-        onBlur={() => validateSfx(desc)}
-        rows={1}
-        placeholder={t("sfxPlaceholder")}
-        className="w-full bg-transparent text-sm leading-relaxed resize-none outline-none overflow-hidden"
-        style={{ color: "rgba(255,255,255,0.65)", minHeight: "22px" }}
-      />
-
-      {isValidating && (
-        <p className="text-[10px] flex items-center gap-1" style={{ color: "rgba(245,158,11,0.45)" }}>
-          <span className="w-2 h-2 border border-t-transparent rounded-full animate-spin inline-block" style={{ borderColor: "rgba(245,158,11,0.5)", borderTopColor: "transparent" }} />
-          Checking…
-        </p>
-      )}
-
-      {sfxWarning && !isValidating && (
-        <div
-          className="flex items-start gap-1.5 px-2.5 py-2 rounded-xl text-[11px] leading-snug"
-          style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "rgba(245,158,11,0.85)" }}
-        >
-          <span className="flex-shrink-0 mt-px">⚠</span>
-          <span>This doesn&apos;t sound like a specific effect. {sfxWarning}</span>
-        </div>
-      )}
-
-      {audioError && !sfxWarning && (
-        <p className="text-[10px]" style={{ color: "rgba(245,158,11,0.6)" }}>⚠ {audioError}</p>
-      )}
     </div>
   );
 }
@@ -259,20 +279,13 @@ function SpeechCard({
 
   return (
     <div
-      className={`relative flex gap-3 p-3 rounded-2xl border transition-all duration-200 ${
-        isFocused ? "bg-bg-elevated" : "bg-bg-card hover:border-white/10"
-      }`}
+      className="flex gap-3 p-3 rounded-2xl border transition-all duration-200"
       style={
         isFocused
-          ? { borderColor: "rgba(79,195,247,0.4)", boxShadow: "0 0 0 1px rgba(79,195,247,0.1), 0 0 20px rgba(79,195,247,0.06)" }
-          : { borderColor: "rgba(255,255,255,0.06)" }
+          ? { background: "rgba(255,255,255,0.04)", borderColor: "rgba(79,195,247,0.3)", boxShadow: "0 0 0 1px rgba(79,195,247,0.1), 0 0 20px rgba(79,195,247,0.06)" }
+          : { background: "rgba(255,255,255,0.025)", borderColor: "rgba(255,255,255,0.07)" }
       }
     >
-      {/* Left focus bar */}
-      <div
-        className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full transition-all duration-200"
-        style={{ background: isFocused ? "linear-gradient(180deg,#4fc3f7,#8B5CF6)" : "transparent" }}
-      />
 
       {/* Voice avatar — click to change voice */}
       <div className="relative flex-shrink-0 pt-0.5 group/voice">
