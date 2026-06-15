@@ -68,73 +68,81 @@ Illustrated in a soft watercolor style for a children's bedtime book cover. The 
 
   console.log("[CoverGen] Final image prompt:", fullPrompt.slice(0, 300));
 
-  // ── Try Imagen 3 models (predict endpoint) ───────────────────────────────
+  // ── Try Imagen 3 via v1 (not v1beta) ─────────────────────────────────────
   const IMAGEN_MODELS = [
     "imagen-3.0-generate-002",
     "imagen-3.0-fast-generate-001",
   ];
 
   for (const model of IMAGEN_MODELS) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            instances: [{ prompt: fullPrompt }],
-            parameters: { sampleCount: 1, aspectRatio: "1:1", safetyFilterLevel: "block_few" },
-          }),
+    for (const apiVersion of ["v1", "v1beta"]) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:predict?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              instances: [{ prompt: fullPrompt }],
+              parameters: { sampleCount: 1, aspectRatio: "1:1", safetyFilterLevel: "block_few" },
+            }),
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          console.warn(`[CoverGen] ${model} (${apiVersion}) ${res.status}:`, data?.error?.message ?? "");
+          continue;
         }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        console.warn(`[CoverGen] ${model} ${res.status}:`, data?.error?.message ?? JSON.stringify(data).slice(0, 200));
-        continue;
+        const prediction = (data?.predictions ?? [])[0] as { bytesBase64Encoded?: string; mimeType?: string } | undefined;
+        if (prediction?.bytesBase64Encoded) {
+          console.log(`[CoverGen] Generated with ${model} (${apiVersion})`);
+          return NextResponse.json({ imageData: prediction.bytesBase64Encoded, mimeType: prediction.mimeType ?? "image/png" });
+        }
+        console.warn(`[CoverGen] ${model} (${apiVersion}) returned no image data`);
+      } catch (err) {
+        console.warn(`[CoverGen] ${model} (${apiVersion}) threw:`, err);
       }
-      const prediction = (data?.predictions ?? [])[0] as { bytesBase64Encoded?: string; mimeType?: string } | undefined;
-      if (prediction?.bytesBase64Encoded) {
-        console.log(`[CoverGen] Generated with ${model}`);
-        return NextResponse.json({
-          imageData: prediction.bytesBase64Encoded,
-          mimeType: prediction.mimeType ?? "image/png",
-        });
-      }
-      console.warn(`[CoverGen] ${model} returned no image data`);
-    } catch (err) {
-      console.warn(`[CoverGen] ${model} threw:`, err);
     }
   }
 
-  // ── Fallback: Gemini generateContent with image modality ─────────────────
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-          generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-        }),
-      }
-    );
-    const data = await res.json();
-    if (res.ok) {
-      const parts = data?.candidates?.[0]?.content?.parts ?? [];
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          console.log("[CoverGen] Generated with gemini-2.0-flash fallback");
-          return NextResponse.json({
-            imageData: part.inlineData.data,
-            mimeType: part.inlineData.mimeType ?? "image/jpeg",
-          });
+  // ── Fallback: Gemini generateContent models with image modality ───────────
+  const GEMINI_IMAGE_MODELS = [
+    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.0-flash-exp",
+    "gemini-2.0-flash",
+  ];
+
+  for (const model of GEMINI_IMAGE_MODELS) {
+    for (const apiVersion of ["v1beta", "v1"]) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+              generationConfig: { responseModalities: ["IMAGE"] },
+            }),
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          console.warn(`[CoverGen] ${model} (${apiVersion}) ${res.status}:`, data?.error?.message ?? "");
+          continue;
         }
+        const parts = data?.candidates?.[0]?.content?.parts ?? [];
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            console.log(`[CoverGen] Generated with ${model} (${apiVersion})`);
+            return NextResponse.json({ imageData: part.inlineData.data, mimeType: part.inlineData.mimeType ?? "image/jpeg" });
+          }
+        }
+        console.warn(`[CoverGen] ${model} (${apiVersion}) no image part, finishReason:`, data?.candidates?.[0]?.finishReason);
+      } catch (err) {
+        console.warn(`[CoverGen] ${model} (${apiVersion}) threw:`, err);
       }
     }
-    console.warn("[CoverGen] gemini-2.0-flash fallback:", data?.error?.message ?? "no image part");
-  } catch (err) {
-    console.warn("[CoverGen] gemini-2.0-flash fallback threw:", err);
   }
 
   return NextResponse.json({ error: "No image in response from any model" }, { status: 502 });
