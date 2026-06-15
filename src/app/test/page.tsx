@@ -371,7 +371,7 @@ export default function TestPage() {
   const [ttsProvider, setTtsProvider]   = useState<TtsProvider>("gemini");
   const [geminiVoice, setGeminiVoice]   = useState("Kore");
   const [elVoiceId, setElVoiceId]       = useState(EL_VOICES[0].id);
-  const [elVoiceStyle, setElVoiceStyle] = useState("");
+  const [voiceStyle, setVoiceStyle] = useState("");
 
   const currentText    = mode === "tts" ? ttsText : sfxText;
   const setCurrentText = mode === "tts" ? setTtsText : setSfxText;
@@ -384,7 +384,7 @@ export default function TestPage() {
       const ttsExtras = mode === "tts" ? {
         provider:   ttsProvider,
         voice:      ttsProvider === "gemini" ? geminiVoice : elVoiceId,
-        voiceStyle: ttsProvider === "el" ? elVoiceStyle : undefined,
+        voiceStyle: voiceStyle || undefined,
       } : {};
       const res  = await fetch("/api/test-audio", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -409,7 +409,7 @@ export default function TestPage() {
     } finally {
       setLoading(false);
     }
-  }, [mode, currentText, ttsProvider, geminiVoice, elVoiceId, elVoiceStyle]);
+  }, [mode, currentText, ttsProvider, geminiVoice, elVoiceId, voiceStyle]);
 
   const updateClip = useCallback((id: string, updates: Partial<MixClip>) => {
     setClips((prev) => prev.map((c) => c.id === id ? { ...c, ...updates } : c));
@@ -545,7 +545,7 @@ export default function TestPage() {
               </div>
             )}
 
-            {/* EL voice grid + style field */}
+            {/* EL voice grid */}
             {ttsProvider === "el" && (
               <>
                 <div>
@@ -569,25 +569,34 @@ export default function TestPage() {
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Voice style <span className="normal-case font-normal text-white/20">(optional — e.g. "warmly", "whispering")</span></p>
-                  <input
-                    type="text"
-                    value={elVoiceStyle}
-                    onChange={(e) => setElVoiceStyle(e.target.value)}
-                    placeholder='e.g. "warmly and gently" or "sleepy and slow"'
-                    className="w-full rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(245,158,11,0.4)")}
-                    onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
-                  />
-                </div>
-
                 <p className="text-white/20 text-[10px] -mt-1">
                   Requires <span style={{ color: "rgba(245,158,11,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
                 </p>
               </>
             )}
+
+            {/* Voice style — shared by both providers */}
+            {(() => {
+              const accent = ttsProvider === "gemini" ? "#4fc3f7" : "#F59E0B";
+              const focusColor = ttsProvider === "gemini" ? "rgba(79,195,247,0.4)" : "rgba(245,158,11,0.4)";
+              return (
+                <div>
+                  <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">
+                    Voice style <span className="normal-case font-normal text-white/20">(optional — e.g. "warmly", "whispering")</span>
+                  </p>
+                  <input
+                    type="text"
+                    value={voiceStyle}
+                    onChange={(e) => setVoiceStyle(e.target.value)}
+                    placeholder='e.g. "warmly and gently" or "sleepy and slow"'
+                    className="w-full rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", accentColor: accent }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = focusColor)}
+                    onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+                  />
+                </div>
+              );
+            })()}
           </div>
         )}
 
