@@ -149,10 +149,12 @@ function VoiceCard({
 function PresetCard({
   voice,
   isPlaying,
+  isCached,
   onPlay,
 }: {
   voice: PresetVoice;
   isPlaying: boolean;
+  isCached: boolean;
   onPlay: (v: PresetVoice) => void;
 }) {
   return (
@@ -178,6 +180,13 @@ function PresetCard({
         <p className="text-white/35 text-[11px] mt-0.5">{voice.desc}</p>
       </div>
 
+      {/* Cached indicator */}
+      {isCached && !isPlaying && (
+        <span className="text-[9px] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ background: "rgba(79,195,247,0.08)", color: "rgba(79,195,247,0.5)", border: "1px solid rgba(79,195,247,0.15)" }}>
+          ready
+        </span>
+      )}
+
       <button
         onClick={() => onPlay(voice)}
         className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 transition-all active:scale-95"
@@ -186,7 +195,7 @@ function PresetCard({
           color: isPlaying ? "#F59E0B" : "rgba(255,255,255,0.45)",
           border: isPlaying ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.08)",
         }}
-        title={isPlaying ? "Stop" : "Play sample"}
+        title={isPlaying ? "Stop" : isCached ? "Play cached sample" : "Generate & play sample"}
       >
         {isPlaying ? "⏹" : "▶"}
       </button>
@@ -742,12 +751,21 @@ export default function VoicesPage() {
   const [playingPreset, setPlayingPreset] = useState<string | null>(null);
   const [presetError, setPresetError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [voiceSamples, setVoiceSamples] = useState<Record<string, string>>({});
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Load cached voice samples generated in the Test lab
+  useEffect(() => {
+    fetch("/api/voice-samples")
+      .then((r) => r.json())
+      .then((data) => setVoiceSamples(data.samples ?? {}))
+      .catch(() => {});
   }, []);
 
   // Load voices
@@ -812,7 +830,7 @@ export default function VoicesPage() {
     [playingId, stopAudio],
   );
 
-  // Play a preset voice via /api/voices/preview
+  // Play a preset voice — use cached sample if available, otherwise generate on-the-fly
   const handlePlayPreset = useCallback(
     async (voice: PresetVoice) => {
       if (playingPreset === voice.geminiVoiceName) {
@@ -823,33 +841,39 @@ export default function VoicesPage() {
       setPresetError(null);
       setPlayingPreset(voice.geminiVoiceName);
 
+      const cachedUrl = voiceSamples[voice.geminiVoiceName];
+
       try {
-        const res = await fetch("/api/voices/preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "preset",
-            geminiVoiceName: voice.geminiVoiceName,
-            language,
-          }),
-        });
+        let playUrl: string;
 
-        const data = await res.json();
-        if (!res.ok) throw new Error((data as { error?: string }).error ?? `Error ${res.status}`);
+        if (cachedUrl) {
+          // Use pre-generated sample directly
+          playUrl = cachedUrl;
+        } else {
+          // Generate on-the-fly via preview API
+          const res = await fetch("/api/voices/preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "preset",
+              geminiVoiceName: voice.geminiVoiceName,
+              language,
+            }),
+          });
 
-        const respData = data as { audioBase64: string; mimeType: string };
-        const url = base64ToObjectUrl(respData.audioBase64, respData.mimeType);
-        blobUrlRef.current = url;
+          const data = await res.json();
+          if (!res.ok) throw new Error((data as { error?: string }).error ?? `Error ${res.status}`);
 
-        const audio = new Audio(url);
+          const respData = data as { audioBase64: string; mimeType: string };
+          const url = base64ToObjectUrl(respData.audioBase64, respData.mimeType);
+          blobUrlRef.current = url;
+          playUrl = url;
+        }
+
+        const audio = new Audio(playUrl);
         audioRef.current = audio;
-        audio.onended = () => {
-          stopAudio();
-        };
-        audio.onerror = () => {
-          setPresetError("Playback failed");
-          stopAudio();
-        };
+        audio.onended = () => { stopAudio(); };
+        audio.onerror = () => { setPresetError("Playback failed"); stopAudio(); };
         await audio.play();
       } catch (err) {
         const message = err instanceof Error ? err.message : "Preview failed";
@@ -857,7 +881,7 @@ export default function VoicesPage() {
         setPlayingPreset(null);
       }
     },
-    [playingPreset, stopAudio, language],
+    [playingPreset, stopAudio, language, voiceSamples],
   );
 
   const handleDeleteVoice = useCallback(
@@ -974,6 +998,7 @@ export default function VoicesPage() {
               key={pv.geminiVoiceName}
               voice={pv}
               isPlaying={playingPreset === pv.geminiVoiceName}
+              isCached={!!voiceSamples[pv.geminiVoiceName]}
               onPlay={handlePlayPreset}
             />
           ))}
