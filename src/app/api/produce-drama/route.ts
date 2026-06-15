@@ -30,7 +30,7 @@ async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Prom
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: `What language is this text written in? Reply with ONLY the ISO 639-1 two-letter code (e.g. "en", "he", "ar", "fr", "de", "es"). No explanation.\n\n${sample}` }] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 5 },
+          generationConfig: { temperature: 0, maxOutputTokens: 5, thinkingConfig: { thinkingBudget: 0 } },
         }),
       }
     );
