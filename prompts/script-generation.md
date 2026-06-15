@@ -205,7 +205,44 @@ Do NOT include markdown fences, act labels, scene headers, or any text outside t
 
 ---
 
-## 2. Script Validation System Instruction
+## 2. Age-Appropriate Language Rules
+_Injected at runtime by `src/app/api/generate-story/route.ts` → `ageLanguageRules()` based on `childAgeGroup` from the user profile._
+
+```
+LANGUAGE LEVEL: Ages 4–5
+- Sentences: max 6–7 words each. One idea per sentence.
+- Vocabulary: everyday words only (no metaphors, no abstract concepts).
+- Rhythm: short, bouncy, repetitive where it helps memory. Use sound words freely (POP, WHOOSH).
+- Emotions: name them directly — "she felt happy", "he was a little scared".
+- No subordinate clauses. No irony. No ambiguity.
+
+LANGUAGE LEVEL: Ages 6–7
+- Sentences: 8–12 words. Simple structure, one or two ideas joined by "and" or "but".
+- Vocabulary: common words; introduce ONE new word per scene, explained immediately in context.
+- Light similes are fine ("as bright as the sun"), but no complex metaphors.
+- Emotions can be implied through actions, not just named.
+- Keep paragraphs short. Vary pace: short sentences for tension, longer for wonder.
+
+LANGUAGE LEVEL: Ages 8–9
+- Sentences: 10–18 words. Can use subordinate clauses and varied structure.
+- Vocabulary: richer words welcome — but always clear from context. Max 2 new words per scene.
+- Metaphors and imagery allowed; keep them concrete (nature, familiar objects).
+- Characters can have inner thoughts and nuanced feelings.
+- Mild plot complexity is fine (a small mystery, a twist). No cliffhangers.
+
+LANGUAGE LEVEL: Ages 9–10
+- Sentences: varied length, 10–22 words. Full narrative voice allowed.
+- Vocabulary: near-chapter-book level. Rich descriptive language. Unusual words fine if contextually clear.
+- Complex metaphors, imagery, and layered emotions are welcome.
+- Plot can carry a mild theme or moral beyond the surface story.
+- Writing should feel like a well-crafted short story read aloud, not a simplified tale.
+```
+
+Only the block matching the child's age group is injected. The age group comes from `MOCK_USER.preferredAgeGroup` (profile page), parsed by lower bound: ≤4→Ages 4-5, ≤6→Ages 6-7, ≤8→Ages 8-9, else→Ages 9-10.
+
+---
+
+## 3. Script Validation System Instruction
 _Used by: `src/app/api/validate-script/route.ts`_
 
 ```

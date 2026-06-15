@@ -7,7 +7,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import ScriptTab from "@/components/studio/ScriptTab";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
-import { VOICES } from "@/lib/mockData";
+import { VOICES, MOCK_USER } from "@/lib/mockData";
 import type { ScriptBlock } from "@/types";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
@@ -147,7 +147,8 @@ export default function CreatePage() {
       mode: "prompt",
       promptText,
       primaryVoiceId: VOICES[0].id,
-      durationMinutes: 5,
+      durationMinutes,
+      childAgeGroup: MOCK_USER.preferredAgeGroup,
     };
 
     try {

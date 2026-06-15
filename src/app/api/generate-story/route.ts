@@ -15,6 +15,8 @@ export interface GenerateStoryRequest {
   primaryVoiceId: string;
   // desired audio length in minutes (1–15)
   durationMinutes?: number;
+  // child's age group from profile (e.g. "4-6", "6-8", "8-10")
+  childAgeGroup?: string;
 }
 
 interface RawBlock {
@@ -40,12 +42,49 @@ function readGuidance(): string {
 
 // ─── System instruction — guidance file + runtime numbers only ────────────────
 
-function buildSystemInstruction(guidance: string, durationMinutes: number): string {
+function ageLanguageRules(ageGroup: string): string {
+  const lo = parseInt(ageGroup.split(/[-–]/)[0] ?? "5", 10);
+  if (lo <= 4) return (
+    `LANGUAGE LEVEL: Ages 4–5
+- Sentences: max 6–7 words each. One idea per sentence.
+- Vocabulary: everyday words only (no metaphors, no abstract concepts).
+- Rhythm: short, bouncy, repetitive where it helps memory. Use sound words freely (POP, WHOOSH).
+- Emotions: name them directly — "she felt happy", "he was a little scared".
+- No subordinate clauses. No irony. No ambiguity.`
+  );
+  if (lo <= 6) return (
+    `LANGUAGE LEVEL: Ages 6–7
+- Sentences: 8–12 words. Simple structure, one or two ideas joined by "and" or "but".
+- Vocabulary: common words; introduce ONE new word per scene, explained immediately in context.
+- Light similes are fine ("as bright as the sun"), but no complex metaphors.
+- Emotions can be implied through actions, not just named.
+- Keep paragraphs short. Vary pace: short sentences for tension, longer for wonder.`
+  );
+  if (lo <= 8) return (
+    `LANGUAGE LEVEL: Ages 8–9
+- Sentences: 10–18 words. Can use subordinate clauses and varied structure.
+- Vocabulary: richer words welcome — but always clear from context. Max 2 new words per scene.
+- Metaphors and imagery allowed; keep them concrete (nature, familiar objects).
+- Characters can have inner thoughts and nuanced feelings.
+- Mild plot complexity is fine (a small mystery, a twist). No cliffhangers.`
+  );
+  return (
+    `LANGUAGE LEVEL: Ages 9–10
+- Sentences: varied length, 10–22 words. Full narrative voice allowed.
+- Vocabulary: near-chapter-book level. Rich descriptive language. Unusual words fine if contextually clear.
+- Complex metaphors, imagery, and layered emotions are welcome.
+- Plot can carry a mild theme or moral beyond the surface story.
+- Writing should feel like a well-crafted short story read aloud, not a simplified tale.`
+  );
+}
+
+function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
+  const agePart     = childAgeGroup ? `\n\n${ageLanguageRules(childAgeGroup)}` : "";
 
-  return `${guidance}
+  return `${guidance}${agePart}
 
 RUNTIME TARGETS FOR THIS STORY
 -------------------------------
@@ -95,7 +134,7 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      systemInstruction: buildSystemInstruction(guidance, durationMinutes),
+      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup),
     });
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
