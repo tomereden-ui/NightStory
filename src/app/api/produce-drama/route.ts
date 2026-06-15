@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock } from "@/types";
 import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
+import { pickGeminiVoice as pickGeminiVoiceForChar } from "@/config/ttsDefaults";
 
 // path/fs via require so no ES-module hoisting issues alongside dynamic imports
 const path = require("path") as typeof import("path"); // eslint-disable-line
@@ -138,7 +139,9 @@ async function runProduction(
           } else {
             const charName = track.character ?? "Narrator";
             const profile = voiceProfiles[charName];
-            const voice = profile?.voiceName ?? voiceMap.assign(charName, track.voice_style);
+            const voice = useEL
+              ? (profile?.voiceName ?? voiceMap.assign(charName, track.voice_style))
+              : (profile?.geminiVoiceName ?? pickGeminiVoiceForChar(charName, track.voice_style));
             const persona = profile?.persona;
             try {
               await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL, profile?.stability, profile?.style, scriptLanguage);

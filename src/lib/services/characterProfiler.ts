@@ -1,4 +1,5 @@
 import type { ScriptBlock } from "@/types";
+import { pickGeminiVoice, NARRATOR_GEMINI_VOICE, NARRATOR_EL_VOICE_ID } from "@/config/ttsDefaults";
 
 export const AVAILABLE_VOICES = [
   { name: "pNInz6obpgDQGcFmaJgB", label: "Adam",    desc: "deep, warm baritone male — authoritative, trustworthy narrator quality" },
@@ -12,10 +13,11 @@ export const AVAILABLE_VOICES = [
 ];
 
 export interface CharacterVoiceProfile {
-  voiceName: string;
-  persona: string;      // rich voice direction passed to the TTS engine
-  stability: number;    // 0–1: higher = more consistent/calm, lower = more variable/expressive
-  style: number;        // 0–1: higher = more stylized/dramatic delivery
+  voiceName: string;       // ElevenLabs voice ID
+  geminiVoiceName: string; // Gemini prebuilt voice name
+  persona: string;         // rich voice direction passed to the TTS engine
+  stability: number;       // 0–1: higher = more consistent/calm, lower = more variable/expressive
+  style: number;           // 0–1: higher = more stylized/dramatic delivery
 }
 
 export async function profileCharacters(
@@ -95,7 +97,7 @@ export async function profileCharacters(
 
     const parsed: Record<string, CharacterVoiceProfile> = JSON.parse(raw);
 
-    // Resolve label names → EL voice IDs and validate
+    // Resolve label names → EL voice IDs, validate, and add geminiVoiceName from config
     const labelToId = Object.fromEntries(AVAILABLE_VOICES.map((v) => [v.label.toLowerCase(), v.name]));
     const validIds  = new Set(AVAILABLE_VOICES.map((v) => v.name));
     for (const char of characters) {
@@ -110,6 +112,8 @@ export async function profileCharacters(
       // Clamp numeric fields
       parsed[char].stability = Math.min(1, Math.max(0, parsed[char].stability ?? 0.55));
       parsed[char].style     = Math.min(1, Math.max(0, parsed[char].style     ?? 0.2));
+      // Assign Gemini voice from config (not from Gemini's LLM response)
+      parsed[char].geminiVoiceName = pickGeminiVoice(char);
     }
     return parsed;
   } catch (err) {
@@ -121,10 +125,10 @@ export async function profileCharacters(
 function fallbackProfile(characterName: string): CharacterVoiceProfile {
   const name = characterName.toLowerCase();
   if (/narrator|storyteller/.test(name)) {
-    return { voiceName: "pNInz6obpgDQGcFmaJgB", persona: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses.", stability: 0.75, style: 0.1 };
+    return { voiceName: NARRATOR_EL_VOICE_ID, geminiVoiceName: NARRATOR_GEMINI_VOICE, persona: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses.", stability: 0.75, style: 0.1 };
   }
   if (/child|kid|little|young/.test(name)) {
-    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", persona: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness.", stability: 0.3, style: 0.5 };
+    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", geminiVoiceName: pickGeminiVoice(characterName), persona: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness.", stability: 0.3, style: 0.5 };
   }
-  return { voiceName: "21m00Tcm4TlvDq8ikWAM", persona: "Measured, mid-pitched and warm — speak naturally with clear emotional colour.", stability: 0.55, style: 0.25 };
+  return { voiceName: "21m00Tcm4TlvDq8ikWAM", geminiVoiceName: pickGeminiVoice(characterName), persona: "Measured, mid-pitched and warm — speak naturally with clear emotional colour.", stability: 0.55, style: 0.25 };
 }
