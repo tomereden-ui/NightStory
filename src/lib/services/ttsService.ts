@@ -51,7 +51,7 @@ async function synthesizeEL(
           body: JSON.stringify({
             text,
             model_id: "eleven_multilingual_v2",
-            voice_settings: { stability, similarity_boost: 0.75, style, use_speaker_boost: true },
+            voice_settings: { stability, similarity_boost: 0.85, style, use_speaker_boost: true },
           }),
           signal: controller.signal,
         },

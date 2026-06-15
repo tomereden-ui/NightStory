@@ -68,42 +68,49 @@ Illustrated in a soft watercolor style for a children's bedtime book cover. The 
 
   console.log("[CoverGen] Final image prompt:", fullPrompt.slice(0, 300));
 
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-          generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-        }),
+  const IMAGE_MODELS = [
+    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.0-flash-exp",
+  ];
+
+  for (const model of IMAGE_MODELS) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+            generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+          }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        console.warn(`[CoverGen] ${model} ${res.status}:`, data?.error?.message ?? JSON.stringify(data).slice(0, 200));
+        continue;
       }
-    );
 
-    const data = await res.json();
-    console.log("[CoverGen] Gemini status:", res.status, "| finishReason:", data?.candidates?.[0]?.finishReason, "| parts:", data?.candidates?.[0]?.content?.parts?.length ?? 0);
-    if (!res.ok) {
-      console.error("[CoverGen] Gemini error body:", JSON.stringify(data).slice(0, 500));
-      return NextResponse.json({ error: data?.error?.message ?? "Gemini error", geminiStatus: res.status }, { status: 502 });
-    }
-
-    const parts = data?.candidates?.[0]?.content?.parts ?? [];
-    for (const part of parts) {
-      if (part.inlineData?.data) {
-        return NextResponse.json({
-          imageData: part.inlineData.data,
-          mimeType: part.inlineData.mimeType ?? "image/jpeg",
-        });
+      const parts = data?.candidates?.[0]?.content?.parts ?? [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          console.log(`[CoverGen] Generated with ${model}`);
+          return NextResponse.json({
+            imageData: part.inlineData.data,
+            mimeType: part.inlineData.mimeType ?? "image/jpeg",
+          });
+        }
       }
-    }
 
-    // Log what we actually got back
-    const textParts = parts.filter((p: { text?: string }) => p.text).map((p: { text: string }) => p.text?.slice(0, 100));
-    console.warn("[CoverGen] No image part. Text parts:", textParts, "| safetyRatings:", JSON.stringify(data?.candidates?.[0]?.safetyRatings ?? []));
-    return NextResponse.json({ error: "No image in response", detail: textParts }, { status: 502 });
-  } catch (err: unknown) {
-    console.error("[CoverGen] Fetch threw:", err);
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });
+      const finishReason = data?.candidates?.[0]?.finishReason ?? "unknown";
+      const textParts = parts.filter((p: { text?: string }) => p.text).map((p: { text: string }) => p.text?.slice(0, 100));
+      console.warn(`[CoverGen] ${model} no image. finishReason=${finishReason} textParts:`, textParts);
+    } catch (err) {
+      console.warn(`[CoverGen] ${model} threw:`, err);
+    }
   }
+
+  return NextResponse.json({ error: "No image in response from any model" }, { status: 502 });
 }

@@ -38,8 +38,9 @@ export async function profileCharacters(
 
   const prompt =
     `You are a voice director for a children's bedtime audio drama (audience: ages 4–10, listening at bedtime).\n` +
-    `Study the script sample and cast each character. All voices must feel warm, safe, and gentle — even playful\n` +
-    `or energetic characters should never sound harsh or frightening.\n\n` +
+    `The target voice quality is professional animation movie acting — think Pixar or Studio Ghibli dubs:\n` +
+    `warm, clear, beautifully articulated, emotionally genuine, never harsh or over-performed.\n` +
+    `Every character must sound like a skilled voice actor: soft consonants, smooth transitions, natural breath.\n\n` +
     `Characters: ${characters.join(", ")}\n\n` +
     `Script sample:\n${scriptSample}\n\n` +
     `Available voices:\n${voiceList}\n\n` +
@@ -49,9 +50,9 @@ export async function profileCharacters(
     `2. persona — exactly 1 sentence (max 20 words) telling the TTS engine HOW to speak.\n` +
     `   Derive it from: how this character speaks in the script + their role in the story + the bedtime audience.\n` +
     `   Cover: pace (slow/measured/fast) · pitch (low/mid/high) · emotional tone (e.g. warm, curious, tender, playful).\n` +
-    `   Example narrator: "Slow, low-pitched and warm — speak with gentle authority, pausing at wonder moments."\n` +
-    `   Example child hero: "Upbeat, mid-pitched and curious — speak with bright energy and genuine surprise."\n` +
-    `   Example wise elder: "Measured, low-pitched and tender — speak softly as if sharing a precious secret."\n` +
+    `   Example narrator:   "Slow, low-pitched and warm — soft and clear like a Pixar narrator, pausing at wonder."\n` +
+    `   Example child hero: "Upbeat, mid-pitched and bright — clear and breathless like a Disney child hero."\n` +
+    `   Example wise elder: "Measured, low-pitched and tender — smooth like a Ghibli elder, every word unhurried."\n` +
     `3. stability — a number 0.0–1.0 based on how variable this character's emotions are in the script:\n` +
     `   • 0.2–0.4 = highly expressive (excited children, comedic characters)\n` +
     `   • 0.5–0.6 = naturally expressive (most characters)\n` +
