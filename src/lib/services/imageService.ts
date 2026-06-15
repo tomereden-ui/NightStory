@@ -69,30 +69,43 @@ Write ONLY the image prompt. No labels, no quotes.`,
 
 Illustrated in a soft watercolor style for a children's bedtime book cover. The characters described above are the main subject, large and centered in the lower two-thirds of the image, warmly lit by a gentle amber glow. Behind them, a soft dark indigo night sky with scattered stars forms the background only. Square composition, painterly brush strokes, cozy and dreamy mood. No text, no letters, no numbers anywhere in the image.`;
 
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-          generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-        }),
+  const IMAGE_MODELS = [
+    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.0-flash-exp",
+  ];
+
+  for (const model of IMAGE_MODELS) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+            generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        console.warn(`[CoverImage] ${model} ${res.status}:`, data?.error?.message ?? JSON.stringify(data).slice(0, 200));
+        continue;
       }
-    );
-    const data = await res.json();
-    const parts: { inlineData?: { mimeType: string; data: string } }[] =
-      data?.candidates?.[0]?.content?.parts ?? [];
-    for (const part of parts) {
-      if (part.inlineData?.mimeType?.startsWith("image/")) {
-        return Buffer.from(part.inlineData.data, "base64");
+      const parts: { inlineData?: { mimeType: string; data: string } }[] =
+        data?.candidates?.[0]?.content?.parts ?? [];
+      for (const part of parts) {
+        if (part.inlineData?.mimeType?.startsWith("image/")) {
+          console.log(`[CoverImage] Generated with ${model}`);
+          return Buffer.from(part.inlineData.data, "base64");
+        }
       }
+      const finishReason = data?.candidates?.[0]?.finishReason ?? "unknown";
+      console.warn(`[CoverImage] ${model} returned no image part. finishReason=${finishReason}`);
+    } catch (err) {
+      console.warn(`[CoverImage] ${model} threw:`, err);
     }
-    console.warn("[CoverImage] No image part in response");
-    return null;
-  } catch (err) {
-    console.warn("[CoverImage] Generation failed:", err);
-    return null;
   }
+
+  return null;
 }
