@@ -97,26 +97,40 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
   return (
     <div className="flex flex-col gap-4">
       {/* Title card */}
-      <div
-        className="px-5 py-4 rounded-2xl flex items-center gap-3"
-        style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
-      >
-        <span className="text-3xl">🎭</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-sm truncate">{job.title ?? "Your Audio Drama"}</p>
-          <p className="text-white/35 text-xs mt-0.5">
-            {dialogueTracks.length} lines · {sfxTracks.length} SFX ·{" "}
-            {formatTime(job.scriptJson ? (job.scriptJson as DramaScript).duration_estimate_seconds : 0)}
-          </p>
+      {job.coverUrl ? (
+        <div className="rounded-2xl overflow-hidden relative" style={{ border: "1px solid rgba(79,195,247,0.15)" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={job.coverUrl} alt={job.title ?? "Cover"} className="w-full object-cover" style={{ maxHeight: 280 }} />
+          <div className="absolute inset-x-0 bottom-0 px-4 py-3" style={{ background: "linear-gradient(to top, rgba(5,8,15,0.92) 0%, transparent 100%)" }}>
+            <p className="text-white font-bold text-base truncate">{job.title ?? "Your Audio Drama"}</p>
+            <p className="text-white/45 text-xs mt-0.5">
+              {dialogueTracks.length} lines · {sfxTracks.length} SFX ·{" "}
+              {formatTime(job.scriptJson ? (job.scriptJson as DramaScript).duration_estimate_seconds : 0)}
+            </p>
+          </div>
         </div>
-        {job.skippedLines?.length ? (
-          <span className="text-[9px] text-yellow-400/70 bg-yellow-400/10 px-2 py-0.5 rounded-full">
-            {job.skippedLines.length} skipped
-          </span>
-        ) : (
-          <span className="text-[9px] text-teal bg-teal/10 px-2 py-0.5 rounded-full">Full mix</span>
-        )}
-      </div>
+      ) : (
+        <div
+          className="px-5 py-4 rounded-2xl flex items-center gap-3"
+          style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
+        >
+          <span className="text-3xl">🎭</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-bold text-sm truncate">{job.title ?? "Your Audio Drama"}</p>
+            <p className="text-white/35 text-xs mt-0.5">
+              {dialogueTracks.length} lines · {sfxTracks.length} SFX ·{" "}
+              {formatTime(job.scriptJson ? (job.scriptJson as DramaScript).duration_estimate_seconds : 0)}
+            </p>
+          </div>
+          {job.skippedLines?.length ? (
+            <span className="text-[9px] text-yellow-400/70 bg-yellow-400/10 px-2 py-0.5 rounded-full">
+              {job.skippedLines.length} skipped
+            </span>
+          ) : (
+            <span className="text-[9px] text-teal bg-teal/10 px-2 py-0.5 rounded-full">Full mix</span>
+          )}
+        </div>
+      )}
 
       {/* Audio player */}
       <div

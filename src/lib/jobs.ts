@@ -15,6 +15,7 @@ export interface Job {
   title?: string;
   scriptJson?: object;
   audioUrl?: string;
+  coverUrl?: string;
   voiceAssignments?: Record<string, string>;
   skippedLines?: string[];
   error?: string;

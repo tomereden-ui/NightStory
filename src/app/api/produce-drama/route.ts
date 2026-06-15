@@ -303,6 +303,7 @@ async function runProduction(
       step: "✅ Drama ready!",
       progress: 100,
       audioUrl,
+      coverUrl,
       voiceAssignments: Object.fromEntries(
         Object.entries(voiceProfiles).map(([k, v]) => [k, v.voiceName])
       ),
