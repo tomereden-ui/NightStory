@@ -93,24 +93,23 @@ async function runProduction(
       progress: 5,
     });
 
-    const [drama, voiceProfiles] = await Promise.all([
+    // Run drama planning, voice profiling, and language detection all in parallel
+    const [drama, voiceProfiles, scriptLanguage] = await Promise.all([
       planDrama(blocks, geminiKey, durationMinutes),
       profileCharacters(blocks, geminiKey),
+      detectScriptLanguage(blocks, geminiKey),
     ]);
+    console.log(`[TTS] Detected language: ${scriptLanguage}`);
     updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 18 });
 
     const dialogueTracks = drama.tracks.filter((t) => t.type === "dialogue");
     const sfxTracks = drama.tracks.filter((t) => t.type === "sfx");
     const totalDurationMs = drama.duration_estimate_seconds * 1000;
 
-    // Detect script language for TTS
-    const scriptLanguage = await detectScriptLanguage(blocks, geminiKey);
-    console.log(`[TTS] Detected language: ${scriptLanguage}`);
-
     // Start cover image in background — runs while TTS is happening
     const coverPromise = generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
 
-    // ── Step 2: TTS for each dialogue line ────────────────────────────────
+    // ── Step 2: TTS for each dialogue line (batched parallel) ────────────────
     updateJob(jobId, {
       status: "recording",
       step: `🎙️ Recording dialogue (0/${dialogueTracks.length})…`,
@@ -121,33 +120,41 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    for (let i = 0; i < dialogueTracks.length; i++) {
-      const track = dialogueTracks[i];
-      const outPath = path.join(jobTmp, `${track.id}.wav`);
-      const line = track.line?.trim() ?? "";
-      if (!line) {
-        writeSilence(500, outPath);
-      } else {
-        const charName = track.character ?? "Narrator";
-        const profile = voiceProfiles[charName];
-        const voice = profile?.voiceName ?? voiceMap.assign(charName, track.voice_style);
-        const persona = profile?.persona;
-        const useEL = !!elevenKey;
-        const ttsKey = useEL ? elevenKey! : geminiKey;
-        if (i === 0) console.log(`[TTS] Provider: ${useEL ? "ElevenLabs" : "Gemini"}`);
-        try {
-          await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL, profile?.stability, profile?.style, scriptLanguage);
-        } catch (err) {
-          console.warn(`[TTS] Skipping ${track.id}:`, err);
-          skippedLines.push(track.id);
-          writeSilence(2000, outPath);
-        }
-      }
-      dialogueDone++;
-      updateJob(jobId, {
-        step: `🎙️ Recording dialogue (${dialogueDone}/${dialogueTracks.length})…`,
-        progress: 20 + Math.round((dialogueDone / dialogueTracks.length) * 35),
-      });
+    // Batch size: 5 concurrent for ElevenLabs, 3 for Gemini (lower RPM ceiling)
+    const useEL = !!elevenKey;
+    const ttsKey = useEL ? elevenKey! : geminiKey;
+    const BATCH_SIZE = useEL ? 5 : 3;
+    console.log(`[TTS] Provider: ${useEL ? "ElevenLabs" : "Gemini"}, batch size: ${BATCH_SIZE}`);
+
+    for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += BATCH_SIZE) {
+      const batch = dialogueTracks.slice(batchStart, batchStart + BATCH_SIZE);
+
+      await Promise.all(
+        batch.map(async (track) => {
+          const outPath = path.join(jobTmp, `${track.id}.wav`);
+          const line = track.line?.trim() ?? "";
+          if (!line) {
+            writeSilence(500, outPath);
+          } else {
+            const charName = track.character ?? "Narrator";
+            const profile = voiceProfiles[charName];
+            const voice = profile?.voiceName ?? voiceMap.assign(charName, track.voice_style);
+            const persona = profile?.persona;
+            try {
+              await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL, profile?.stability, profile?.style, scriptLanguage);
+            } catch (err) {
+              console.warn(`[TTS] Skipping ${track.id}:`, err);
+              skippedLines.push(track.id);
+              writeSilence(2000, outPath);
+            }
+          }
+          dialogueDone++;
+          updateJob(jobId, {
+            step: `🎙️ Recording dialogue (${dialogueDone}/${dialogueTracks.length})…`,
+            progress: 20 + Math.round((dialogueDone / dialogueTracks.length) * 35),
+          });
+        }),
+      );
     }
 
     // ── Step 3: SFX generation ────────────────────────────────────────────
