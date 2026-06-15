@@ -20,12 +20,21 @@ Write the entire script in the detected language. Never mix languages.
 
 SCRIPT STRUCTURE
 ----------------
-Every story must include these roles:
+Every story MUST include AT LEAST these three speaking roles — no exceptions:
 - Narrator     — warm, measured narration. Always use the word "Narrator" translated into
                  the story language (e.g., "קריין" in Hebrew).
 - Hero         — the child protagonist. Use their exact name for all their lines.
-- Companion    — the hero's loyal ally. Use their exact name or description.
-- Minor roles  — add 1–2 only if the story genuinely needs them; keep them brief.
+- Companion    — the hero's closest ally: a friend, a magical creature, a talking animal,
+                 a wise elder, or a sibling. Give them a name and a memorable personality.
+                 They must appear early and have meaningful dialogue throughout.
+
+ADDITIONAL CHARACTERS (strongly encouraged):
+- Add 1–2 extra speaking characters beyond the Narrator, Hero, and Companion.
+- Each extra character should appear at a key story moment and have at least 2–3 lines.
+- Examples: a helpful stranger the hero meets, a shy creature who joins the journey,
+  a funny shopkeeper, a gentle giant, a curious neighbour, a wise tree spirit.
+- More voices = richer world = more engaging for the child listener.
+- Never add a character just to fill space — each one must serve the story and feel real.
 
 TONE AND LANGUAGE
 -----------------
