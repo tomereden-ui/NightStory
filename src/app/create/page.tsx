@@ -178,6 +178,7 @@ export default function CreatePage() {
       const produceBody: Record<string, unknown> = { blocks, durationMinutes };
       if (editingStoryId) produceBody.editingStoryId = editingStoryId;
       if (summary) produceBody.summary = summary;
+      if (coverPrompt) produceBody.coverPrompt = coverPrompt;
       const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(produceBody) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};

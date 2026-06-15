@@ -37,6 +37,7 @@ async function runProduction(
   geminiKey: string,
   elevenKey: string | null,
   durationMinutes: number,
+  coverPrompt?: string,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -72,7 +73,7 @@ async function runProduction(
     const totalDurationMs = drama.duration_estimate_seconds * 1000;
 
     // Start cover image in background — runs while TTS is happening
-    const coverPromise = generateCoverImage(drama.title, blocks, geminiKey);
+    const coverPromise = generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
 
     // ── Step 2: TTS for each dialogue line ────────────────────────────────
     updateJob(jobId, {
@@ -276,7 +277,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
     }
 
-    let body: { blocks: ScriptBlock[]; editingStoryId?: string; summary?: string; durationMinutes?: number };
+    let body: { blocks: ScriptBlock[]; editingStoryId?: string; summary?: string; durationMinutes?: number; coverPrompt?: string };
     try {
       body = await req.json();
     } catch {
@@ -303,7 +304,7 @@ export async function POST(req: NextRequest) {
     const durationMinutes = Math.min(10, Math.max(1, body.durationMinutes ?? 3));
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {
