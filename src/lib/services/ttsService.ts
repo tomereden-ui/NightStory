@@ -85,6 +85,14 @@ async function synthesizeEL(
   throw new Error("EL TTS failed after 5 attempts");
 }
 
+// ISO 639-1 → readable name for Gemini system instruction
+const LANG_NAMES: Record<string, string> = {
+  en: "English", he: "Hebrew", ar: "Arabic", fr: "French", es: "Spanish",
+  de: "German", it: "Italian", pt: "Portuguese", ru: "Russian", zh: "Chinese",
+  ja: "Japanese", ko: "Korean", nl: "Dutch", pl: "Polish", tr: "Turkish",
+  hi: "Hindi", sv: "Swedish", da: "Danish", fi: "Finnish", no: "Norwegian",
+};
+
 // ── Gemini TTS fallback ───────────────────────────────────────────────────────
 
 async function synthesizeGemini(
@@ -93,6 +101,7 @@ async function synthesizeGemini(
   apiKey: string,
   outputPath: string,
   systemInstruction?: string,
+  language?: string,
 ): Promise<void> {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
@@ -106,8 +115,13 @@ async function synthesizeGemini(
     },
   };
 
-  const payloads: Record<string, unknown>[] = systemInstruction
-    ? [{ systemInstruction: { parts: [{ text: systemInstruction }] }, ...basePayload }, basePayload]
+  const langNote = language && language !== "en"
+    ? `Speak in ${LANG_NAMES[language] ?? language}. `
+    : "";
+  const fullSystemInstruction = langNote + (systemInstruction ?? "");
+
+  const payloads: Record<string, unknown>[] = fullSystemInstruction.trim()
+    ? [{ systemInstruction: { parts: [{ text: fullSystemInstruction.trim() }] }, ...basePayload }, basePayload]
     : [basePayload];
 
   let lastError = "";
@@ -168,5 +182,5 @@ export async function synthesizeLine(
     ? `Deliver this line with the following emotion/style: ${tagMatches.join(", ")}.`
     : "";
   const fullInstruction = [persona, styleHints].filter(Boolean).join(" ");
-  return synthesizeGemini(spokenText || line, voiceId, primaryKey, outputPath, fullInstruction || undefined);
+  return synthesizeGemini(spokenText || line, voiceId, primaryKey, outputPath, fullInstruction || undefined, language);
 }
