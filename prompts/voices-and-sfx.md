@@ -50,13 +50,10 @@ Available voices:
 
 For EACH character produce:
 1. voiceName — choose from the list above (label name only, e.g. "Adam").
-2. persona — a rich, precise voice direction (4–6 sentences) covering:
-   - Gender, approximate age, and cultural/language background if evident
-   - Personality: is this character confident, shy, curious, wise, mischievous, caring?
-   - Voice quality: pitch (high/mid/low), texture (smooth/raspy/breathy/clear), pace (fast/measured/slow)
-   - Energy level and emotional mood throughout the story
-   - Any distinctive speech patterns visible in their lines (hesitations, exclamations, tenderness)
-   - How their delivery should make the listener FEEL
+2. persona — exactly 1 sentence (max 20 words) for the TTS engine covering ONLY:
+   pace (slow/measured/fast) + pitch (low/mid/high) + energy (calm/warm/bright/excited)
+   Example: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses."
+   Example: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness."
 3. stability — a number 0.0–1.0:
    • 0.2–0.4 = highly expressive, variable (excited children, dramatic characters)
    • 0.5–0.6 = naturally expressive (most characters)

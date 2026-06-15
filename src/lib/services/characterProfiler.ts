@@ -37,29 +37,26 @@ export async function profileCharacters(
   const voiceList = AVAILABLE_VOICES.map((v) => `- "${v.label}": ${v.desc}`).join("\n");
 
   const prompt =
-    `You are a voice director for a children's audio drama. Study the script and cast each character with a detailed voice profile.\n\n` +
+    `You are a voice director for a children's audio drama. Cast each character with a voice profile.\n\n` +
     `Characters: ${characters.join(", ")}\n\n` +
     `Script sample:\n${scriptSample}\n\n` +
     `Available voices:\n${voiceList}\n\n` +
     `For EACH character produce:\n` +
     `1. voiceName — choose from the list above (label name only, e.g. "Adam").\n` +
-    `2. persona — a rich, precise voice direction (4–6 sentences) covering:\n` +
-    `   - Gender, approximate age, and cultural/language background if evident\n` +
-    `   - Personality: is this character confident, shy, curious, wise, mischievous, caring?\n` +
-    `   - Voice quality: pitch (high/mid/low), texture (smooth/raspy/breathy/clear), pace (fast/measured/slow)\n` +
-    `   - Energy level and emotional mood throughout the story\n` +
-    `   - Any distinctive speech patterns visible in their lines (hesitations, exclamations, tenderness)\n` +
-    `   - How their delivery should make the listener FEEL\n` +
+    `2. persona — exactly 1 sentence (max 20 words) for the TTS engine covering ONLY:\n` +
+    `   pace (slow/measured/fast) + pitch (low/mid/high) + energy (calm/warm/bright/excited)\n` +
+    `   Example: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses."\n` +
+    `   Example: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness."\n` +
     `3. stability — a number 0.0–1.0:\n` +
-    `   • 0.2–0.4 = highly expressive, variable (excited children, dramatic characters)\n` +
+    `   • 0.2–0.4 = highly expressive (excited children, comedic characters)\n` +
     `   • 0.5–0.6 = naturally expressive (most characters)\n` +
-    `   • 0.7–0.9 = calm, consistent (narrators, wise elders, soothing characters)\n` +
+    `   • 0.7–0.9 = calm, consistent (narrators, wise elders)\n` +
     `4. style — a number 0.0–1.0:\n` +
-    `   • 0.0–0.2 = understated, natural delivery\n` +
-    `   • 0.3–0.5 = noticeable personality and colour\n` +
-    `   • 0.6–0.8 = strong stylistic expression (comedic, highly dramatic)\n\n` +
+    `   • 0.0–0.2 = understated, natural\n` +
+    `   • 0.3–0.5 = noticeable personality\n` +
+    `   • 0.6–0.8 = strong stylistic expression\n\n` +
     `Rules:\n` +
-    `- Narrator uses "Adam" (or "Rachel" if narrator is female) with stability 0.75, style 0.1.\n` +
+    `- Narrator uses "Adam" (or "Rachel" if female narrator) with stability 0.75, style 0.1.\n` +
     `- Children use "Harry" (boys) or "Elli" (girls) with stability 0.3, style 0.5.\n` +
     `- Each character MUST get a different voice where possible.\n\n` +
     `Return ONLY valid JSON (all keys double-quoted), no markdown:\n` +
@@ -118,10 +115,10 @@ export async function profileCharacters(
 function fallbackProfile(characterName: string): CharacterVoiceProfile {
   const name = characterName.toLowerCase();
   if (/narrator|storyteller/.test(name)) {
-    return { voiceName: "pNInz6obpgDQGcFmaJgB", persona: "A warm, unhurried bedtime story narrator. Speak with gentle authority and wonder — like a parent reading to a beloved child. Vary your pace to match story tension, slow down at magical moments.", stability: 0.75, style: 0.1 };
+    return { voiceName: "pNInz6obpgDQGcFmaJgB", persona: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses.", stability: 0.75, style: 0.1 };
   }
   if (/child|kid|little|young/.test(name)) {
-    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", persona: "A lively, curious young child. Speak with genuine excitement and natural spontaneity — a little breathless, full of wonder. Let emotions show freely.", stability: 0.3, style: 0.5 };
+    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", persona: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness.", stability: 0.3, style: 0.5 };
   }
-  return { voiceName: "21m00Tcm4TlvDq8ikWAM", persona: "A warm, expressive character. Speak naturally with personality — let the emotion of each line come through clearly.", stability: 0.55, style: 0.25 };
+  return { voiceName: "21m00Tcm4TlvDq8ikWAM", persona: "Measured, mid-pitched and warm — speak naturally with clear emotional colour.", stability: 0.55, style: 0.25 };
 }
