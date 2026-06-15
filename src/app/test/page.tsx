@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 type Mode = "tts" | "sfx";
 type TtsProvider = "gemini" | "el";
@@ -377,6 +377,46 @@ export default function TestPage() {
   const [elVoiceId, setElVoiceId]       = useState(EL_VOICES[0].id);
   const [voiceStyle, setVoiceStyle] = useState("");
 
+  // Voice samples (Gemini previews)
+  const [voiceSamples, setVoiceSamples]         = useState<Record<string, string>>({});
+  const [generatingVoice, setGeneratingVoice]   = useState<string | null>(null);
+  const [generatingSamples, setGeneratingSamples] = useState(false);
+  const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    fetch("/api/voice-samples")
+      .then((r) => r.json())
+      .then((data) => setVoiceSamples(data.samples ?? {}))
+      .catch(() => {});
+  }, []);
+
+  const playSample = useCallback((url: string) => {
+    if (sampleAudioRef.current) sampleAudioRef.current.pause();
+    const audio = new Audio(url);
+    sampleAudioRef.current = audio;
+    audio.play().catch(() => {});
+  }, []);
+
+  const generateAllSamples = useCallback(async () => {
+    if (generatingSamples) return;
+    setGeneratingSamples(true);
+    for (const v of GEMINI_VOICES) {
+      if (voiceSamples[v.name]) continue;
+      setGeneratingVoice(v.name);
+      try {
+        const res = await fetch("/api/voice-samples", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voice: v.name }),
+        });
+        const data = await res.json();
+        if (data.url) setVoiceSamples((prev) => ({ ...prev, [v.name]: data.url }));
+      } catch { /* skip */ }
+    }
+    setGeneratingVoice(null);
+    setGeneratingSamples(false);
+  }, [generatingSamples, voiceSamples]);
+
   const currentText    = mode === "tts" ? ttsText : sfxText;
   const setCurrentText = mode === "tts" ? setTtsText : setSfxText;
 
@@ -532,20 +572,46 @@ export default function TestPage() {
             {/* Gemini voice grid */}
             {ttsProvider === "gemini" && (
               <div>
-                <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Voice</p>
+                  <button
+                    onClick={generateAllSamples}
+                    disabled={generatingSamples}
+                    className="text-[9px] px-2 py-1 rounded-lg transition-all"
+                    style={{
+                      background: generatingSamples ? "rgba(79,195,247,0.06)" : "rgba(79,195,247,0.1)",
+                      color: generatingSamples ? "rgba(79,195,247,0.4)" : "#4fc3f7",
+                      border: "1px solid rgba(79,195,247,0.2)",
+                    }}>
+                    {generatingSamples
+                      ? `Generating ${generatingVoice ?? "…"}`
+                      : Object.keys(voiceSamples).length === GEMINI_VOICES.length
+                        ? "▶ Re-generate previews"
+                        : "▶ Generate previews"}
+                  </button>
+                </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   {GEMINI_VOICES.map((v) => {
-                    const active = geminiVoice === v.name;
+                    const active   = geminiVoice === v.name;
+                    const sampleUrl = voiceSamples[v.name];
+                    const isLoading = generatingVoice === v.name;
                     return (
                       <button key={v.name}
-                        onClick={() => setGeminiVoice(v.name)}
-                        className="px-2 py-2 rounded-xl text-left transition-all"
+                        onClick={() => {
+                          setGeminiVoice(v.name);
+                          if (sampleUrl) playSample(sampleUrl);
+                        }}
+                        className="px-2 py-2 rounded-xl text-left transition-all relative"
                         style={{
                           background: active ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.03)",
                           border: `1px solid ${active ? "rgba(79,195,247,0.35)" : "rgba(255,255,255,0.07)"}`,
                         }}>
-                        <p className="text-[11px] font-semibold leading-tight" style={{ color: active ? "#4fc3f7" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
+                        <p className="text-[11px] font-semibold leading-tight pr-4" style={{ color: active ? "#4fc3f7" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
                         <p className="text-[9px] mt-0.5" style={{ color: active ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.25)" }}>{v.trait}</p>
+                        {/* Sample indicator */}
+                        <span className="absolute top-1.5 right-1.5 text-[8px]" style={{ color: isLoading ? "#F59E0B" : sampleUrl ? "#4fc3f7" : "rgba(255,255,255,0.12)" }}>
+                          {isLoading ? "⏳" : sampleUrl ? "▶" : "·"}
+                        </span>
                       </button>
                     );
                   })}
