@@ -5,7 +5,7 @@ export async function generateCoverImage(
   blocks: ScriptBlock[],
   apiKey: string,
   coverPrompt?: string,
-): Promise<Buffer | null> {
+): Promise<{ buf: Buffer; mimeType: string } | null> {
   // ── Step 1: build scene description ──────────────────────────────────────
   // Prefer the AI-generated coverPrompt from the story generator — it was
   // written specifically to describe the key visual moment of this story.
@@ -72,7 +72,7 @@ ${storyContext}
 Write ONLY the image prompt. No labels, no quotes.`,
               }],
             }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 200 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 200, thinkingConfig: { thinkingBudget: 0 } },
           }),
         }
       );
@@ -118,7 +118,7 @@ Illustrated in a soft watercolor style for a children's bedtime book cover. The 
       const prediction = (data?.predictions ?? [])[0] as { bytesBase64Encoded?: string; mimeType?: string } | undefined;
       if (prediction?.bytesBase64Encoded) {
         console.log(`[CoverImage] Generated with ${model}`);
-        return Buffer.from(prediction.bytesBase64Encoded, "base64");
+        return { buf: Buffer.from(prediction.bytesBase64Encoded, "base64"), mimeType: prediction.mimeType ?? "image/png" };
       }
       console.warn(`[CoverImage] ${model} returned no image data`);
     } catch (err) {
@@ -146,7 +146,7 @@ Illustrated in a soft watercolor style for a children's bedtime book cover. The 
       for (const part of parts) {
         if (part.inlineData?.mimeType?.startsWith("image/")) {
           console.log("[CoverImage] Generated with gemini-2.0-flash fallback");
-          return Buffer.from(part.inlineData.data, "base64");
+          return { buf: Buffer.from(part.inlineData.data, "base64"), mimeType: part.inlineData.mimeType };
         }
       }
     }

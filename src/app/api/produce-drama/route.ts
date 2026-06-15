@@ -273,13 +273,15 @@ async function runProduction(
     });
 
     let coverUrl: string | undefined;
-    const coverBuf = await coverPromise;
-    if (coverBuf) {
+    const coverResult = await coverPromise;
+    if (coverResult) {
+      const ext = coverResult.mimeType.includes("png") ? "png" : "jpg";
+      const storageKey = `${storyId}.${ext}`;
       const { error: coverErr } = await supabase.storage
         .from("covers")
-        .upload(`${storyId}.jpg`, coverBuf, { contentType: "image/jpeg", upsert: true });
+        .upload(storageKey, coverResult.buf, { contentType: coverResult.mimeType, upsert: true });
       if (!coverErr) {
-        coverUrl = supabase.storage.from("covers").getPublicUrl(`${storyId}.jpg`).data.publicUrl;
+        coverUrl = supabase.storage.from("covers").getPublicUrl(storageKey).data.publicUrl;
       } else {
         console.warn("[Storage] Cover upload failed:", coverErr.message);
       }
