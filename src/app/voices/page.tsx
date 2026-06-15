@@ -905,9 +905,22 @@ export default function VoicesPage() {
   return (
     <div className="min-h-full" style={{ background: "transparent" }}>
       {/* Header */}
-      <div className="px-5 pt-12 pb-4">
-        <h1 className="text-base font-semibold text-white tracking-wide mb-0.5">Voices</h1>
-        <p className="text-white/30 text-xs">Manage narrators for your stories</p>
+      <div className="px-5 pt-12 pb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-base font-semibold text-white tracking-wide mb-0.5">Voices</h1>
+          <p className="text-white/30 text-xs">Manage narrators for your stories</p>
+        </div>
+        <button
+          onClick={() => setShowAddSheet(true)}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
+          style={{
+            background: "rgba(79,195,247,0.1)",
+            color: "#4fc3f7",
+            border: "1px solid rgba(79,195,247,0.25)",
+          }}
+        >
+          ＋ Add Voice
+        </button>
       </div>
 
       {/* Tab bar */}
@@ -966,15 +979,6 @@ export default function VoicesPage() {
               onDelete={handleDeleteVoice}
             />
           ))}
-
-          {/* Add voice button */}
-          <button
-            onClick={() => setShowAddSheet(true)}
-            className="flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-medium transition-all active:scale-[0.98]"
-            style={{ border: "1.5px dashed rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.35)" }}
-          >
-            ＋ Add Voice
-          </button>
         </div>
       )}
 
