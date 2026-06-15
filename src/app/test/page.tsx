@@ -3,7 +3,16 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
 type Mode = "tts" | "sfx";
-type TtsProvider = "gemini" | "el";
+type TtsProvider = "gemini" | "el" | "family";
+
+interface FamilyVoice {
+  id: string;
+  name: string;
+  avatar_emoji: string;
+  gemini_voice_name?: string;
+  el_voice_id?: string;
+  description?: string;
+}
 
 const GEMINI_VOICES = [
   { name: "Zephyr",      trait: "Bright"         },
@@ -377,6 +386,19 @@ export default function TestPage() {
   const [elVoiceId, setElVoiceId]       = useState(EL_VOICES[0].id);
   const [voiceStyle, setVoiceStyle] = useState("");
 
+  // Family voices
+  const [familyVoices, setFamilyVoices]           = useState<FamilyVoice[]>([]);
+  const [selectedFamilyId, setSelectedFamilyId]   = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/voices")
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) setFamilyVoices((data as FamilyVoice[]).filter((v) => (v as { category?: string }).category === "family"));
+      })
+      .catch(() => {});
+  }, []);
+
   // Voice samples (Gemini previews)
   const [voiceSamples, setVoiceSamples]         = useState<Record<string, string>>({});
   const [generatingVoice, setGeneratingVoice]   = useState<string | null>(null);
@@ -425,21 +447,34 @@ export default function TestPage() {
     setLoading(true);
     setError(null);
     try {
-      const ttsExtras = mode === "tts" ? {
-        provider:   ttsProvider,
-        voice:      ttsProvider === "gemini" ? geminiVoice : elVoiceId,
-        voiceStyle: voiceStyle || undefined,
-      } : {};
+      let ttsExtras: Record<string, string | undefined> = {};
+      let voiceName: string | undefined;
+      if (mode === "tts") {
+        if (ttsProvider === "family") {
+          const fv = familyVoices.find((v) => v.id === selectedFamilyId);
+          if (!fv) throw new Error("No family voice selected.");
+          const useEL = !!fv.el_voice_id;
+          ttsExtras = {
+            provider:   useEL ? "el" : "gemini",
+            voice:      useEL ? fv.el_voice_id! : (fv.gemini_voice_name ?? "Kore"),
+            voiceStyle: voiceStyle || undefined,
+          };
+          voiceName = fv.name;
+        } else {
+          ttsExtras = {
+            provider:   ttsProvider,
+            voice:      ttsProvider === "gemini" ? geminiVoice : elVoiceId,
+            voiceStyle: voiceStyle || undefined,
+          };
+          voiceName = ttsProvider === "gemini" ? geminiVoice : (EL_VOICES.find((v) => v.id === elVoiceId)?.name ?? "EL");
+        }
+      }
       const res  = await fetch("/api/test-audio", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: mode, text: currentText.trim(), ...ttsExtras }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
-
-      const voiceName = mode === "tts"
-        ? (ttsProvider === "gemini" ? geminiVoice : (EL_VOICES.find((v) => v.id === elVoiceId)?.name ?? "EL"))
-        : undefined;
       const clip: MixClip = {
         id:        crypto.randomUUID(),
         type:      mode === "tts" ? "speech" : "sfx",
@@ -457,7 +492,7 @@ export default function TestPage() {
     } finally {
       setLoading(false);
     }
-  }, [mode, currentText, ttsProvider, geminiVoice, elVoiceId, voiceStyle]);
+  }, [mode, currentText, ttsProvider, geminiVoice, elVoiceId, voiceStyle, familyVoices, selectedFamilyId]);
 
   const updateClip = useCallback((id: string, updates: Partial<MixClip>) => {
     setClips((prev) => prev.map((c) => c.id === id ? { ...c, ...updates } : c));
@@ -554,18 +589,26 @@ export default function TestPage() {
             <div>
               <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Model</p>
               <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                {(["gemini", "el"] as TtsProvider[]).map((p) => (
-                  <button key={p}
-                    onClick={() => setTtsProvider(p)}
-                    className="flex-1 py-2 rounded-[10px] text-[11px] font-bold transition-all"
-                    style={ttsProvider === p ? {
-                      background: p === "gemini" ? "rgba(79,195,247,0.12)" : "rgba(245,158,11,0.12)",
-                      color: p === "gemini" ? "#4fc3f7" : "#F59E0B",
-                      border: `1px solid ${p === "gemini" ? "rgba(79,195,247,0.25)" : "rgba(245,158,11,0.25)"}`,
-                    } : { color: "rgba(255,255,255,0.3)" }}>
-                    {p === "gemini" ? "✦ Gemini TTS" : "⚡ ElevenLabs"}
-                  </button>
-                ))}
+                {(["gemini", "el", "family"] as TtsProvider[]).map((p) => {
+                  const colors: Record<TtsProvider, { bg: string; color: string; border: string }> = {
+                    gemini: { bg: "rgba(79,195,247,0.12)",  color: "#4fc3f7", border: "rgba(79,195,247,0.25)"  },
+                    el:     { bg: "rgba(245,158,11,0.12)", color: "#F59E0B", border: "rgba(245,158,11,0.25)" },
+                    family: { bg: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "rgba(139,92,246,0.25)" },
+                  };
+                  const labels: Record<TtsProvider, string> = { gemini: "✦ Gemini", el: "⚡ ElevenLabs", family: "👨‍👩‍👧 My Family" };
+                  return (
+                    <button key={p}
+                      onClick={() => setTtsProvider(p)}
+                      className="flex-1 py-2 rounded-[10px] text-[11px] font-bold transition-all"
+                      style={ttsProvider === p ? {
+                        background: colors[p].bg,
+                        color: colors[p].color,
+                        border: `1px solid ${colors[p].border}`,
+                      } : { color: "rgba(255,255,255,0.3)" }}>
+                      {labels[p]}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -649,10 +692,42 @@ export default function TestPage() {
               </>
             )}
 
-            {/* Voice style — shared by both providers */}
+            {/* My Family voice grid */}
+            {ttsProvider === "family" && (
+              <div>
+                <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                {familyVoices.length === 0 ? (
+                  <p className="text-white/25 text-xs py-3 text-center">No family voices yet — add them in the Voices tab.</p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {familyVoices.map((v) => {
+                      const active = selectedFamilyId === v.id;
+                      return (
+                        <button key={v.id}
+                          onClick={() => setSelectedFamilyId(v.id)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
+                          style={{
+                            background: active ? "rgba(139,92,246,0.12)" : "rgba(255,255,255,0.03)",
+                            border: `1px solid ${active ? "rgba(139,92,246,0.35)" : "rgba(255,255,255,0.07)"}`,
+                          }}>
+                          <span className="text-xl flex-shrink-0">{v.avatar_emoji}</span>
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-semibold leading-tight" style={{ color: active ? "#a78bfa" : "rgba(255,255,255,0.8)" }}>{v.name}</p>
+                            {v.description && <p className="text-[9px] mt-0.5 truncate" style={{ color: active ? "rgba(167,139,250,0.6)" : "rgba(255,255,255,0.25)" }}>{v.description}</p>}
+                          </div>
+                          {v.el_voice_id && <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: "rgba(245,158,11,0.1)", color: "rgba(245,158,11,0.5)", border: "1px solid rgba(245,158,11,0.2)" }}>EL</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Voice style — shared by all providers */}
             {(() => {
-              const accent = ttsProvider === "gemini" ? "#4fc3f7" : "#F59E0B";
-              const focusColor = ttsProvider === "gemini" ? "rgba(79,195,247,0.4)" : "rgba(245,158,11,0.4)";
+              const accent = ttsProvider === "gemini" ? "#4fc3f7" : ttsProvider === "family" ? "#a78bfa" : "#F59E0B";
+              const focusColor = ttsProvider === "gemini" ? "rgba(79,195,247,0.4)" : ttsProvider === "family" ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.4)";
               return (
                 <div>
                   <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">
