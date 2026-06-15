@@ -68,6 +68,24 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
     setCurrentTime(t);
   };
 
+  // Character palette — cycles through cosmic accent colours
+  const CAST_PALETTE = [
+    { bg: "rgba(79,195,247,0.12)",  border: "rgba(79,195,247,0.35)",  glow: "rgba(79,195,247,0.15)",  text: "#4fc3f7"  },
+    { bg: "rgba(139,92,246,0.12)", border: "rgba(139,92,246,0.35)", glow: "rgba(139,92,246,0.15)", text: "#a78bfa" },
+    { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.35)", glow: "rgba(245,158,11,0.15)", text: "#F59E0B" },
+    { bg: "rgba(16,217,160,0.12)", border: "rgba(16,217,160,0.35)", glow: "rgba(16,217,160,0.15)", text: "#10D9A0" },
+    { bg: "rgba(236,72,153,0.12)", border: "rgba(236,72,153,0.35)", glow: "rgba(236,72,153,0.15)", text: "#EC4899" },
+    { bg: "rgba(251,191,36,0.12)", border: "rgba(251,191,36,0.35)", glow: "rgba(251,191,36,0.15)", text: "#FBBF24" },
+  ];
+
+  const castMembers = Object.keys(voiceAssignments)
+    .filter((name) => !/^(narrator|sfx|sound|narrat)/i.test(name.trim()))
+    .map((name, i) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      initial: name.charAt(0).toUpperCase(),
+      color: CAST_PALETTE[i % CAST_PALETTE.length],
+    }));
+
   const activeTrack = dialogueTracks.find((t, i) => {
     const nextStart = dialogueTracks[i + 1]?.start_ms ?? Infinity;
     return (
@@ -154,32 +172,35 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
         >
           <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#4fc3f7" }}>
             {activeTrack.character}
-            {voiceAssignments[activeTrack.character?.toLowerCase() ?? ""] && (
-              <span className="text-white/25 normal-case font-normal tracking-normal ml-2">
-                · {voiceAssignments[activeTrack.character?.toLowerCase() ?? ""]}
-              </span>
-            )}
           </p>
           <p className="text-white/75 text-sm leading-relaxed">{activeTrack.line}</p>
         </div>
       )}
 
       {/* Voice cast */}
-      {Object.keys(voiceAssignments).length > 0 && (
+      {castMembers.length > 0 && (
         <div
-          className="px-4 py-3 rounded-2xl"
+          className="px-4 py-4 rounded-2xl"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-2">Cast</p>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(voiceAssignments).map(([char, voice]) => (
-              <span
-                key={char}
-                className="text-[10px] px-2.5 py-1 rounded-full"
-                style={{ background: "rgba(79,195,247,0.08)", color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.15)" }}
-              >
-                {char} · {voice}
-              </span>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-3">Cast</p>
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {castMembers.map(({ name, color, initial }) => (
+              <div key={name} className="flex flex-col items-center gap-2 flex-shrink-0" style={{ minWidth: 64 }}>
+                {/* Avatar */}
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold relative overflow-hidden"
+                  style={{ background: color.bg, border: `1.5px solid ${color.border}`, boxShadow: `0 4px 16px ${color.glow}` }}
+                >
+                  <span style={{ color: color.text }}>{initial}</span>
+                  {/* Shine overlay */}
+                  <div className="absolute inset-0 opacity-30" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 60%)" }} />
+                </div>
+                {/* Name */}
+                <p className="text-white/70 text-[11px] font-semibold text-center leading-tight" style={{ maxWidth: 64 }}>
+                  {name}
+                </p>
+              </div>
             ))}
           </div>
         </div>
