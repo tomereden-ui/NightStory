@@ -179,6 +179,13 @@ async function cloneVoiceEL(
 
   if (!res.ok) {
     const errText = await res.text();
+    // Surface a human-readable message for the missing-permission case
+    if (errText.includes("missing_permissions") || errText.includes("create_instant_voice_clone")) {
+      throw new Error(
+        "Voice cloning requires the Creator plan (or higher) on ElevenLabs. " +
+        "Go to elevenlabs.io → Profile → API Keys and make sure your key has the 'Instant Voice Cloning' permission enabled.",
+      );
+    }
     throw new Error(`ElevenLabs voice clone ${res.status}: ${errText.slice(0, 200)}`);
   }
 
