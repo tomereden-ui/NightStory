@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
+import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 
 export interface GenerateStoryRequest {
   mode: "wizard" | "prompt";
@@ -106,13 +107,6 @@ function buildUserPrompt(body: GenerateStoryRequest): string {
   return parts.join("\n");
 }
 
-function assignVoice(characterName: string, primaryVoiceId: string, heroName: string): string {
-  const name = characterName.toLowerCase();
-  if (name === "narrator") return "v1";
-  if (heroName && name.includes(heroName.toLowerCase().slice(0, 5))) return primaryVoiceId;
-  return "v3";
-}
-
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === "your_gemini_api_key_here") {
@@ -158,11 +152,12 @@ export async function POST(req: NextRequest) {
     }
 
     const heroName = body.hero ?? "";
+    const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], heroName, body.primaryVoiceId);
     const blocks = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,
       characterName: block.characterName,
-      assignedVoiceId: assignVoice(block.characterName, body.primaryVoiceId, heroName),
+      assignedVoiceId: characterVoiceMap[block.characterName] ?? body.primaryVoiceId,
       textPayload: block.textPayload,
     }));
 

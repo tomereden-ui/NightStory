@@ -7,8 +7,9 @@ import { useLanguage } from "@/context/LanguageContext";
 import ScriptTab from "@/components/studio/ScriptTab";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
-import { VOICES, MOCK_USER } from "@/lib/mockData";
-import type { ScriptBlock } from "@/types";
+import { MOCK_USER } from "@/lib/mockData";
+import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
+import type { ScriptBlock, Voice } from "@/types";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 
@@ -116,6 +117,12 @@ export default function CreatePage() {
   const [isFetchingCover, setIsFetchingCover] = useState(false);
   const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(3);
+  const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
+
+  // Load the full voice catalog (presets + family voices) once on mount
+  useEffect(() => {
+    fetchVoicePool().then(setVoicePool);
+  }, []);
 
   // Restore draft on mount
   useEffect(() => {
@@ -151,7 +158,7 @@ export default function CreatePage() {
     const body: GenerateStoryRequest = {
       mode: "prompt",
       promptText,
-      primaryVoiceId: VOICES[0].id,
+      primaryVoiceId: voicePool[0]?.id ?? PRESET_VOICE_POOL[0].id,
       durationMinutes,
       childAgeGroup: MOCK_USER.preferredAgeGroup,
     };
@@ -380,7 +387,7 @@ export default function CreatePage() {
         )}
         {activeTab === "script" && (
           <ScriptTab
-            blocks={scriptBlocks} voices={VOICES}
+            blocks={scriptBlocks} voices={voicePool}
             onBlocksChange={setScriptBlocks}
             onProduce={handleProduce} isProducing={isProducing}
             summary={summary}

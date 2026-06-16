@@ -2,19 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock } from "@/types";
 import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
 import { pickGeminiVoice as pickGeminiVoiceForChar } from "@/config/ttsDefaults";
-import { VOICES } from "@/lib/mockData";
+import { PRESET_VOICES } from "@/config/presetVoices";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Builds character → voice overrides from the user's per-block voice assignments
  * (ScriptBlockCard's VoicePicker). The first assigned voice found per character wins.
+ * assignedVoiceId is resolved against the built-in Gemini presets first, then
+ * against family voices created by the user (stored in Supabase).
  */
-function buildVoiceOverrides(blocks: ScriptBlock[]): Record<string, { elevenLabsId?: string; geminiVoiceName?: string }> {
-  const voicesById = Object.fromEntries(VOICES.map((v) => [v.id, v]));
+async function buildVoiceOverrides(
+  blocks: ScriptBlock[],
+  supabase: SupabaseClient,
+): Promise<Record<string, { elevenLabsId?: string; geminiVoiceName?: string }>> {
+  const presetById: Record<string, { geminiVoiceName: string }> = Object.fromEntries(
+    PRESET_VOICES.map((p) => [p.id, { geminiVoiceName: p.geminiVoiceName }]),
+  );
+
+  const unresolvedIds = Array.from(
+    new Set(blocks.map((b) => b.assignedVoiceId).filter((id) => id && !presetById[id])),
+  );
+
+  const familyById: Record<string, { elevenLabsId?: string; geminiVoiceName?: string }> = {};
+  if (unresolvedIds.length > 0) {
+    const { data, error } = await supabase.from("voices").select("*").in("id", unresolvedIds);
+    if (error) {
+      console.warn("[produce-drama] Failed to resolve family voices:", error.message);
+    } else {
+      for (const row of data ?? []) {
+        familyById[row.id] = { elevenLabsId: row.el_voice_id ?? undefined, geminiVoiceName: row.gemini_voice_name ?? undefined };
+      }
+    }
+  }
+
   const overrides: Record<string, { elevenLabsId?: string; geminiVoiceName?: string }> = {};
   for (const block of blocks) {
     if (overrides[block.characterName]) continue;
-    const voice = voicesById[block.assignedVoiceId];
-    if (voice) overrides[block.characterName] = { elevenLabsId: voice.elevenLabsId, geminiVoiceName: voice.geminiVoiceName };
+    const voice = presetById[block.assignedVoiceId] ?? familyById[block.assignedVoiceId];
+    if (voice) overrides[block.characterName] = voice;
   }
   return overrides;
 }
@@ -138,7 +163,7 @@ async function runProduction(
     });
 
     const voiceMap = new VoiceMap();
-    const voiceOverrides = buildVoiceOverrides(blocks);
+    const voiceOverrides = await buildVoiceOverrides(blocks, supabase);
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 

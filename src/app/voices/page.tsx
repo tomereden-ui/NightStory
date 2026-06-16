@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
+import { PRESET_VOICES, type PresetVoiceConfig } from "@/config/presetVoices";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,26 +27,7 @@ type AddMethod = "text" | "record";
 type RecordState = "idle" | "recording" | "done";
 type PreviewState = "idle" | "loading" | "ready";
 
-// ─── Preset voices ────────────────────────────────────────────────────────────
-
-interface PresetVoice {
-  name: string;
-  emoji: string;
-  desc: string;
-  geminiVoiceName: string;
-  avatarUrl: string;
-}
-
-const PRESET_VOICES: PresetVoice[] = [
-  { name: "Aoede",  emoji: "🌸", desc: "Warm & melodic feminine",   geminiVoiceName: "Aoede",  avatarUrl: "/api/voices/avatar/Aoede"  },
-  { name: "Charon", emoji: "🌑", desc: "Deep & authoritative",       geminiVoiceName: "Charon", avatarUrl: "/api/voices/avatar/Charon" },
-  { name: "Fenrir", emoji: "⚡", desc: "Strong & dynamic masculine", geminiVoiceName: "Fenrir", avatarUrl: "/api/voices/avatar/Fenrir" },
-  { name: "Kore",   emoji: "🌿", desc: "Soft & gentle feminine",     geminiVoiceName: "Kore",   avatarUrl: "/api/voices/avatar/Kore"   },
-  { name: "Leda",   emoji: "✨", desc: "Clear & bright feminine",    geminiVoiceName: "Leda",   avatarUrl: "/api/voices/avatar/Leda"   },
-  { name: "Orus",   emoji: "🪨", desc: "Steady & rich masculine",    geminiVoiceName: "Orus",   avatarUrl: "/api/voices/avatar/Orus"   },
-  { name: "Puck",   emoji: "🎭", desc: "Playful & energetic",        geminiVoiceName: "Puck",   avatarUrl: "/api/voices/avatar/Puck"   },
-  { name: "Zephyr", emoji: "🌬", desc: "Bright & airy neutral",      geminiVoiceName: "Zephyr", avatarUrl: "/api/voices/avatar/Zephyr" },
-];
+type PresetVoice = PresetVoiceConfig;
 
 const EMOJI_OPTIONS = ["🎙", "👩", "👨", "👴", "👵", "🧒", "🧑", "🎤", "🌟", "🦁"];
 

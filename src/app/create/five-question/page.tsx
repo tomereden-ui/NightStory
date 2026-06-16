@@ -15,8 +15,8 @@ import ScriptTab from "@/components/studio/ScriptTab";
 import { writeDraft } from "@/lib/draftStore";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
-import { VOICES } from "@/lib/mockData";
-import type { ScriptBlock } from "@/types";
+import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
+import type { ScriptBlock, Voice } from "@/types";
 import type { Job } from "@/lib/jobs";
 import type { ResolutionMood, StorySeeds } from "@/utils/buildStoryPrompt";
 
@@ -661,6 +661,11 @@ export default function FiveQuestionPage() {
   const [coverUrl, setCoverUrl]           = useState("");
   const [coverPrompt, setCoverPrompt]     = useState("");
   const [isFetchingCover, setIsFetchingCover] = useState(false);
+  const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
+
+  useEffect(() => {
+    fetchVoicePool().then(setVoicePool);
+  }, []);
 
   const setAnswer = <K extends keyof Answers>(key: K, value: Answers[K]) =>
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -829,7 +834,7 @@ export default function FiveQuestionPage() {
           )}
           <ScriptTab
             blocks={scriptBlocks}
-            voices={VOICES}
+            voices={voicePool}
             onBlocksChange={setScriptBlocks}
             onProduce={handleProduce}
             isProducing={isProducing}

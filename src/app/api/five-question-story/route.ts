@@ -5,6 +5,8 @@ import path from "path";
 import { inferCompanionAbility } from "@/utils/inferCompanionAbility";
 import { MOOD_LABELS } from "@/constants/bluebellScripts";
 import type { StorySeeds } from "@/utils/buildStoryPrompt";
+import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import { PRESET_VOICES } from "@/config/presetVoices";
 
 export interface FiveQuestionStoryRequest {
   seeds: StorySeeds;
@@ -66,13 +68,6 @@ Story rules:
 - End with ${seeds.q1_hero} feeling ${moodLabel}`;
 }
 
-function assignVoice(characterName: string, heroName: string): string {
-  const n = characterName.toLowerCase();
-  if (n === "narrator") return "v1";
-  if (heroName && n.includes(heroName.toLowerCase().slice(0, 4))) return "v2";
-  return "v3";
-}
-
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -115,11 +110,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
     }
 
+    const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], seeds.q1_hero);
     const blocks = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,
       characterName: block.characterName,
-      assignedVoiceId: assignVoice(block.characterName, seeds.q1_hero),
+      assignedVoiceId: characterVoiceMap[block.characterName] ?? PRESET_VOICES[0].id,
       textPayload: block.textPayload,
     }));
 
