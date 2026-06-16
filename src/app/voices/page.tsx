@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/context/LanguageContext";
+import { useViewMode } from "@/context/ViewModeContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -214,6 +215,8 @@ function AddVoiceSheet({
   onClose: () => void;
   onSaved: (voice: VoiceRecord) => void;
 }) {
+  const { effective } = useViewMode();
+  const sheetMaxWidth = effective === "mobile" ? 448 : 512;
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("🎙");
   const [method, setMethod] = useState<AddMethod>("text");
@@ -442,8 +445,9 @@ function AddVoiceSheet({
 
       {/* Sheet */}
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-lg rounded-t-3xl overflow-hidden flex flex-col"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-3xl overflow-hidden flex flex-col"
         style={{
+          maxWidth: sheetMaxWidth,
           background: "rgba(8,12,24,0.97)",
           border: "1px solid rgba(255,255,255,0.09)",
           zIndex: 9999,

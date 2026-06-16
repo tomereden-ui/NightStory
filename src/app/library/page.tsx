@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
+import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 
 function timeAgo(ts: number): string {
@@ -23,6 +24,8 @@ function durationLabel(seconds: number): string {
 
 export default function LibraryPage() {
   const { t } = useLanguage();
+  const { effective } = useViewMode();
+  const isMobile = effective === "mobile";
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trashCount, setTrashCount] = useState(0);
@@ -116,7 +119,10 @@ export default function LibraryPage() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
+          <div
+            className={isMobile ? "flex flex-col gap-3" : "grid gap-4"}
+            style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
+          >
             {entries.map((entry) => {
               const isConfirming = confirmingId === entry.id;
               const isDeleting = deletingId === entry.id;
@@ -240,8 +246,10 @@ export default function LibraryPage() {
       {/* FAB */}
       <Link
         href="/create"
-        className="fixed bottom-24 md:bottom-8 right-4 md:right-8 w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-light z-40 active:scale-95 transition-transform"
+        className="fixed w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-light z-40 active:scale-95 transition-transform"
         style={{
+          bottom: isMobile ? 96 : 32,
+          right: isMobile ? 16 : 32,
           background: "linear-gradient(135deg, rgba(79,195,247,0.3), rgba(79,195,247,0.12))",
           border: "1px solid rgba(79,195,247,0.4)",
           boxShadow: "0 4px 24px rgba(79,195,247,0.25)",

@@ -1,8 +1,16 @@
 "use client";
 
 import { useLanguage } from "@/context/LanguageContext";
+import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
+
+const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; icon: string }[] = [
+  { mode: "auto",    label: "Auto",    icon: "🔄" },
+  { mode: "mobile",  label: "Mobile",  icon: "📱" },
+  { mode: "tablet",  label: "Tablet",  icon: "📲" },
+  { mode: "desktop", label: "Desktop", icon: "🖥️" },
+];
 
 const TIER_BADGE: Record<string, { label: string; color: string; emoji: string }> = {
   free:    { label: "Free",    color: "rgba(255,255,255,0.3)",  emoji: "🌱" },
@@ -27,6 +35,7 @@ function Row({ icon, label, value }: { icon: string; label: string; value: strin
 
 export default function ProfilePage() {
   const { t, language, isRTL } = useLanguage();
+  const { mode, setMode } = useViewMode();
   const user = MOCK_USER;
   const tier = TIER_BADGE[user.subscriptionTier] ?? TIER_BADGE.free;
 
@@ -117,6 +126,41 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Layout view mode */}
+        <div className="mb-6">
+          <h3 className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-3">
+            Display
+          </h3>
+          <div className="grid grid-cols-4 gap-2">
+            {VIEW_MODE_OPTIONS.map((opt) => {
+              const isActive = mode === opt.mode;
+              return (
+                <button
+                  key={opt.mode}
+                  onClick={() => setMode(opt.mode)}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all active:scale-95"
+                  style={{
+                    background: isActive ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.03)",
+                    border: isActive ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.06)",
+                    boxShadow: isActive ? "0 0 12px rgba(79,195,247,0.15)" : "none",
+                  }}
+                >
+                  <span className="text-lg">{opt.icon}</span>
+                  <span
+                    className="text-[10px] font-semibold"
+                    style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}
+                  >
+                    {opt.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-white/20 text-[10px] mt-2 leading-relaxed">
+            Forces the app layout (navigation, columns, widths) to the selected screen size, regardless of your actual device.
+          </p>
         </div>
 
         {/* Settings */}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { writeDraft } from "@/lib/draftStore";
+import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 
 function formatTime(seconds: number): string {
@@ -26,6 +27,8 @@ function timeAgo(ts: number): string {
 export default function StoryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { effective } = useViewMode();
+  const stickyMaxWidth = effective === "desktop" ? 896 : effective === "tablet" ? 672 : 448;
 
   const [entry, setEntry] = useState<LibraryEntry | null>(null);
   const [loading, setLoading] = useState(true);
@@ -243,7 +246,7 @@ export default function StoryDetailPage() {
         className="fixed bottom-0 left-0 right-0 pt-6"
         style={{ background: "linear-gradient(to top, #05080F 70%, transparent)" }}
       >
-        <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto px-4 pb-8">
+        <div className="mx-auto px-4 pb-8" style={{ maxWidth: stickyMaxWidth }}>
           <div
             className="rounded-2xl px-4 py-3.5"
             style={{
