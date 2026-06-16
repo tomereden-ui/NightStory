@@ -1,10 +1,10 @@
 import type { Story, Voice, UserProfile, NavItem, ScriptBlock } from "@/types";
 
 export const VOICES: Voice[] = [
-  { id: "v1", name: "Luna", nameHe: "לונה", gender: "female", style: "warm", language: "en", avatarEmoji: "🌙", elevenLabsId: "21m00Tcm4TlvDq8ikWAM", geminiVoiceName: "Kore" },
-  { id: "v2", name: "Leo", nameHe: "ליאו", gender: "male", style: "playful", language: "en", avatarEmoji: "🦁", elevenLabsId: "VR6AewLTigWG4xSOukaG", geminiVoiceName: "Puck" },
-  { id: "v3", name: "Starlight", nameHe: "כוכבית", gender: "neutral", style: "calm", language: "he", avatarEmoji: "⭐", elevenLabsId: "GBv7mTt0atIp3Br8iCZE", geminiVoiceName: "Aoede" },
-  { id: "v4", name: "Noa", nameHe: "נועה", gender: "female", style: "gentle", language: "he", avatarEmoji: "🌺", elevenLabsId: "LcfcDJNUP1GQjkzn1xUU", geminiVoiceName: "Fenrir" },
+  { id: "v1", name: "Luna", nameHe: "לונה", gender: "female", style: "warm", language: "en", avatarEmoji: "🌙", avatarUrl: "/api/voices/avatar/v1", elevenLabsId: "21m00Tcm4TlvDq8ikWAM", geminiVoiceName: "Kore" },
+  { id: "v2", name: "Leo", nameHe: "ליאו", gender: "male", style: "playful", language: "en", avatarEmoji: "🦁", avatarUrl: "/api/voices/avatar/v2", elevenLabsId: "VR6AewLTigWG4xSOukaG", geminiVoiceName: "Puck" },
+  { id: "v3", name: "Starlight", nameHe: "כוכבית", gender: "neutral", style: "calm", language: "he", avatarEmoji: "⭐", avatarUrl: "/api/voices/avatar/v3", elevenLabsId: "GBv7mTt0atIp3Br8iCZE", geminiVoiceName: "Aoede" },
+  { id: "v4", name: "Noa", nameHe: "נועה", gender: "female", style: "gentle", language: "he", avatarEmoji: "🌺", avatarUrl: "/api/voices/avatar/v4", elevenLabsId: "LcfcDJNUP1GQjkzn1xUU", geminiVoiceName: "Fenrir" },
 ];
 
 export const STORIES: Story[] = [

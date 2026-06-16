@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ScriptBlock, Voice } from "@/types";
+import VoiceAvatar from "@/components/ui/VoiceAvatar";
 
 interface SpeechPlayerModalProps {
   block: ScriptBlock;
@@ -41,12 +42,7 @@ export default function SpeechPlayerModal({
         <div className="px-5 pt-4 pb-5 flex flex-col gap-4">
           {/* Character header */}
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-            >
-              {voice.avatarEmoji}
-            </div>
+            <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.avatarEmoji} size={40} borderColor="rgba(255,255,255,0.1)" />
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-widest"
                 style={{ color: soundActive ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>

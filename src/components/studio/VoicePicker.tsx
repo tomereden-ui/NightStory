@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Voice } from "@/types";
+import VoiceAvatar from "@/components/ui/VoiceAvatar";
 
 interface VoicePickerProps {
   voices: Voice[];
@@ -53,7 +54,7 @@ export default function VoicePicker({
                   isSelected ? "bg-teal/10" : "hover:bg-white/5"
                 }`}
               >
-                <span className="text-lg leading-none">{voice.avatarEmoji}</span>
+                <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.avatarEmoji} size={28} borderColor="rgba(79,195,247,0.2)" />
                 <div className="flex-1 min-w-0">
                   <p
                     className={`text-xs font-semibold ${

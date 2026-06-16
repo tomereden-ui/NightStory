@@ -25,6 +25,8 @@ export interface Voice {
   language: Language;
   previewUrl?: string;
   avatarEmoji: string;
+  /** Generated person-portrait thumbnail matching this voice's character (see /api/voices/avatar). */
+  avatarUrl?: string;
   /** ElevenLabs voice ID used when this voice is assigned to a character in production. */
   elevenLabsId?: string;
   /** Gemini TTS prebuilt voice name used when this voice is assigned to a character in production. */

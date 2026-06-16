@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
+import VoiceAvatar from "@/components/ui/VoiceAvatar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,17 +33,18 @@ interface PresetVoice {
   emoji: string;
   desc: string;
   geminiVoiceName: string;
+  avatarUrl: string;
 }
 
 const PRESET_VOICES: PresetVoice[] = [
-  { name: "Aoede",  emoji: "🌸", desc: "Warm & melodic feminine",   geminiVoiceName: "Aoede"  },
-  { name: "Charon", emoji: "🌑", desc: "Deep & authoritative",       geminiVoiceName: "Charon" },
-  { name: "Fenrir", emoji: "⚡", desc: "Strong & dynamic masculine", geminiVoiceName: "Fenrir" },
-  { name: "Kore",   emoji: "🌿", desc: "Soft & gentle feminine",     geminiVoiceName: "Kore"   },
-  { name: "Leda",   emoji: "✨", desc: "Clear & bright feminine",    geminiVoiceName: "Leda"   },
-  { name: "Orus",   emoji: "🪨", desc: "Steady & rich masculine",    geminiVoiceName: "Orus"   },
-  { name: "Puck",   emoji: "🎭", desc: "Playful & energetic",        geminiVoiceName: "Puck"   },
-  { name: "Zephyr", emoji: "🌬", desc: "Bright & airy neutral",      geminiVoiceName: "Zephyr" },
+  { name: "Aoede",  emoji: "🌸", desc: "Warm & melodic feminine",   geminiVoiceName: "Aoede",  avatarUrl: "/api/voices/avatar/Aoede"  },
+  { name: "Charon", emoji: "🌑", desc: "Deep & authoritative",       geminiVoiceName: "Charon", avatarUrl: "/api/voices/avatar/Charon" },
+  { name: "Fenrir", emoji: "⚡", desc: "Strong & dynamic masculine", geminiVoiceName: "Fenrir", avatarUrl: "/api/voices/avatar/Fenrir" },
+  { name: "Kore",   emoji: "🌿", desc: "Soft & gentle feminine",     geminiVoiceName: "Kore",   avatarUrl: "/api/voices/avatar/Kore"   },
+  { name: "Leda",   emoji: "✨", desc: "Clear & bright feminine",    geminiVoiceName: "Leda",   avatarUrl: "/api/voices/avatar/Leda"   },
+  { name: "Orus",   emoji: "🪨", desc: "Steady & rich masculine",    geminiVoiceName: "Orus",   avatarUrl: "/api/voices/avatar/Orus"   },
+  { name: "Puck",   emoji: "🎭", desc: "Playful & energetic",        geminiVoiceName: "Puck",   avatarUrl: "/api/voices/avatar/Puck"   },
+  { name: "Zephyr", emoji: "🌬", desc: "Bright & airy neutral",      geminiVoiceName: "Zephyr", avatarUrl: "/api/voices/avatar/Zephyr" },
 ];
 
 const EMOJI_OPTIONS = ["🎙", "👩", "👨", "👴", "👵", "🧒", "🧑", "🎤", "🌟", "🦁"];
@@ -93,16 +95,7 @@ function VoiceCard({
         border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      {/* Emoji avatar */}
-      <div
-        className="w-11 h-11 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
-        style={{
-          background: "rgba(255,255,255,0.06)",
-          border: "1.5px solid rgba(79,195,247,0.25)",
-        }}
-      >
-        {voice.avatar_emoji}
-      </div>
+      <VoiceAvatar emoji={voice.avatar_emoji} size={44} borderColor="rgba(79,195,247,0.25)" />
 
       {/* Info */}
       <div className="flex-1 min-w-0">
@@ -166,15 +159,7 @@ function PresetCard({
         border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      <div
-        className="w-11 h-11 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
-        style={{
-          background: "rgba(255,255,255,0.06)",
-          border: "1.5px solid rgba(245,158,11,0.25)",
-        }}
-      >
-        {voice.emoji}
-      </div>
+      <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.emoji} size={44} borderColor="rgba(245,158,11,0.25)" />
 
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-semibold">{voice.name}</p>

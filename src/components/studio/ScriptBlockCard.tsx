@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import type { ScriptBlock, Voice } from "@/types";
 import VoicePicker from "./VoicePicker";
 import { useLanguage } from "@/context/LanguageContext";
+import VoiceAvatar from "@/components/ui/VoiceAvatar";
 
 // ─── SFX payload helpers ──────────────────────────────────────────────────────
 
@@ -291,13 +292,13 @@ function SpeechCard({
       <div className="relative flex-shrink-0 pt-0.5 group/voice">
         <button
           onClick={() => setShowPicker((p) => !p)}
-          className={`w-9 h-9 rounded-full flex items-center justify-center text-base border transition-all ${
-            showPicker ? "border-teal bg-teal/15 shadow-teal-sm" : "border-bg-border bg-bg-elevated hover:border-teal/40"
+          className={`rounded-full flex items-center justify-center transition-all ${
+            showPicker ? "ring-2 ring-teal shadow-teal-sm" : "hover:ring-2 hover:ring-teal/40"
           }`}
           aria-label={`Voice: ${assignedVoice?.name ?? ""}. Tap to change.`}
           title="Change voice"
         >
-          {assignedVoice?.avatarEmoji ?? "🎙️"}
+          <VoiceAvatar avatarUrl={assignedVoice?.avatarUrl} emoji={assignedVoice?.avatarEmoji ?? "🎙️"} size={36} borderColor="rgba(79,195,247,0.2)" />
         </button>
         {/* "change voice" tooltip under avatar */}
         {!showPicker && (

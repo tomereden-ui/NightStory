@@ -5,6 +5,7 @@ import type { ScriptBlock, Voice } from "@/types";
 import ScriptBlockCard, { buildSfxPayload } from "./ScriptBlockCard";
 import SpeechPlayerModal from "./SpeechPlayerModal";
 import { useLanguage } from "@/context/LanguageContext";
+import VoiceAvatar from "@/components/ui/VoiceAvatar";
 
 interface ScriptTabProps {
   blocks: ScriptBlock[];
@@ -244,7 +245,7 @@ function TextInsertModal({
                   : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }
                 }
               >
-                <span className="text-xl">{v.avatarEmoji}</span>
+                <VoiceAvatar avatarUrl={v.avatarUrl} emoji={v.avatarEmoji} size={32} borderColor="rgba(79,195,247,0.2)" />
                 <span className="text-[9px] font-semibold" style={{ color: v.id === voiceId ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>
                   {v.name.split(" ")[0]}
                 </span>

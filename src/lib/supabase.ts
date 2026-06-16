@@ -24,7 +24,7 @@ export const supabase = new Proxy({} as SupabaseClient, {
 let bucketsReady = false;
 export async function ensureBuckets() {
   if (bucketsReady) return;
-  for (const name of ["audio", "covers"]) {
+  for (const name of ["audio", "covers", "voice-avatars"]) {
     const { error } = await supabase.storage.createBucket(name, { public: true });
     if (error && !error.message.toLowerCase().includes("already exists")) {
       console.warn(`[Storage] bucket ${name}:`, error.message);
