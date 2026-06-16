@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface VoiceAvatarProps {
   avatarUrl?: string;
@@ -8,12 +8,21 @@ interface VoiceAvatarProps {
   size?: number;
   borderColor?: string;
   className?: string;
+  /** Delay (ms) before requesting the image — stagger many avatars on one screen to avoid overloading generation. */
+  delayMs?: number;
 }
 
-export default function VoiceAvatar({ avatarUrl, emoji, size = 44, borderColor = "rgba(79,195,247,0.25)", className = "" }: VoiceAvatarProps) {
+export default function VoiceAvatar({ avatarUrl, emoji, size = 44, borderColor = "rgba(79,195,247,0.25)", className = "", delayMs = 0 }: VoiceAvatarProps) {
   const [failed, setFailed] = useState(false);
+  const [ready, setReady] = useState(delayMs === 0);
 
-  if (avatarUrl && !failed) {
+  useEffect(() => {
+    if (delayMs === 0) return;
+    const timer = setTimeout(() => setReady(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [delayMs]);
+
+  if (avatarUrl && ready && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img

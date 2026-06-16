@@ -145,11 +145,13 @@ function PresetCard({
   isPlaying,
   isCached,
   onPlay,
+  index = 0,
 }: {
   voice: PresetVoice;
   isPlaying: boolean;
   isCached: boolean;
   onPlay: (v: PresetVoice) => void;
+  index?: number;
 }) {
   return (
     <div
@@ -159,7 +161,7 @@ function PresetCard({
         border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.emoji} size={44} borderColor="rgba(245,158,11,0.25)" />
+      <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.emoji} size={44} borderColor="rgba(245,158,11,0.25)" delayMs={index * 600} />
 
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-semibold">{voice.name}</p>
@@ -986,13 +988,14 @@ export default function VoicesPage() {
               ⚠ {presetError}
             </div>
           )}
-          {PRESET_VOICES.map((pv) => (
+          {PRESET_VOICES.map((pv, i) => (
             <PresetCard
               key={pv.geminiVoiceName}
               voice={pv}
               isPlaying={playingPreset === pv.geminiVoiceName}
               isCached={!!voiceSamples[pv.geminiVoiceName]}
               onPlay={handlePlayPreset}
+              index={i}
             />
           ))}
         </div>

@@ -44,7 +44,7 @@ export default function VoicePicker({
       </div>
 
       <ul className="py-1">
-        {voices.map((voice) => {
+        {voices.map((voice, i) => {
           const isSelected = voice.id === selectedVoiceId;
           return (
             <li key={voice.id}>
@@ -54,7 +54,7 @@ export default function VoicePicker({
                   isSelected ? "bg-teal/10" : "hover:bg-white/5"
                 }`}
               >
-                <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.avatarEmoji} size={28} borderColor="rgba(79,195,247,0.2)" />
+                <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.avatarEmoji} size={28} borderColor="rgba(79,195,247,0.2)" delayMs={i * 600} />
                 <div className="flex-1 min-w-0">
                   <p
                     className={`text-xs font-semibold ${
