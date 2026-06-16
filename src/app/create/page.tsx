@@ -142,6 +142,11 @@ export default function CreatePage() {
     if (!promptText.trim()) return;
     setGenerating(true);
     setGenerateError(null);
+    // Generating fresh content from a prompt always starts a brand-new story —
+    // clear any stale editingStoryId restored from an abandoned "Edit story"
+    // draft, otherwise production would overwrite that old library entry
+    // instead of creating a new one.
+    setEditingStoryId(null);
 
     const body: GenerateStoryRequest = {
       mode: "prompt",

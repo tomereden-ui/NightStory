@@ -34,8 +34,8 @@ export default function LibraryPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/library").then((r) => r.json()),
-      fetch("/api/library/trash").then((r) => r.json()),
+      fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/library/trash", { cache: "no-store" }).then((r) => r.json()),
     ])
       .then(([lib, trash]) => {
         setEntries(Array.isArray(lib) ? lib : []);
