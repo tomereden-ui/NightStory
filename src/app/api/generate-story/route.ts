@@ -136,7 +136,16 @@ export async function POST(req: NextRequest) {
       model: "gemini-2.5-flash",
       systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup),
     });
-    const result = await model.generateContent(prompt);
+
+    // Gemini occasionally stalls or errors transiently — retry once before
+    // giving up, rather than making the user wait a minute for a hard failure.
+    let result;
+    try {
+      result = await model.generateContent(prompt, { timeout: 30_000 });
+    } catch (err) {
+      console.warn("[generate-story] First Gemini attempt failed, retrying once:", err);
+      result = await model.generateContent(prompt, { timeout: 30_000 });
+    }
     const text = result.response.text().trim();
 
     const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();

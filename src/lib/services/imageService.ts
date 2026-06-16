@@ -1,4 +1,5 @@
 import type { ScriptBlock } from "@/types";
+import { fetchPollinationsImage } from "./pollinationsClient";
 
 export async function generateCoverImage(
   title: string,
@@ -91,27 +92,8 @@ Write ONLY the image prompt. No labels, no quotes.`,
 
 Illustrated as a glowing monochromatic blue-and-teal cosmic night scene for a children's bedtime book cover. The characters/subject described above are large and centered, rendered as a soft silhouette or gently lit shape glowing from within against a deep navy-black night sky. Scattered stars and a faint nebula-like glow surround the subject. Square composition, dreamy bioluminescent lighting, smooth gradients, minimal flat illustration style — no warm or amber tones, only cool blues, teals, and indigo. No text, no letters, no numbers anywhere in the image.`;
 
-  // ── Pollinations.ai — free, no key, always works ─────────────────────────
-  try {
-    const seed = Math.floor(Math.random() * 999999);
-    const encoded = encodeURIComponent(fullPrompt.slice(0, 1500));
-    const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=768&height=768&nologo=true&seed=${seed}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30_000);
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
-    if (res.ok) {
-      const contentType = res.headers.get("content-type") ?? "image/jpeg";
-      if (contentType.startsWith("image/")) {
-        const buf = Buffer.from(await res.arrayBuffer());
-        console.log("[CoverImage] Generated with Pollinations.ai");
-        return { buf, mimeType: contentType.split(";")[0].trim() };
-      }
-    }
-    console.warn("[CoverImage] Pollinations returned non-image:", res.status, res.headers.get("content-type"));
-  } catch (err) {
-    console.warn("[CoverImage] Pollinations threw:", err);
-  }
-
-  return null;
+  // ── Pollinations.ai — free, no key, retried with backoff (flaky under load) ──
+  const result = await fetchPollinationsImage(fullPrompt, "CoverImage", { width: 768, height: 768 });
+  if (result) console.log("[CoverImage] Generated with Pollinations.ai");
+  return result;
 }

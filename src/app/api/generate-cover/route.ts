@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchPollinationsImage } from "@/lib/services/pollinationsClient";
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -68,29 +69,14 @@ Illustrated as a glowing monochromatic blue-and-teal cosmic night scene for a ch
 
   console.log("[CoverGen] Final image prompt:", fullPrompt.slice(0, 300));
 
-  // ── Pollinations.ai — free, no key, always works ─────────────────────────
-  try {
-    const seed = Math.floor(Math.random() * 999999);
-    const encoded = encodeURIComponent(fullPrompt.slice(0, 1500));
-    const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=768&height=768&nologo=true&seed=${seed}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30_000);
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
-    if (res.ok) {
-      const contentType = res.headers.get("content-type") ?? "image/jpeg";
-      if (contentType.startsWith("image/")) {
-        const buf = Buffer.from(await res.arrayBuffer());
-        console.log("[CoverGen] Generated with Pollinations.ai");
-        return NextResponse.json({
-          imageData: buf.toString("base64"),
-          mimeType: contentType.split(";")[0].trim(),
-        });
-      }
-    }
-    console.warn("[CoverGen] Pollinations returned non-image:", res.status, res.headers.get("content-type"));
-  } catch (err) {
-    console.warn("[CoverGen] Pollinations threw:", err);
+  // ── Pollinations.ai — free, no key, retried with backoff (flaky under load) ──
+  const result = await fetchPollinationsImage(fullPrompt, "CoverGen", { width: 768, height: 768 });
+  if (result) {
+    console.log("[CoverGen] Generated with Pollinations.ai");
+    return NextResponse.json({
+      imageData: result.buf.toString("base64"),
+      mimeType: result.mimeType,
+    });
   }
 
   return NextResponse.json({ error: "No image in response from any model" }, { status: 502 });
