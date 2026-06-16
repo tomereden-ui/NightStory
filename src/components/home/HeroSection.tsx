@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
-import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
 
 function BuildTimestamp() {
@@ -29,20 +28,17 @@ export default function HeroSection() {
       </div>
 
       {/* Top bar */}
-      <div className={`flex items-center justify-between mb-6 ${isRTL ? "flex-row-reverse" : ""}`}>
-        <div className={`flex items-center gap-2.5 ${isRTL ? "flex-row-reverse" : ""}`}>
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center text-lg"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-          >
-            {MOCK_USER.avatarEmoji}
-          </div>
-          <div>
-            <p className="text-white/25 text-[10px] uppercase tracking-widest">Good Night</p>
-            <p className="text-white text-sm font-semibold">{MOCK_USER.displayName}</p>
-          </div>
+      <div className={`flex items-center gap-2.5 mb-6 ${isRTL ? "flex-row-reverse" : ""}`}>
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center text-lg"
+          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          {MOCK_USER.avatarEmoji}
         </div>
-        <LanguageToggle />
+        <div>
+          <p className="text-white/25 text-[10px] uppercase tracking-widest">Good Night</p>
+          <p className="text-white text-sm font-semibold">{MOCK_USER.displayName}</p>
+        </div>
       </div>
 
       {/* Hero */}
