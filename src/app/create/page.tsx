@@ -179,6 +179,12 @@ export default function CreatePage() {
       if (editingStoryId) produceBody.editingStoryId = editingStoryId;
       if (summary) produceBody.summary = summary;
       if (coverPrompt) produceBody.coverPrompt = coverPrompt;
+      // Reuse the cover already generated right after the script (avoid regenerating it).
+      const coverMatch = coverUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (coverMatch) {
+        produceBody.coverImageMimeType = coverMatch[1];
+        produceBody.coverImageData = coverMatch[2];
+      }
       const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(produceBody) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};
@@ -190,7 +196,7 @@ export default function CreatePage() {
       setIsProducing(false);
       setActiveTab("script");
     }
-  }, [editingStoryId, summary]);
+  }, [editingStoryId, summary, coverPrompt, coverUrl]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job);

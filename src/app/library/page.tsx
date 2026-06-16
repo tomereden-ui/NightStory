@@ -48,11 +48,12 @@ export default function LibraryPage() {
   const handleDeleteConfirm = async (id: string) => {
     setDeletingId(id);
     try {
-      await fetch(`/api/library/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/library/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
       setEntries((prev) => prev.filter((e) => e.id !== id));
       setTrashCount((c) => c + 1);
     } catch {
-      // silently ignore — entry stays in list
+      // entry stays in list — the delete didn't actually succeed server-side
     } finally {
       setDeletingId(null);
       setConfirmingId(null);

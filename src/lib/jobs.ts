@@ -19,6 +19,7 @@ export interface Job {
   voiceAssignments?: Record<string, string>;
   skippedLines?: string[];
   error?: string;
+  libraryError?: string;
   createdAt: number;
 }
 

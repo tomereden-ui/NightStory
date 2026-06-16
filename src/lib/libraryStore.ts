@@ -87,8 +87,16 @@ export async function getTrash(): Promise<TrashEntry[]> {
 export async function moveToTrash(id: string): Promise<boolean> {
   const { data } = await supabase.from("stories").select("*").eq("id", id).maybeSingle();
   if (!data) return false;
-  await supabase.from("trash").upsert({ ...data, deleted_at: Date.now() });
-  await supabase.from("stories").delete().eq("id", id);
+
+  const { error: insertErr } = await supabase.from("trash").upsert({ ...data, deleted_at: Date.now() });
+  if (insertErr) throw new Error(`moveToTrash (insert): ${insertErr.message}`);
+
+  const { error: deleteErr } = await supabase.from("stories").delete().eq("id", id);
+  if (deleteErr) {
+    // Roll back the trash insert so the story isn't duplicated in both tables.
+    await supabase.from("trash").delete().eq("id", id);
+    throw new Error(`moveToTrash (delete): ${deleteErr.message}`);
+  }
   return true;
 }
 
@@ -96,8 +104,11 @@ export async function restoreFromTrash(id: string): Promise<boolean> {
   const { data } = await supabase.from("trash").select("*").eq("id", id).maybeSingle();
   if (!data) return false;
   const { deleted_at: _del, ...rest } = data; // eslint-disable-line
-  await supabase.from("stories").upsert(rest);
-  await supabase.from("trash").delete().eq("id", id);
+  const { error: insertErr } = await supabase.from("stories").upsert(rest);
+  if (insertErr) throw new Error(`restoreFromTrash (insert): ${insertErr.message}`);
+
+  const { error: deleteErr } = await supabase.from("trash").delete().eq("id", id);
+  if (deleteErr) throw new Error(`restoreFromTrash (delete): ${deleteErr.message}`);
   return true;
 }
 

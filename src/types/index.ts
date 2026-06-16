@@ -25,6 +25,10 @@ export interface Voice {
   language: Language;
   previewUrl?: string;
   avatarEmoji: string;
+  /** ElevenLabs voice ID used when this voice is assigned to a character in production. */
+  elevenLabsId?: string;
+  /** Gemini TTS prebuilt voice name used when this voice is assigned to a character in production. */
+  geminiVoiceName?: string;
 }
 
 export type StoryStatus = "published" | "draft" | "generating";

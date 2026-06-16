@@ -722,7 +722,16 @@ export default function FiveQuestionPage() {
   const handleProduce = useCallback(async (blocks: ScriptBlock[], durationMinutes: number) => {
     setIsProducing(true);
     try {
-      const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks, durationMinutes }) });
+      const produceBody: Record<string, unknown> = { blocks, durationMinutes };
+      if (summary) produceBody.summary = summary;
+      if (coverPrompt) produceBody.coverPrompt = coverPrompt;
+      // Reuse the cover already generated right after the script (avoid regenerating it).
+      const coverMatch = coverUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (coverMatch) {
+        produceBody.coverImageMimeType = coverMatch[1];
+        produceBody.coverImageData = coverMatch[2];
+      }
+      const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(produceBody) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};
       try { data = JSON.parse(text); } catch { throw new Error(`Server error (${res.status})`); }
@@ -732,7 +741,7 @@ export default function FiveQuestionPage() {
       setError(err instanceof Error ? err.message : "Production failed");
       setIsProducing(false);
     }
-  }, []);
+  }, [summary, coverPrompt, coverUrl]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job); setIsProducing(false);

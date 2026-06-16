@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock } from "@/types";
 import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
 import { pickGeminiVoice as pickGeminiVoiceForChar } from "@/config/ttsDefaults";
+import { VOICES } from "@/lib/mockData";
+
+/**
+ * Builds character → voice overrides from the user's per-block voice assignments
+ * (ScriptBlockCard's VoicePicker). The first assigned voice found per character wins.
+ */
+function buildVoiceOverrides(blocks: ScriptBlock[]): Record<string, { elevenLabsId?: string; geminiVoiceName?: string }> {
+  const voicesById = Object.fromEntries(VOICES.map((v) => [v.id, v]));
+  const overrides: Record<string, { elevenLabsId?: string; geminiVoiceName?: string }> = {};
+  for (const block of blocks) {
+    if (overrides[block.characterName]) continue;
+    const voice = voicesById[block.assignedVoiceId];
+    if (voice) overrides[block.characterName] = { elevenLabsId: voice.elevenLabsId, geminiVoiceName: voice.geminiVoiceName };
+  }
+  return overrides;
+}
 
 // path/fs via require so no ES-module hoisting issues alongside dynamic imports
 const path = require("path") as typeof import("path"); // eslint-disable-line
@@ -70,6 +86,7 @@ async function runProduction(
   elevenKey: string | null,
   durationMinutes: number,
   coverPrompt?: string,
+  existingCover?: { data: string; mimeType: string },
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -107,8 +124,11 @@ async function runProduction(
     const sfxTracks = drama.tracks.filter((t) => t.type === "sfx");
     const totalDurationMs = drama.duration_estimate_seconds * 1000;
 
-    // Start cover image in background — runs while TTS is happening
-    const coverPromise = generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
+    // The cover was already generated once right after the script (shown in the
+    // create-story UI) — reuse that image instead of generating a brand new one here.
+    const coverPromise: Promise<{ buf: Buffer; mimeType: string } | null> = existingCover
+      ? Promise.resolve({ buf: Buffer.from(existingCover.data, "base64"), mimeType: existingCover.mimeType })
+      : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
 
     // ── Step 2: TTS for each dialogue line (batched parallel) ────────────────
     updateJob(jobId, {
@@ -118,6 +138,7 @@ async function runProduction(
     });
 
     const voiceMap = new VoiceMap();
+    const voiceOverrides = buildVoiceOverrides(blocks);
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
@@ -139,9 +160,10 @@ async function runProduction(
           } else {
             const charName = track.character ?? "Narrator";
             const profile = voiceProfiles[charName];
+            const override = voiceOverrides[charName];
             const voice = useEL
-              ? (profile?.voiceName ?? voiceMap.assign(charName, track.voice_style))
-              : (profile?.geminiVoiceName ?? pickGeminiVoiceForChar(charName, track.voice_style));
+              ? (override?.elevenLabsId ?? profile?.voiceName ?? voiceMap.assign(charName, track.voice_style))
+              : (override?.geminiVoiceName ?? profile?.geminiVoiceName ?? pickGeminiVoiceForChar(charName, track.voice_style));
             const persona = profile?.persona;
             try {
               await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL, profile?.stability, profile?.style, scriptLanguage);
@@ -287,7 +309,12 @@ async function runProduction(
       }
     }
 
-    await addEntry({
+    // Audio + cover are already uploaded to Storage at this point — don't let a
+    // transient library-save failure throw away a finished production. Retry once,
+    // and if it still fails, surface the job as done (with the audio/cover URLs)
+    // rather than as a fatal error, so the user can still reach the file.
+    let libraryError: string | undefined;
+    const entry = {
       id: storyId,
       title: drama.title,
       summary: summaryOverride || generateSummary(blocks),
@@ -296,16 +323,28 @@ async function runProduction(
       durationSeconds: drama.duration_estimate_seconds,
       createdAt: Date.now(),
       blocks,
-    });
+    };
+    try {
+      await addEntry(entry);
+    } catch (err) {
+      console.warn("[produce-drama] addEntry failed, retrying once:", err);
+      try {
+        await addEntry(entry);
+      } catch (retryErr) {
+        libraryError = retryErr instanceof Error ? retryErr.message : "Failed to save to library";
+        console.error("[produce-drama] addEntry retry failed:", libraryError);
+      }
+    }
 
     updateJob(jobId, {
       status: "done",
-      step: "✅ Drama ready!",
+      step: libraryError ? "⚠️ Drama ready, but library save failed" : "✅ Drama ready!",
       progress: 100,
       audioUrl,
       coverUrl,
+      libraryError,
       voiceAssignments: Object.fromEntries(
-        Object.entries(voiceProfiles).map(([k, v]) => [k, v.voiceName])
+        Object.entries(voiceProfiles).map(([k, v]) => [k, voiceOverrides[k]?.elevenLabsId ?? v.voiceName])
       ),
       skippedLines,
     });
@@ -325,7 +364,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
     }
 
-    let body: { blocks: ScriptBlock[]; editingStoryId?: string; summary?: string; durationMinutes?: number; coverPrompt?: string };
+    let body: {
+      blocks: ScriptBlock[];
+      editingStoryId?: string;
+      summary?: string;
+      durationMinutes?: number;
+      coverPrompt?: string;
+      coverImageData?: string;
+      coverImageMimeType?: string;
+    };
     try {
       body = await req.json();
     } catch {
@@ -351,8 +398,12 @@ export async function POST(req: NextRequest) {
 
     const durationMinutes = Math.min(10, Math.max(1, body.durationMinutes ?? 3));
 
+    const existingCover = body.coverImageData && body.coverImageMimeType
+      ? { data: body.coverImageData, mimeType: body.coverImageMimeType }
+      : undefined;
+
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

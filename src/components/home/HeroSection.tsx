@@ -13,7 +13,7 @@ function BuildTimestamp() {
     " " +
     d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   return (
-    <span className="text-white/15 text-[9px] font-mono tracking-wide">v {label}</span>
+    <span className="text-white/15 text-[14px] font-mono tracking-wide">v {label}</span>
   );
 }
 

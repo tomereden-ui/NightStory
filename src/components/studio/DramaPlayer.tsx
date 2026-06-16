@@ -96,6 +96,14 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
+      {job.libraryError && (
+        <div
+          className="px-4 py-3 rounded-2xl text-xs"
+          style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", color: "#F59E0B" }}
+        >
+          ⚠️ Your drama was produced successfully, but saving it to your Library failed. Download it now so you don't lose it — try producing again later to retry the save.
+        </div>
+      )}
       {/* Title card */}
       {job.coverUrl ? (
         <div className="rounded-2xl overflow-hidden relative" style={{ border: "1px solid rgba(79,195,247,0.15)" }}>
@@ -230,9 +238,15 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <div className="relative h-8 rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
             {tracks.map((t) => {
               const left = (t.start_ms / 1000 / duration) * 100;
+              // Dialogue tracks never carry a duration_hint_ms (only SFX does) — estimate
+              // from word count using the same ~380ms/word rate the planner uses for timing,
+              // otherwise every line renders at the same fixed width regardless of length.
+              const dialogueMs = t.line
+                ? Math.max(600, t.line.replace(/\[.*?\]/g, "").trim().split(/\s+/).filter(Boolean).length * 380)
+                : 600;
               const width = t.type === "sfx" && t.loop
                 ? 100 - left
-                : Math.max(1, ((t.duration_hint_ms ?? 1500) / 1000 / duration) * 100);
+                : Math.max(1, ((t.type === "sfx" ? t.duration_hint_ms ?? 1500 : dialogueMs) / 1000 / duration) * 100);
               return (
                 <div
                   key={t.id}
@@ -243,9 +257,9 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
                     background:
                       t.type === "sfx"
                         ? t.loop
-                          ? "rgba(139,92,246,0.5)"
-                          : "rgba(245,158,11,0.5)"
-                        : "rgba(79,195,247,0.5)",
+                          ? "rgba(139,92,246,0.7)"
+                          : "rgba(245,158,11,0.7)"
+                        : "rgba(79,195,247,0.7)",
                   }}
                   title={t.type === "dialogue" ? `${t.character}: ${t.line?.slice(0, 40)}` : t.description}
                 />
