@@ -235,7 +235,7 @@ function TextInsertModal({
         <div>
           <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Voice</label>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {voices.map((v, i) => (
+            {voices.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setVoiceId(v.id)}
@@ -245,7 +245,7 @@ function TextInsertModal({
                   : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }
                 }
               >
-                <VoiceAvatar avatarUrl={v.avatarUrl} emoji={v.avatarEmoji} size={32} borderColor="rgba(79,195,247,0.2)" delayMs={i * 600} />
+                <VoiceAvatar avatarUrl={v.avatarUrl} emoji={v.avatarEmoji} size={32} borderColor="rgba(79,195,247,0.2)" />
                 <span className="text-[9px] font-semibold" style={{ color: v.id === voiceId ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>
                   {v.name.split(" ")[0]}
                 </span>

@@ -7,5 +7,5 @@ function buildAvatarPrompt(personDesc: string): string {
 // Pollinations.ai — free, no key, same provider already used for story cover art.
 export async function generateVoiceAvatar(personDesc: string): Promise<{ buf: Buffer; mimeType: string } | null> {
   const fullPrompt = buildAvatarPrompt(personDesc);
-  return fetchPollinationsImage(fullPrompt, "VoiceAvatar", { width: 384, height: 384, timeoutMs: 20_000, retryDelaysMs: [0, 1500] });
+  return fetchPollinationsImage(fullPrompt, "VoiceAvatar", { width: 384, height: 384, timeoutMs: 20_000, retryDelaysMs: [0, 1500, 3000] });
 }
