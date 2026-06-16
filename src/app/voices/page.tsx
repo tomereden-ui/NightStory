@@ -82,7 +82,7 @@ function VoiceCard({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-semibold truncate">{voice.name}</p>
-        <p className="text-white/35 text-[11px] truncate mt-0.5">
+        <p className="text-white/45 text-xs truncate mt-0.5">
           {voice.description ?? voice.gemini_voice_name ?? (voice.type === "recorded" ? "Cloned voice" : "AI voice")}
         </p>
       </div>
@@ -147,7 +147,7 @@ function PresetCard({
 
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-semibold">{voice.name}</p>
-        <p className="text-white/35 text-[11px] mt-0.5">{voice.desc}</p>
+        <p className="text-white/45 text-xs mt-0.5">{voice.desc}</p>
       </div>
 
       {/* Cached indicator */}

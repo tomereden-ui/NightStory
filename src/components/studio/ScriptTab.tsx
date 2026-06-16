@@ -104,14 +104,14 @@ function BlockSeparator({ onAddSfx, onAddText }: { onAddSfx: () => void; onAddTe
         <>
           <button
             onClick={() => { setExpanded(false); onAddSfx(); }}
-            className="text-[10px] font-semibold px-3 py-1 rounded-full transition-all"
+            className="text-xs font-semibold px-3 py-1 rounded-full transition-all"
             style={{ color: "rgba(245,158,11,0.7)", border: "1px solid rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.06)" }}
           >
             🔊 Sound
           </button>
           <button
             onClick={() => { setExpanded(false); onAddText(); }}
-            className="text-[10px] font-semibold px-3 py-1 rounded-full transition-all"
+            className="text-xs font-semibold px-3 py-1 rounded-full transition-all"
             style={{ color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.2)", background: "rgba(79,195,247,0.05)" }}
           >
             💬 Dialogue

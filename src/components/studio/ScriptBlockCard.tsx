@@ -323,13 +323,13 @@ function SpeechCard({
       {/* Editable text area */}
       <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div className="flex items-center gap-1.5">
-          <span className={`text-[10px] font-semibold uppercase tracking-widest ${isNarrator ? "text-purple-bright/60" : "text-teal/70"}`}>
+          <span className={`text-[11px] font-semibold uppercase tracking-widest ${isNarrator ? "text-purple-bright/60" : "text-teal/70"}`}>
             {block.characterName}
           </span>
           {assignedVoice && (
-            <span className="text-white/15 text-[9px]">· {assignedVoice.name}</span>
+            <span className="text-white/25 text-[11px]">· {assignedVoice.name}</span>
           )}
-          <span className="ml-auto text-[8px] text-white/20 italic">{t("tapToEdit")}</span>
+          <span className="ml-auto text-[10px] text-white/25 italic">{t("tapToEdit")}</span>
         </div>
         <textarea
           ref={textareaRef}
