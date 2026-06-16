@@ -18,8 +18,6 @@ export const viewport: Viewport = {
   themeColor: "#080B18",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -27,9 +25,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" dir="ltr" className={`${inter.variable} ${rubik.variable}`}>
       <body className="min-h-screen antialiased" style={{ background: "#0A0C14" }}>
         <LanguageProvider>
-          <div className="flex flex-col min-h-screen max-w-md mx-auto relative" style={{ background: "#0A0C14" }}>
-            <main className="flex-1 pb-24 overflow-x-hidden">{children}</main>
+          <div className="flex flex-col md:flex-row min-h-screen relative" style={{ background: "#0A0C14" }}>
             <BottomNav />
+            <main className="flex-1 pb-24 md:pb-8 overflow-x-hidden">
+              <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto md:px-6 md:py-6">
+                {children}
+              </div>
+            </main>
           </div>
         </LanguageProvider>
       </body>

@@ -243,7 +243,7 @@ export default function StoryDetailPage() {
         className="fixed bottom-0 left-0 right-0 pt-6"
         style={{ background: "linear-gradient(to top, #05080F 70%, transparent)" }}
       >
-        <div className="max-w-md mx-auto px-4 pb-8">
+        <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto px-4 pb-8">
           <div
             className="rounded-2xl px-4 py-3.5"
             style={{

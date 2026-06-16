@@ -442,7 +442,7 @@ function AddVoiceSheet({
 
       {/* Sheet */}
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md rounded-t-3xl overflow-hidden flex flex-col"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-lg rounded-t-3xl overflow-hidden flex flex-col"
         style={{
           background: "rgba(8,12,24,0.97)",
           border: "1px solid rgba(255,255,255,0.09)",

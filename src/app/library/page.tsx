@@ -116,7 +116,7 @@ export default function LibraryPage() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
             {entries.map((entry) => {
               const isConfirming = confirmingId === entry.id;
               const isDeleting = deletingId === entry.id;
@@ -240,7 +240,7 @@ export default function LibraryPage() {
       {/* FAB */}
       <Link
         href="/create"
-        className="fixed bottom-24 right-4 w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-light z-40 active:scale-95 transition-transform"
+        className="fixed bottom-24 md:bottom-8 right-4 md:right-8 w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-light z-40 active:scale-95 transition-transform"
         style={{
           background: "linear-gradient(135deg, rgba(79,195,247,0.3), rgba(79,195,247,0.12))",
           border: "1px solid rgba(79,195,247,0.4)",
