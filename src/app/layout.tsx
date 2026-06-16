@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Rubik } from "next/font/google";
+import { Inter, Outfit, Rubik } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ViewModeProvider } from "@/context/ViewModeContext";
 import AppShell from "@/components/layout/AppShell";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", display: "swap" });
 const rubik = Rubik({ subsets: ["latin", "hebrew"], variable: "--font-rubik", display: "swap" });
 
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" dir="ltr" className={`${inter.variable} ${rubik.variable}`}>
+    <html lang="en" dir="ltr" className={`${inter.variable} ${outfit.variable} ${rubik.variable}`}>
       <body className="min-h-screen antialiased" style={{ background: "#0A0C14" }}>
         <LanguageProvider>
           <ViewModeProvider>

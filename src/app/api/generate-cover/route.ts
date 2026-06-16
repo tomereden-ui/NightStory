@@ -64,7 +64,7 @@ Write ONLY the image prompt. No labels, no quotes.`,
   // ── Step 2: natural language prompt — character description first ────────────
   const fullPrompt = `${scenePrompt}
 
-Illustrated in a soft watercolor style for a children's bedtime book cover. The characters described above are the main subject, large and centered in the lower two-thirds of the image, warmly lit by a gentle amber glow (from a lantern, fireflies, or glowing flowers nearby). Behind them, a soft dark indigo night sky with scattered stars forms the background — the sky fills only the upper portion and never replaces the characters. Square composition, painterly brush strokes, cozy and dreamy mood. No text, no letters, no numbers anywhere in the image.`;
+Illustrated as a glowing monochromatic blue-and-teal cosmic night scene for a children's bedtime book cover. The characters/subject described above are large and centered, rendered as a soft silhouette or gently lit shape glowing from within against a deep navy-black night sky. Scattered stars and a faint nebula-like glow surround the subject. Square composition, dreamy bioluminescent lighting, smooth gradients, minimal flat illustration style — no warm or amber tones, only cool blues, teals, and indigo. No text, no letters, no numbers anywhere in the image.`;
 
   console.log("[CoverGen] Final image prompt:", fullPrompt.slice(0, 300));
 
