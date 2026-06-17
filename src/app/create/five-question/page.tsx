@@ -226,15 +226,29 @@ function PrimaryButton({ label, onClick, disabled }: { label: string; onClick: (
   );
 }
 
-function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebellComplete }: {
+function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl }: {
   onBack: () => void; children: React.ReactNode;
   bluebellText: string; bluebellSpeed?: number; onBluebellComplete?: () => void;
+  audioUrl?: string;
 }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Auto-play Bluebell's voice when the audio URL becomes available
+  useEffect(() => {
+    if (!audioUrl) return;
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    audio.play().catch(() => {}); // graceful: browser may block autoplay
+    return () => { audio.pause(); audioRef.current = null; };
+  }, [audioUrl]);
+
   return (
     <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
       <div className="flex items-center mb-8">
         <button onClick={onBack} className="w-8 h-8 flex items-center justify-center text-white/40 text-base">←</button>
-        <div className="flex-1 flex justify-center"><span className="text-2xl">🧚</span></div>
+        <div className="flex-1 flex justify-center">
+          <span className="text-2xl" style={{ filter: audioUrl ? "drop-shadow(0 0 8px rgba(79,195,247,0.6))" : "none" }}>🧚</span>
+        </div>
         <div className="w-8" />
       </div>
       <div className="mb-7">
@@ -257,7 +271,7 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
 
 type Q1Mode = null | "own" | "magical" | "stranger" | "surprise";
 
-function Q1View({ initialHero, onNext, onBack, optionImages }: { initialHero: string; onNext: (hero: string) => void; onBack: () => void; optionImages: Record<string, string> }) {
+function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl }: { initialHero: string; onNext: (hero: string) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [mode, setMode] = useState<Q1Mode>(null);
   const [textVal, setTextVal] = useState(initialHero);
   const [magicChip, setMagicChip] = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
@@ -289,7 +303,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages }: { initialHero: st
   );
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q1}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q1} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         {mode === null && (
           <div className="grid grid-cols-2 gap-2.5">
@@ -350,7 +364,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages }: { initialHero: st
 
 // ─── Q2 — Story world ─────────────────────────────────────────────────────────
 
-function Q2View({ heroName, initialWorld, onNext, onBack, optionImages }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; optionImages: Record<string, string> }) {
+function Q2View({ heroName, initialWorld, onNext, onBack, optionImages, audioUrl }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [selected, setSelected] = useState(initialWorld);
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
@@ -368,7 +382,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, optionImages }: { hero
   );
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q2(heroName)}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q2(heroName)} audioUrl={audioUrl}>
       <div className="grid grid-cols-2 gap-2.5 mb-5">
         {WORLD_OPTIONS.map((w) => {
           const isSel = selected === w.label;
@@ -396,7 +410,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, optionImages }: { hero
 
 type Q3Mode = null | "friend" | "pet" | "creature" | "family";
 
-function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionImages }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; optionImages: Record<string, string> }) {
+function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionImages, audioUrl }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [mode, setMode] = useState<Q3Mode>(null);
   const [textVal, setTextVal] = useState(initialCompanion);
   const [transitioning, setTransitioning] = useState(false);
@@ -428,7 +442,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
   const activeMode = COMPANION_MODES.find((m) => m.id === mode);
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q3(worldName, heroName)}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q3(worldName, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         {mode === null && (
           <>
@@ -466,7 +480,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
 type Q4Mode = null | "funny" | "spooky" | "weird" | "delicious";
 type Q4Phase = "input" | "reaction1" | "reaction2";
 
-function Q4View({ heroName, companionName, initialEngine, onNext, onBack, optionImages }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; optionImages: Record<string, string> }) {
+function Q4View({ heroName, companionName, initialEngine, onNext, onBack, optionImages, audioUrl }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [mode, setMode] = useState<Q4Mode>(null);
   const [textVal, setTextVal] = useState(initialEngine);
   const [phase, setPhase] = useState<Q4Phase>("input");
@@ -506,7 +520,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
   const activeMode = Q4_MODES.find((m) => m.id === mode);
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q4(companionName, heroName)}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q4(companionName, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         {mode === null && (
           <>
@@ -540,7 +554,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
 
 // ─── Q5 — Resolution mood ─────────────────────────────────────────────────────
 
-function Q5View({ heroName, engineText, onNext, onBack, optionImages }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; optionImages: Record<string, string> }) {
+function Q5View({ heroName, engineText, onNext, onBack, optionImages, audioUrl }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const MOODS: { id: ResolutionMood; label: string; emoji: string; isBedtime?: boolean }[] = [
     { id: "brave",     label: "Super brave",          emoji: "🦁" },
     { id: "laughing",  label: "Laughing so much",      emoji: "😂" },
@@ -549,7 +563,7 @@ function Q5View({ heroName, engineText, onNext, onBack, optionImages }: { heroNa
   ];
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q5(engineText, heroName)}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q5(engineText, heroName)} audioUrl={audioUrl}>
       <div className="grid grid-cols-2 gap-2.5">
         {MOODS.map((m) => (
           <IllustratedCard
@@ -753,9 +767,51 @@ export default function FiveQuestionPage() {
   const [isFetchingCover, setIsFetchingCover] = useState(false);
   const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
   const [optionImages, setOptionImages] = useState<Record<string, string>>({});
+  const [questionAudios, setQuestionAudios] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchVoicePool().then(setVoicePool);
+  }, []);
+
+  // Seed Bluebell question audio: generate via server-side Gemini TTS and cache
+  // in Supabase. Generates q1 first so it's ready as soon as the flow opens.
+  useEffect(() => {
+    let cancelled = false;
+    async function seedAudio() {
+      try {
+        const res = await fetch("/api/admin/seed-bluebell-audio");
+        if (!res.ok) return;
+        const { missing, existingAudioUrls } = await res.json() as {
+          missing: string[];
+          existingAudioUrls: Record<string, string>;
+        };
+
+        if (existingAudioUrls && Object.keys(existingAudioUrls).length > 0) {
+          setQuestionAudios((prev) => ({ ...prev, ...existingAudioUrls }));
+        }
+
+        if (!missing?.length) return;
+
+        // Prioritise q1 so audio is ready before the user finishes reading
+        const ordered = ["q1", "q2", "q3", "q4", "q5"].filter((k) => missing.includes(k));
+        for (const key of ordered) {
+          if (cancelled) return;
+          try {
+            const genRes = await fetch(`/api/admin/seed-bluebell-audio?key=${key}`, { method: "POST" });
+            if (genRes.ok) {
+              const { url } = await genRes.json() as { ok: boolean; key: string; url: string };
+              if (url) setQuestionAudios((prev) => ({ ...prev, [key]: url }));
+            }
+          } catch {
+            // ignore individual failures — will retry on next visit
+          }
+        }
+      } catch {
+        // ignore silently
+      }
+    }
+    seedAudio();
+    return () => { cancelled = true; };
   }, []);
 
   // Browser-side image seeder: generates option card images via Pollinations and caches
@@ -910,11 +966,11 @@ export default function FiveQuestionPage() {
 
   // ─── Step routing ───────────────────────────────────────────────────────────
 
-  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={() => router.push("/create")} optionImages={optionImages} />;
-  if (step === "q2") return <Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} optionImages={optionImages} />;
-  if (step === "q3") return <Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} optionImages={optionImages} />;
-  if (step === "q4") return <Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} optionImages={optionImages} />;
-  if (step === "q5") return <Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} optionImages={optionImages} />;
+  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={() => router.push("/create")} optionImages={optionImages} audioUrl={questionAudios.q1} />;
+  if (step === "q2") return <Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q2} />;
+  if (step === "q3") return <Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q3} />;
+  if (step === "q4") return <Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q4} />;
+  if (step === "q5") return <Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q5} />;
 
   if (step === "summary") return (
     <>
