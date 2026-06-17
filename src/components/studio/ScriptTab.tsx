@@ -310,7 +310,7 @@ function TextInsertModal({
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
 export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange }: ScriptTabProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
   const [isPlaying, setIsPlaying]         = useState(false);
@@ -342,7 +342,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     stopAudio();
     setSpeechError(null); setIsLoading(true); setIsPlaying(false); setIsPaused(false);
     try {
-      const res  = await fetch("/api/synthesize-speech", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: block.textPayload, characterName: block.characterName }) });
+      const res  = await fetch("/api/synthesize-speech", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: block.textPayload, characterName: block.characterName, assignedVoiceId: block.assignedVoiceId, language }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Speech generation failed");
       const url = await base64ToAudioUrl(data.audioData, data.mimeType ?? "audio/wav");
