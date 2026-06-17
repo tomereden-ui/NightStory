@@ -23,7 +23,7 @@ async function fetchOnce(
 ): Promise<{ buf: Buffer; mimeType: string } | null> {
   const seed = Math.floor(Math.random() * 999999);
   const encoded = encodeURIComponent(prompt.slice(0, 1500));
-  const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=${width}&height=${height}&nologo=true&seed=${seed}`;
+  const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=${width}&height=${height}&seed=${seed}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
