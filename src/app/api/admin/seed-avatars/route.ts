@@ -15,11 +15,15 @@ export async function GET() {
     .filter((v) => !existingNames.has(`${v.id}.jpg`))
     .map((v) => ({ id: v.id, prompt: VOICE_AVATAR_PROMPTS[v.id] ?? "" }));
 
-  const existing = PRESET_VOICES
-    .filter((v) => existingNames.has(`${v.id}.jpg`))
-    .map((v) => v.id);
+  // Return full public URLs server-side so the client doesn't need NEXT_PUBLIC_SUPABASE_URL
+  const existingAvatarUrls: Record<string, string> = {};
+  for (const v of PRESET_VOICES) {
+    if (existingNames.has(`${v.id}.jpg`)) {
+      existingAvatarUrls[v.id] = supabase.storage.from("voice-avatars").getPublicUrl(`${v.id}.jpg`).data.publicUrl;
+    }
+  }
 
-  return NextResponse.json({ missing, existing });
+  return NextResponse.json({ missing, existingAvatarUrls });
 }
 
 // POST — browser sends a generated image blob; server caches it in Supabase
@@ -37,5 +41,6 @@ export async function POST(req: NextRequest) {
     .upload(`${voiceId}.jpg`, buf, { contentType: mimeType, upsert: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  const publicUrl = supabase.storage.from("voice-avatars").getPublicUrl(`${voiceId}.jpg`).data.publicUrl;
+  return NextResponse.json({ ok: true, url: publicUrl });
 }

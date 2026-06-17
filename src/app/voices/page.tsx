@@ -147,7 +147,7 @@ function PresetCard({
 
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-semibold">{voice.name}</p>
-        <p className="text-white/45 text-xs mt-0.5">{voice.desc}</p>
+        <p className="text-white/45 text-[13px] mt-0.5">{voice.desc}</p>
       </div>
 
       {/* Cached indicator */}
@@ -744,21 +744,14 @@ export default function VoicesPage() {
       try {
         const res = await fetch("/api/admin/seed-avatars");
         if (!res.ok) return;
-        const { missing, existing } = await res.json() as {
+        const { missing, existingAvatarUrls } = await res.json() as {
           missing: { id: string; prompt: string }[];
-          existing: string[];
+          existingAvatarUrls: Record<string, string>;
         };
 
-        // Pre-populate avatarUrls for already-cached voices
-        if (existing?.length) {
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-          if (supabaseUrl) {
-            const cached: Record<string, string> = {};
-            for (const id of existing) {
-              cached[id] = `${supabaseUrl}/storage/v1/object/public/voice-avatars/${id}.jpg`;
-            }
-            setAvatarUrls((prev) => ({ ...prev, ...cached }));
-          }
+        // Pre-populate avatarUrls for already-cached voices using URLs from server
+        if (existingAvatarUrls && Object.keys(existingAvatarUrls).length > 0) {
+          setAvatarUrls((prev) => ({ ...prev, ...existingAvatarUrls }));
         }
 
         if (!missing?.length) return;
@@ -778,14 +771,8 @@ export default function VoicesPage() {
               method: "POST", body: blob, headers: { "Content-Type": blob.type },
             });
             if (cacheRes.ok) {
-              // Update avatar URL to direct Supabase URL now that it's cached
-              const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-              if (supabaseUrl) {
-                setAvatarUrls((prev) => ({
-                  ...prev,
-                  [id]: `${supabaseUrl}/storage/v1/object/public/voice-avatars/${id}.jpg`,
-                }));
-              }
+              const { url } = await cacheRes.json() as { ok: boolean; url: string };
+              if (url) setAvatarUrls((prev) => ({ ...prev, [id]: url }));
             }
           } catch {
             // ignore individual failures — next page visit will retry
