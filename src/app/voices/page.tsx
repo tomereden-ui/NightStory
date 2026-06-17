@@ -124,11 +124,13 @@ function VoiceCard({
 
 function PresetCard({
   voice,
+  avatarUrl,
   isPlaying,
   isCached,
   onPlay,
 }: {
   voice: PresetVoice;
+  avatarUrl?: string;
   isPlaying: boolean;
   isCached: boolean;
   onPlay: (v: PresetVoice) => void;
@@ -141,7 +143,7 @@ function PresetCard({
         border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.emoji} size={44} borderColor="rgba(245,158,11,0.25)" />
+      <VoiceAvatar avatarUrl={avatarUrl} emoji={voice.emoji} size={44} borderColor="rgba(245,158,11,0.25)" />
 
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-semibold">{voice.name}</p>
@@ -723,6 +725,8 @@ export default function VoicesPage() {
   const [presetError, setPresetError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [voiceSamples, setVoiceSamples] = useState<Record<string, string>>({});
+  // avatarUrls are seeded by the browser once cached in Supabase
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const blobUrlRef = useRef<string | null>(null);
@@ -731,15 +735,32 @@ export default function VoicesPage() {
     setMounted(true);
   }, []);
 
-  // Seed missing voice avatars from the browser (server IP is blocked by Pollinations;
-  // browser generates images client-side and POSTs the blobs to be cached in Supabase).
+  // Seed missing voice avatars from the browser (Pollinations blocks server IPs;
+  // the browser generates images and POSTs blobs to be cached in Supabase).
+  // avatarUrls state updates as each image is cached so avatars appear live.
   useEffect(() => {
     let cancelled = false;
     async function seedAvatars() {
       try {
         const res = await fetch("/api/admin/seed-avatars");
         if (!res.ok) return;
-        const { missing } = await res.json() as { missing: { id: string; prompt: string }[] };
+        const { missing, existing } = await res.json() as {
+          missing: { id: string; prompt: string }[];
+          existing: string[];
+        };
+
+        // Pre-populate avatarUrls for already-cached voices
+        if (existing?.length) {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          if (supabaseUrl) {
+            const cached: Record<string, string> = {};
+            for (const id of existing) {
+              cached[id] = `${supabaseUrl}/storage/v1/object/public/voice-avatars/${id}.jpg`;
+            }
+            setAvatarUrls((prev) => ({ ...prev, ...cached }));
+          }
+        }
+
         if (!missing?.length) return;
 
         for (const { id, prompt } of missing) {
@@ -753,7 +774,19 @@ export default function VoicesPage() {
             if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
             if (cancelled) return;
             const blob = await imgRes.blob();
-            await fetch(`/api/admin/seed-avatars?voiceId=${id}`, { method: "POST", body: blob, headers: { "Content-Type": blob.type } });
+            const cacheRes = await fetch(`/api/admin/seed-avatars?voiceId=${id}`, {
+              method: "POST", body: blob, headers: { "Content-Type": blob.type },
+            });
+            if (cacheRes.ok) {
+              // Update avatar URL to direct Supabase URL now that it's cached
+              const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+              if (supabaseUrl) {
+                setAvatarUrls((prev) => ({
+                  ...prev,
+                  [id]: `${supabaseUrl}/storage/v1/object/public/voice-avatars/${id}.jpg`,
+                }));
+              }
+            }
           } catch {
             // ignore individual failures — next page visit will retry
           }
@@ -1007,6 +1040,7 @@ export default function VoicesPage() {
             <PresetCard
               key={pv.geminiVoiceName}
               voice={pv}
+              avatarUrl={avatarUrls[pv.id]}
               isPlaying={playingPreset === pv.geminiVoiceName}
               isCached={!!voiceSamples[pv.geminiVoiceName]}
               onPlay={handlePlayPreset}

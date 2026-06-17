@@ -5,17 +5,21 @@ import { VOICE_AVATAR_PROMPTS } from "@/config/voiceAvatars";
 
 export const dynamic = "force-dynamic";
 
-// GET — returns which avatars are missing (so the browser knows what to generate)
+// GET — returns which avatars are missing and which already exist in Supabase
 export async function GET() {
   await ensureBuckets();
-  const { data: existing } = await supabase.storage.from("voice-avatars").list("", { limit: 100 });
-  const existingNames = new Set((existing ?? []).map((f) => f.name));
+  const { data: existingFiles } = await supabase.storage.from("voice-avatars").list("", { limit: 100 });
+  const existingNames = new Set((existingFiles ?? []).map((f) => f.name));
 
   const missing = PRESET_VOICES
     .filter((v) => !existingNames.has(`${v.id}.jpg`))
     .map((v) => ({ id: v.id, prompt: VOICE_AVATAR_PROMPTS[v.id] ?? "" }));
 
-  return NextResponse.json({ missing });
+  const existing = PRESET_VOICES
+    .filter((v) => existingNames.has(`${v.id}.jpg`))
+    .map((v) => v.id);
+
+  return NextResponse.json({ missing, existing });
 }
 
 // POST — browser sends a generated image blob; server caches it in Supabase
