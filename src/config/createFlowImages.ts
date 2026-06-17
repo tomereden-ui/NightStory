@@ -53,7 +53,7 @@ export const MOOD_IMAGE_PROMPTS: Record<string, string> = {
     "sleepy child tucked in cozy bed, moonlight through window, stars and moon outside, dream clouds forming, teddy bear, children's book illustration, soft blues and purples, peaceful",
 };
 
-export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood";
+export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile";
 
 export const HERO_IMAGE_PROMPTS: Record<string, string> = {
   own:
@@ -72,6 +72,25 @@ export interface CreateOptionSpec {
   prompt: string;
 }
 
+export const PROFILE_IMAGE_PROMPTS: Record<string, string> = {
+  // Display mode cards
+  "mode-auto":
+    "magical shape-shifting device morphing between phone, tablet and screen, glowing transformation aura, children's book digital illustration, cosmic blues and purples, seamless and fluid",
+  "mode-mobile":
+    "sleek glowing smartphone floating in a starry night sky, soft light emanating from the screen, children's book illustration, deep blue and cyan tones, elegant and modern",
+  "mode-tablet":
+    "elegant tablet device floating with a glowing warm screen, magical sparkles around it, children's book illustration, soft golden and teal light, futuristic yet cozy",
+  "mode-desktop":
+    "wide glowing monitor screen showing a magical starfield, dramatic light beams, children's book illustration, rich purple and blue tones, impressive and immersive",
+  // Settings cards
+  "setting-notifications":
+    "magical golden bell floating with shimmering stars and sparkles around it, soft warm light rays, children's book illustration, warm amber and gold tones, delightful",
+  "setting-nightmode":
+    "serene crescent moon in a starry night sky, glowing softly, cozy clouds and distant stars, children's book illustration, deep indigo and soft silver tones, peaceful",
+  "setting-volume":
+    "magical musical notes and sound waves floating through glowing air, colorful swirling ribbons of sound, children's book illustration, warm vibrant colors, joyful",
+};
+
 export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
   const specs: CreateOptionSpec[] = [];
   for (const [id, prompt] of Object.entries(HERO_IMAGE_PROMPTS))
@@ -84,6 +103,8 @@ export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
     specs.push({ type: "engine", id, prompt });
   for (const [id, prompt] of Object.entries(MOOD_IMAGE_PROMPTS))
     specs.push({ type: "mood", id, prompt });
+  for (const [id, prompt] of Object.entries(PROFILE_IMAGE_PROMPTS))
+    specs.push({ type: "profile", id, prompt });
   return specs;
 }
 

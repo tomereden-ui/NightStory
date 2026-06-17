@@ -1,179 +1,310 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
 
-const VIEW_MODE_OPTIONS: { mode: ViewMode; label: string; icon: string }[] = [
-  { mode: "auto",    label: "Auto",    icon: "🔄" },
-  { mode: "mobile",  label: "Mobile",  icon: "📱" },
-  { mode: "tablet",  label: "Tablet",  icon: "📲" },
-  { mode: "desktop", label: "Desktop", icon: "🖥️" },
-];
+// ─── Illustrated card (same pattern as 5-question flow) ──────────────────────
 
-const TIER_BADGE: Record<string, { label: string; color: string; emoji: string }> = {
-  free:    { label: "Free",    color: "rgba(255,255,255,0.3)",  emoji: "🌱" },
-  basic:   { label: "Basic",   color: "#4fc3f7",               emoji: "⭐" },
-  premium: { label: "Premium", color: "#8B5CF6",               emoji: "👑" },
-  family:  { label: "Family",  color: "#EC4899",               emoji: "🏡" },
-};
+function IllustratedCard({
+  label, emoji, imageUrl, selected, onClick, dim,
+}: {
+  label: string; emoji: string; imageUrl?: string;
+  selected?: boolean; onClick?: () => void; dim?: boolean;
+}) {
+  const [imgLoaded, setImgLoaded] = useState(false);
 
-function Row({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <button
-      className="flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl text-left transition-colors"
-      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+      onClick={onClick}
+      className="relative overflow-hidden rounded-2xl transition-transform active:scale-[0.97]"
+      style={{ aspectRatio: "4/3", cursor: onClick ? "pointer" : "default", opacity: dim ? 0.45 : 1 }}
     >
-      <span className="text-lg">{icon}</span>
-      <span className="flex-1 text-white/55 text-sm">{label}</span>
-      <span className="text-white/25 text-xs">{value}</span>
-      <span className="text-white/15 text-xs">›</span>
+      {imageUrl && (
+        <img
+          src={imageUrl} alt={label}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.5s ease" }}
+          onLoad={() => setImgLoaded(true)}
+        />
+      )}
+      {/* Gradient placeholder */}
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{
+          background: "radial-gradient(ellipse at 40% 30%, rgba(79,195,247,0.2), rgba(10,12,24,0.95))",
+          opacity: imgLoaded ? 0 : 1,
+          transition: "opacity 0.4s ease",
+          pointerEvents: "none",
+        }}
+      >
+        <span className="text-4xl" style={{ filter: "drop-shadow(0 0 14px rgba(79,195,247,0.7))" }}>{emoji}</span>
+      </div>
+      {/* Cinematic overlay */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.05) 100%)" }} />
+      {/* Selection ring */}
+      <div
+        className="absolute inset-0 rounded-2xl transition-all duration-200"
+        style={selected
+          ? { border: "2px solid #4fc3f7", boxShadow: "inset 0 0 20px rgba(79,195,247,0.25), 0 0 16px rgba(79,195,247,0.35)" }
+          : { border: "1px solid rgba(255,255,255,0.1)" }}
+      />
+      {/* Label */}
+      <div className="absolute bottom-0 left-0 right-0 px-2 pb-2.5 text-center">
+        <span
+          className="text-[11px] font-semibold leading-tight"
+          style={{
+            color: selected ? "#4fc3f7" : "rgba(255,255,255,0.92)",
+            textShadow: "0 1px 8px rgba(0,0,0,1)",
+            display: "block",
+          }}
+        >
+          {label}
+        </span>
+      </div>
     </button>
   );
 }
 
+// ─── Child profile card ────────────────────────────────────────────────────────
+
+const CHILD_PALETTES: [string, string][] = [
+  ["#4fc3f7", "#7c3aed"],
+  ["#f59e0b", "#ec4899"],
+  ["#10b981", "#4fc3f7"],
+  ["#a78bfa", "#f472b6"],
+];
+
+function ChildCard({ name, emoji, ageGroup }: { name: string; emoji: string; ageGroup: string }) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  const [c1, c2] = CHILD_PALETTES[h % CHILD_PALETTES.length];
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl p-4 flex flex-col items-center gap-2"
+      style={{ background: `linear-gradient(145deg, ${c1}18, ${c2}25)`, border: `1px solid ${c1}33` }}
+    >
+      <div
+        className="w-14 h-14 rounded-full flex items-center justify-center text-3xl"
+        style={{
+          background: `linear-gradient(145deg, ${c1}22, ${c2}33)`,
+          border: `2px solid ${c1}55`,
+          boxShadow: `0 0 20px ${c1}33`,
+        }}
+      >
+        {emoji}
+      </div>
+      <span className="text-white text-sm font-semibold">{name}</span>
+      <span
+        className="text-[10px] px-2.5 py-0.5 rounded-full font-bold tracking-widest uppercase"
+        style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}
+      >
+        {ageGroup} yrs
+      </span>
+    </div>
+  );
+}
+
+// ─── Settings row ─────────────────────────────────────────────────────────────
+
+function SettingCard({
+  label, imageUrl, emoji, value,
+}: {
+  label: string; imageUrl?: string; emoji: string; value?: string;
+}) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl flex items-center gap-0"
+      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+    >
+      {/* Left image panel */}
+      <div className="w-16 flex-shrink-0 self-stretch relative overflow-hidden" style={{ minHeight: 56 }}>
+        {imageUrl && (
+          <img
+            src={imageUrl} alt={label}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.5s" }}
+            onLoad={() => setImgLoaded(true)}
+          />
+        )}
+        {(!imageUrl || !imgLoaded) && (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ background: "radial-gradient(ellipse at 40% 40%, rgba(79,195,247,0.2), rgba(10,12,24,0.95))" }}
+          >
+            <span className="text-2xl" style={{ filter: "drop-shadow(0 0 10px rgba(79,195,247,0.6))" }}>{emoji}</span>
+          </div>
+        )}
+        <div className="absolute inset-y-0 right-0 w-6" style={{ background: "linear-gradient(to right, transparent, rgba(10,12,24,0.92))" }} />
+      </div>
+
+      <div className="flex-1 px-3 py-3.5">
+        <p className="text-white/80 text-sm font-medium">{label}</p>
+      </div>
+
+      {value && (
+        <span className="text-white/30 text-xs pr-3 flex-shrink-0">{value}</span>
+      )}
+      <span className="text-white/15 text-sm pr-3 flex-shrink-0">›</span>
+    </div>
+  );
+}
+
+// ─── Profile page ─────────────────────────────────────────────────────────────
+
+const VIEW_MODES: { mode: ViewMode; label: string; emoji: string; key: string }[] = [
+  { mode: "auto",    label: "Auto",    emoji: "✦",  key: "profile-mode-auto" },
+  { mode: "mobile",  label: "Mobile",  emoji: "📱", key: "profile-mode-mobile" },
+  { mode: "tablet",  label: "Tablet",  emoji: "📲", key: "profile-mode-tablet" },
+  { mode: "desktop", label: "Desktop", emoji: "🖥️", key: "profile-mode-desktop" },
+];
+
+const SETTINGS = [
+  { id: "notifications", label: "Notifications", emoji: "🔔", key: "profile-setting-notifications", value: "On" },
+  { id: "nightmode",     label: "Night mode",     emoji: "🌙", key: "profile-setting-nightmode",     value: "Always" },
+  { id: "volume",        label: "Volume",          emoji: "🔊", key: "profile-setting-volume",        value: "80%" },
+];
+
 export default function ProfilePage() {
-  const { t, language, isRTL } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const { mode, setMode } = useViewMode();
   const user = MOCK_USER;
-  const tier = TIER_BADGE[user.subscriptionTier] ?? TIER_BADGE.free;
+  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
+
+  // Browser-side seeder — reuses the same seed-create-images API
+  useEffect(() => {
+    let cancelled = false;
+    async function seedImages() {
+      try {
+        const res = await fetch("/api/admin/seed-create-images");
+        if (!res.ok) return;
+        const { missing, existingImageUrls } = await res.json() as {
+          missing: { key: string; prompt: string }[];
+          existingImageUrls: Record<string, string>;
+        };
+
+        // Load any already-cached profile images
+        const profKeys = new Set([
+          ...VIEW_MODES.map((m) => m.key),
+          ...SETTINGS.map((s) => s.key),
+        ]);
+        const cached: Record<string, string> = {};
+        for (const [k, v] of Object.entries(existingImageUrls)) {
+          if (profKeys.has(k)) cached[k] = v as string;
+        }
+        if (Object.keys(cached).length) setProfileImages((prev) => ({ ...prev, ...cached }));
+
+        // Generate missing profile images
+        const missingProf = (missing ?? []).filter(({ key }: { key: string }) => profKeys.has(key));
+        for (const { key, prompt } of missingProf as { key: string; prompt: string }[]) {
+          if (cancelled) return;
+          try {
+            const encoded = encodeURIComponent(prompt.slice(0, 1500));
+            const seed = Math.floor(Math.random() * 999999);
+            const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=512&height=384&seed=${seed}`;
+            const imgRes = await fetch(url);
+            if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
+            if (cancelled) return;
+            const blob = await imgRes.blob();
+            const cacheRes = await fetch(`/api/admin/seed-create-images?key=${encodeURIComponent(`${key}.jpg`)}`, {
+              method: "POST", body: blob, headers: { "Content-Type": blob.type },
+            });
+            if (cacheRes.ok) {
+              const { imageKey, url: cachedUrl } = await cacheRes.json() as { imageKey: string; url: string };
+              if (imageKey && cachedUrl) setProfileImages((prev) => ({ ...prev, [imageKey]: cachedUrl }));
+            }
+          } catch {
+            // ignore individual failures
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    seedImages();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="min-h-full" style={{ background: "transparent" }} dir={isRTL ? "rtl" : "ltr"}>
-      <div className="px-5 pt-12 pb-6">
+      <div className="px-5 pt-12 pb-10">
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-base font-semibold text-white tracking-wide">{t("profile")}</h1>
           <LanguageToggle />
         </div>
 
-        {/* Avatar & name */}
-        <div className="flex flex-col items-center mb-8">
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-3"
-            style={{ background: "rgba(255,255,255,0.06)", border: "2px solid rgba(79,195,247,0.25)" }}
-          >
-            {user.avatarEmoji}
-          </div>
-          <h2 className="text-white text-xl font-bold">{user.displayName}</h2>
-          <p className="text-white/35 text-sm mt-0.5">{user.email}</p>
-
-          {/* Tier badge */}
-          <div
-            className="flex items-center gap-1.5 mt-3 px-4 py-1.5 rounded-full"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: `1px solid ${tier.color}40`,
-              color: tier.color,
-            }}
-          >
-            <span>{tier.emoji}</span>
-            <span className="text-xs font-semibold capitalize">
-              {user.subscriptionTier === "premium" ? t("premiumBadge") : tier.label}
-            </span>
-          </div>
-        </div>
-
-        {/* Child profiles */}
-        <div className="mb-6">
-          <h3 className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-3">
+        {/* ── Child profiles ─────────────────────────────────────────── */}
+        <div className="mb-7">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
             {t("childProfiles")}
-          </h3>
-          <div className="flex gap-3">
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
             {user.childProfiles.map((child) => (
-              <div
-                key={child.id}
-                className="flex-1 rounded-2xl p-3 flex flex-col items-center gap-2"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
-                >
-                  {child.avatarEmoji}
-                </div>
-                <span className="text-white text-sm font-medium">{child.name}</span>
-                <span
-                  className="text-[10px] px-2 py-0.5 rounded-full"
-                  style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)" }}
-                >
-                  {child.ageGroup} {t("yrs")}
-                </span>
-              </div>
+              <ChildCard key={child.id} name={child.name} emoji={child.avatarEmoji} ageGroup={child.ageGroup} />
             ))}
+            {/* Add child slot */}
+            <button
+              className="relative overflow-hidden rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.97]"
+              style={{
+                aspectRatio: "unset",
+                minHeight: 120,
+                background: "rgba(255,255,255,0.03)",
+                border: "1.5px dashed rgba(255,255,255,0.12)",
+              }}
+            >
+              <span className="text-2xl" style={{ color: "rgba(255,255,255,0.2)" }}>＋</span>
+              <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.25)" }}>Add child</span>
+            </button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mb-6">
-          <h3 className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-3">
-            {t("stats")}
-          </h3>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { value: user.favoriteStoryIds.length, label: t("favorites"), color: "#EC4899" },
-              { value: user.recentlyPlayedIds.length, label: t("played"),    color: "#4fc3f7" },
-              { value: user.childProfiles.length,     label: t("children"),  color: "#8B5CF6" },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-2xl p-3 text-center"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-              >
-                <p className="font-bold text-xl leading-none" style={{ color: stat.color }}>{stat.value}</p>
-                <p className="text-white/30 text-[10px] mt-1">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Layout view mode */}
-        <div className="mb-6">
-          <h3 className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-3">
+        {/* ── Display modes ──────────────────────────────────────────── */}
+        <div className="mb-7">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
             Display
-          </h3>
-          <div className="grid grid-cols-4 gap-2">
-            {VIEW_MODE_OPTIONS.map((opt) => {
-              const isActive = mode === opt.mode;
-              return (
-                <button
-                  key={opt.mode}
-                  onClick={() => setMode(opt.mode)}
-                  className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all active:scale-95"
-                  style={{
-                    background: isActive ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.03)",
-                    border: isActive ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.06)",
-                    boxShadow: isActive ? "0 0 12px rgba(79,195,247,0.15)" : "none",
-                  }}
-                >
-                  <span className="text-lg">{opt.icon}</span>
-                  <span
-                    className="text-[10px] font-semibold"
-                    style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}
-                  >
-                    {opt.label}
-                  </span>
-                </button>
-              );
-            })}
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {VIEW_MODES.map((opt) => (
+              <IllustratedCard
+                key={opt.mode}
+                label={opt.label}
+                emoji={opt.emoji}
+                imageUrl={profileImages[opt.key]}
+                selected={mode === opt.mode}
+                onClick={() => setMode(opt.mode)}
+              />
+            ))}
           </div>
           <p className="text-white/20 text-[10px] mt-2 leading-relaxed">
-            Forces the app layout (navigation, columns, widths) to the selected screen size, regardless of your actual device.
+            Forces the layout to a specific screen size regardless of your device.
           </p>
         </div>
 
-        {/* Settings */}
+        {/* ── Settings ───────────────────────────────────────────────── */}
         <div>
-          <h3 className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
             {t("settings")}
-          </h3>
-          <div className="flex flex-col gap-1.5">
-            <Row icon="🔔" label={t("notifications")} value={t("on")} />
-            <Row icon="🌙" label={t("nightMode")} value={t("always")} />
-            <Row icon="🔊" label={t("volume")} value="80%" />
+          </p>
+          <div className="flex flex-col gap-2">
+            {SETTINGS.map((s) => (
+              <SettingCard
+                key={s.id}
+                label={s.label}
+                emoji={s.emoji}
+                imageUrl={profileImages[s.key]}
+                value={s.value}
+              />
+            ))}
           </div>
         </div>
+
       </div>
     </div>
   );
