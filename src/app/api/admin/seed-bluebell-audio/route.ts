@@ -5,6 +5,12 @@ export const dynamic = "force-dynamic";
 
 const BLUEBELL_VOICE = "Kore"; // soft & gentle feminine — suits a fairy narrator
 
+const LANG_NAMES: Record<string, string> = {
+  en: "English", he: "Hebrew", ar: "Arabic", fr: "French", es: "Spanish",
+  de: "German", it: "Italian", pt: "Portuguese", zh: "Chinese",
+  ja: "Japanese",
+};
+
 // Generic-placeholder scripts (no hero name) per language so audio can be
 // cached once and reused across all sessions for that language.
 const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
@@ -118,15 +124,20 @@ function pcmToWav(pcmBase64: string): Buffer {
   return wav;
 }
 
-async function generateTTS(apiKey: string, text: string): Promise<Buffer> {
+async function generateTTS(apiKey: string, text: string, lang: string): Promise<Buffer> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-  const body = {
+  const langName = LANG_NAMES[lang] ?? lang;
+  const systemInstruction = lang !== "en"
+    ? { parts: [{ text: `Speak in ${langName}.` }] }
+    : undefined;
+  const basePayload = {
     contents: [{ role: "user", parts: [{ text }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: BLUEBELL_VOICE } } },
     },
   };
+  const body = systemInstruction ? { systemInstruction, ...basePayload } : basePayload;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();
@@ -196,7 +207,7 @@ export async function POST(req: NextRequest) {
   await ensureBuckets();
 
   try {
-    const wavBuf = await generateTTS(geminiKey, scripts[key]);
+    const wavBuf = await generateTTS(geminiKey, scripts[key], lang);
     const { error } = await supabase.storage
       .from("audio")
       .upload(storageKey(lang, key), wavBuf, { contentType: "audio/wav", upsert: true });
