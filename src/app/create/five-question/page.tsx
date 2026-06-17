@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
 import { BLUEBELL, MOOD_LABELS } from "@/constants/bluebellScripts";
 import { WORLD_OPTIONS } from "@/constants/worldOptions";
 import {
@@ -750,6 +751,7 @@ const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", 
 
 export default function FiveQuestionPage() {
   const router = useRouter();
+  const { language } = useLanguage();
 
   const [step, setStep]                   = useState<Step>("q1");
   const [answers, setAnswers]             = useState<Answers>(INITIAL_ANSWERS);
@@ -774,12 +776,14 @@ export default function FiveQuestionPage() {
   }, []);
 
   // Seed Bluebell question audio: generate via server-side Gemini TTS and cache
-  // in Supabase. Generates q1 first so it's ready as soon as the flow opens.
+  // in Supabase. Re-runs whenever the UI language changes so the correct
+  // language's audio is fetched/generated. Generates q1 first so it's ready
+  // as soon as the flow opens.
   useEffect(() => {
     let cancelled = false;
     async function seedAudio() {
       try {
-        const res = await fetch("/api/admin/seed-bluebell-audio");
+        const res = await fetch(`/api/admin/seed-bluebell-audio?lang=${language}`);
         if (!res.ok) return;
         const { missing, existingAudioUrls } = await res.json() as {
           missing: string[];
@@ -797,7 +801,7 @@ export default function FiveQuestionPage() {
         for (const key of ordered) {
           if (cancelled) return;
           try {
-            const genRes = await fetch(`/api/admin/seed-bluebell-audio?key=${key}`, { method: "POST" });
+            const genRes = await fetch(`/api/admin/seed-bluebell-audio?lang=${language}&key=${key}`, { method: "POST" });
             if (genRes.ok) {
               const { url } = await genRes.json() as { ok: boolean; key: string; url: string };
               if (url) setQuestionAudios((prev) => ({ ...prev, [key]: url }));
@@ -810,9 +814,10 @@ export default function FiveQuestionPage() {
         // ignore silently
       }
     }
+    setQuestionAudios({});
     seedAudio();
     return () => { cancelled = true; };
-  }, []);
+  }, [language]);
 
   // Browser-side image seeder: generates option card images via Pollinations and caches
   // them in Supabase (story-options bucket). Images load progressively as they're cached.
