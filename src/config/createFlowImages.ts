@@ -53,7 +53,18 @@ export const MOOD_IMAGE_PROMPTS: Record<string, string> = {
     "sleepy child tucked in cozy bed, moonlight through window, stars and moon outside, dream clouds forming, teddy bear, children's book illustration, soft blues and purples, peaceful",
 };
 
-export type CreateOptionType = "world" | "companion" | "engine" | "mood";
+export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood";
+
+export const HERO_IMAGE_PROMPTS: Record<string, string> = {
+  own:
+    "happy child looking at their glowing reflection in a magical mirror, stars and sparkles, children's book digital illustration, warm golden light, joyful and proud",
+  magical:
+    "enchanted glowing name written in floating stardust and light, magical runes and sparkles swirling, children's book illustration, deep purple and gold tones, mystical",
+  stranger:
+    "brave young adventurer with a backpack and map standing on a hilltop, epic landscape behind, children's book illustration, warm amber sunset, heroic and curious",
+  surprise:
+    "magical surprise box bursting open with stars, confetti, and glowing light, children's book illustration, bright vivid colors, sense of wonder and delight",
+};
 
 export interface CreateOptionSpec {
   type: CreateOptionType;
@@ -63,6 +74,8 @@ export interface CreateOptionSpec {
 
 export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
   const specs: CreateOptionSpec[] = [];
+  for (const [id, prompt] of Object.entries(HERO_IMAGE_PROMPTS))
+    specs.push({ type: "hero", id, prompt });
   for (const [id, prompt] of Object.entries(WORLD_IMAGE_PROMPTS))
     specs.push({ type: "world", id, prompt });
   for (const [id, prompt] of Object.entries(COMPANION_IMAGE_PROMPTS))

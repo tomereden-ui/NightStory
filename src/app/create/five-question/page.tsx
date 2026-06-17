@@ -257,7 +257,7 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
 
 type Q1Mode = null | "own" | "magical" | "stranger" | "surprise";
 
-function Q1View({ initialHero, onNext, onBack }: { initialHero: string; onNext: (hero: string) => void; onBack: () => void }) {
+function Q1View({ initialHero, onNext, onBack, optionImages }: { initialHero: string; onNext: (hero: string) => void; onBack: () => void; optionImages: Record<string, string> }) {
   const [mode, setMode] = useState<Q1Mode>(null);
   const [textVal, setTextVal] = useState(initialHero);
   const [magicChip, setMagicChip] = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
@@ -292,12 +292,12 @@ function Q1View({ initialHero, onNext, onBack }: { initialHero: string; onNext: 
     <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q1}>
       <div className="flex flex-col gap-3">
         {mode === null && (
-          <>
-            <OptionPill label="Your own name" emoji="👤" onClick={() => setMode("own")} />
-            <OptionPill label="A magical name" emoji="✨" onClick={() => setMode("magical")} />
-            <OptionPill label="A brave stranger" emoji="🗺️" onClick={() => setMode("stranger")} />
-            <OptionPill label="Surprise me!" emoji="🎲" onClick={handleSurprise} />
-          </>
+          <div className="grid grid-cols-2 gap-2.5">
+            <IllustratedCard label="Your own name"   emoji="👤" imageUrl={optionImages["hero-own"]}      onClick={() => setMode("own")} />
+            <IllustratedCard label="A magical name"  emoji="✨" imageUrl={optionImages["hero-magical"]}  onClick={() => setMode("magical")} />
+            <IllustratedCard label="A brave stranger" emoji="🗺️" imageUrl={optionImages["hero-stranger"]} onClick={() => setMode("stranger")} />
+            <IllustratedCard label="Surprise me!"    emoji="🎲" imageUrl={optionImages["hero-surprise"]} onClick={handleSurprise} />
+          </div>
         )}
         {mode === "own" && (
           <>
@@ -910,7 +910,7 @@ export default function FiveQuestionPage() {
 
   // ─── Step routing ───────────────────────────────────────────────────────────
 
-  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={() => router.push("/create")} />;
+  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={() => router.push("/create")} optionImages={optionImages} />;
   if (step === "q2") return <Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} optionImages={optionImages} />;
   if (step === "q3") return <Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} optionImages={optionImages} />;
   if (step === "q4") return <Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} optionImages={optionImages} />;
