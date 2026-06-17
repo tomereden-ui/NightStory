@@ -123,6 +123,77 @@ function OptionPill({ label, emoji, selected, onClick }: { label: string; emoji?
   );
 }
 
+// ─── IllustratedCard: AI image card for world/companion/engine/mood options ────
+
+function IllustratedCard({
+  label, emoji, imageUrl, selected, onClick, badge,
+}: {
+  label: string; emoji: string; imageUrl?: string;
+  selected?: boolean; onClick: () => void; badge?: React.ReactNode;
+}) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative overflow-hidden rounded-2xl active:scale-[0.97] transition-transform"
+      style={{ aspectRatio: "4/3" }}
+    >
+      {/* AI illustration */}
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={label}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.5s ease" }}
+          onLoad={() => setImgLoaded(true)}
+        />
+      )}
+      {/* Gradient placeholder while loading / if no image yet */}
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{
+          background: "radial-gradient(ellipse at 40% 30%, rgba(79,195,247,0.22), rgba(10,12,24,0.95))",
+          opacity: imgLoaded ? 0 : 1,
+          transition: "opacity 0.4s ease",
+          pointerEvents: "none",
+        }}
+      >
+        <span className="text-4xl" style={{ filter: "drop-shadow(0 0 14px rgba(79,195,247,0.7))" }}>{emoji}</span>
+      </div>
+
+      {/* Cinematic gradient overlay — always present for text legibility */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.05) 100%)" }}
+      />
+
+      {/* Selection ring */}
+      <div
+        className="absolute inset-0 rounded-2xl transition-all duration-200"
+        style={selected
+          ? { border: "2px solid #4fc3f7", boxShadow: "inset 0 0 20px rgba(79,195,247,0.25), 0 0 16px rgba(79,195,247,0.35)" }
+          : { border: "1px solid rgba(255,255,255,0.1)" }}
+      />
+
+      {/* Label */}
+      <div className="absolute bottom-0 left-0 right-0 px-2 pb-2.5 text-center">
+        {badge}
+        <span
+          className="text-[11px] font-semibold leading-tight"
+          style={{
+            color: selected ? "#4fc3f7" : "rgba(255,255,255,0.92)",
+            textShadow: "0 1px 8px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,0.8)",
+            display: "block",
+          }}
+        >
+          {label}
+        </span>
+      </div>
+    </button>
+  );
+}
+
 function StoryInput({ value, onChange, placeholder, maxSoftLimit, autoFocus, onSubmit }: {
   value: string; onChange: (v: string) => void; placeholder: string;
   maxSoftLimit?: number; autoFocus?: boolean; onSubmit?: () => void;
@@ -279,7 +350,7 @@ function Q1View({ initialHero, onNext, onBack }: { initialHero: string; onNext: 
 
 // ─── Q2 — Story world ─────────────────────────────────────────────────────────
 
-function Q2View({ heroName, initialWorld, onNext, onBack }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void }) {
+function Q2View({ heroName, initialWorld, onNext, onBack, optionImages }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; optionImages: Record<string, string> }) {
   const [selected, setSelected] = useState(initialWorld);
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
@@ -302,14 +373,14 @@ function Q2View({ heroName, initialWorld, onNext, onBack }: { heroName: string; 
         {WORLD_OPTIONS.map((w) => {
           const isSel = selected === w.label;
           return (
-            <button key={w.id} onClick={() => setSelected(w.label)}
-              className="flex flex-col items-center gap-2 py-4 px-2 rounded-2xl transition-all active:scale-[0.97]"
-              style={isSel
-                ? { background: "rgba(79,195,247,0.12)", border: "1.5px solid rgba(79,195,247,0.5)" }
-                : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}>
-              <span className="text-2xl">{w.emoji}</span>
-              <span className="text-xs font-medium text-center leading-tight" style={{ color: isSel ? "#4fc3f7" : "rgba(255,255,255,0.65)" }}>{w.label}</span>
-            </button>
+            <IllustratedCard
+              key={w.id}
+              label={w.label}
+              emoji={w.emoji}
+              imageUrl={optionImages[`world-${w.id}`]}
+              selected={isSel}
+              onClick={() => setSelected(w.label)}
+            />
           );
         })}
       </div>
@@ -325,7 +396,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack }: { heroName: string; 
 
 type Q3Mode = null | "friend" | "pet" | "creature" | "family";
 
-function Q3View({ heroName, worldName, initialCompanion, onNext, onBack }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void }) {
+function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionImages }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; optionImages: Record<string, string> }) {
   const [mode, setMode] = useState<Q3Mode>(null);
   const [textVal, setTextVal] = useState(initialCompanion);
   const [transitioning, setTransitioning] = useState(false);
@@ -361,7 +432,17 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack }: { her
       <div className="flex flex-col gap-3">
         {mode === null && (
           <>
-            {COMPANION_MODES.map((m) => <OptionPill key={m.id} label={m.label} emoji={m.emoji} onClick={() => setMode(m.id)} />)}
+            <div className="grid grid-cols-2 gap-2.5 mb-1">
+              {COMPANION_MODES.map((m) => (
+                <IllustratedCard
+                  key={m.id}
+                  label={m.label}
+                  emoji={m.emoji}
+                  imageUrl={optionImages[`companion-${m.id}`]}
+                  onClick={() => setMode(m.id)}
+                />
+              ))}
+            </div>
             <OptionPill label="Surprise me!" emoji="🎲" onClick={() => { setTextVal(pickRandom(SURPRISE_COMPANIONS)); setMode("creature"); }} />
             <p className="text-xs text-center mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
           </>
@@ -385,7 +466,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack }: { her
 type Q4Mode = null | "funny" | "spooky" | "weird" | "delicious";
 type Q4Phase = "input" | "reaction1" | "reaction2";
 
-function Q4View({ heroName, companionName, initialEngine, onNext, onBack }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void }) {
+function Q4View({ heroName, companionName, initialEngine, onNext, onBack, optionImages }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; optionImages: Record<string, string> }) {
   const [mode, setMode] = useState<Q4Mode>(null);
   const [textVal, setTextVal] = useState(initialEngine);
   const [phase, setPhase] = useState<Q4Phase>("input");
@@ -429,7 +510,17 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack }: { he
       <div className="flex flex-col gap-3">
         {mode === null && (
           <>
-            {Q4_MODES.map((m) => <OptionPill key={m.id} label={m.label} emoji={m.emoji} onClick={() => setMode(m.id)} />)}
+            <div className="grid grid-cols-2 gap-2.5 mb-1">
+              {Q4_MODES.map((m) => (
+                <IllustratedCard
+                  key={m.id}
+                  label={m.label.replace(/^Something /, "")}
+                  emoji={m.emoji}
+                  imageUrl={optionImages[`engine-${m.id}`]}
+                  onClick={() => setMode(m.id)}
+                />
+              ))}
+            </div>
             <OptionPill label="Surprise me!" emoji="🎲" onClick={() => { setTextVal(pickRandom(SURPRISE_ENGINES)); setMode("funny"); }} />
           </>
         )}
@@ -449,7 +540,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack }: { he
 
 // ─── Q5 — Resolution mood ─────────────────────────────────────────────────────
 
-function Q5View({ heroName, engineText, onNext, onBack }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void }) {
+function Q5View({ heroName, engineText, onNext, onBack, optionImages }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; optionImages: Record<string, string> }) {
   const MOODS: { id: ResolutionMood; label: string; emoji: string; isBedtime?: boolean }[] = [
     { id: "brave",     label: "Super brave",          emoji: "🦁" },
     { id: "laughing",  label: "Laughing so much",      emoji: "😂" },
@@ -459,20 +550,19 @@ function Q5View({ heroName, engineText, onNext, onBack }: { heroName: string; en
 
   return (
     <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q5(engineText, heroName)}>
-      <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         {MOODS.map((m) => (
-          <button key={m.id} onClick={() => onNext(m.id)}
-            className="w-full text-left px-4 py-4 rounded-2xl text-sm font-medium transition-all active:scale-[0.98] flex items-center gap-3"
-            style={m.isBedtime
-              ? { background: "rgba(251,191,36,0.06)", border: "1.5px solid rgba(251,191,36,0.35)", color: "rgba(255,255,255,0.8)" }
-              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.75)" }}>
-            <span className="text-xl">{m.emoji}</span>
-            <span className="flex-1">{m.label}</span>
-            {m.isBedtime && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                style={{ background: "rgba(251,191,36,0.15)", color: "#FBB824" }}>bedtime ending</span>
-            )}
-          </button>
+          <IllustratedCard
+            key={m.id}
+            label={m.label}
+            emoji={m.emoji}
+            imageUrl={optionImages[`mood-${m.id}`]}
+            onClick={() => onNext(m.id)}
+            badge={m.isBedtime
+              ? <span className="block text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
+              : undefined
+            }
+          />
         ))}
       </div>
     </QuestionShell>
@@ -662,9 +752,59 @@ export default function FiveQuestionPage() {
   const [coverPrompt, setCoverPrompt]     = useState("");
   const [isFetchingCover, setIsFetchingCover] = useState(false);
   const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
+  const [optionImages, setOptionImages] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchVoicePool().then(setVoicePool);
+  }, []);
+
+  // Browser-side image seeder: generates option card images via Pollinations and caches
+  // them in Supabase (story-options bucket). Images load progressively as they're cached.
+  useEffect(() => {
+    let cancelled = false;
+    async function seedImages() {
+      try {
+        const res = await fetch("/api/admin/seed-create-images");
+        if (!res.ok) return;
+        const { missing, existingImageUrls } = await res.json() as {
+          missing: { key: string; prompt: string }[];
+          existingImageUrls: Record<string, string>;
+        };
+
+        if (existingImageUrls && Object.keys(existingImageUrls).length > 0) {
+          setOptionImages((prev) => ({ ...prev, ...existingImageUrls }));
+        }
+
+        if (!missing?.length) return;
+
+        for (const { key, prompt } of missing) {
+          if (cancelled) return;
+          if (!prompt) continue;
+          try {
+            const encoded = encodeURIComponent(prompt.slice(0, 1500));
+            const seed = Math.floor(Math.random() * 999999);
+            const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=512&height=384&seed=${seed}`;
+            const imgRes = await fetch(url);
+            if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
+            if (cancelled) return;
+            const blob = await imgRes.blob();
+            const cacheRes = await fetch(`/api/admin/seed-create-images?key=${encodeURIComponent(key)}`, {
+              method: "POST", body: blob, headers: { "Content-Type": blob.type },
+            });
+            if (cacheRes.ok) {
+              const { imageKey, url: cachedUrl } = await cacheRes.json() as { ok: boolean; imageKey: string; url: string };
+              if (imageKey && cachedUrl) setOptionImages((prev) => ({ ...prev, [imageKey]: cachedUrl }));
+            }
+          } catch {
+            // ignore individual failures — will retry on next page visit
+          }
+        }
+      } catch {
+        // ignore seed failures silently
+      }
+    }
+    seedImages();
+    return () => { cancelled = true; };
   }, []);
 
   const setAnswer = <K extends keyof Answers>(key: K, value: Answers[K]) =>
@@ -771,10 +911,10 @@ export default function FiveQuestionPage() {
   // ─── Step routing ───────────────────────────────────────────────────────────
 
   if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={() => router.push("/create")} />;
-  if (step === "q2") return <Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} />;
-  if (step === "q3") return <Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} />;
-  if (step === "q4") return <Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} />;
-  if (step === "q5") return <Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} />;
+  if (step === "q2") return <Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} optionImages={optionImages} />;
+  if (step === "q3") return <Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} optionImages={optionImages} />;
+  if (step === "q4") return <Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} optionImages={optionImages} />;
+  if (step === "q5") return <Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} optionImages={optionImages} />;
 
   if (step === "summary") return (
     <>
