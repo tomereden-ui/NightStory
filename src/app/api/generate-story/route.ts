@@ -132,13 +132,14 @@ export async function POST(req: NextRequest) {
     });
 
     // Gemini occasionally stalls or errors transiently — retry once before
-    // giving up, rather than making the user wait a minute for a hard failure.
+    // giving up. Timeout is generous (120 s) because 2.5-flash with thinking
+    // can take 60–90 s for a longer story on the first cold request.
     let result;
     try {
-      result = await model.generateContent(prompt, { timeout: 30_000 });
+      result = await model.generateContent(prompt, { timeout: 120_000 });
     } catch (err) {
       console.warn("[generate-story] First Gemini attempt failed, retrying once:", err);
-      result = await model.generateContent(prompt, { timeout: 30_000 });
+      result = await model.generateContent(prompt, { timeout: 120_000 });
     }
     const text = result.response.text().trim();
 
