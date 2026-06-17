@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
@@ -82,13 +82,11 @@ export default function LibraryPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    return entries.filter((e) => {
-      const matchesSearch = !q || e.title.toLowerCase().includes(q) || e.summary?.toLowerCase().includes(q);
-      return matchesSearch && matchesDuration(e.durationSeconds, durationFilter);
-    });
-  }, [entries, search, durationFilter]);
+  const q = search.toLowerCase().trim();
+  const filtered = entries.filter((e) => {
+    const matchesSearch = !q || e.title.toLowerCase().includes(q) || (e.summary ?? "").toLowerCase().includes(q);
+    return matchesSearch && matchesDuration(e.durationSeconds, durationFilter);
+  });
 
   const handleDeleteConfirm = async (id: string) => {
     setDeletingId(id);
@@ -141,40 +139,38 @@ export default function LibraryPage() {
           <div className="w-9" />
         </div>
 
-        {/* Search bar */}
-        {entries.length > 0 && (
-          <div className="relative mb-3">
-            <span
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
-              style={{ color: "rgba(255,255,255,0.25)" }}
+        {/* Search bar — always mounted so typing is never interrupted */}
+        <div className="relative mb-3" style={{ display: entries.length > 0 || search ? "block" : "none" }}>
+          <span
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
+            style={{ color: "rgba(255,255,255,0.25)" }}
+          >
+            🔍
+          </span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search stories…"
+            className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm text-white placeholder-white/20 outline-none"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.09)",
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors text-base leading-none"
             >
-              🔍
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search stories…"
-              className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm text-white placeholder-white/20 outline-none"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.09)",
-              }}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors text-base leading-none"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        )}
+              ×
+            </button>
+          )}
+        </div>
 
         {/* Duration filter chips */}
         {entries.length > 0 && (
-          <div className="flex gap-2 mb-5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
             {DURATION_FILTERS.map(({ key, label, icon }) => {
               const active = durationFilter === key;
               return (
