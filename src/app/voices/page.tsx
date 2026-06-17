@@ -731,6 +731,41 @@ export default function VoicesPage() {
     setMounted(true);
   }, []);
 
+  // Seed missing voice avatars from the browser (server IP is blocked by Pollinations;
+  // browser generates images client-side and POSTs the blobs to be cached in Supabase).
+  useEffect(() => {
+    let cancelled = false;
+    async function seedAvatars() {
+      try {
+        const res = await fetch("/api/admin/seed-avatars");
+        if (!res.ok) return;
+        const { missing } = await res.json() as { missing: { id: string; prompt: string }[] };
+        if (!missing?.length) return;
+
+        for (const { id, prompt } of missing) {
+          if (cancelled) return;
+          if (!prompt) continue;
+          try {
+            const encoded = encodeURIComponent(prompt.slice(0, 1500));
+            const seed = Math.floor(Math.random() * 999999);
+            const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=384&height=384&seed=${seed}`;
+            const imgRes = await fetch(url);
+            if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
+            if (cancelled) return;
+            const blob = await imgRes.blob();
+            await fetch(`/api/admin/seed-avatars?voiceId=${id}`, { method: "POST", body: blob, headers: { "Content-Type": blob.type } });
+          } catch {
+            // ignore individual failures — next page visit will retry
+          }
+        }
+      } catch {
+        // ignore seed failures silently
+      }
+    }
+    seedAvatars();
+    return () => { cancelled = true; };
+  }, []);
+
   // Load cached voice samples generated in the Test lab
   useEffect(() => {
     fetch("/api/voice-samples")
