@@ -169,7 +169,7 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    const BATCH_SIZE = 1;
+    const BATCH_SIZE = 3;
 
     for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += BATCH_SIZE) {
       const batch = dialogueTracks.slice(batchStart, batchStart + BATCH_SIZE);
@@ -195,8 +195,6 @@ async function runProduction(
             writeSilence(500, path.join(jobTmp, `${track.id}.wav`));
           } else {
             const persona = profile?.persona;
-            // Gemini TTS free tier: ~10 RPM. Pause between tracks to avoid 429s.
-            if (!useELForChar && dialogueDone > 0) await new Promise((r) => setTimeout(r, 4000));
             try {
               await synthesizeLine(line, voice, ttsKey, outPath, persona, useELForChar, profile?.stability, profile?.style, scriptLanguage);
             } catch (err) {
