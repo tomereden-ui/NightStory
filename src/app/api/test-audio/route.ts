@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { synthesizeLine } from "@/lib/services/ttsService";
 import { generateSfx, writeSilence } from "@/lib/services/sfxService";
+import { synthesizeCloudTts } from "@/lib/services/cloudTtsService";
 
 const OUT_DIR = path.join(process.cwd(), "public", "output");
 
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
   }
 
-  let body: { type: "tts" | "sfx"; text: string; provider?: "gemini" | "el"; voice?: string; voiceStyle?: string };
+  let body: { type: "tts" | "sfx"; text: string; provider?: "gemini" | "el" | "gcloud"; voice?: string; voiceStyle?: string };
   try {
     body = await req.json();
   } catch {
@@ -27,6 +28,24 @@ export async function POST(req: NextRequest) {
   const id = crypto.randomUUID().slice(0, 8);
 
   if (body.type === "tts") {
+    // ── Google Cloud TTS ──────────────────────────────────────────────────────
+    if (body.provider === "gcloud") {
+      const cloudKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
+      if (!cloudKey) {
+        return NextResponse.json({ error: "GOOGLE_CLOUD_TTS_API_KEY not configured. Add it to .env.local." }, { status: 500 });
+      }
+      const voice = body.voice?.trim() || "en-US-Neural2-D";
+      const outPath = path.join(OUT_DIR, `test_tts_${id}.mp3`);
+      try {
+        await synthesizeCloudTts(body.text.trim(), voice, cloudKey, outPath);
+      } catch (err) {
+        console.warn("[Cloud TTS]", err);
+        return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 502 });
+      }
+      return NextResponse.json({ audioUrl: `/output/test_tts_${id}.mp3` });
+    }
+
+    // ── ElevenLabs / Gemini TTS ───────────────────────────────────────────────
     const useEL = body.provider === "el";
     const elevenKey = process.env.ELEVENLABS_API_KEY ?? null;
 
@@ -48,7 +67,6 @@ export async function POST(req: NextRequest) {
       console.log("[Gemini TTS] text sent to Gemini →", JSON.stringify(rawText));
     }
 
-    // Performance tag prefix carries style hints into the line
     const line = body.voiceStyle?.trim()
       ? `[${body.voiceStyle.trim()}] ${rawText}`
       : rawText;

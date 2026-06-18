@@ -3,7 +3,18 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
 type Mode = "tts" | "sfx";
-type TtsProvider = "gemini" | "el" | "family";
+type TtsProvider = "gemini" | "el" | "family" | "gcloud";
+
+const CLOUD_TTS_VOICES = [
+  { id: "en-US-Neural2-D", label: "Neural2 · D", lang: "EN", gender: "M" },
+  { id: "en-US-Neural2-F", label: "Neural2 · F", lang: "EN", gender: "F" },
+  { id: "en-US-Neural2-A", label: "Neural2 · A", lang: "EN", gender: "F" },
+  { id: "en-US-Neural2-J", label: "Neural2 · J", lang: "EN", gender: "M" },
+  { id: "he-IL-Neural2-A", label: "Neural2 · A", lang: "HE", gender: "F" },
+  { id: "he-IL-Neural2-B", label: "Neural2 · B", lang: "HE", gender: "M" },
+  { id: "he-IL-Neural2-C", label: "Neural2 · C", lang: "HE", gender: "F" },
+  { id: "he-IL-Neural2-D", label: "Neural2 · D", lang: "HE", gender: "M" },
+];
 
 interface FamilyVoice {
   id: string;
@@ -381,6 +392,7 @@ export default function TestPage() {
   const [geminiVoice, setGeminiVoice]   = useState("Kore");
   const [elVoices, setElVoices]         = useState(EL_VOICES_FALLBACK);
   const [elVoiceId, setElVoiceId]       = useState(EL_VOICES_FALLBACK[0].id);
+  const [cloudVoiceId, setCloudVoiceId] = useState("en-US-Neural2-D");
   const [voiceStyle, setVoiceStyle] = useState("");
 
   // Family voices
@@ -469,6 +481,9 @@ export default function TestPage() {
             voiceStyle: voiceStyle || undefined,
           };
           voiceName = fv.name;
+        } else if (ttsProvider === "gcloud") {
+          ttsExtras = { provider: "gcloud", voice: cloudVoiceId };
+          voiceName = CLOUD_TTS_VOICES.find((v) => v.id === cloudVoiceId)?.label ?? cloudVoiceId;
         } else {
           ttsExtras = {
             provider:   ttsProvider,
@@ -501,7 +516,7 @@ export default function TestPage() {
     } finally {
       setLoading(false);
     }
-  }, [mode, currentText, ttsProvider, geminiVoice, elVoiceId, voiceStyle, familyVoices, selectedFamilyId]);
+  }, [mode, currentText, ttsProvider, geminiVoice, elVoiceId, cloudVoiceId, voiceStyle, familyVoices, selectedFamilyId]);
 
   const updateClip = useCallback((id: string, updates: Partial<MixClip>) => {
     setClips((prev) => prev.map((c) => c.id === id ? { ...c, ...updates } : c));
@@ -598,13 +613,14 @@ export default function TestPage() {
             <div>
               <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Model</p>
               <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                {(["gemini", "el", "family"] as TtsProvider[]).map((p) => {
+                {(["gemini", "el", "gcloud", "family"] as TtsProvider[]).map((p) => {
                   const colors: Record<TtsProvider, { bg: string; color: string; border: string }> = {
                     gemini: { bg: "rgba(79,195,247,0.12)",  color: "#4fc3f7", border: "rgba(79,195,247,0.25)"  },
                     el:     { bg: "rgba(245,158,11,0.12)", color: "#F59E0B", border: "rgba(245,158,11,0.25)" },
+                    gcloud: { bg: "rgba(52,168,83,0.12)",  color: "#34A853", border: "rgba(52,168,83,0.25)"  },
                     family: { bg: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "rgba(139,92,246,0.25)" },
                   };
-                  const labels: Record<TtsProvider, string> = { gemini: "✦ Gemini", el: "⚡ ElevenLabs", family: "👨‍👩‍👧 My Family" };
+                  const labels: Record<TtsProvider, string> = { gemini: "✦ Gemini", el: "⚡ ElevenLabs", gcloud: "☁ Google", family: "👨‍👩‍👧 My Family" };
                   return (
                     <button key={p}
                       onClick={() => setTtsProvider(p)}
@@ -701,6 +717,35 @@ export default function TestPage() {
               </>
             )}
 
+            {/* Google Cloud TTS voice grid */}
+            {ttsProvider === "gcloud" && (
+              <>
+                <div>
+                  <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {CLOUD_TTS_VOICES.map((v) => {
+                      const active = cloudVoiceId === v.id;
+                      return (
+                        <button key={v.id}
+                          onClick={() => setCloudVoiceId(v.id)}
+                          className="px-3 py-2 rounded-xl text-left transition-all"
+                          style={{
+                            background: active ? "rgba(52,168,83,0.1)" : "rgba(255,255,255,0.03)",
+                            border: `1px solid ${active ? "rgba(52,168,83,0.35)" : "rgba(255,255,255,0.07)"}`,
+                          }}>
+                          <p className="text-[11px] font-semibold leading-tight" style={{ color: active ? "#34A853" : "rgba(255,255,255,0.7)" }}>{v.label}</p>
+                          <p className="text-[9px] mt-0.5" style={{ color: active ? "rgba(52,168,83,0.6)" : "rgba(255,255,255,0.25)" }}>{v.lang} · {v.gender === "M" ? "Male" : "Female"}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <p className="text-white/20 text-[10px] -mt-1">
+                  Requires <span style={{ color: "rgba(52,168,83,0.5)" }}>GOOGLE_CLOUD_TTS_API_KEY</span> in .env.local
+                </p>
+              </>
+            )}
+
             {/* My Family voice grid */}
             {ttsProvider === "family" && (
               <div>
@@ -735,8 +780,8 @@ export default function TestPage() {
 
             {/* Voice style — shared by all providers */}
             {(() => {
-              const accent = ttsProvider === "gemini" ? "#4fc3f7" : ttsProvider === "family" ? "#a78bfa" : "#F59E0B";
-              const focusColor = ttsProvider === "gemini" ? "rgba(79,195,247,0.4)" : ttsProvider === "family" ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.4)";
+              const accent = ttsProvider === "gemini" ? "#4fc3f7" : ttsProvider === "family" ? "#a78bfa" : ttsProvider === "gcloud" ? "#34A853" : "#F59E0B";
+              const focusColor = ttsProvider === "gemini" ? "rgba(79,195,247,0.4)" : ttsProvider === "family" ? "rgba(139,92,246,0.4)" : ttsProvider === "gcloud" ? "rgba(52,168,83,0.4)" : "rgba(245,158,11,0.4)";
               return (
                 <div>
                   <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">
