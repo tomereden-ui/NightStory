@@ -169,10 +169,11 @@ async function synthesizeGemini(
     const rawBuf = Buffer.from(inlineData.data, "base64");
     console.log(`[${ts()}][Gemini TTS] mimeType: ${mime}, bytes: ${rawBuf.length}`);
 
-    const isPcm  = mime.includes("L16") || mime.includes("pcm");
-    const isMp3  = mime.includes("mp3") || mime.includes("mpeg");
-    const isOgg  = mime.includes("ogg") || mime.includes("opus");
-    const isWav  = mime.includes("wav");
+    const lmime = mime.toLowerCase();
+    const isPcm  = lmime.includes("l16") || lmime.includes("pcm");
+    const isMp3  = lmime.includes("mp3") || lmime.includes("mpeg");
+    const isOgg  = lmime.includes("ogg") || lmime.includes("opus");
+    const isWav  = lmime.includes("wav");
 
     if (isPcm) {
       // Parse sample rate from mime like "audio/L16;rate=24000"
