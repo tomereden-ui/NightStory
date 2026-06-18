@@ -73,8 +73,10 @@ export async function POST(req: NextRequest) {
 
     const ext = useEL ? "mp3" : "wav";
     const outPath = path.join(OUT_DIR, `test_tts_${id}.${ext}`);
+    let geminiMime = "";
     try {
-      await synthesizeLine(line, voice, apiKey, outPath, undefined, useEL);
+      const result = await synthesizeLine(line, voice, apiKey, outPath, undefined, useEL);
+      geminiMime = result.mimeType ?? "";
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.warn("[test-audio TTS]", msg);
@@ -83,10 +85,13 @@ export async function POST(req: NextRequest) {
     // Gemini may return MP3/OGG — check which file was actually written
     if (!useEL) {
       for (const e of ["mp3", "ogg", "wav"] as const) {
-        if (fs.existsSync(path.join(OUT_DIR, `test_tts_${id}.${e}`))) {
-          return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${e}` });
+        const p = path.join(OUT_DIR, `test_tts_${id}.${e}`);
+        if (fs.existsSync(p)) {
+          const bytes = fs.statSync(p).size;
+          return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${e}`, debug: { mimeType: geminiMime, bytes, ext: e } });
         }
       }
+      return NextResponse.json({ error: `No audio file written. Gemini mimeType was: "${geminiMime}"` }, { status: 502 });
     }
     return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${ext}` });
   }

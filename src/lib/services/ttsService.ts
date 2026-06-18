@@ -109,7 +109,7 @@ async function synthesizeGemini(
   systemInstruction?: string,
   language?: string,
   opts?: GeminiTTSOptions,
-): Promise<void> {
+): Promise<{ mimeType: string }> {
   const maxAttempts = opts?.maxAttempts ?? 5;
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const url =
@@ -198,7 +198,7 @@ async function synthesizeGemini(
       else if (isWavMagic) fs.writeFileSync(outputPath, rawBuf);
       else fs.writeFileSync(outputPath.replace(/\.wav$/i, ".bin"), rawBuf);
     }
-    return;
+    return { mimeType: mime };
   }
   throw new Error(lastError || "Gemini TTS failed");
 }
@@ -216,17 +216,15 @@ export async function synthesizeLine(
   style?: number,
   language?: string,
   geminiOpts?: GeminiTTSOptions,
-): Promise<void> {
-  // ElevenLabs needs tags stripped — it doesn't understand [excited] etc.
+): Promise<{ mimeType?: string }> {
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
   if (useElevenLabs) {
     console.log(`[${ts()}][EL TTS] text →`, JSON.stringify(spokenText || line));
-    return synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language);
+    await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language);
+    return {};
   }
 
-  // Gemini 3.1 understands inline [tags] as audio tags — pass line as-is.
-  // Persona sets overall character voice via system instruction.
   console.log(`[${ts()}][Gemini TTS] text →`, JSON.stringify(line));
   return synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts);
 }
