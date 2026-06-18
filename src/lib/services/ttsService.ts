@@ -94,6 +94,11 @@ const LANG_NAMES: Record<string, string> = {
 
 // ── Gemini TTS fallback ───────────────────────────────────────────────────────
 
+interface GeminiTTSOptions {
+  maxAttempts?: number;       // per payload; default 5
+  perAttemptTimeoutMs?: number; // default 25_000
+}
+
 async function synthesizeGemini(
   text: string,
   voiceName: string,
@@ -101,7 +106,10 @@ async function synthesizeGemini(
   outputPath: string,
   systemInstruction?: string,
   language?: string,
+  opts?: GeminiTTSOptions,
 ): Promise<void> {
+  const maxAttempts = opts?.maxAttempts ?? 5;
+  const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
@@ -128,28 +136,28 @@ async function synthesizeGemini(
 
   let lastError = "";
   for (const body of payloads) {
-    for (let attempt = 1; attempt <= 5; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 25_000);
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       let res: Response;
       try {
         res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: controller.signal });
       } catch (err) {
         clearTimeout(timer);
-        if (attempt < 5) { await sleep(attempt * 1000); continue; }
+        if (attempt < maxAttempts) { await sleep(attempt * 1000); continue; }
         lastError = (err as { name?: string }).name === "AbortError" ? "TTS timed out" : `TTS network error: ${String(err)}`;
         break;
       }
       clearTimeout(timer);
       if (res.status === 429) { lastError = "TTS rate limited (429)"; await sleep(Math.min(30000, attempt * 3000)); continue; }
-      if (res.status === 500 && attempt < 3) { await sleep(attempt * 1500); continue; }
+      if (res.status === 500 && attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 1500); continue; }
       if (!res.ok) { lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`; break; }
       const json = await res.json();
       const inlineData = json.candidates?.[0]?.content?.parts?.[0]?.inlineData as { mimeType: string; data: string } | undefined;
       // "No audio" can be transient — retry a couple of times before giving up
       if (!inlineData?.data) {
         lastError = "No audio in TTS response";
-        if (attempt < 3) { await sleep(attempt * 2000); continue; }
+        if (attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 2000); continue; }
         break;
       }
       const buf = inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")
@@ -174,6 +182,7 @@ export async function synthesizeLine(
   stability?: number,
   style?: number,
   language?: string,
+  geminiOpts?: GeminiTTSOptions,
 ): Promise<void> {
   const tagMatches: string[] = [];
   const tagRe = /\[([^\]]+)\]/g;
@@ -190,5 +199,5 @@ export async function synthesizeLine(
     ? `Deliver this line with the following emotion/style: ${tagMatches.join(", ")}.`
     : "";
   const fullInstruction = [persona, styleHints].filter(Boolean).join(" ");
-  return synthesizeGemini(spokenText || line, voiceId, primaryKey, outputPath, fullInstruction || undefined, language);
+  return synthesizeGemini(spokenText || line, voiceId, primaryKey, outputPath, fullInstruction || undefined, language, geminiOpts);
 }

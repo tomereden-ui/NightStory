@@ -79,7 +79,9 @@ export async function POST(req: NextRequest) {
 
   const tmpPath = path.join(os.tmpdir(), `speech-${crypto.randomUUID().slice(0, 8)}.${ext}`);
   try {
-    await synthesizeLine(text, voice, apiKey, tmpPath, undefined, useEL, undefined, undefined, language);
+    // Interactive endpoint: fail fast rather than retrying for minutes
+    await synthesizeLine(text, voice, apiKey, tmpPath, undefined, useEL, undefined, undefined, language,
+      useEL ? undefined : { maxAttempts: 2, perAttemptTimeoutMs: 10_000 });
     const audio = fs.readFileSync(tmpPath);
     const mimeType = useEL ? "audio/mpeg" : "audio/wav";
     return NextResponse.json({ audioData: audio.toString("base64"), mimeType, voiceName: voice });
