@@ -195,6 +195,8 @@ async function runProduction(
             writeSilence(500, path.join(jobTmp, `${track.id}.wav`));
           } else {
             const persona = profile?.persona;
+            // Gemini TTS free tier: ~10 RPM. Pause between tracks to avoid 429s.
+            if (!useELForChar && dialogueDone > 0) await new Promise((r) => setTimeout(r, 4000));
             try {
               await synthesizeLine(line, voice, ttsKey, outPath, persona, useELForChar, profile?.stability, profile?.style, scriptLanguage);
             } catch (err) {
