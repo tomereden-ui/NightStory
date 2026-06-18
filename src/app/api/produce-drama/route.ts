@@ -167,7 +167,7 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    const BATCH_SIZE = 2;
+    const BATCH_SIZE = 1;
 
     for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += BATCH_SIZE) {
       const batch = dialogueTracks.slice(batchStart, batchStart + BATCH_SIZE);
