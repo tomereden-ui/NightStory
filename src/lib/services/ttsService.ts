@@ -35,8 +35,8 @@ async function synthesizeEL(
   apiKey: string,
   outputPath: string,
   stability = 0.5,
-  style = 0.0,
-  language?: string,
+  _style = 0.0,
+  _language?: string,
 ): Promise<void> {
   for (let attempt = 1; attempt <= 5; attempt++) {
     const controller = new AbortController();
@@ -45,15 +45,14 @@ async function synthesizeEL(
     let res: Response;
     try {
       res = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+        `https://api.elevenlabs.io/v1/text-to-dialogue/stream`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "xi-api-key": apiKey },
           body: JSON.stringify({
-            text,
-            model_id: "eleven_flash_v2_5",
-            ...(language ? { language_code: language } : {}),
-            voice_settings: { stability, similarity_boost: 0.75, style, use_speaker_boost: true },
+            inputs: [{ text, voice_id: voiceId }],
+            model_id: "eleven_v3",
+            settings: { stability },
           }),
           signal: controller.signal,
         },
