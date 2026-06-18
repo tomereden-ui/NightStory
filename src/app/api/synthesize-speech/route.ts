@@ -3,45 +3,22 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import { synthesizeLine } from "@/lib/services/ttsService";
+import { PRESET_VOICES } from "@/config/presetVoices";
 
 export interface SynthesizeRequest {
   text: string;
   characterName: string;
-  assignedVoiceId?: string; // Gemini voice name (Charon, Fenrir, Kore…)
-  language?: string;        // ISO 639-1 code from the UI language context
+  assignedVoiceId?: string;
+  language?: string;
 }
 
-// Preset Gemini voice names — assignedVoiceId is always one of these.
-const GEMINI_PRESET_VOICES = new Set(["Aoede", "Charon", "Fenrir", "Kore", "Leda", "Orus", "Puck", "Zephyr"]);
+const PRESET_VOICE_NAMES = new Set(PRESET_VOICES.map((p) => p.geminiVoiceName));
 
-// Maps Gemini preset voice names → closest EL voice ID (by gender/style).
-const GEMINI_TO_EL: Record<string, string> = {
-  Aoede:  "21m00Tcm4TlvDq8ikWAM", // Rachel  — warm feminine
-  Charon: "pNInz6obpgDQGcFmaJgB", // Adam    — deep authoritative male
-  Fenrir: "VR6AewLTigWG4xSOukaG", // Arnold  — strong dynamic male
-  Kore:   "ThT5KcBeYPX3keUQqHPh", // Dorothy — soft gentle feminine
-  Leda:   "MF3mGyEYCl7XYWbV9V6O", // Elli    — clear bright feminine
-  Orus:   "GBv7mTt0atIp3Br8iCZE", // Thomas  — steady rich male
-  Puck:   "SOYHLrjzK2X1ezoPC6cr", // Harry   — playful energetic
-  Zephyr: "LcfcDJNUP1GQjkzn1xUU", // Emily   — airy light
-};
-
-// Default EL voice from character-name heuristics (English pattern fallback).
-function getELVoiceId(assignedVoiceId: string | undefined, characterName: string): string {
-  if (assignedVoiceId && GEMINI_PRESET_VOICES.has(assignedVoiceId)) {
-    return GEMINI_TO_EL[assignedVoiceId] ?? "21m00Tcm4TlvDq8ikWAM";
-  }
-  const n = (characterName ?? "").toLowerCase();
-  if (/child|kid|boy|little|young/.test(n)) return "SOYHLrjzK2X1ezoPC6cr"; // Harry
-  if (/girl|fairy|sprite|elf/.test(n))      return "MF3mGyEYCl7XYWbV9V6O"; // Elli
-  if (/dragon|beast|monster|giant/.test(n)) return "VR6AewLTigWG4xSOukaG"; // Arnold
-  if (/elder|old|wise|king|master/.test(n)) return "GBv7mTt0atIp3Br8iCZE"; // Thomas
-  if (/queen|mother|mom/.test(n))           return "LcfcDJNUP1GQjkzn1xUU"; // Emily
-  return "21m00Tcm4TlvDq8ikWAM"; // Rachel — default
-}
+// UUID pattern — Supabase voice row IDs, not EL voice IDs
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getGeminiVoice(assignedVoiceId: string | undefined, characterName: string): string {
-  if (assignedVoiceId && GEMINI_PRESET_VOICES.has(assignedVoiceId)) return assignedVoiceId;
+  if (assignedVoiceId && PRESET_VOICE_NAMES.has(assignedVoiceId)) return assignedVoiceId;
   const n = (characterName ?? "").toLowerCase();
   if (/child|kid|boy/.test(n))  return "Puck";
   if (/girl|fairy/.test(n))     return "Kore";
@@ -65,9 +42,38 @@ export async function POST(req: NextRequest) {
   const { text, characterName, assignedVoiceId, language = "en" } = body;
   if (!text?.trim()) return NextResponse.json({ error: "text is required." }, { status: 400 });
 
-  // EL voice IDs contain digits; Gemini preset names are pure letters.
-  const useEL = !!(assignedVoiceId && /[0-9]/.test(assignedVoiceId) && elKey);
-  const voice = useEL ? assignedVoiceId! : getGeminiVoice(assignedVoiceId, characterName);
+  // Resolve voice: preset names go directly to Gemini; anything else
+  // (DB voice IDs like "voice-1718…-abc123", UUIDs, or raw EL IDs) is
+  // looked up in the voices table first so we get the actual el_voice_id /
+  // gemini_voice_name rather than accidentally passing the DB row ID to EL.
+  let elVoiceId: string | undefined;
+  let geminiVoiceName: string | undefined;
+
+  if (assignedVoiceId && !PRESET_VOICE_NAMES.has(assignedVoiceId)) {
+    // Try DB lookup first — covers voice-TIMESTAMP-RANDOM and UUID formats
+    if (UUID_RE.test(assignedVoiceId) || assignedVoiceId.startsWith("voice-")) {
+      try {
+        const { supabase } = await import("@/lib/supabase");
+        const { data } = await supabase
+          .from("voices")
+          .select("el_voice_id, gemini_voice_name")
+          .eq("id", assignedVoiceId)
+          .single();
+        elVoiceId = data?.el_voice_id ?? undefined;
+        geminiVoiceName = data?.gemini_voice_name ?? undefined;
+      } catch {
+        // If DB lookup fails, fall through to character-name heuristics
+      }
+    } else if (/[0-9]/.test(assignedVoiceId)) {
+      // Raw EL voice ID passed directly (alphanumeric, no hyphens/prefix)
+      elVoiceId = assignedVoiceId;
+    }
+  }
+
+  const useEL = !!(elVoiceId && elKey);
+  const voice = useEL
+    ? elVoiceId!
+    : (geminiVoiceName ?? getGeminiVoice(assignedVoiceId, characterName));
   const apiKey = useEL ? elKey! : gemKey;
   const ext = useEL ? "mp3" : "wav";
 
