@@ -221,8 +221,10 @@ async function runProduction(
         progress: 57,
       });
 
-      await Promise.all(
-        sfxTracks.map(async (track) => {
+      // EL concurrent limit is 5 — batch SFX at 4 to stay safe
+      const SFX_BATCH = 4;
+      for (let i = 0; i < sfxTracks.length; i += SFX_BATCH) {
+        await Promise.all(sfxTracks.slice(i, i + SFX_BATCH).map(async (track) => {
           const outPath = path.join(jobTmp, `${track.id}.mp3`);
           const durationHint = track.loop
             ? Math.min(22000, totalDurationMs)
@@ -241,8 +243,8 @@ async function runProduction(
             step: `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`,
             progress: 57 + Math.round((sfxDone / sfxTracks.length) * 15),
           });
-        }),
-      );
+        }));
+      }
     }
 
     // ── Step 4: Audio mixing ──────────────────────────────────────────────

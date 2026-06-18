@@ -155,8 +155,10 @@ async function synthesizeGemini(
         const body429 = await res.text().catch(() => "");
         console.warn(`[${ts()}][TTS] 429 from Gemini (attempt ${attempt}):`, body429.slice(0, 300));
         lastError = "TTS rate limited (429)";
-        await sleep(Math.min(30000, attempt * 5000));
-        continue;
+        // Retry once with a short wait; give up fast so one stuck track
+        // doesn't block the whole queue.
+        if (attempt < 2) { await sleep(8000); continue; }
+        break;
       }
       if (res.status === 500 && attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 1500); continue; }
       if (!res.ok) { lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`; break; }
