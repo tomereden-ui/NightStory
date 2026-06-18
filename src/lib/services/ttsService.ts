@@ -114,11 +114,14 @@ async function synthesizeGemini(
     },
   };
 
-  const langNote = language && language !== "en"
-    ? `Speak in ${LANG_NAMES[language] ?? language}. `
-    : "";
-  const fullSystemInstruction = langNote + (systemInstruction ?? "");
+  // Gemini TTS auto-detects language from the input text — do NOT add a
+  // "Speak in X" language note to systemInstruction. That phrase causes the
+  // model to return 400 "Model tried to generate text" because it interprets
+  // "Speak in Hebrew" as a text-generation task rather than TTS audio.
+  const fullSystemInstruction = systemInstruction ?? "";
 
+  // Try with voice-style system instruction first; fall back to bare payload
+  // if the instruction triggers the "generate text" error.
   const payloads: Record<string, unknown>[] = fullSystemInstruction.trim()
     ? [{ systemInstruction: { parts: [{ text: fullSystemInstruction.trim() }] }, ...basePayload }, basePayload]
     : [basePayload];
@@ -143,7 +146,12 @@ async function synthesizeGemini(
       if (!res.ok) { lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`; break; }
       const json = await res.json();
       const inlineData = json.candidates?.[0]?.content?.parts?.[0]?.inlineData as { mimeType: string; data: string } | undefined;
-      if (!inlineData?.data) { lastError = "No audio in TTS response"; break; }
+      // "No audio" can be transient — retry a couple of times before giving up
+      if (!inlineData?.data) {
+        lastError = "No audio in TTS response";
+        if (attempt < 3) { await sleep(attempt * 2000); continue; }
+        break;
+      }
       const buf = inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")
         ? pcmToWav(Buffer.from(inlineData.data, "base64"))
         : Buffer.from(inlineData.data, "base64");
