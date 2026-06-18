@@ -141,7 +141,7 @@ async function synthesizeGemini(
         break;
       }
       clearTimeout(timer);
-      if (res.status === 429) { await sleep(Math.min(30000, attempt * 3000)); continue; }
+      if (res.status === 429) { lastError = "TTS rate limited (429)"; await sleep(Math.min(30000, attempt * 3000)); continue; }
       if (res.status === 500 && attempt < 3) { await sleep(attempt * 1500); continue; }
       if (!res.ok) { lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`; break; }
       const json = await res.json();
