@@ -27,7 +27,7 @@ async function buildVoiceOverrides(
   if (unresolvedIds.length > 0) {
     const { data, error } = await supabase.from("voices").select("*").in("id", unresolvedIds);
     if (error) {
-      console.warn("[produce-drama] Failed to resolve family voices:", error.message);
+      console.warn(`[${ts()}][produce-drama] Failed to resolve family voices:`, error.message);
     } else {
       for (const row of data ?? []) {
         familyById[row.id] = { elevenLabsId: row.el_voice_id ?? undefined, geminiVoiceName: row.gemini_voice_name ?? undefined };
@@ -47,6 +47,8 @@ async function buildVoiceOverrides(
 // path/fs via require so no ES-module hoisting issues alongside dynamic imports
 const path = require("path") as typeof import("path"); // eslint-disable-line
 const fs   = require("fs")   as typeof import("fs");   // eslint-disable-line
+
+const ts = () => new Date().toTimeString().slice(0, 8);
 
 function generateSummary(blocks: ScriptBlock[]): string {
   const narrator = blocks.find((b) => b.characterName.toLowerCase().includes("narrat"));
@@ -82,7 +84,7 @@ async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Prom
       if (code && /^[a-z]{2}$/.test(code)) return code;
     }
   } catch (err) {
-    console.warn("[TTS] Language detection failed:", err);
+    console.warn(`[${ts()}][TTS] Language detection failed:`, err);
   }
   return "en";
 }
@@ -142,7 +144,7 @@ async function runProduction(
       profileCharacters(blocks, geminiKey),
       detectScriptLanguage(blocks, geminiKey),
     ]);
-    console.log(`[TTS] Detected language: ${scriptLanguage}`);
+    console.log(`[${ts()}][TTS] Detected language: ${scriptLanguage}`);
     updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 18 });
 
     const dialogueTracks = drama.tracks.filter((t) => t.type === "dialogue");
@@ -196,7 +198,7 @@ async function runProduction(
             try {
               await synthesizeLine(line, voice, ttsKey, outPath, persona, useELForChar, profile?.stability, profile?.style, scriptLanguage);
             } catch (err) {
-              console.warn(`[TTS] Skipping ${track.id}:`, err);
+              console.warn(`[${ts()}][TTS] Skipping ${track.id}:`, err);
               skippedLines.push(track.id);
               writeSilence(2000, path.join(jobTmp, `${track.id}.wav`));
             }
@@ -283,11 +285,11 @@ async function runProduction(
     try {
       await mixTracks(mixTrackList, tmpMp3Path, totalDurationMs);
     } catch (mixErr) {
-      console.warn("[Mixer] ffmpeg mix failed:", mixErr);
+      console.warn(`[${ts()}][Mixer] ffmpeg mix failed:`, mixErr);
       try {
         await concatenateTracks(dialoguePaths, tmpMp3Path);
       } catch (concatErr) {
-        console.warn("[Mixer] ffmpeg concat failed, using pure-JS WAV fallback:", concatErr);
+        console.warn(`[${ts()}][Mixer] ffmpeg concat failed, using pure-JS WAV fallback:`, concatErr);
         concatenateWavFilesPureJS(dialoguePaths.filter((p) => p.endsWith(".wav")), tmpWavPath);
         localAudioPath = tmpWavPath;
         audioExt = "wav";
@@ -306,7 +308,7 @@ async function runProduction(
       if (!uploadErr) {
         audioUrl = supabase.storage.from("audio").getPublicUrl(storageKey).data.publicUrl;
       } else {
-        console.warn("[Storage] Audio upload failed:", uploadErr.message);
+        console.warn(`[${ts()}][Storage] Audio upload failed:`, uploadErr.message);
         // Copy to public/output as fallback
         const OUT_DIR_FALLBACK = path.join(process.cwd(), "public", "output");
         fs.mkdirSync(OUT_DIR_FALLBACK, { recursive: true });
@@ -336,7 +338,7 @@ async function runProduction(
       if (!coverErr) {
         coverUrl = supabase.storage.from("covers").getPublicUrl(storageKey).data.publicUrl;
       } else {
-        console.warn("[Storage] Cover upload failed:", coverErr.message);
+        console.warn(`[${ts()}][Storage] Cover upload failed:`, coverErr.message);
       }
     }
 
@@ -358,12 +360,12 @@ async function runProduction(
     try {
       await addEntry(entry);
     } catch (err) {
-      console.warn("[produce-drama] addEntry failed, retrying once:", err);
+      console.warn(`[${ts()}][produce-drama] addEntry failed, retrying once:`, err);
       try {
         await addEntry(entry);
       } catch (retryErr) {
         libraryError = retryErr instanceof Error ? retryErr.message : "Failed to save to library";
-        console.error("[produce-drama] addEntry retry failed:", libraryError);
+        console.error(`[${ts()}][produce-drama] addEntry retry failed:`, libraryError);
       }
     }
 
@@ -381,7 +383,7 @@ async function runProduction(
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown production error";
-    console.error("[produce-drama] Fatal error:", msg);
+    console.error(`[${ts()}][produce-drama] Fatal error:`, msg);
     updateJob(jobId, { status: "error", step: "❌ Production failed", error: msg, progress: 0 });
   } finally {
     cleanTempDir(jobId);
@@ -415,7 +417,7 @@ export async function POST(req: NextRequest) {
     }
 
     try { ensureDirs(); } catch (e) {
-      console.error("[produce-drama] ensureDirs failed:", e);
+      console.error(`[${ts()}][produce-drama] ensureDirs failed:`, e);
       return NextResponse.json({ error: `Cannot create temp directory: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
     }
 
@@ -439,7 +441,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ jobId });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[produce-drama] POST handler crash:", msg);
+    console.error(`[${ts()}][produce-drama] POST handler crash:`, msg);
     return NextResponse.json({ error: `Server error: ${msg}` }, { status: 500 });
   }
 }

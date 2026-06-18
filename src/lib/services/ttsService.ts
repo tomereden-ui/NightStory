@@ -1,5 +1,7 @@
 import fs from "fs";
 
+const ts = () => new Date().toTimeString().slice(0, 8);
+
 function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
   const numChannels = 1;
   const bitsPerSample = 16;
@@ -66,7 +68,7 @@ async function synthesizeEL(
 
     if (res.status === 429) {
       const wait = Math.min(30_000, attempt * 5000);
-      console.warn(`[TTS] EL rate limited, waiting ${wait}ms (attempt ${attempt})`);
+      console.warn(`[${ts()}][TTS] EL rate limited, waiting ${wait}ms (attempt ${attempt})`);
       await sleep(wait);
       continue;
     }
@@ -191,7 +193,7 @@ export async function synthesizeLine(
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
   if (useElevenLabs) {
-    console.log("[EL TTS] text →", JSON.stringify(spokenText || line));
+    console.log(`[${ts()}][EL TTS] text →`, JSON.stringify(spokenText || line));
     return synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language);
   }
 
