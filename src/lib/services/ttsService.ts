@@ -163,7 +163,7 @@ export async function synthesizeLine(
   primaryKey: string,
   outputPath: string,
   persona?: string,
-  useElevenLabs = true,
+  useElevenLabs = false,
   stability?: number,
   style?: number,
   language?: string,

@@ -167,11 +167,11 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    // Batch size: 5 concurrent for ElevenLabs, 3 for Gemini (lower RPM ceiling)
-    const useEL = !!elevenKey;
-    const ttsKey = useEL ? elevenKey! : geminiKey;
-    const BATCH_SIZE = useEL ? 5 : 3;
-    console.log(`[TTS] Provider: ${useEL ? "ElevenLabs" : "Gemini"}, batch size: ${BATCH_SIZE}`);
+    // Always use Gemini for TTS; ElevenLabs is reserved for SFX only.
+    const useEL = false;
+    const ttsKey = geminiKey;
+    const BATCH_SIZE = 3; // Gemini RPM ceiling
+    console.log("[TTS] Provider: Gemini, batch size: 3");
 
     for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += BATCH_SIZE) {
       const batch = dialogueTracks.slice(batchStart, batchStart + BATCH_SIZE);
