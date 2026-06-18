@@ -45,7 +45,7 @@ async function synthesizeEL(
     let res: Response;
     try {
       res = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=pcm_24000`,
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "xi-api-key": apiKey },
@@ -78,8 +78,8 @@ async function synthesizeEL(
       throw new Error(`EL TTS ${res.status}: ${body.slice(0, 200)}`);
     }
 
-    const pcm = Buffer.from(await res.arrayBuffer());
-    fs.writeFileSync(outputPath, pcmToWav(pcm));
+    const mp3 = Buffer.from(await res.arrayBuffer());
+    fs.writeFileSync(outputPath.replace(/\.wav$/, ".mp3"), mp3);
     return;
   }
   throw new Error("EL TTS failed after 5 attempts");

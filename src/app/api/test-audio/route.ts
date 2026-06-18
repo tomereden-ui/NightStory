@@ -53,14 +53,15 @@ export async function POST(req: NextRequest) {
       ? `[${body.voiceStyle.trim()}] ${rawText}`
       : rawText;
 
-    const outPath = path.join(OUT_DIR, `test_tts_${id}.wav`);
+    const ext = useEL ? "mp3" : "wav";
+    const outPath = path.join(OUT_DIR, `test_tts_${id}.${ext}`);
     try {
       await synthesizeLine(line, voice, apiKey, outPath, undefined, useEL);
     } catch (err) {
-      writeSilence(2000, outPath);
+      writeSilence(2000, outPath.replace(/\.mp3$/, ".wav"));
       console.warn("[test-audio TTS]", err);
     }
-    return NextResponse.json({ audioUrl: `/output/test_tts_${id}.wav` });
+    return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${ext}` });
   }
 
   // SFX
