@@ -156,13 +156,24 @@ async function synthesizeGemini(
     const inlineData = json.candidates?.[0]?.content?.parts?.[0]?.inlineData as { mimeType: string; data: string } | undefined;
     if (!inlineData?.data) {
       lastError = "No audio in TTS response";
+      console.warn(`[${ts()}][Gemini TTS] No audio — full response:`, JSON.stringify(json).slice(0, 500));
       if (attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 2000); continue; }
       break;
     }
-    const buf = inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")
-      ? pcmToWav(Buffer.from(inlineData.data, "base64"))
-      : Buffer.from(inlineData.data, "base64");
-    fs.writeFileSync(outputPath, buf);
+    const mime = inlineData.mimeType ?? "";
+    console.log(`[${ts()}][Gemini TTS] mimeType: ${mime}, data length: ${inlineData.data.length}`);
+    const isPcm = mime.includes("L16") || mime.includes("pcm");
+    const isMp3 = mime.includes("mp3") || mime.includes("mpeg");
+    const rawBuf = Buffer.from(inlineData.data, "base64");
+    if (isPcm) {
+      fs.writeFileSync(outputPath, pcmToWav(rawBuf));
+    } else if (isMp3) {
+      // Gemini 3.1 returns MP3 — write to .mp3 path; caller checks which file exists
+      fs.writeFileSync(outputPath.replace(/\.wav$/i, ".mp3"), rawBuf);
+    } else {
+      // Unknown format — write as-is (may already be WAV)
+      fs.writeFileSync(outputPath, rawBuf);
+    }
     return;
   }
   throw new Error(lastError || "Gemini TTS failed");

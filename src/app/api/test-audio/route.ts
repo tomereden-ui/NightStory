@@ -79,7 +79,10 @@ export async function POST(req: NextRequest) {
       writeSilence(2000, outPath.replace(/\.mp3$/, ".wav"));
       console.warn("[test-audio TTS]", err);
     }
-    return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${ext}` });
+    // Gemini 3.1 may return MP3 — check which file was actually written
+    const mp3Path = path.join(OUT_DIR, `test_tts_${id}.mp3`);
+    const actualExt = !useEL && fs.existsSync(mp3Path) ? "mp3" : ext;
+    return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${actualExt}` });
   }
 
   // SFX
