@@ -116,14 +116,10 @@ async function synthesizeGemini(
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
 
-  // Gemini 3.1 Flash TTS does NOT support systemInstruction (returns 400 INVALID_ARGUMENT).
-  // Persona is prepended as a speaking-style instruction in the text itself instead.
-  const fullText = systemInstruction?.trim()
-    ? `[${systemInstruction.trim()}]\n${text}`
-    : text;
-
+  // Gemini 3.1 Flash TTS does NOT support systemInstruction.
+  // Expressiveness comes from inline [audio tags] already in the line text.
   const payload: Record<string, unknown> = {
-    contents: [{ role: "user", parts: [{ text: fullText }] }],
+    contents: [{ role: "user", parts: [{ text }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },

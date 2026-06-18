@@ -49,6 +49,7 @@ const path = require("path") as typeof import("path"); // eslint-disable-line
 const fs   = require("fs")   as typeof import("fs");   // eslint-disable-line
 
 const ts = () => new Date().toTimeString().slice(0, 8);
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function generateSummary(blocks: ScriptBlock[]): string {
   const narrator = blocks.find((b) => b.characterName.toLowerCase().includes("narrat"));
@@ -235,11 +236,9 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    // Gemini TTS quota is tight — serialize dialogue to avoid 429s
-    const BATCH_SIZE = 1;
-
-    for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += BATCH_SIZE) {
-      const batch = dialogueTracks.slice(batchStart, batchStart + BATCH_SIZE);
+    // Gemini TTS quota is tight — process dialogue one at a time
+    for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart++) {
+      const batch = [dialogueTracks[batchStart]];
 
       await Promise.all(
         batch.map(async (track) => {
@@ -277,6 +276,8 @@ async function runProduction(
           });
         }),
       );
+      // Small pause between requests to stay within Gemini TTS quota
+      if (batchStart < dialogueTracks.length - 1) await sleep(500);
     }
 
     // ── Step 3: SFX generation ────────────────────────────────────────────
