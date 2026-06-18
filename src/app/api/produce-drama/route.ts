@@ -91,6 +91,72 @@ async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Prom
 
 const TMP_DIR = path.join(process.cwd(), "tmp", "audio");
 
+/** Read actual duration of a WAV file from its header. */
+function wavDurationMs(filePath: string): number {
+  try {
+    const buf = fs.readFileSync(filePath);
+    if (buf.length < 44 || buf.toString("ascii", 0, 4) !== "RIFF") return 0;
+    const sampleRate  = buf.readUInt32LE(24);
+    const numChannels = buf.readUInt16LE(22);
+    const bitsPerSample = buf.readUInt16LE(34);
+    const bytesPerSec = sampleRate * numChannels * (bitsPerSample / 8);
+    if (!bytesPerSec) return 0;
+    // Scan for the data chunk (not always at fixed offset)
+    let pos = 12;
+    while (pos < buf.length - 8) {
+      const id = buf.toString("ascii", pos, pos + 4);
+      const size = buf.readUInt32LE(pos + 4);
+      if (id === "data") return Math.round((size / bytesPerSec) * 1000);
+      pos += 8 + size + (size % 2);
+    }
+  } catch { /* ignore */ }
+  return 0;
+}
+
+/** Estimate duration of an MP3 from file size at 128 kbps. */
+function mp3DurationMs(filePath: string): number {
+  try {
+    const size = fs.statSync(filePath).size;
+    return Math.round((size / (128 * 1024 / 8)) * 1000);
+  } catch { return 0; }
+}
+
+function audioDurationMs(filePath: string): number {
+  if (filePath.endsWith(".wav")) return wavDurationMs(filePath);
+  if (filePath.endsWith(".mp3")) return mp3DurationMs(filePath);
+  return 0;
+}
+
+/**
+ * Recalculate dialogue start times so lines never overlap.
+ * Preserves gaps from the drama plan but uses actual audio durations.
+ */
+function fixDialogueTiming(
+  dialogueTracks: Array<{ id: string; start_ms: number }>,
+  jobTmp: string,
+): Map<string, number> {
+  const sorted = [...dialogueTracks].sort((a, b) => a.start_ms - b.start_ms);
+  const adjusted = new Map<string, number>();
+
+  let prevEnd = 0;
+
+  for (let i = 0; i < sorted.length; i++) {
+    const t = sorted[i];
+    const filePath = [".wav", ".mp3"]
+      .map((e) => path.join(jobTmp, `${t.id}${e}`))
+      .find((p) => fs.existsSync(p)) ?? "";
+
+    // Planned start must not overlap previous line; push forward if needed
+    const plannedStart = i === 0 ? t.start_ms : Math.max(t.start_ms, prevEnd + 200);
+    adjusted.set(t.id, plannedStart);
+
+    const duration = filePath ? audioDurationMs(filePath) : 2000;
+    prevEnd = plannedStart + duration;
+  }
+
+  return adjusted;
+}
+
 function ensureDirs() {
   fs.mkdirSync(TMP_DIR, { recursive: true });
 }
@@ -268,18 +334,17 @@ async function runProduction(
       })
       .filter((p): p is string => p !== null);
 
-    // ── Diagnostic: log what was actually generated ───────────────────────
-    const diagLines = dialogueTracks.map((t) => {
-      const wav = path.join(jobTmp, `${t.id}.wav`);
-      const mp3 = path.join(jobTmp, `${t.id}.mp3`);
-      const bin = path.join(jobTmp, `${t.id}.bin`);
-      const found = fs.existsSync(wav) ? wav : fs.existsSync(mp3) ? mp3 : fs.existsSync(bin) ? bin : null;
-      const size  = found ? fs.statSync(found).size : 0;
-      return `${t.id}(${t.character ?? "?"}): ${found ? path.extname(found) + " " + size + "B" : "MISSING"}`;
-    });
-    console.log(`[${ts()}][Mixer] dialogue files (${dialoguePaths.length}/${dialogueTracks.length} found):`, diagLines.join(" | "));
-    console.log(`[${ts()}][Mixer] skipped lines: ${skippedLines.length > 0 ? skippedLines.join(", ") : "none"}`);
-    // ─────────────────────────────────────────────────────────────────────
+    // Fix dialogue timing: drama planner uses estimated durations; actual audio
+    // may be longer, causing overlaps. Recalculate start_ms from real file durations.
+    const adjustedStartMs = fixDialogueTiming(dialogueTracks, jobTmp);
+    const adjustedTotal = Math.max(
+      totalDurationMs,
+      ...Array.from(adjustedStartMs.values()).map((s, i) => {
+        const t = dialogueTracks[i];
+        const fp = [".wav", ".mp3"].map((e) => path.join(jobTmp, `${t?.id}${e}`)).find((p) => fs.existsSync(p)) ?? "";
+        return s + (fp ? audioDurationMs(fp) : 0);
+      }),
+    );
 
     const mixTrackList = drama.tracks
       .filter((t) => {
@@ -290,16 +355,19 @@ async function runProduction(
       .map((t) => {
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);
         const wav = path.join(jobTmp, `${t.id}.wav`);
+        const startMs = t.type === "dialogue"
+          ? (adjustedStartMs.get(t.id) ?? t.start_ms)
+          : t.start_ms;
         return {
           filePath: fs.existsSync(mp3) ? mp3 : wav,
-          startMs: t.start_ms,
+          startMs,
           isSfx: t.type === "sfx",
           isLooping: !!(t.type === "sfx" && t.loop),
         };
       });
 
     try {
-      await mixTracks(mixTrackList, tmpMp3Path, totalDurationMs);
+      await mixTracks(mixTrackList, tmpMp3Path, adjustedTotal);
     } catch (mixErr) {
       console.warn(`[${ts()}][Mixer] ffmpeg mix failed:`, mixErr);
       try {
