@@ -175,6 +175,7 @@ export async function synthesizeLine(
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
   if (useElevenLabs) {
+    console.log("[EL TTS] text →", JSON.stringify(spokenText || line));
     return synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language);
   }
 
