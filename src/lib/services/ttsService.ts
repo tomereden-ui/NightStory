@@ -114,68 +114,56 @@ async function synthesizeGemini(
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+    `gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
 
-  const basePayload = {
+  // Gemini 3.1 understands inline [audio tags] natively — pass text as-is
+  // with performance tags intact. Persona goes as system instruction only.
+  const payload: Record<string, unknown> = {
     contents: [{ role: "user", parts: [{ text }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
     },
   };
-
-  // Gemini TTS auto-detects language from the input text — do NOT add a
-  // "Speak in X" language note to systemInstruction. That phrase causes the
-  // model to return 400 "Model tried to generate text" because it interprets
-  // "Speak in Hebrew" as a text-generation task rather than TTS audio.
-  const fullSystemInstruction = systemInstruction ?? "";
-
-  // Try with voice-style system instruction first; fall back to bare payload
-  // if the instruction triggers the "generate text" error.
-  const payloads: Record<string, unknown>[] = fullSystemInstruction.trim()
-    ? [{ systemInstruction: { parts: [{ text: fullSystemInstruction.trim() }] }, ...basePayload }, basePayload]
-    : [basePayload];
+  if (systemInstruction?.trim()) {
+    payload.systemInstruction = { parts: [{ text: systemInstruction.trim() }] };
+  }
 
   let lastError = "";
-  for (const body of payloads) {
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      let res: Response;
-      try {
-        res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: controller.signal });
-      } catch (err) {
-        clearTimeout(timer);
-        if (attempt < maxAttempts) { await sleep(attempt * 1000); continue; }
-        lastError = (err as { name?: string }).name === "AbortError" ? "TTS timed out" : `TTS network error: ${String(err)}`;
-        break;
-      }
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let res: Response;
+    try {
+      res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
+    } catch (err) {
       clearTimeout(timer);
-      if (res.status === 429) {
-        const body429 = await res.text().catch(() => "");
-        console.warn(`[${ts()}][TTS] 429 from Gemini (attempt ${attempt}):`, body429.slice(0, 300));
-        lastError = "TTS rate limited (429)";
-        // Retry once with a short wait; give up fast so one stuck track
-        // doesn't block the whole queue.
-        if (attempt < 2) { await sleep(8000); continue; }
-        break;
-      }
-      if (res.status === 500 && attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 1500); continue; }
-      if (!res.ok) { lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`; break; }
-      const json = await res.json();
-      const inlineData = json.candidates?.[0]?.content?.parts?.[0]?.inlineData as { mimeType: string; data: string } | undefined;
-      // "No audio" can be transient — retry a couple of times before giving up
-      if (!inlineData?.data) {
-        lastError = "No audio in TTS response";
-        if (attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 2000); continue; }
-        break;
-      }
-      const buf = inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")
-        ? pcmToWav(Buffer.from(inlineData.data, "base64"))
-        : Buffer.from(inlineData.data, "base64");
-      fs.writeFileSync(outputPath, buf);
-      return;
+      if (attempt < maxAttempts) { await sleep(attempt * 1000); continue; }
+      lastError = (err as { name?: string }).name === "AbortError" ? "TTS timed out" : `TTS network error: ${String(err)}`;
+      break;
     }
+    clearTimeout(timer);
+    if (res.status === 429) {
+      const body429 = await res.text().catch(() => "");
+      console.warn(`[${ts()}][TTS] 429 from Gemini (attempt ${attempt}):`, body429.slice(0, 300));
+      lastError = "TTS rate limited (429)";
+      if (attempt < 2) { await sleep(8000); continue; }
+      break;
+    }
+    if (res.status === 500 && attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 1500); continue; }
+    if (!res.ok) { lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`; break; }
+    const json = await res.json();
+    const inlineData = json.candidates?.[0]?.content?.parts?.[0]?.inlineData as { mimeType: string; data: string } | undefined;
+    if (!inlineData?.data) {
+      lastError = "No audio in TTS response";
+      if (attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 2000); continue; }
+      break;
+    }
+    const buf = inlineData.mimeType.includes("L16") || inlineData.mimeType.includes("pcm")
+      ? pcmToWav(Buffer.from(inlineData.data, "base64"))
+      : Buffer.from(inlineData.data, "base64");
+    fs.writeFileSync(outputPath, buf);
+    return;
   }
   throw new Error(lastError || "Gemini TTS failed");
 }
@@ -194,10 +182,7 @@ export async function synthesizeLine(
   language?: string,
   geminiOpts?: GeminiTTSOptions,
 ): Promise<void> {
-  const tagMatches: string[] = [];
-  const tagRe = /\[([^\]]+)\]/g;
-  let tagMatch: RegExpExecArray | null;
-  while ((tagMatch = tagRe.exec(line)) !== null) tagMatches.push(tagMatch[1]);
+  // ElevenLabs needs tags stripped — it doesn't understand [excited] etc.
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
   if (useElevenLabs) {
@@ -205,9 +190,8 @@ export async function synthesizeLine(
     return synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language);
   }
 
-  const styleHints = tagMatches.length > 0
-    ? `Deliver this line with the following emotion/style: ${tagMatches.join(", ")}.`
-    : "";
-  const fullInstruction = [persona, styleHints].filter(Boolean).join(" ");
-  return synthesizeGemini(spokenText || line, voiceId, primaryKey, outputPath, fullInstruction || undefined, language, geminiOpts);
+  // Gemini 3.1 understands inline [tags] as audio tags — pass line as-is.
+  // Persona sets overall character voice via system instruction.
+  console.log(`[${ts()}][Gemini TTS] text →`, JSON.stringify(line));
+  return synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts);
 }
