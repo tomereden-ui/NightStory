@@ -198,7 +198,7 @@ async function runProduction(
             try {
               await synthesizeLine(line, voice, ttsKey, outPath, persona, useELForChar, profile?.stability, profile?.style, scriptLanguage);
             } catch (err) {
-              console.warn(`[${ts()}][TTS] Skipping ${track.id}:`, err);
+              console.warn(`[${ts()}][TTS] Skipping ${track.id} (${charName}): "${line.slice(0, 80)}${line.length > 80 ? "…" : ""}"`, err instanceof Error ? err.message : err);
               skippedLines.push(track.id);
               writeSilence(2000, path.join(jobTmp, `${track.id}.wav`));
             }
