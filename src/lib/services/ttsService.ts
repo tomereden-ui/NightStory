@@ -35,7 +35,7 @@ async function synthesizeEL(
   apiKey: string,
   outputPath: string,
   stability = 0.5,
-  style = 0.3,
+  style = 0.0,
   language?: string,
 ): Promise<void> {
   for (let attempt = 1; attempt <= 5; attempt++) {
@@ -51,9 +51,9 @@ async function synthesizeEL(
           headers: { "Content-Type": "application/json", "xi-api-key": apiKey },
           body: JSON.stringify({
             text,
-            model_id: "eleven_turbo_v2_5",
+            model_id: "eleven_flash_v2_5",
             ...(language ? { language_code: language } : {}),
-            voice_settings: { stability: stability ?? 0.35, similarity_boost: 0.75, style: style ?? 0.55, use_speaker_boost: true },
+            voice_settings: { stability, similarity_boost: 0.75, style, use_speaker_boost: true },
           }),
           signal: controller.signal,
         },
