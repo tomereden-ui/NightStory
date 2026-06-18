@@ -267,6 +267,19 @@ async function runProduction(
       })
       .filter((p): p is string => p !== null);
 
+    // ── Diagnostic: log what was actually generated ───────────────────────
+    const diagLines = dialogueTracks.map((t) => {
+      const wav = path.join(jobTmp, `${t.id}.wav`);
+      const mp3 = path.join(jobTmp, `${t.id}.mp3`);
+      const bin = path.join(jobTmp, `${t.id}.bin`);
+      const found = fs.existsSync(wav) ? wav : fs.existsSync(mp3) ? mp3 : fs.existsSync(bin) ? bin : null;
+      const size  = found ? fs.statSync(found).size : 0;
+      return `${t.id}(${t.character ?? "?"}): ${found ? path.extname(found) + " " + size + "B" : "MISSING"}`;
+    });
+    console.log(`[${ts()}][Mixer] dialogue files (${dialoguePaths.length}/${dialogueTracks.length} found):`, diagLines.join(" | "));
+    console.log(`[${ts()}][Mixer] skipped lines: ${skippedLines.length > 0 ? skippedLines.join(", ") : "none"}`);
+    // ─────────────────────────────────────────────────────────────────────
+
     const mixTrackList = drama.tracks
       .filter((t) => {
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);
