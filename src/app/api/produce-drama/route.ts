@@ -167,35 +167,38 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    // Always use Gemini for TTS; ElevenLabs is reserved for SFX only.
-    const useEL = false;
-    const ttsKey = geminiKey;
-    const BATCH_SIZE = 3; // Gemini RPM ceiling
-    console.log("[TTS] Provider: Gemini, batch size: 3");
+    const BATCH_SIZE = 3;
 
     for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += BATCH_SIZE) {
       const batch = dialogueTracks.slice(batchStart, batchStart + BATCH_SIZE);
 
       await Promise.all(
         batch.map(async (track) => {
-          const outPath = path.join(jobTmp, `${track.id}.wav`);
           const line = track.line?.trim() ?? "";
+          const charName = track.character ?? "Narrator";
+          const profile = voiceProfiles[charName];
+          const override = voiceOverrides[charName];
+
+          // Use EL only when character has a cloned voice (EL IDs contain digits)
+          const useELForChar = !!(override?.elevenLabsId && elevenKey);
+          const ttsKey = useELForChar ? elevenKey! : geminiKey;
+          const voice = useELForChar
+            ? override.elevenLabsId!
+            : (override?.geminiVoiceName ?? profile?.geminiVoiceName ?? pickGeminiVoiceForChar(charName, track.voice_style));
+          // EL synthesizeEL rewrites .wav → .mp3; pass correct extension upfront
+          const ext = useELForChar ? "mp3" : "wav";
+          const outPath = path.join(jobTmp, `${track.id}.${ext}`);
+
           if (!line) {
-            writeSilence(500, outPath);
+            writeSilence(500, path.join(jobTmp, `${track.id}.wav`));
           } else {
-            const charName = track.character ?? "Narrator";
-            const profile = voiceProfiles[charName];
-            const override = voiceOverrides[charName];
-            const voice = useEL
-              ? (override?.elevenLabsId ?? profile?.voiceName ?? voiceMap.assign(charName, track.voice_style))
-              : (override?.geminiVoiceName ?? profile?.geminiVoiceName ?? pickGeminiVoiceForChar(charName, track.voice_style));
             const persona = profile?.persona;
             try {
-              await synthesizeLine(line, voice, ttsKey, outPath, persona, useEL, profile?.stability, profile?.style, scriptLanguage);
+              await synthesizeLine(line, voice, ttsKey, outPath, persona, useELForChar, profile?.stability, profile?.style, scriptLanguage);
             } catch (err) {
               console.warn(`[TTS] Skipping ${track.id}:`, err);
               skippedLines.push(track.id);
-              writeSilence(2000, outPath);
+              writeSilence(2000, path.join(jobTmp, `${track.id}.wav`));
             }
           }
           dialogueDone++;
@@ -253,12 +256,15 @@ async function runProduction(
     let audioExt = "mp3";
 
     const dialoguePaths = dialogueTracks
-      .map((t) => path.join(jobTmp, `${t.id}.wav`))
-      .filter((p) => fs.existsSync(p));
+      .map((t) => {
+        const wav = path.join(jobTmp, `${t.id}.wav`);
+        const mp3 = path.join(jobTmp, `${t.id}.mp3`);
+        return fs.existsSync(wav) ? wav : fs.existsSync(mp3) ? mp3 : null;
+      })
+      .filter((p): p is string => p !== null);
 
     const mixTrackList = drama.tracks
       .filter((t) => {
-        if (t.type === "dialogue") return fs.existsSync(path.join(jobTmp, `${t.id}.wav`));
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);
         const wav = path.join(jobTmp, `${t.id}.wav`);
         return fs.existsSync(mp3) || fs.existsSync(wav);
@@ -267,7 +273,7 @@ async function runProduction(
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);
         const wav = path.join(jobTmp, `${t.id}.wav`);
         return {
-          filePath: t.type === "dialogue" ? wav : fs.existsSync(mp3) ? mp3 : wav,
+          filePath: fs.existsSync(mp3) ? mp3 : wav,
           startMs: t.start_ms,
           isSfx: t.type === "sfx",
           isLooping: !!(t.type === "sfx" && t.loop),
@@ -282,7 +288,7 @@ async function runProduction(
         await concatenateTracks(dialoguePaths, tmpMp3Path);
       } catch (concatErr) {
         console.warn("[Mixer] ffmpeg concat failed, using pure-JS WAV fallback:", concatErr);
-        concatenateWavFilesPureJS(dialoguePaths, tmpWavPath);
+        concatenateWavFilesPureJS(dialoguePaths.filter((p) => p.endsWith(".wav")), tmpWavPath);
         localAudioPath = tmpWavPath;
         audioExt = "wav";
       }

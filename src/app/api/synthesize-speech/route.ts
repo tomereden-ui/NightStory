@@ -65,15 +65,18 @@ export async function POST(req: NextRequest) {
   const { text, characterName, assignedVoiceId, language = "en" } = body;
   if (!text?.trim()) return NextResponse.json({ error: "text is required." }, { status: 400 });
 
-  // Always use Gemini for script block playback — Gemini voices are what the
-  // story generator assigns, and Gemini TTS handles all UI languages correctly.
-  const voice = getGeminiVoice(assignedVoiceId, characterName);
+  // EL voice IDs contain digits; Gemini preset names are pure letters.
+  const useEL = !!(assignedVoiceId && /[0-9]/.test(assignedVoiceId) && elKey);
+  const voice = useEL ? assignedVoiceId! : getGeminiVoice(assignedVoiceId, characterName);
+  const apiKey = useEL ? elKey! : gemKey;
+  const ext = useEL ? "mp3" : "wav";
 
-  const tmpPath = path.join(os.tmpdir(), `speech-${crypto.randomUUID().slice(0, 8)}.wav`);
+  const tmpPath = path.join(os.tmpdir(), `speech-${crypto.randomUUID().slice(0, 8)}.${ext}`);
   try {
-    await synthesizeLine(text, voice, gemKey, tmpPath, undefined, false, undefined, undefined, language);
-    const wav = fs.readFileSync(tmpPath);
-    return NextResponse.json({ audioData: wav.toString("base64"), mimeType: "audio/wav", voiceName: voice });
+    await synthesizeLine(text, voice, apiKey, tmpPath, undefined, useEL, undefined, undefined, language);
+    const audio = fs.readFileSync(tmpPath);
+    const mimeType = useEL ? "audio/mpeg" : "audio/wav";
+    return NextResponse.json({ audioData: audio.toString("base64"), mimeType, voiceName: voice });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   } finally {
