@@ -38,10 +38,17 @@ export async function POST(req: NextRequest) {
     const defaultVoice = useEL ? "pNInz6obpgDQGcFmaJgB" : "Kore";
     const voice = body.voice?.trim() || defaultVoice;
 
+    // ElevenLabs receives Hebrew text in reversed order from the browser textarea
+    // (LTR storage of RTL input). Detect and fix before synthesis.
+    const isHebrew = /[֐-׿יִ-ﭏ]/.test(body.text);
+    const rawText = (useEL && isHebrew)
+      ? body.text.trim().split("").reverse().join("")
+      : body.text.trim();
+
     // Performance tag prefix carries style hints into the line
     const line = body.voiceStyle?.trim()
-      ? `[${body.voiceStyle.trim()}] ${body.text.trim()}`
-      : body.text.trim();
+      ? `[${body.voiceStyle.trim()}] ${rawText}`
+      : rawText;
 
     const outPath = path.join(OUT_DIR, `test_tts_${id}.wav`);
     try {
