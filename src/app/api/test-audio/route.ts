@@ -76,8 +76,9 @@ export async function POST(req: NextRequest) {
     try {
       await synthesizeLine(line, voice, apiKey, outPath, undefined, useEL);
     } catch (err) {
-      writeSilence(2000, outPath.replace(/\.mp3$/, ".wav"));
-      console.warn("[test-audio TTS]", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn("[test-audio TTS]", msg);
+      return NextResponse.json({ error: `TTS failed: ${msg}` }, { status: 502 });
     }
     // Gemini 3.1 may return MP3 — check which file was actually written
     const mp3Path = path.join(OUT_DIR, `test_tts_${id}.mp3`);

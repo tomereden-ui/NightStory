@@ -151,7 +151,12 @@ async function synthesizeGemini(
       break;
     }
     if (res.status === 500 && attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 1500); continue; }
-    if (!res.ok) { lastError = `TTS ${res.status}: ${(await res.text()).slice(0, 200)}`; break; }
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      lastError = `TTS ${res.status}: ${errBody.slice(0, 300)}`;
+      console.error(`[${ts()}][Gemini TTS] HTTP ${res.status}:`, errBody.slice(0, 500));
+      break;
+    }
     const json = await res.json();
     const inlineData = json.candidates?.[0]?.content?.parts?.[0]?.inlineData as { mimeType: string; data: string } | undefined;
     if (!inlineData?.data) {
