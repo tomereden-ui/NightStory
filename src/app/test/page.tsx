@@ -35,15 +35,11 @@ const GEMINI_VOICES = [
   { name: "Pulcherrima", trait: "Forward"        },
 ];
 
-const EL_VOICES = [
-  { id: "pNInz6obpgDQGcFmaJgB", name: "Adam",    trait: "Deep warm"      },
-  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel",  trait: "Warm expressive"},
-  { id: "VR6AewLTigWG4xSOukaG", name: "Arnold",  trait: "Strong bold"    },
-  { id: "LcfcDJNUP1GQjkzn1xUU", name: "Emily",   trait: "Soft gentle"    },
-  { id: "SOYHLrjzK2X1ezoPC6cr", name: "Harry",   trait: "Playful young"  },
-  { id: "MF3mGyEYCl7XYWbV9V6O", name: "Elli",    trait: "Youthful"       },
-  { id: "GBv7mTt0atIp3Br8iCZE", name: "Thomas",  trait: "Wise elder"     },
-  { id: "ThT5KcBeYPX3keUQqHPh", name: "Dorothy", trait: "Airy light"     },
+const EL_VOICES_FALLBACK = [
+  { id: "pNInz6obpgDQGcFmaJgB", name: "Adam",    category: "premade" },
+  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel",  category: "premade" },
+  { id: "VR6AewLTigWG4xSOukaG", name: "Arnold",  category: "premade" },
+  { id: "LcfcDJNUP1GQjkzn1xUU", name: "Emily",   category: "premade" },
 ];
 
 interface MixClip {
@@ -383,7 +379,8 @@ export default function TestPage() {
   // TTS provider controls
   const [ttsProvider, setTtsProvider]   = useState<TtsProvider>("gemini");
   const [geminiVoice, setGeminiVoice]   = useState("Kore");
-  const [elVoiceId, setElVoiceId]       = useState(EL_VOICES[0].id);
+  const [elVoices, setElVoices]         = useState(EL_VOICES_FALLBACK);
+  const [elVoiceId, setElVoiceId]       = useState(EL_VOICES_FALLBACK[0].id);
   const [voiceStyle, setVoiceStyle] = useState("");
 
   // Family voices
@@ -395,6 +392,18 @@ export default function TestPage() {
       .then((r) => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) setFamilyVoices((data as FamilyVoice[]).filter((v) => (v as { category?: string }).category === "family"));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/el-voices")
+      .then((r) => r.json())
+      .then((data: { voices?: { id: string; name: string; category: string }[] }) => {
+        if (data.voices?.length) {
+          setElVoices(data.voices);
+          setElVoiceId((prev) => data.voices!.some((v) => v.id === prev) ? prev : data.voices![0].id);
+        }
       })
       .catch(() => {});
   }, []);
@@ -466,7 +475,7 @@ export default function TestPage() {
             voice:      ttsProvider === "gemini" ? geminiVoice : elVoiceId,
             voiceStyle: voiceStyle || undefined,
           };
-          voiceName = ttsProvider === "gemini" ? geminiVoice : (EL_VOICES.find((v) => v.id === elVoiceId)?.name ?? "EL");
+          voiceName = ttsProvider === "gemini" ? geminiVoice : (elVoices.find((v) => v.id === elVoiceId)?.name ?? "EL");
         }
       }
       const res  = await fetch("/api/test-audio", {
@@ -668,7 +677,7 @@ export default function TestPage() {
                 <div>
                   <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1.5">Voice</p>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {EL_VOICES.map((v) => {
+                    {elVoices.map((v) => {
                       const active = elVoiceId === v.id;
                       return (
                         <button key={v.id}
@@ -679,7 +688,7 @@ export default function TestPage() {
                             border: `1px solid ${active ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.07)"}`,
                           }}>
                           <p className="text-[11px] font-semibold leading-tight" style={{ color: active ? "#F59E0B" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
-                          <p className="text-[9px] mt-0.5" style={{ color: active ? "rgba(245,158,11,0.6)" : "rgba(255,255,255,0.25)" }}>{v.trait}</p>
+                          <p className="text-[9px] mt-0.5" style={{ color: active ? "rgba(245,158,11,0.6)" : "rgba(255,255,255,0.25)" }}>{v.category}</p>
                         </button>
                       );
                     })}
