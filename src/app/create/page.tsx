@@ -292,7 +292,7 @@ export default function CreatePage() {
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{t("producingDrama")}</h1>
             <div className="w-8" />
           </div>
-          <ProductionProgress jobId={productionJobId} onDone={handleProductionDone} onError={handleProductionError} />
+          <ProductionProgress jobId={productionJobId} onDone={handleProductionDone} onError={handleProductionError} coverUrl={coverUrl || undefined} />
         </div>
       </div>
     );

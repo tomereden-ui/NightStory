@@ -7,6 +7,7 @@ interface Props {
   jobId: string;
   onDone: (job: Job) => void;
   onError: (msg: string) => void;
+  coverUrl?: string;
 }
 
 const STEP_ICONS: Record<string, string> = {
@@ -19,7 +20,7 @@ const STEP_ICONS: Record<string, string> = {
   error:     "❌",
 };
 
-export default function ProductionProgress({ jobId, onDone, onError }: Props) {
+export default function ProductionProgress({ jobId, onDone, onError, coverUrl }: Props) {
   const [job, setJob] = useState<Job | null>(null);
 
   useEffect(() => {
@@ -72,18 +73,33 @@ export default function ProductionProgress({ jobId, onDone, onError }: Props) {
       className="flex flex-col items-center justify-center px-6 text-center gap-6"
       style={{ minHeight: "60vh" }}
     >
-      {/* Animated icon */}
-      <div className="relative w-24 h-24 flex items-center justify-center">
-        <div
-          className="absolute inset-0 rounded-full animate-ping opacity-15"
-          style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }}
-        />
-        <div
-          className="absolute inset-2 rounded-full opacity-30 animate-pulse"
-          style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }}
-        />
-        <span className="relative text-5xl">{icon}</span>
-      </div>
+      {/* Cover image or animated icon */}
+      {coverUrl ? (
+        <div className="relative w-full max-w-xs rounded-2xl overflow-hidden"
+          style={{ aspectRatio: "16/9", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={coverUrl} alt="Story cover" className="w-full h-full object-cover" />
+          {/* Animated overlay to show it's processing */}
+          <div className="absolute inset-0 flex items-center justify-center"
+            style={{ background: "rgba(5,8,20,0.45)", backdropFilter: "blur(1px)" }}>
+            <div className="relative w-16 h-16 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full animate-ping opacity-20"
+                style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
+              <div className="absolute inset-1 rounded-full opacity-40 animate-pulse"
+                style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
+              <span className="relative text-3xl">{icon}</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="relative w-24 h-24 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full animate-ping opacity-15"
+            style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
+          <div className="absolute inset-2 rounded-full opacity-30 animate-pulse"
+            style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
+          <span className="relative text-5xl">{icon}</span>
+        </div>
+      )}
 
       {/* Current step */}
       <div>
