@@ -303,7 +303,7 @@ export default function CreatePage() {
       <div className="min-h-full" style={{ background: "transparent" }} dir={isRTL ? "rtl" : "ltr"}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
-            <button onClick={handleReset} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+            <button onClick={() => setActiveTab("script")} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{t("dramaReady")}</h1>
             <div className="w-8" />
           </div>
