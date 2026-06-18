@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
       const codes = Array.from(rawText).slice(0, 8).map((c) => `U+${c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}(${c})`);
       console.log("[EL TTS] text sent to EL →", JSON.stringify(rawText));
       console.log("[EL TTS] first chars     →", codes.join(" "));
+    } else {
+      console.log("[Gemini TTS] text sent to Gemini →", JSON.stringify(rawText));
     }
 
     // Performance tag prefix carries style hints into the line
