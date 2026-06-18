@@ -10,10 +10,10 @@ const CLOUD_TTS_VOICES = [
   { id: "en-US-Neural2-F", label: "Neural2 · F", lang: "EN", gender: "F" },
   { id: "en-US-Neural2-A", label: "Neural2 · A", lang: "EN", gender: "F" },
   { id: "en-US-Neural2-J", label: "Neural2 · J", lang: "EN", gender: "M" },
-  { id: "he-IL-Neural2-A", label: "Neural2 · A", lang: "HE", gender: "F" },
-  { id: "he-IL-Neural2-B", label: "Neural2 · B", lang: "HE", gender: "M" },
-  { id: "he-IL-Neural2-C", label: "Neural2 · C", lang: "HE", gender: "F" },
-  { id: "he-IL-Neural2-D", label: "Neural2 · D", lang: "HE", gender: "M" },
+  { id: "he-IL-Wavenet-A", label: "WaveNet · A", lang: "HE", gender: "F" },
+  { id: "he-IL-Wavenet-B", label: "WaveNet · B", lang: "HE", gender: "M" },
+  { id: "he-IL-Wavenet-C", label: "WaveNet · C", lang: "HE", gender: "F" },
+  { id: "he-IL-Wavenet-D", label: "WaveNet · D", lang: "HE", gender: "M" },
 ];
 
 interface FamilyVoice {
