@@ -178,6 +178,7 @@ function ClipCard({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration]   = useState(0);
   const [expanded, setExpanded]   = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   const isSpeech = clip.type === "speech";
   const accent   = isSpeech ? "#4fc3f7" : "#a78bfa";
@@ -195,7 +196,13 @@ function ClipCard({
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
         onEnded={() => { setPlaying(false); setCurrentTime(0); }}
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        onLoadedMetadata={() => { setDuration(audioRef.current?.duration ?? 0); setAudioError(null); }}
+        onError={(e) => {
+          const el = e.currentTarget;
+          const code = el.error?.code;
+          const msgs: Record<number, string> = { 1: "aborted", 2: "network error", 3: "decode error", 4: "format not supported" };
+          setAudioError(`Audio error: ${msgs[code ?? 0] ?? "unknown"} (${clip.url})`);
+        }}
       />
 
       {/* Header row */}
@@ -220,7 +227,9 @@ function ClipCard({
         {/* Voice · text */}
         <p className="flex-1 text-xs truncate min-w-0">
           {clip.voice && <span className="font-semibold mr-1" style={{ color: accent }}>{clip.voice}</span>}
-          <span className="text-white/50">{clip.text}</span>
+          {audioError
+            ? <span className="text-red-400">{audioError}</span>
+            : <span className="text-white/50">{clip.text}</span>}
         </p>
 
         {/* Expand timing */}

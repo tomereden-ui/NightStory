@@ -80,10 +80,15 @@ export async function POST(req: NextRequest) {
       console.warn("[test-audio TTS]", msg);
       return NextResponse.json({ error: `TTS failed: ${msg}` }, { status: 502 });
     }
-    // Gemini 3.1 may return MP3 — check which file was actually written
-    const mp3Path = path.join(OUT_DIR, `test_tts_${id}.mp3`);
-    const actualExt = !useEL && fs.existsSync(mp3Path) ? "mp3" : ext;
-    return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${actualExt}` });
+    // Gemini may return MP3/OGG — check which file was actually written
+    if (!useEL) {
+      for (const e of ["mp3", "ogg", "wav"] as const) {
+        if (fs.existsSync(path.join(OUT_DIR, `test_tts_${id}.${e}`))) {
+          return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${e}` });
+        }
+      }
+    }
+    return NextResponse.json({ audioUrl: `/output/test_tts_${id}.${ext}` });
   }
 
   // SFX

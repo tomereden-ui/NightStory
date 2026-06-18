@@ -166,18 +166,37 @@ async function synthesizeGemini(
       break;
     }
     const mime = inlineData.mimeType ?? "";
-    console.log(`[${ts()}][Gemini TTS] mimeType: ${mime}, data length: ${inlineData.data.length}`);
-    const isPcm = mime.includes("L16") || mime.includes("pcm");
-    const isMp3 = mime.includes("mp3") || mime.includes("mpeg");
     const rawBuf = Buffer.from(inlineData.data, "base64");
+    console.log(`[${ts()}][Gemini TTS] mimeType: ${mime}, bytes: ${rawBuf.length}`);
+
+    const isPcm  = mime.includes("L16") || mime.includes("pcm");
+    const isMp3  = mime.includes("mp3") || mime.includes("mpeg");
+    const isOgg  = mime.includes("ogg") || mime.includes("opus");
+    const isWav  = mime.includes("wav");
+
     if (isPcm) {
-      fs.writeFileSync(outputPath, pcmToWav(rawBuf));
+      // Parse sample rate from mime like "audio/L16;rate=24000"
+      const rateMatch = mime.match(/rate=(\d+)/i);
+      const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+      fs.writeFileSync(outputPath, pcmToWav(rawBuf, sampleRate));
     } else if (isMp3) {
-      // Gemini 3.1 returns MP3 — write to .mp3 path; caller checks which file exists
       fs.writeFileSync(outputPath.replace(/\.wav$/i, ".mp3"), rawBuf);
-    } else {
-      // Unknown format — write as-is (may already be WAV)
+    } else if (isOgg) {
+      fs.writeFileSync(outputPath.replace(/\.wav$/i, ".ogg"), rawBuf);
+    } else if (isWav) {
       fs.writeFileSync(outputPath, rawBuf);
+    } else {
+      // Unknown — log first bytes to diagnose, write with detected extension
+      const header = rawBuf.slice(0, 4).toString("ascii");
+      console.warn(`[${ts()}][Gemini TTS] Unknown mime "${mime}", header bytes: ${JSON.stringify(header)}`);
+      // Try to auto-detect by magic bytes
+      const isOggMagic = rawBuf[0] === 0x4f && rawBuf[1] === 0x67 && rawBuf[2] === 0x67;
+      const isMp3Magic = rawBuf[0] === 0xff && (rawBuf[1] & 0xe0) === 0xe0;
+      const isWavMagic = header === "RIFF";
+      if (isOggMagic) fs.writeFileSync(outputPath.replace(/\.wav$/i, ".ogg"), rawBuf);
+      else if (isMp3Magic) fs.writeFileSync(outputPath.replace(/\.wav$/i, ".mp3"), rawBuf);
+      else if (isWavMagic) fs.writeFileSync(outputPath, rawBuf);
+      else fs.writeFileSync(outputPath.replace(/\.wav$/i, ".bin"), rawBuf);
     }
     return;
   }
