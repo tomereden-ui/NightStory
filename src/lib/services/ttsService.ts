@@ -116,18 +116,19 @@ async function synthesizeGemini(
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
 
-  // Gemini 3.1 understands inline [audio tags] natively — pass text as-is
-  // with performance tags intact. Persona goes as system instruction only.
+  // Gemini 3.1 Flash TTS does NOT support systemInstruction (returns 400 INVALID_ARGUMENT).
+  // Persona is prepended as a speaking-style instruction in the text itself instead.
+  const fullText = systemInstruction?.trim()
+    ? `[${systemInstruction.trim()}]\n${text}`
+    : text;
+
   const payload: Record<string, unknown> = {
-    contents: [{ role: "user", parts: [{ text }] }],
+    contents: [{ role: "user", parts: [{ text: fullText }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
     },
   };
-  if (systemInstruction?.trim()) {
-    payload.systemInstruction = { parts: [{ text: systemInstruction.trim() }] };
-  }
 
   let lastError = "";
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -144,10 +145,11 @@ async function synthesizeGemini(
     }
     clearTimeout(timer);
     if (res.status === 429) {
-      const body429 = await res.text().catch(() => "");
-      console.warn(`[${ts()}][TTS] 429 from Gemini (attempt ${attempt}):`, body429.slice(0, 300));
+      await res.text().catch(() => "");
       lastError = "TTS rate limited (429)";
-      if (attempt < 2) { await sleep(8000); continue; }
+      const wait429 = Math.min(30_000, attempt * 10_000);
+      console.warn(`[${ts()}][TTS] 429 from Gemini (attempt ${attempt}/${maxAttempts}), waiting ${wait429}ms`);
+      if (attempt < maxAttempts) { await sleep(wait429); continue; }
       break;
     }
     if (res.status === 500 && attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 1500); continue; }
