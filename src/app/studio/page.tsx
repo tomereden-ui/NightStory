@@ -21,10 +21,12 @@ interface CastMember {
 function CharacterCards({
   blocks,
   voicePool,
+  avatars,
   onDirectCharacter,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
+  avatars: Record<string, string>;
   onDirectCharacter: (characterName: string, instruction: string) => void;
 }) {
   const cast = Array.from(
@@ -55,6 +57,7 @@ function CharacterCards({
             key={characterName}
             characterName={characterName}
             voice={voice}
+            avatarUrl={avatars[characterName]}
             onDirect={(instruction) => onDirectCharacter(characterName, instruction)}
           />
         ))}
@@ -74,10 +77,12 @@ const CHAR_CHIPS = [
 function CharacterCard({
   characterName,
   voice,
+  avatarUrl,
   onDirect,
 }: {
   characterName: string;
   voice: Voice | undefined;
+  avatarUrl?: string;
   onDirect: (instruction: string) => void;
 }) {
   const [open, setOpen]       = useState(false);
@@ -113,13 +118,27 @@ function CharacterCard({
         title={`Direct ${characterName}`}
       >
         <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold transition-all"
+          className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-xl font-bold transition-all relative"
           style={open
-            ? { background: "rgba(139,92,246,0.18)", border: "2px solid rgba(139,92,246,0.55)", boxShadow: "0 0 14px rgba(139,92,246,0.2)", color: "#C4B5FD" }
-            : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: isNarrator ? "rgba(167,139,250,0.8)" : "rgba(79,195,247,0.8)" }
+            ? { border: "2px solid rgba(139,92,246,0.55)", boxShadow: "0 0 14px rgba(139,92,246,0.25)" }
+            : { border: "1px solid rgba(255,255,255,0.1)" }
           }
         >
-          {initial}
+          {avatarUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{ background: "rgba(255,255,255,0.05)", color: isNarrator ? "rgba(167,139,250,0.8)" : "rgba(79,195,247,0.8)" }}
+            >
+              {initial}
+            </div>
+          )}
+          {/* Subtle shimmer while loading (no avatarUrl yet) */}
+          {!avatarUrl && (
+            <div className="absolute inset-0 opacity-20" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 60%)" }} />
+          )}
         </div>
         <span
           className="text-[10px] font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
@@ -231,6 +250,9 @@ export default function StudioPage() {
   const [reviseError, setReviseError]       = useState<string | null>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
+  const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
+  const avatarSeedingRef = useRef(false);
+
   // Load voice pool
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
 
@@ -243,15 +265,55 @@ export default function StudioPage() {
       setCoverUrl(draft.coverUrl ?? "");
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
+      setCharacterAvatars(draft.characterAvatars ?? {});
     }
     setLoaded(true);
   }, []);
 
-  // Persist draft on change
+  // Persist draft on change (including avatars)
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText: "", scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined });
-  }, [scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, loaded]);
+    writeDraft({ promptText: "", scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars });
+  }, [scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, loaded]);
+
+  // Background-seed missing character avatars one by one
+  useEffect(() => {
+    if (!loaded || scriptBlocks.length === 0 || avatarSeedingRef.current) return;
+    const characters = Array.from(
+      new Set(scriptBlocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName))
+    );
+    const missing = characters.filter((name) => !characterAvatars[name]);
+    if (missing.length === 0) return;
+
+    let cancelled = false;
+    avatarSeedingRef.current = true;
+
+    (async () => {
+      for (const name of missing) {
+        if (cancelled) break;
+        try {
+          const res = await fetch("/api/generate-avatar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ characterName: name, summary }),
+          });
+          if (res.ok) {
+            const { imageData, mimeType } = await res.json() as { imageData: string; mimeType: string };
+            if (imageData && !cancelled) {
+              const dataUrl = `data:${mimeType};base64,${imageData}`;
+              setCharacterAvatars((prev) => ({ ...prev, [name]: dataUrl }));
+            }
+          }
+        } catch {
+          // ignore individual failures — letter initial stays shown
+        }
+      }
+      avatarSeedingRef.current = false;
+    })();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, scriptBlocks.length > 0]);
 
   const handleRevise = useCallback(async (instruction: string) => {
     if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return;
@@ -384,6 +446,7 @@ export default function StudioPage() {
             <CharacterCards
               blocks={scriptBlocks}
               voicePool={voicePool}
+              avatars={characterAvatars}
               onDirectCharacter={(characterName, instruction) => handleRevise(instruction)}
             />
 

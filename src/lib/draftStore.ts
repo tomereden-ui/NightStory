@@ -9,6 +9,7 @@ export interface DraftState {
   coverPrompt: string;
   coverUrl: string;
   editingStoryId?: string;
+  characterAvatars?: Record<string, string>;
 }
 
 export function readDraft(): DraftState | null {
