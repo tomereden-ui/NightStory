@@ -19,6 +19,7 @@ interface ScriptTabProps {
   onRegenerateCover?: () => void;
   durationMinutes?: number;
   onDurationChange?: (v: number) => void;
+  hideDirectorsNote?: boolean;
 }
 
 function makeId() {
@@ -309,7 +310,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -736,8 +737,8 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </div>
         )}
 
-        {/* Director's Note Bar */}
-        <div
+        {/* Director's Note Bar — hidden when Studio page shows its own top-level version */}
+        {!hideDirectorsNote && <div
           className="mb-3 rounded-2xl p-3 flex flex-col gap-2.5"
           style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.18)" }}
         >
@@ -813,7 +814,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           {reviseError && (
             <p className="text-[10px]" style={{ color: "rgba(239,68,68,0.7)" }}>⚠ {reviseError}</p>
           )}
-        </div>
+        </div>}
 
         {/* Produce button */}
         <button
