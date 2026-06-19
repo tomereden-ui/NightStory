@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { readDraft, writeDraft } from "@/lib/draftStore";
 import { useLanguage } from "@/context/LanguageContext";
 import ScriptTab from "@/components/studio/ScriptTab";
@@ -253,6 +253,10 @@ export default function StudioPage() {
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
   const avatarSeedingRef = useRef(false);
 
+  const [pendingDirections, setPendingDirections] = useState<string[]>([]);
+  const [showToast, setShowToast] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Load voice pool
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
 
@@ -331,6 +335,23 @@ export default function StudioPage() {
       setIsRevising(false);
     }
   }, [scriptBlocks, isRevising]);
+
+  // Queue a character direction; shows toast to prompt "Update Script"
+  const handleQueueDirection = useCallback((instruction: string) => {
+    setPendingDirections((prev) => [...prev, instruction]);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setShowToast(true);
+    toastTimerRef.current = setTimeout(() => setShowToast(false), 4500);
+  }, []);
+
+  // Apply all queued directions at once
+  const handleUpdateScript = useCallback(async () => {
+    if (pendingDirections.length === 0 || isRevising) return;
+    const combined = pendingDirections.join(". Also: ");
+    setPendingDirections([]);
+    setShowToast(false);
+    await handleRevise(combined);
+  }, [pendingDirections, isRevising, handleRevise]);
 
   const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
     if (!prompt) return;
@@ -442,15 +463,7 @@ export default function StudioPage() {
           <EmptyStudio />
         ) : (
           <>
-            {/* Character Cards — tap any to direct that character */}
-            <CharacterCards
-              blocks={scriptBlocks}
-              voicePool={voicePool}
-              avatars={characterAvatars}
-              onDirectCharacter={(characterName, instruction) => handleRevise(instruction)}
-            />
-
-            {/* Script blocks — full editing + per-line ⋯ directing */}
+            {/* Script blocks — CharacterCards injected between cover and blocks via belowCover */}
             <ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
@@ -467,6 +480,14 @@ export default function StudioPage() {
               hideDurationPicker
               hideProduceButton
               studioMode
+              belowCover={
+                <CharacterCards
+                  blocks={scriptBlocks}
+                  voicePool={voicePool}
+                  avatars={characterAvatars}
+                  onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
+                />
+              }
             />
 
             {/* ── Director's Note — below the script, after the user has read it ── */}
@@ -547,6 +568,28 @@ export default function StudioPage() {
               )}
             </div>
 
+            {/* Update Script — active when character directions are queued */}
+            <button
+              onClick={handleUpdateScript}
+              disabled={pendingDirections.length === 0 || isRevising}
+              className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-2.5"
+              style={pendingDirections.length > 0 && !isRevising
+                ? { background: "rgba(139,92,246,0.18)", border: "1.5px solid rgba(139,92,246,0.55)", color: "#C4B5FD", boxShadow: "0 0 20px rgba(139,92,246,0.15)" }
+                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
+              }
+            >
+              {isRevising ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(139,92,246,0.3)", borderTopColor: "#A78BFA" }} />
+                  Updating…
+                </>
+              ) : pendingDirections.length > 0 ? (
+                <>✏️ Update Script · {pendingDirections.length} direction{pendingDirections.length > 1 ? "s" : ""}</>
+              ) : (
+                <>✏️ Update Script</>
+              )}
+            </button>
+
             {/* Produce Audio — pinned after Director's Note */}
             <button
               onClick={() => handleProduce(scriptBlocks, durationMinutes)}
@@ -563,6 +606,22 @@ export default function StudioPage() {
                 <span className="flex items-center justify-center gap-2">🎙️ Produce Audio</span>
               )}
             </button>
+
+            {/* Toast — appears after queuing a character direction */}
+            <div
+              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 pointer-events-none"
+              style={{
+                opacity: showToast ? 1 : 0,
+                transform: showToast ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(8px)",
+              }}
+            >
+              <div
+                className="px-4 py-2.5 rounded-2xl text-xs font-semibold whitespace-nowrap"
+                style={{ background: "rgba(139,92,246,0.92)", color: "#fff", boxShadow: "0 4px 20px rgba(139,92,246,0.45)", backdropFilter: "blur(8px)" }}
+              >
+                ✏️ Tap &quot;Update Script&quot; to apply your direction
+              </div>
+            </div>
           </>
         )}
       </div>

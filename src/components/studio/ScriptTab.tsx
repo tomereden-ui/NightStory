@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import type { ScriptBlock, Voice } from "@/types";
 import ScriptBlockCard, { buildSfxPayload } from "./ScriptBlockCard";
 import SpeechPlayerModal from "./SpeechPlayerModal";
@@ -23,6 +23,7 @@ interface ScriptTabProps {
   hideDurationPicker?: boolean;
   hideProduceButton?: boolean;
   studioMode?: boolean;
+  belowCover?: React.ReactNode;
 }
 
 function makeId() {
@@ -385,7 +386,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -707,6 +708,9 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             )}
           </div>
         )}
+
+        {/* Slot rendered between cover/summary and script blocks (e.g. CharacterCards) */}
+        {belowCover}
 
         {/* Stats row */}
         <div className="flex items-center justify-between mb-3">
