@@ -436,6 +436,47 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     [blocks, onBlocksChange, markDirty],
   );
 
+  // ─── Director revise ────────────────────────────────────────────────────────
+
+  const [directorNote, setDirectorNote]   = useState("");
+  const [isRevising, setIsRevising]       = useState(false);
+  const [reviseError, setReviseError]     = useState<string | null>(null);
+
+  const handleRevise = useCallback(async (instruction: string) => {
+    if (!instruction.trim() || isRevising) return;
+    setIsRevising(true);
+    setReviseError(null);
+    try {
+      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks, instruction: instruction.trim() }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Revision failed");
+      onBlocksChange(data.blocks);
+      setDirectorNote("");
+      markDirty();
+    } catch (err: unknown) {
+      setReviseError(err instanceof Error ? err.message : "Revision failed");
+    } finally {
+      setIsRevising(false);
+    }
+  }, [blocks, isRevising, onBlocksChange, markDirty]);
+
+  const handleReviseBlock = useCallback(async (id: string, instruction: string) => {
+    if (!instruction.trim() || isRevising) return;
+    setIsRevising(true);
+    setReviseError(null);
+    try {
+      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks, instruction: instruction.trim(), targetBlockId: id }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Revision failed");
+      onBlocksChange(data.blocks);
+      markDirty();
+    } catch (err: unknown) {
+      setReviseError(err instanceof Error ? err.message : "Revision failed");
+    } finally {
+      setIsRevising(false);
+    }
+  }, [blocks, isRevising, onBlocksChange, markDirty]);
+
   // ─── Validate / regenerate ──────────────────────────────────────────────────
 
   const handleRegenerate = useCallback(async () => {
@@ -603,6 +644,8 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 onVoiceChange={handleVoiceChange}
                 onPlayPreview={handleOpenPlayer}
                 onDelete={handleDelete}
+                onReviseBlock={handleReviseBlock}
+                isRevising={isRevising}
               />
             </div>
           </div>
@@ -692,6 +735,85 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             </div>
           </div>
         )}
+
+        {/* Director's Note Bar */}
+        <div
+          className="mb-3 rounded-2xl p-3 flex flex-col gap-2.5"
+          style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.18)" }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm">🎬</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.7)" }}>
+              Director&apos;s Note
+            </span>
+            {isRevising && (
+              <span className="ml-auto flex items-center gap-1 text-[10px]" style={{ color: "rgba(139,92,246,0.6)" }}>
+                <span className="w-2.5 h-2.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(139,92,246,0.3)", borderTopColor: "#A78BFA" }} />
+                Revising…
+              </span>
+            )}
+          </div>
+
+          {/* Quick chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: "😴 More sleepy", instruction: "Make the whole story more sleepy and calming, perfect for bedtime" },
+              { label: "✨ More magical", instruction: "Add more magic and wonder to the story — make it feel enchanted and dreamy" },
+              { label: "😂 Funnier", instruction: "Make the story funnier and more playful with light humor for children" },
+              { label: "✂️ Shorter", instruction: "Shorten the story — condense each block to be more concise while keeping the key moments" },
+            ].map(({ label, instruction }) => (
+              <button
+                key={label}
+                disabled={isRevising}
+                onClick={() => handleRevise(instruction)}
+                className="text-[11px] px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+                style={{
+                  background: isRevising ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.1)",
+                  border: "1px solid rgba(139,92,246,0.25)",
+                  color: isRevising ? "rgba(255,255,255,0.2)" : "#C4B5FD",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Free-text note input */}
+          <div className="flex gap-2 items-end">
+            <textarea
+              value={directorNote}
+              onChange={(e) => setDirectorNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && directorNote.trim()) {
+                  e.preventDefault();
+                  handleRevise(directorNote);
+                }
+              }}
+              rows={2}
+              placeholder="Tell the story what to change… (e.g. make the ending happier, add more tension in the middle)"
+              disabled={isRevising}
+              className="flex-1 rounded-xl px-3 py-2 text-xs leading-relaxed outline-none resize-none text-white/80 placeholder-white/20 transition-colors"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)" }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.45)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.2)")}
+            />
+            <button
+              disabled={!directorNote.trim() || isRevising}
+              onClick={() => handleRevise(directorNote)}
+              className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
+              style={directorNote.trim() && !isRevising
+                ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.45)", color: "#A78BFA" }
+                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
+              }
+            >
+              ↵
+            </button>
+          </div>
+
+          {reviseError && (
+            <p className="text-[10px]" style={{ color: "rgba(239,68,68,0.7)" }}>⚠ {reviseError}</p>
+          )}
+        </div>
 
         {/* Produce button */}
         <button

@@ -28,6 +28,8 @@ interface ScriptBlockCardProps {
   onVoiceChange: (id: string, voiceId: string) => void;
   onPlayPreview: (id: string) => void;
   onDelete: (id: string) => void;
+  onReviseBlock?: (id: string, instruction: string) => void;
+  isRevising?: boolean;
 }
 
 // ─── SFX card ─────────────────────────────────────────────────────────────────
@@ -262,11 +264,16 @@ function SpeechCard({
   onVoiceChange,
   onPlayPreview,
   onDelete,
+  onReviseBlock,
+  isRevising,
 }: ScriptBlockCardProps) {
   const { t } = useLanguage();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [showPicker, setShowPicker] = useState(false);
-  const [isFocused, setIsFocused]   = useState(false);
+  const textareaRef   = useRef<HTMLTextAreaElement>(null);
+  const directRef     = useRef<HTMLInputElement>(null);
+  const [showPicker, setShowPicker]         = useState(false);
+  const [isFocused, setIsFocused]           = useState(false);
+  const [showDirectMenu, setShowDirectMenu] = useState(false);
+  const [directNote, setDirectNote]         = useState("");
 
   const assignedVoice = voices.find((v) => v.id === block.assignedVoiceId) ?? voices[0];
   const isNarrator    = block.characterName === "Narrator";
@@ -280,13 +287,14 @@ function SpeechCard({
 
   return (
     <div
-      className="flex gap-3 p-3 rounded-2xl border transition-all duration-200"
+      className="flex flex-col p-3 rounded-2xl border transition-all duration-200"
       style={
         isFocused
           ? { background: "rgba(255,255,255,0.04)", borderColor: "rgba(79,195,247,0.3)", boxShadow: "0 0 0 1px rgba(79,195,247,0.1), 0 0 20px rgba(79,195,247,0.06)" }
           : { background: "rgba(255,255,255,0.025)", borderColor: "rgba(255,255,255,0.07)" }
       }
     >
+    <div className="flex gap-3">
 
       {/* Voice avatar — click to change voice */}
       <div className="relative flex-shrink-0 pt-0.5 group/voice">
@@ -371,6 +379,21 @@ function SpeechCard({
           )}
         </button>
 
+        {/* Director menu toggle */}
+        {onReviseBlock && (
+          <button
+            onClick={() => { setShowDirectMenu((s) => !s); setTimeout(() => directRef.current?.focus(), 60); }}
+            className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
+            style={showDirectMenu
+              ? { background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.5)", color: "#A78BFA" }
+              : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.25)" }
+            }
+            title="Direct this line"
+          >
+            <span className="text-[11px] leading-none">⋯</span>
+          </button>
+        )}
+
         {/* Delete */}
         <button
           onClick={() => onDelete(block.id)}
@@ -381,6 +404,57 @@ function SpeechCard({
           <span className="text-[10px]">✕</span>
         </button>
       </div>
+
+    </div>
+      {/* Inline direction panel — full-width row below the card content */}
+      {showDirectMenu && onReviseBlock && (
+        <div
+          className="col-span-full mt-2 rounded-xl p-2.5 flex flex-col gap-2"
+          style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.2)" }}
+        >
+          {/* Quick presets */}
+          <div className="flex flex-wrap gap-1.5">
+            {["✨ Make it more magical", "😴 Make it sleepier", "😂 Make it funnier", "🔄 Rewrite this line"].map((chip) => (
+              <button
+                key={chip}
+                disabled={isRevising}
+                onClick={() => { onReviseBlock(block.id, chip); setShowDirectMenu(false); }}
+                className="text-[10px] px-2.5 py-1 rounded-full transition-all active:scale-95"
+                style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+          {/* Custom input */}
+          <div className="flex gap-1.5 items-center">
+            <input
+              ref={directRef}
+              type="text"
+              value={directNote}
+              onChange={(e) => setDirectNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && directNote.trim()) { onReviseBlock(block.id, directNote.trim()); setShowDirectMenu(false); setDirectNote(""); }
+                if (e.key === "Escape") setShowDirectMenu(false);
+              }}
+              placeholder="Type direction for this line…"
+              className="flex-1 rounded-lg px-2.5 py-1.5 text-[11px] outline-none text-white/80"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.25)" }}
+            />
+            <button
+              disabled={!directNote.trim() || isRevising}
+              onClick={() => { if (directNote.trim()) { onReviseBlock(block.id, directNote.trim()); setShowDirectMenu(false); setDirectNote(""); } }}
+              className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all active:scale-95"
+              style={directNote.trim() && !isRevising
+                ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#A78BFA" }
+                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
+              }
+            >
+              ↵
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -393,3 +467,4 @@ export default function ScriptBlockCard(props: ScriptBlockCardProps) {
   }
   return <SpeechCard {...props} />;
 }
+
