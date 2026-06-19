@@ -7,7 +7,6 @@ import ScriptTab from "@/components/studio/ScriptTab";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
-import VoiceAvatar from "@/components/ui/VoiceAvatar";
 import type { ScriptBlock, Voice } from "@/types";
 import type { Job } from "@/lib/jobs";
 import Link from "next/link";
@@ -16,18 +15,17 @@ import Link from "next/link";
 
 interface CastMember {
   characterName: string;
-  assignedVoiceId: string;
   voice: Voice | undefined;
 }
 
 function CharacterCards({
   blocks,
   voicePool,
-  onVoiceChange,
+  onDirectCharacter,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
-  onVoiceChange: (characterName: string, voiceId: string) => void;
+  onDirectCharacter: (characterName: string, instruction: string) => void;
 }) {
   const cast = Array.from(
     blocks
@@ -36,7 +34,6 @@ function CharacterCards({
         if (!map.has(b.characterName)) {
           map.set(b.characterName, {
             characterName: b.characterName,
-            assignedVoiceId: b.assignedVoiceId,
             voice: voicePool.find((v) => v.id === b.assignedVoiceId),
           });
         }
@@ -50,17 +47,15 @@ function CharacterCards({
   return (
     <div className="mb-5">
       <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
-        Cast
+        Cast — tap to direct a character
       </p>
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: "none" }}>
-        {cast.map(({ characterName, assignedVoiceId, voice }) => (
+        {cast.map(({ characterName, voice }) => (
           <CharacterCard
             key={characterName}
             characterName={characterName}
-            assignedVoiceId={assignedVoiceId}
             voice={voice}
-            voicePool={voicePool}
-            onVoiceChange={(voiceId) => onVoiceChange(characterName, voiceId)}
+            onDirect={(instruction) => onDirectCharacter(characterName, instruction)}
           />
         ))}
       </div>
@@ -68,106 +63,117 @@ function CharacterCards({
   );
 }
 
+const CHAR_CHIPS = [
+  "More gentle",
+  "More dramatic",
+  "More playful",
+  "Shorter lines",
+  "More expressive",
+];
+
 function CharacterCard({
   characterName,
-  assignedVoiceId,
   voice,
-  voicePool,
-  onVoiceChange,
+  onDirect,
 }: {
   characterName: string;
-  assignedVoiceId: string;
   voice: Voice | undefined;
-  voicePool: Voice[];
-  onVoiceChange: (voiceId: string) => void;
+  onDirect: (instruction: string) => void;
 }) {
-  const [showPicker, setShowPicker] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen]       = useState(false);
+  const [note, setNote]       = useState("");
+  const cardRef               = useRef<HTMLDivElement>(null);
+  const inputRef              = useRef<HTMLInputElement>(null);
+  const isNarrator            = characterName === "Narrator";
 
-  // Close picker on outside click
   useEffect(() => {
-    if (!showPicker) return;
-    const handleClick = (e: MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        setShowPicker(false);
-      }
+    if (!open) return;
+    setTimeout(() => inputRef.current?.focus(), 60);
+    const close = (e: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [showPicker]);
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
 
-  const isNarrator = characterName === "Narrator";
+  const submit = (instruction: string) => {
+    if (!instruction.trim()) return;
+    onDirect(`For the character "${characterName}": ${instruction.trim()}`);
+    setNote("");
+    setOpen(false);
+  };
+
+  const initial = characterName.charAt(0).toUpperCase();
 
   return (
-    <div ref={cardRef} className="relative flex-shrink-0 flex flex-col items-center gap-1.5 cursor-pointer" style={{ minWidth: 72 }}>
+    <div ref={cardRef} className="relative flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
       <button
-        onClick={() => setShowPicker((p) => !p)}
-        className="flex flex-col items-center gap-1.5 w-full"
-        title={`Change voice for ${characterName}`}
+        onClick={() => setOpen((p) => !p)}
+        className="flex flex-col items-center gap-1.5 w-full group"
+        title={`Direct ${characterName}`}
       >
         <div
-          className="relative w-14 h-14 rounded-2xl flex items-center justify-center transition-all"
-          style={showPicker
-            ? { background: "rgba(79,195,247,0.12)", border: "2px solid rgba(79,195,247,0.55)", boxShadow: "0 0 14px rgba(79,195,247,0.2)" }
-            : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
+          className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold transition-all"
+          style={open
+            ? { background: "rgba(139,92,246,0.18)", border: "2px solid rgba(139,92,246,0.55)", boxShadow: "0 0 14px rgba(139,92,246,0.2)", color: "#C4B5FD" }
+            : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: isNarrator ? "rgba(167,139,250,0.8)" : "rgba(79,195,247,0.8)" }
           }
         >
-          <VoiceAvatar
-            avatarUrl={voice?.avatarUrl}
-            emoji={voice?.avatarEmoji ?? (isNarrator ? "🎙️" : "👤")}
-            size={42}
-            borderColor="transparent"
-          />
-          {/* Change voice badge */}
-          <span
-            className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px]"
-            style={{ background: "#0d1120", border: "1px solid rgba(79,195,247,0.3)", color: "rgba(79,195,247,0.7)" }}
-          >
-            ↕
-          </span>
+          {initial}
         </div>
         <span
-          className="text-[10px] font-bold uppercase tracking-widest text-center leading-tight max-w-[72px] truncate"
+          className="text-[10px] font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
           style={{ color: isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)" }}
         >
           {characterName}
         </span>
         {voice && (
-          <span className="text-[9px] text-white/30 text-center leading-tight max-w-[72px] truncate">
-            {voice.name.split(" ")[0]}
-          </span>
+          <span className="text-[9px] text-white/25 text-center truncate w-full">{voice.name.split(" ")[0]}</span>
         )}
       </button>
 
-      {/* Inline voice picker popover */}
-      {showPicker && (
+      {/* Direction popup */}
+      {open && (
         <div
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 rounded-2xl p-2 w-48 flex flex-col gap-1 max-h-52 overflow-y-auto"
-          style={{ background: "#0d1120", border: "1px solid rgba(79,195,247,0.2)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}
+          className="absolute top-full left-0 mt-2 z-50 rounded-2xl p-3 flex flex-col gap-2.5"
+          style={{ background: "#0d1120", border: "1px solid rgba(139,92,246,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.7)", width: 220 }}
         >
-          <p className="text-[9px] font-bold uppercase tracking-widest px-1 mb-0.5" style={{ color: "rgba(79,195,247,0.4)" }}>
-            {characterName}
+          <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "rgba(167,139,250,0.6)" }}>
+            Direct {characterName}
           </p>
-          {voicePool.map((v) => (
+          <div className="flex flex-wrap gap-1.5">
+            {CHAR_CHIPS.map((chip) => (
+              <button
+                key={chip}
+                onClick={() => submit(chip)}
+                className="text-[10px] px-2 py-1 rounded-full transition-all active:scale-95"
+                style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.28)", color: "#C4B5FD" }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <input
+              ref={inputRef}
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") setOpen(false); }}
+              placeholder={`e.g. "speak slower"`}
+              className="flex-1 rounded-lg px-2.5 py-1.5 text-[11px] outline-none text-white/80"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.22)" }}
+            />
             <button
-              key={v.id}
-              onClick={() => { onVoiceChange(v.id); setShowPicker(false); }}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all text-left"
-              style={v.id === assignedVoiceId
-                ? { background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.3)" }
-                : { background: "transparent", border: "1px solid transparent" }
+              onClick={() => submit(note)}
+              disabled={!note.trim()}
+              className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all active:scale-95"
+              style={note.trim()
+                ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#A78BFA" }
+                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
               }
-            >
-              <VoiceAvatar avatarUrl={v.avatarUrl} emoji={v.avatarEmoji} size={24} borderColor="rgba(79,195,247,0.15)" />
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-white/85 truncate">{v.name}</p>
-                <p className="text-[9px] text-white/30 truncate">{v.style}</p>
-              </div>
-              {v.id === assignedVoiceId && (
-                <span className="ml-auto text-[9px]" style={{ color: "#4fc3f7" }}>✓</span>
-              )}
-            </button>
-          ))}
+            >↵</button>
+          </div>
         </div>
       )}
     </div>
@@ -246,13 +252,6 @@ export default function StudioPage() {
     if (!loaded) return;
     writeDraft({ promptText: "", scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined });
   }, [scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, loaded]);
-
-  // Re-assign all blocks for a given character to a new voice
-  const handleCastVoiceChange = useCallback((characterName: string, voiceId: string) => {
-    setScriptBlocks((prev) =>
-      prev.map((b) => b.characterName === characterName ? { ...b, assignedVoiceId: voiceId } : b)
-    );
-  }, []);
 
   const handleRevise = useCallback(async (instruction: string) => {
     if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return;
@@ -381,9 +380,33 @@ export default function StudioPage() {
           <EmptyStudio />
         ) : (
           <>
-            {/* ── Director's Note (prominent, top-of-page) ── */}
+            {/* Character Cards — tap any to direct that character */}
+            <CharacterCards
+              blocks={scriptBlocks}
+              voicePool={voicePool}
+              onDirectCharacter={(characterName, instruction) => handleRevise(instruction)}
+            />
+
+            {/* Script blocks — full editing + per-line ⋯ directing */}
+            <ScriptTab
+              blocks={scriptBlocks}
+              voices={voicePool}
+              onBlocksChange={setScriptBlocks}
+              onProduce={handleProduce}
+              isProducing={isProducing}
+              summary={summary}
+              coverUrl={coverUrl}
+              isFetchingCover={isFetchingCover}
+              onRegenerateCover={coverPrompt ? () => { setCoverUrl(""); fetchCover(coverPrompt, summary); } : undefined}
+              durationMinutes={durationMinutes}
+              onDurationChange={setDurationMinutes}
+              hideDirectorsNote
+              hideDurationPicker
+            />
+
+            {/* ── Director's Note — below the script, after the user has read it ── */}
             <div
-              className="mb-6 rounded-2xl p-4 flex flex-col gap-3"
+              className="mt-2 mb-3 rounded-2xl p-4 flex flex-col gap-3"
               style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.22)" }}
             >
               <div className="flex items-center gap-2">
@@ -399,14 +422,13 @@ export default function StudioPage() {
                 )}
               </div>
 
-              {/* Quick chips */}
               <div className="flex flex-wrap gap-2">
                 {[
                   { label: "😴 More sleepy",   instruction: "Make the whole story more sleepy and calming — softer language, slower pace, perfect for drifting off" },
-                  { label: "✨ More magical",  instruction: "Add more magic, wonder and enchantment throughout — make it feel like anything is possible" },
+                  { label: "✨ More magical",  instruction: "Add more magic, wonder and enchantment throughout" },
                   { label: "😂 Funnier",       instruction: "Add playful humor and lightness throughout — make it fun and giggly for young children" },
                   { label: "✂️ Shorter",       instruction: "Shorten the story — condense each scene to its essential moment while keeping the emotional arc" },
-                  { label: "💫 More dramatic", instruction: "Add more dramatic tension and emotional peaks — make the story feel more cinematic and exciting" },
+                  { label: "💫 More dramatic", instruction: "Add more dramatic tension and emotional peaks" },
                   { label: "🌙 Cozier",        instruction: "Make the story feel warmer, cozier and more comforting — like being tucked in on a cold night" },
                 ].map(({ label, instruction }) => (
                   <button
@@ -425,7 +447,6 @@ export default function StudioPage() {
                 ))}
               </div>
 
-              {/* Free-text input */}
               <div className="flex gap-2 items-end">
                 <textarea
                   ref={noteRef}
@@ -439,7 +460,7 @@ export default function StudioPage() {
                   }}
                   rows={2}
                   disabled={isRevising}
-                  placeholder={'Describe how you want the whole story to change… e.g. "make the ending happier", "add more tension in the middle", "rewrite for a younger audience"'}
+                  placeholder={'How should the whole story change? e.g. "make the ending happier", "add more tension in the middle"'}
                   className="flex-1 rounded-xl px-3 py-2.5 text-sm leading-relaxed outline-none resize-none text-white/80 placeholder-white/20 transition-colors"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.22)" }}
                   onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.55)")}
@@ -453,38 +474,13 @@ export default function StudioPage() {
                     ? { background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.55)", color: "#A78BFA" }
                     : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
                   }
-                >
-                  ↵
-                </button>
+                >↵</button>
               </div>
 
               {reviseError && (
                 <p className="text-[10px]" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
               )}
             </div>
-
-            {/* Character Cards */}
-            <CharacterCards
-              blocks={scriptBlocks}
-              voicePool={voicePool}
-              onVoiceChange={handleCastVoiceChange}
-            />
-
-            {/* Script — Director's Note Bar suppressed (shown above instead) */}
-            <ScriptTab
-              blocks={scriptBlocks}
-              voices={voicePool}
-              onBlocksChange={setScriptBlocks}
-              onProduce={handleProduce}
-              isProducing={isProducing}
-              summary={summary}
-              coverUrl={coverUrl}
-              isFetchingCover={isFetchingCover}
-              onRegenerateCover={coverPrompt ? () => { setCoverUrl(""); fetchCover(coverPrompt, summary); } : undefined}
-              durationMinutes={durationMinutes}
-              onDurationChange={setDurationMinutes}
-              hideDirectorsNote
-            />
           </>
         )}
       </div>

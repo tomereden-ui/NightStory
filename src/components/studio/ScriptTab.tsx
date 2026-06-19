@@ -20,6 +20,7 @@ interface ScriptTabProps {
   durationMinutes?: number;
   onDurationChange?: (v: number) => void;
   hideDirectorsNote?: boolean;
+  hideDurationPicker?: boolean;
 }
 
 function makeId() {
@@ -310,7 +311,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -707,8 +708,8 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </div>
         )}
 
-        {/* Duration picker */}
-        {!isProducing && (
+        {/* Duration picker — hidden in Studio (length is fixed once script is generated) */}
+        {!isProducing && !hideDurationPicker && (
           <div className="mb-3 rounded-2xl px-4 py-3 flex flex-col gap-2"
             style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
             <div className="flex items-center justify-between">
