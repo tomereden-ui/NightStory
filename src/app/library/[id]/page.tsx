@@ -69,7 +69,7 @@ export default function StoryDetailPage() {
       coverUrl: entry.coverUrl ?? "",
       editingStoryId: entry.id,
     });
-    router.push("/create");
+    router.push("/studio");
   }, [entry, router]);
 
   if (loading) {
@@ -235,8 +235,8 @@ export default function StoryDetailPage() {
               color: "rgba(139,92,246,0.9)",
             }}
           >
-            <span>✏️</span>
-            <span>Edit Script</span>
+            <span>🎬</span>
+            <span>Open in Studio</span>
           </button>
         </div>
       </div>

@@ -11,6 +11,14 @@ function durationLabel(seconds: number): string {
   return m <= 1 ? "1 min" : `${m} min`;
 }
 
+function deriveClassicSummary(blocks: ScriptBlock[]): string {
+  return blocks
+    .filter((b) => b.characterName.toLowerCase().includes("narrat"))
+    .slice(0, 3)
+    .map((b) => b.textPayload.replace(/^\[.*?\]\s*/, ""))
+    .join(" ");
+}
+
 const CARD_PALETTES: [string, string][] = [
   ["#4fc3f7", "#7c3aed"],
   ["#f59e0b", "#ec4899"],
@@ -56,10 +64,11 @@ export default function ClassicDetailPage() {
   const handleOpenInStudio = useCallback(async () => {
     if (!meta || !blocks) return;
     setOpeningInStudio(true);
+    const summary = deriveClassicSummary(blocks) || meta.tagline;
     writeDraft({
       promptText: `${meta.title} — ${meta.tagline}`,
       scriptBlocks: blocks,
-      summary: meta.tagline,
+      summary,
       coverPrompt: "",
       coverUrl: meta.coverUrl ?? "",
       editingStoryId: undefined,
@@ -243,6 +252,31 @@ export default function ClassicDetailPage() {
 
         {/* Divider */}
         <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+
+        {/* Story summary — derived from opening narrator lines */}
+        {isReady && (() => {
+          const summary = deriveClassicSummary(blocks!);
+          if (!summary) return null;
+          return (
+            <div
+              className="mx-5 mb-5 px-4 py-3.5 rounded-2xl"
+              style={{
+                background: `linear-gradient(135deg, ${c1}0a, ${c2}0a)`,
+                border: `1px solid ${c1}28`,
+              }}
+            >
+              <p
+                className="text-[9px] font-bold tracking-[0.18em] uppercase mb-2"
+                style={{ color: `${c1}bb` }}
+              >
+                Story
+              </p>
+              <p className="text-sm leading-relaxed italic" style={{ color: "rgba(255,255,255,0.6)" }}>
+                {summary}
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Script blocks */}
         {isReady ? (

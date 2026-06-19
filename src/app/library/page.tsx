@@ -599,7 +599,7 @@ export default function LibraryPage() {
       {/* FAB — only on My Stories tab */}
       {activeTab === "my-stories" && (
         <Link
-          href="/create"
+          href="/studio"
           className="fixed w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-light z-40 active:scale-95 transition-transform"
           style={{
             bottom: isMobile ? 96 : 32,
