@@ -13,6 +13,7 @@ import type { ScriptBlock, Voice } from "@/types";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
+import { FiveQuestionFlow } from "@/app/create/five-question/FiveQuestionFlow";
 
 // ─── Script saves browser ─────────────────────────────────────────────────────
 
@@ -874,7 +875,7 @@ export default function StudioPage() {
                 key={id}
                 onClick={() => {
                   if (isDisabled) return;
-                  if (isFiveQ) { router.push("/create/five-question"); return; }
+                  if (isFiveQ) { setActiveTab("five-question"); return; }
                   setActiveTab(id);
                 }}
                 disabled={isDisabled}
@@ -912,6 +913,23 @@ export default function StudioPage() {
             durationMinutes={durationMinutes} setDurationMinutes={setDurationMinutes}
             generating={generating} onGenerate={handleGenerate}
           />
+        )}
+
+        {/* 5 Questions tab */}
+        {activeTab === "five-question" && (
+          <div className="-mx-5">
+            <FiveQuestionFlow
+              onComplete={({ blocks, summary: sm, coverPrompt: cp }) => {
+                setScriptBlocks(blocks);
+                setSummary(sm);
+                setCoverPrompt(cp);
+                setCoverUrl("");
+                writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp });
+                if (cp) fetchCover(cp, sm);
+                setActiveTab("script");
+              }}
+            />
+          </div>
         )}
 
         {/* Script tab */}
