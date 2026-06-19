@@ -779,10 +779,10 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           />
         )}
 
-        <div className="h-px my-3" style={{ background: "rgba(255,255,255,0.07)" }} />
+        {!studioMode && <div className="h-px my-3" style={{ background: "rgba(255,255,255,0.07)" }} />}
 
-        {/* Regenerate / validation panel */}
-        {isDirty && (
+        {/* Regenerate / validation panel — hidden in Studio (revise handled by Director's Note outside ScriptTab) */}
+        {isDirty && !studioMode && (
           <div className="mb-3 flex flex-col gap-2">
             <button
               onClick={handleRegenerate}
@@ -822,7 +822,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         )}
 
         {/* Duration picker — hidden in Studio (length is fixed once script is generated) */}
-        {!isProducing && !hideDurationPicker && (
+        {!isProducing && !hideDurationPicker && !studioMode && (
           <div className="mb-3 rounded-2xl px-4 py-3 flex flex-col gap-2"
             style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
             <div className="flex items-center justify-between">
