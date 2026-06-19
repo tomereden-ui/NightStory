@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
+import type { ClassicMeta } from "@/lib/classicStories";
+import { writeDraft } from "@/lib/draftStore";
+import type { ScriptBlock } from "@/types";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -41,7 +45,6 @@ function matchesDuration(seconds: number, filter: DurationFilter): boolean {
   return true;
 }
 
-// Deterministic gradient per title — gives each card a unique accent colour
 const CARD_PALETTES: [string, string][] = [
   ["#4fc3f7", "#7c3aed"],
   ["#f59e0b", "#ec4899"],
@@ -56,11 +59,231 @@ function cardPalette(title: string): [string, string] {
   return CARD_PALETTES[h % CARD_PALETTES.length];
 }
 
+// ── Classics tab ─────────────────────────────────────────────────────────────
+
+function ClassicsTab() {
+  const router = useRouter();
+  const { effective } = useViewMode();
+  const isMobile = effective === "mobile";
+
+  const [classics, setClassics] = useState<ClassicMeta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const seedingRef = useRef(false);
+
+  useEffect(() => {
+    fetch("/api/classics", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setClassics(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Background: generate missing classics one by one
+  useEffect(() => {
+    if (loading || seedingRef.current) return;
+    const pending = classics.filter((c) => c.status === "pending");
+    if (pending.length === 0) return;
+
+    seedingRef.current = true;
+
+    (async () => {
+      for (const c of pending) {
+        setGeneratingId(c.id);
+        try {
+          const res = await fetch("/api/classics", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: c.id }),
+          });
+          if (res.ok) {
+            const { meta } = await res.json() as { meta: ClassicMeta };
+            setClassics((prev) =>
+              prev.map((item) => (item.id === c.id ? meta : item))
+            );
+          }
+        } catch {
+          // keep as pending, retry on next load
+        }
+      }
+      setGeneratingId(null);
+      seedingRef.current = false;
+    })();
+  }, [loading, classics]);
+
+  const handleOpenInStudio = async (meta: ClassicMeta) => {
+    if (meta.status !== "ready") return;
+    setOpeningId(meta.id);
+    try {
+      const res = await fetch(`/api/classics/${meta.id}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Not ready");
+      const { blocks, durationSeconds } = await res.json() as {
+        blocks: ScriptBlock[];
+        durationSeconds: number;
+      };
+
+      const def = { id: meta.id, title: meta.title, tagline: meta.tagline };
+      writeDraft({
+        promptText: `${def.title} — ${def.tagline}`,
+        scriptBlocks: blocks,
+        summary: meta.tagline,
+        coverPrompt: "",
+        coverUrl: meta.coverUrl ?? "",
+        editingStoryId: undefined,
+        characterAvatars: {},
+      });
+      router.push("/studio");
+    } catch {
+      // stay on page
+    } finally {
+      setOpeningId(null);
+    }
+  };
+
+  const cardCols = isMobile
+    ? "grid-cols-2"
+    : effective === "desktop"
+    ? "grid-cols-3"
+    : "grid-cols-2";
+
+  if (loading) {
+    return (
+      <div className={`grid ${cardCols} gap-4 pt-2`}>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className="aspect-[3/4] rounded-3xl animate-pulse"
+            style={{ background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.08}s` }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`grid ${cardCols} gap-4 pt-2`}>
+      {classics.map((meta) => {
+        const isGenerating = generatingId === meta.id;
+        const isOpening = openingId === meta.id;
+        const [c1, c2] = cardPalette(meta.title);
+        const isReady = meta.status === "ready";
+
+        return (
+          <div
+            key={meta.id}
+            className="flex flex-col rounded-3xl overflow-hidden transition-all"
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 2px 20px rgba(0,0,0,0.3)",
+            }}
+          >
+            {/* Cover */}
+            <div className="relative w-full aspect-square overflow-hidden">
+              {meta.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={meta.coverUrl}
+                  alt={meta.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center text-5xl"
+                  style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}33)` }}
+                >
+                  <span style={{ filter: `drop-shadow(0 0 16px ${c1}88)` }}>
+                    {isGenerating ? "✨" : meta.emoji}
+                  </span>
+                </div>
+              )}
+
+              {/* Generating overlay */}
+              {isGenerating && (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+                  style={{ background: "rgba(5,8,20,0.65)", backdropFilter: "blur(4px)" }}
+                >
+                  <div
+                    className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
+                    style={{ borderColor: `${c1} transparent transparent transparent` }}
+                  />
+                  <span className="text-[10px] text-white/50">Generating…</span>
+                </div>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-col flex-1 p-3 gap-2">
+              <div>
+                <div
+                  className="w-6 h-0.5 rounded-full mb-1.5"
+                  style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
+                />
+                <p className="text-white text-xs font-semibold leading-snug">{meta.title}</p>
+                <p className="text-white/35 text-[10px] leading-snug mt-0.5 line-clamp-2">{meta.tagline}</p>
+              </div>
+
+              {meta.durationSeconds && (
+                <span
+                  className="text-[9px] font-bold tracking-widest uppercase self-start px-2 py-0.5 rounded-full"
+                  style={{
+                    background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
+                    border: `1px solid ${c1}44`,
+                    color: c1,
+                  }}
+                >
+                  {durationLabel(meta.durationSeconds)}
+                </span>
+              )}
+
+              <button
+                onClick={() => handleOpenInStudio(meta)}
+                disabled={!isReady || isOpening || isGenerating}
+                className="mt-auto w-full py-2 rounded-2xl text-xs font-medium transition-all active:scale-[0.97]"
+                style={
+                  isReady
+                    ? {
+                        background: `linear-gradient(135deg, ${c1}22, ${c2}22)`,
+                        border: `1px solid ${c1}44`,
+                        color: c1,
+                      }
+                    : {
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        color: "rgba(255,255,255,0.2)",
+                      }
+                }
+              >
+                {isOpening
+                  ? "Opening…"
+                  : isGenerating
+                  ? "Preparing…"
+                  : isReady
+                  ? "Open in Studio"
+                  : "Pending…"}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main Library page ─────────────────────────────────────────────────────────
+
+type LibraryTab = "my-stories" | "classics";
+
 export default function LibraryPage() {
   const { t } = useLanguage();
   const { effective } = useViewMode();
   const isMobile = effective === "mobile";
 
+  const [activeTab, setActiveTab] = useState<LibraryTab>("my-stories");
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trashCount, setTrashCount] = useState(0);
@@ -108,21 +331,25 @@ export default function LibraryPage() {
       {/* Header */}
       <div className="px-5 pt-12 pb-0">
         <div className="flex items-center justify-between mb-5">
-          <Link
-            href="/library/trash"
-            className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
-            style={{ color: "rgba(255,255,255,0.3)" }}
-          >
-            <span className="text-base">🗑</span>
-            {trashCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
-                style={{ background: "rgba(236,72,153,0.8)", color: "#fff" }}
-              >
-                {trashCount > 9 ? "9+" : trashCount}
-              </span>
-            )}
-          </Link>
+          {activeTab === "my-stories" ? (
+            <Link
+              href="/library/trash"
+              className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
+              style={{ color: "rgba(255,255,255,0.3)" }}
+            >
+              <span className="text-base">🗑</span>
+              {trashCount > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+                  style={{ background: "rgba(236,72,153,0.8)", color: "#fff" }}
+                >
+                  {trashCount > 9 ? "9+" : trashCount}
+                </span>
+              )}
+            </Link>
+          ) : (
+            <div className="w-9" />
+          )}
 
           <h1
             className="text-lg font-light tracking-widest"
@@ -139,261 +366,293 @@ export default function LibraryPage() {
           <div className="w-9" />
         </div>
 
-        {/* Search bar — always mounted so typing is never interrupted */}
-        <div className="relative mb-3" style={{ display: entries.length > 0 || search ? "block" : "none" }}>
-          <span
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
-            style={{ color: "rgba(255,255,255,0.25)" }}
-          >
-            🔍
-          </span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search stories…"
-            className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm text-white placeholder-white/20 outline-none"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.09)",
-            }}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors text-base leading-none"
-            >
-              ×
-            </button>
-          )}
+        {/* Tab switcher */}
+        <div className="flex gap-1.5 mb-4 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)" }}>
+          {(["my-stories", "classics"] as LibraryTab[]).map((tab) => {
+            const active = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="flex-1 py-2 rounded-xl text-xs font-medium tracking-wide transition-all"
+                style={active
+                  ? {
+                      background: "rgba(79,195,247,0.15)",
+                      border: "1px solid rgba(79,195,247,0.35)",
+                      color: "#4fc3f7",
+                    }
+                  : {
+                      background: "transparent",
+                      border: "1px solid transparent",
+                      color: "rgba(255,255,255,0.28)",
+                    }
+                }
+              >
+                {tab === "my-stories" ? "My Stories" : "✨ Classics"}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Duration filter chips */}
-        {entries.length > 0 && (
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
-            {DURATION_FILTERS.map(({ key, label, icon }) => {
-              const active = durationFilter === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setDurationFilter(key)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium flex-shrink-0 transition-all"
-                  style={{
-                    background: active ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
-                    border: active ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                    color: active ? "#4fc3f7" : "rgba(255,255,255,0.35)",
-                  }}
-                >
-                  <span>{icon}</span>
-                  {label}
-                </button>
-              );
-            })}
-            {entries.length > 0 && (
+        {/* My Stories filters */}
+        {activeTab === "my-stories" && (
+          <>
+            <div className="relative mb-3" style={{ display: entries.length > 0 || search ? "block" : "none" }}>
               <span
-                className="flex items-center px-3 py-1.5 rounded-full text-xs flex-shrink-0"
-                style={{ color: "rgba(255,255,255,0.2)" }}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
+                style={{ color: "rgba(255,255,255,0.25)" }}
               >
-                {filtered.length} {filtered.length === 1 ? "story" : "stories"}
+                🔍
               </span>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search stories…"
+                className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm text-white placeholder-white/20 outline-none"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.09)",
+                }}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors text-base leading-none"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            {entries.length > 0 && (
+              <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+                {DURATION_FILTERS.map(({ key, label, icon }) => {
+                  const active = durationFilter === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setDurationFilter(key)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium flex-shrink-0 transition-all"
+                      style={{
+                        background: active ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
+                        border: active ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                        color: active ? "#4fc3f7" : "rgba(255,255,255,0.35)",
+                      }}
+                    >
+                      <span>{icon}</span>
+                      {label}
+                    </button>
+                  );
+                })}
+                {entries.length > 0 && (
+                  <span
+                    className="flex items-center px-3 py-1.5 rounded-full text-xs flex-shrink-0"
+                    style={{ color: "rgba(255,255,255,0.2)" }}
+                  >
+                    {filtered.length} {filtered.length === 1 ? "story" : "stories"}
+                  </span>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
       <div className="px-4 pb-32">
-        {loading ? (
-          <div className="flex flex-col gap-3 pt-4">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-24 rounded-3xl animate-pulse"
-                style={{ background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.12}s` }}
-              />
-            ))}
-          </div>
-        ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
-            <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>🌙</span>
-            <p className="text-white/40 text-sm font-light tracking-wide">{t("noStories")}</p>
-            <p className="text-white/20 text-xs">{t("createFirstStory")}</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
-            <span className="text-4xl" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
-            <p className="text-white/40 text-sm">No stories match your filter</p>
-            <button
-              onClick={() => { setSearch(""); setDurationFilter("all"); }}
-              className="text-xs px-4 py-2 rounded-full transition-all"
-              style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
-            >
-              Clear filters
-            </button>
-          </div>
-        ) : (
-          <div
-            className={isMobile ? "flex flex-col gap-3" : "grid gap-4"}
-            style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
-          >
-            {filtered.map((entry) => {
-              const isConfirming = confirmingId === entry.id;
-              const isDeleting = deletingId === entry.id;
-              const [c1, c2] = cardPalette(entry.title);
+        {/* ── Classics tab ── */}
+        {activeTab === "classics" && <ClassicsTab />}
 
-              return (
+        {/* ── My Stories tab ── */}
+        {activeTab === "my-stories" && (
+          loading ? (
+            <div className="flex flex-col gap-3 pt-4">
+              {[0, 1, 2].map((i) => (
                 <div
-                  key={entry.id}
-                  className="rounded-3xl overflow-hidden transition-all"
-                  style={{
-                    background: isConfirming
-                      ? "rgba(236,72,153,0.06)"
-                      : "rgba(255,255,255,0.04)",
-                    border: isConfirming
-                      ? "1px solid rgba(236,72,153,0.35)"
-                      : "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: isConfirming
-                      ? "none"
-                      : `0 2px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)`,
-                    backdropFilter: "blur(16px)",
-                    opacity: isDeleting ? 0.4 : 1,
-                    transition: "opacity 0.2s, border-color 0.2s",
-                  }}
-                >
-                  {isConfirming ? (
-                    <div className="flex flex-col gap-3 px-4 py-4">
-                      <p className="text-sm text-white/70">
-                        {t("moveToTrash")} <span className="text-white font-medium">"{entry.title}"</span>?
-                      </p>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                        {t("keptFor30Days")}
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setConfirmingId(null)}
-                          className="flex-1 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
-                          style={{
-                            background: "rgba(255,255,255,0.05)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            color: "rgba(255,255,255,0.5)",
-                          }}
+                  key={i}
+                  className="h-24 rounded-3xl animate-pulse"
+                  style={{ background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.12}s` }}
+                />
+              ))}
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
+              <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>🌙</span>
+              <p className="text-white/40 text-sm font-light tracking-wide">{t("noStories")}</p>
+              <p className="text-white/20 text-xs">{t("createFirstStory")}</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
+              <span className="text-4xl" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
+              <p className="text-white/40 text-sm">No stories match your filter</p>
+              <button
+                onClick={() => { setSearch(""); setDurationFilter("all"); }}
+                className="text-xs px-4 py-2 rounded-full transition-all"
+                style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <div
+              className={isMobile ? "flex flex-col gap-3" : "grid gap-4"}
+              style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
+            >
+              {filtered.map((entry) => {
+                const isConfirming = confirmingId === entry.id;
+                const isDeleting = deletingId === entry.id;
+                const [c1, c2] = cardPalette(entry.title);
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="rounded-3xl overflow-hidden transition-all"
+                    style={{
+                      background: isConfirming
+                        ? "rgba(236,72,153,0.06)"
+                        : "rgba(255,255,255,0.04)",
+                      border: isConfirming
+                        ? "1px solid rgba(236,72,153,0.35)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                      boxShadow: isConfirming
+                        ? "none"
+                        : `0 2px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)`,
+                      backdropFilter: "blur(16px)",
+                      opacity: isDeleting ? 0.4 : 1,
+                      transition: "opacity 0.2s, border-color 0.2s",
+                    }}
+                  >
+                    {isConfirming ? (
+                      <div className="flex flex-col gap-3 px-4 py-4">
+                        <p className="text-sm text-white/70">
+                          {t("moveToTrash")} <span className="text-white font-medium">"{entry.title}"</span>?
+                        </p>
+                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+                          {t("keptFor30Days")}
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setConfirmingId(null)}
+                            className="flex-1 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
+                            style={{
+                              background: "rgba(255,255,255,0.05)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              color: "rgba(255,255,255,0.5)",
+                            }}
+                          >
+                            {t("cancel")}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteConfirm(entry.id)}
+                            disabled={isDeleting}
+                            className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
+                            style={{
+                              background: "rgba(236,72,153,0.15)",
+                              border: "1px solid rgba(236,72,153,0.4)",
+                              color: "#EC4899",
+                            }}
+                          >
+                            {isDeleting ? "…" : t("moveToTrash")}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-stretch">
+                        <Link
+                          href={`/library/${entry.id}`}
+                          className="flex-1 flex items-center gap-0 active:opacity-70 transition-opacity min-w-0"
                         >
-                          {t("cancel")}
-                        </button>
+                          <div
+                            className="w-20 flex-shrink-0 self-stretch relative overflow-hidden"
+                            style={{ minHeight: 80 }}
+                          >
+                            {entry.coverUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={entry.coverUrl}
+                                alt={entry.title}
+                                className="w-full h-full object-cover"
+                                style={{ minHeight: 80 }}
+                              />
+                            ) : (
+                              <div
+                                className="w-full h-full flex items-center justify-center text-3xl"
+                                style={{
+                                  background: `linear-gradient(145deg, ${c1}22, ${c2}33)`,
+                                  minHeight: 80,
+                                }}
+                              >
+                                <span style={{ filter: `drop-shadow(0 0 10px ${c1}88)` }}>🌙</span>
+                              </div>
+                            )}
+                            <div
+                              className="absolute inset-y-0 right-0 w-8 pointer-events-none"
+                              style={{ background: `linear-gradient(to right, transparent, rgba(10,12,24,0.92))` }}
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0 px-3 py-3.5">
+                            <div
+                              className="w-8 h-0.5 rounded-full mb-2"
+                              style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
+                            />
+                            <p className="text-white text-sm font-semibold truncate leading-snug tracking-wide">
+                              {entry.title}
+                            </p>
+                            <p className="text-white/38 text-xs truncate mt-0.5 leading-snug">
+                              {entry.summary}
+                            </p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <span
+                                className="text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+                                style={{
+                                  background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
+                                  border: `1px solid ${c1}44`,
+                                  color: c1,
+                                }}
+                              >
+                                {durationLabel(entry.durationSeconds)}
+                              </span>
+                              <span className="text-white/20 text-[10px]">{timeAgo(entry.createdAt)}</span>
+                            </div>
+                          </div>
+                        </Link>
+
                         <button
-                          onClick={() => handleDeleteConfirm(entry.id)}
-                          disabled={isDeleting}
-                          className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
-                          style={{
-                            background: "rgba(236,72,153,0.15)",
-                            border: "1px solid rgba(236,72,153,0.4)",
-                            color: "#EC4899",
-                          }}
+                          onClick={() => setConfirmingId(entry.id)}
+                          className="w-11 flex items-center justify-center flex-shrink-0 transition-opacity active:opacity-50"
+                          style={{ color: "rgba(255,255,255,0.15)" }}
+                          aria-label="Delete story"
                         >
-                          {isDeleting ? "…" : t("moveToTrash")}
+                          <span className="text-sm">🗑</span>
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-stretch">
-                      <Link
-                        href={`/library/${entry.id}`}
-                        className="flex-1 flex items-center gap-0 active:opacity-70 transition-opacity min-w-0"
-                      >
-                        {/* Cover art — taller, full bleed left panel */}
-                        <div
-                          className="w-20 flex-shrink-0 self-stretch relative overflow-hidden"
-                          style={{ minHeight: 80 }}
-                        >
-                          {entry.coverUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={entry.coverUrl}
-                              alt={entry.title}
-                              className="w-full h-full object-cover"
-                              style={{ minHeight: 80 }}
-                            />
-                          ) : (
-                            <div
-                              className="w-full h-full flex items-center justify-center text-3xl"
-                              style={{
-                                background: `linear-gradient(145deg, ${c1}22, ${c2}33)`,
-                                minHeight: 80,
-                              }}
-                            >
-                              <span style={{ filter: `drop-shadow(0 0 10px ${c1}88)` }}>🌙</span>
-                            </div>
-                          )}
-                          {/* Gradient overlay to blend into card */}
-                          <div
-                            className="absolute inset-y-0 right-0 w-8 pointer-events-none"
-                            style={{
-                              background: `linear-gradient(to right, transparent, rgba(10,12,24,0.92))`,
-                            }}
-                          />
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0 px-3 py-3.5">
-                          {/* Accent top line */}
-                          <div
-                            className="w-8 h-0.5 rounded-full mb-2"
-                            style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
-                          />
-                          <p className="text-white text-sm font-semibold truncate leading-snug tracking-wide">
-                            {entry.title}
-                          </p>
-                          <p className="text-white/38 text-xs truncate mt-0.5 leading-snug">
-                            {entry.summary}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span
-                              className="text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-                              style={{
-                                background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
-                                border: `1px solid ${c1}44`,
-                                color: c1,
-                              }}
-                            >
-                              {durationLabel(entry.durationSeconds)}
-                            </span>
-                            <span className="text-white/20 text-[10px]">{timeAgo(entry.createdAt)}</span>
-                          </div>
-                        </div>
-                      </Link>
-
-                      {/* Delete button */}
-                      <button
-                        onClick={() => setConfirmingId(entry.id)}
-                        className="w-11 flex items-center justify-center flex-shrink-0 transition-opacity active:opacity-50"
-                        style={{ color: "rgba(255,255,255,0.15)" }}
-                        aria-label="Delete story"
-                      >
-                        <span className="text-sm">🗑</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
 
-      {/* FAB */}
-      <Link
-        href="/create"
-        className="fixed w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-light z-40 active:scale-95 transition-transform"
-        style={{
-          bottom: isMobile ? 96 : 32,
-          right: isMobile ? 16 : 32,
-          background: "linear-gradient(135deg, rgba(79,195,247,0.3), rgba(79,195,247,0.12))",
-          border: "1px solid rgba(79,195,247,0.4)",
-          boxShadow: "0 4px 24px rgba(79,195,247,0.25)",
-          backdropFilter: "blur(12px)",
-        }}
-      >
-        ✦
-      </Link>
+      {/* FAB — only on My Stories tab */}
+      {activeTab === "my-stories" && (
+        <Link
+          href="/create"
+          className="fixed w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-light z-40 active:scale-95 transition-transform"
+          style={{
+            bottom: isMobile ? 96 : 32,
+            right: isMobile ? 16 : 32,
+            background: "linear-gradient(135deg, rgba(79,195,247,0.3), rgba(79,195,247,0.12))",
+            border: "1px solid rgba(79,195,247,0.4)",
+            boxShadow: "0 4px 24px rgba(79,195,247,0.25)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          ✦
+        </Link>
+      )}
     </div>
   );
 }
