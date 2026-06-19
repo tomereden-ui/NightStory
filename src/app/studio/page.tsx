@@ -354,12 +354,14 @@ function DirectionSheet({
             className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
             style={{ border: `1.5px solid ${accentBorder}`, boxShadow: `0 0 14px ${accentBorder}` }}
           >
-            {avatarUrl ? (
+            {(avatarUrl || voice?.avatarUrl) ? (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
-            ) : voice?.avatarUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={voice.avatarUrl} alt={voice.name} className="w-full h-full object-cover" />
+              <img
+                src={avatarUrl || voice?.avatarUrl}
+                alt={characterName}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-lg font-bold"
                 style={{ background: "rgba(255,255,255,0.05)", color: accentColor }}>
@@ -433,6 +435,26 @@ function CharacterCard({
   const isNarrator = characterName === "Narrator";
   const initial = characterName.charAt(0).toUpperCase();
 
+  // Cascading image fallback: generated portrait → voice avatar → styled initial
+  // Each stage is tried in order; onError advances to the next.
+  type ImgStage = "generated" | "voice" | "initial";
+  const firstStage: ImgStage = avatarUrl ? "generated" : voice?.avatarUrl ? "voice" : "initial";
+  const [imgStage, setImgStage] = useState<ImgStage>(firstStage);
+
+  // Reset cascade when avatarUrl arrives (generated portrait loaded)
+  useEffect(() => {
+    if (avatarUrl) setImgStage("generated");
+  }, [avatarUrl]);
+
+  const advanceStage = () => {
+    setImgStage((s) => {
+      if (s === "generated") return voice?.avatarUrl ? "voice" : "initial";
+      return "initial";
+    });
+  };
+
+  const accentColor = isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)";
+
   return (
     <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
       <button
@@ -447,24 +469,26 @@ function CharacterCard({
             : { border: "1px solid rgba(255,255,255,0.1)" }
           }
         >
-          {avatarUrl ? (
+          {imgStage === "generated" && avatarUrl && (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
-          ) : voice?.avatarUrl ? (
+            <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" onError={advanceStage} />
+          )}
+          {imgStage === "voice" && voice?.avatarUrl && (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={voice.avatarUrl} alt={voice.name} className="w-full h-full object-cover" />
-          ) : (
+            <img src={voice.avatarUrl} alt={voice.name} className="w-full h-full object-cover" onError={advanceStage} />
+          )}
+          {imgStage === "initial" && (
             <div
-              className="w-full h-full flex items-center justify-center"
-              style={{ background: "rgba(255,255,255,0.05)", color: isNarrator ? "rgba(167,139,250,0.8)" : "rgba(79,195,247,0.8)" }}
+              className="w-full h-full flex flex-col items-center justify-center gap-0.5"
+              style={{ background: `linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))` }}
             >
-              {initial}
+              <span className="text-lg font-bold" style={{ color: accentColor }}>{initial}</span>
             </div>
           )}
         </div>
         <span
           className="text-[10px] font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
-          style={{ color: isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)" }}
+          style={{ color: accentColor }}
         >
           {characterName}
         </span>
@@ -671,8 +695,12 @@ export default function StudioPage() {
     avatarSeedingRef.current = true;
 
     (async () => {
-      for (const name of missing) {
+      for (let i = 0; i < missing.length; i++) {
         if (cancelled) break;
+        // Space requests 4s apart so Pollinations doesn't rate-limit back-to-back calls
+        if (i > 0) await new Promise((r) => setTimeout(r, 4000));
+        if (cancelled) break;
+        const name = missing[i];
         try {
           const res = await fetch("/api/generate-avatar", {
             method: "POST",
@@ -687,7 +715,7 @@ export default function StudioPage() {
             }
           }
         } catch {
-          // ignore individual failures — letter initial stays shown
+          // ignore individual failures — voice avatar or styled initial stays shown
         }
       }
       avatarSeedingRef.current = false;
