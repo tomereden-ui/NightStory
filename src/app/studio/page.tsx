@@ -229,6 +229,8 @@ function CharacterCards({
   avatars: Record<string, string>;
   onDirectCharacter: (characterName: string, instruction: string) => void;
 }) {
+  const [openCharacter, setOpenCharacter] = useState<string | null>(null);
+
   const cast = Array.from(
     blocks
       .filter((b) => b.characterName !== "SFX")
@@ -246,6 +248,8 @@ function CharacterCards({
 
   if (cast.length === 0) return null;
 
+  const openMember = openCharacter ? cast.find((c) => c.characterName === openCharacter) : null;
+
   return (
     <div className="mb-5">
       <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
@@ -258,10 +262,22 @@ function CharacterCards({
             characterName={characterName}
             voice={voice}
             avatarUrl={avatars[characterName]}
-            onDirect={(instruction) => onDirectCharacter(characterName, instruction)}
+            isOpen={openCharacter === characterName}
+            onOpen={() => setOpenCharacter(characterName)}
           />
         ))}
       </div>
+
+      {/* Bottom sheet — rendered outside scroll container so it covers the full screen */}
+      {openCharacter && openMember && (
+        <DirectionSheet
+          characterName={openCharacter}
+          voice={openMember.voice}
+          avatarUrl={avatars[openCharacter]}
+          onDirect={(instruction) => onDirectCharacter(openCharacter, instruction)}
+          onClose={() => setOpenCharacter(null)}
+        />
+      )}
     </div>
   );
 }
@@ -274,53 +290,160 @@ const CHAR_CHIPS = [
   "More expressive",
 ];
 
-function CharacterCard({
+// ─── Direction bottom sheet ────────────────────────────────────────────────────
+
+function DirectionSheet({
   characterName,
   voice,
   avatarUrl,
   onDirect,
+  onClose,
 }: {
   characterName: string;
   voice: Voice | undefined;
   avatarUrl?: string;
   onDirect: (instruction: string) => void;
+  onClose: () => void;
 }) {
-  const [open, setOpen]       = useState(false);
-  const [note, setNote]       = useState("");
-  const cardRef               = useRef<HTMLDivElement>(null);
-  const inputRef              = useRef<HTMLInputElement>(null);
-  const isNarrator            = characterName === "Narrator";
+  const [note, setNote] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isNarrator = characterName === "Narrator";
 
   useEffect(() => {
-    if (!open) return;
-    setTimeout(() => inputRef.current?.focus(), 60);
-    const close = (e: MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
+    setTimeout(() => inputRef.current?.focus(), 120);
+  }, []);
 
   const submit = (instruction: string) => {
     if (!instruction.trim()) return;
     onDirect(`For the character "${characterName}": ${instruction.trim()}`);
     setNote("");
-    setOpen(false);
+    onClose();
   };
 
   const initial = characterName.charAt(0).toUpperCase();
+  const accentColor = isNarrator ? "rgba(167,139,250,0.8)" : "rgba(139,92,246,0.9)";
+  const accentBorder = isNarrator ? "rgba(167,139,250,0.35)" : "rgba(139,92,246,0.35)";
 
   return (
-    <div ref={cardRef} className="relative flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
+    <>
+      {/* Scrim */}
+      <div
+        className="fixed inset-0 z-40"
+        style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+        onClick={onClose}
+      />
+
+      {/* Sheet */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl px-5 pt-5 pb-8 flex flex-col gap-4"
+        style={{
+          background: "linear-gradient(180deg, rgba(14,20,45,0.98) 0%, rgba(8,12,28,1) 100%)",
+          border: "1px solid rgba(139,92,246,0.2)",
+          borderBottom: "none",
+          boxShadow: "0 -8px 40px rgba(0,0,0,0.6), 0 -1px 0 rgba(139,92,246,0.15)",
+          maxWidth: 480,
+          margin: "0 auto",
+        }}
+      >
+        {/* Handle */}
+        <div className="w-10 h-1 rounded-full mx-auto -mt-1 mb-1" style={{ background: "rgba(255,255,255,0.15)" }} />
+
+        {/* Character header */}
+        <div className="flex items-center gap-3">
+          <div
+            className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
+            style={{ border: `1.5px solid ${accentBorder}`, boxShadow: `0 0 14px ${accentBorder}` }}
+          >
+            {avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
+            ) : voice?.avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={voice.avatarUrl} alt={voice.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-lg font-bold"
+                style={{ background: "rgba(255,255,255,0.05)", color: accentColor }}>
+                {initial}
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>Direct</p>
+            <p className="text-sm font-bold text-white">{characterName}</p>
+            {voice && <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>{voice.name}</p>}
+          </div>
+        </div>
+
+        {/* Quick chips */}
+        <div className="flex flex-wrap gap-2">
+          {CHAR_CHIPS.map((chip) => (
+            <button
+              key={chip}
+              onClick={() => submit(chip)}
+              className="text-[11px] px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+              style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+
+        {/* Freetext */}
+        <div className="flex gap-2 items-center">
+          <input
+            ref={inputRef}
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") onClose(); }}
+            placeholder={`Custom direction, e.g. "speak slower"`}
+            className="flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none text-white/80 placeholder-white/20"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.22)" }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.55)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.22)")}
+          />
+          <button
+            onClick={() => submit(note)}
+            disabled={!note.trim()}
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all active:scale-95 flex-shrink-0"
+            style={note.trim()
+              ? { background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.55)", color: "#A78BFA" }
+              : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
+            }
+          >↵</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function CharacterCard({
+  characterName,
+  voice,
+  avatarUrl,
+  isOpen,
+  onOpen,
+}: {
+  characterName: string;
+  voice: Voice | undefined;
+  avatarUrl?: string;
+  isOpen: boolean;
+  onOpen: () => void;
+}) {
+  const isNarrator = characterName === "Narrator";
+  const initial = characterName.charAt(0).toUpperCase();
+
+  return (
+    <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
       <button
-        onClick={() => setOpen((p) => !p)}
-        className="flex flex-col items-center gap-1.5 w-full group"
+        onClick={onOpen}
+        className="flex flex-col items-center gap-1.5 w-full"
         title={`Direct ${characterName}`}
       >
         <div
-          className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-xl font-bold transition-all relative"
-          style={open
-            ? { border: "2px solid rgba(139,92,246,0.55)", boxShadow: "0 0 14px rgba(139,92,246,0.25)" }
+          className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-xl font-bold transition-all"
+          style={isOpen
+            ? { border: "2px solid rgba(139,92,246,0.65)", boxShadow: "0 0 16px rgba(139,92,246,0.3)" }
             : { border: "1px solid rgba(255,255,255,0.1)" }
           }
         >
@@ -349,51 +472,6 @@ function CharacterCard({
           <span className="text-[9px] text-white/25 text-center truncate w-full">{voice.name.split(" ")[0]}</span>
         )}
       </button>
-
-      {/* Direction popup */}
-      {open && (
-        <div
-          className="absolute top-full left-0 mt-2 z-50 rounded-2xl p-3 flex flex-col gap-2.5"
-          style={{ background: "#0d1120", border: "1px solid rgba(139,92,246,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.7)", width: 220 }}
-        >
-          <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "rgba(167,139,250,0.6)" }}>
-            Direct {characterName}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {CHAR_CHIPS.map((chip) => (
-              <button
-                key={chip}
-                onClick={() => submit(chip)}
-                className="text-[10px] px-2 py-1 rounded-full transition-all active:scale-95"
-                style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.28)", color: "#C4B5FD" }}
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1.5">
-            <input
-              ref={inputRef}
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") setOpen(false); }}
-              placeholder={`e.g. "speak slower"`}
-              className="flex-1 rounded-lg px-2.5 py-1.5 text-[11px] outline-none text-white/80"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.22)" }}
-            />
-            <button
-              onClick={() => submit(note)}
-              disabled={!note.trim()}
-              className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all active:scale-95"
-              style={note.trim()
-                ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#A78BFA" }
-                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
-              }
-            >↵</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
