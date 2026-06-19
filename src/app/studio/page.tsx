@@ -102,7 +102,10 @@ function ScriptBrowser({
 
       {/* Save list */}
       {expanded && (
-        <div className="flex flex-col gap-1.5 px-3 pb-3">
+        <div
+          className="flex flex-col gap-1.5 px-3 pb-3"
+          style={{ maxHeight: 260, overflowY: "auto", scrollbarWidth: "none" }}
+        >
           {saves.map((s) => {
             const isLoading  = loadingId === s.id;
             const isDeleting = deletingId === s.id;
@@ -111,13 +114,27 @@ function ScriptBrowser({
                 key={s.id}
                 onClick={() => handleLoad(s.id)}
                 disabled={isLoading}
-                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]"
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-xl text-left transition-all active:scale-[0.98]"
                 style={{
                   background: s.isAutosave ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
                   border: s.isAutosave ? "1px solid rgba(79,195,247,0.22)" : "1px solid rgba(255,255,255,0.09)",
                 }}
               >
-                <div className="flex flex-col gap-0.5 min-w-0">
+                {/* Cover thumbnail */}
+                <div
+                  className="flex-shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
+                  style={{ width: 44, height: 44, background: "rgba(255,255,255,0.05)" }}
+                >
+                  {s.coverUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={s.coverUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-lg">🌙</span>
+                  )}
+                </div>
+
+                {/* Text */}
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                   <span className="text-[11px] font-bold" style={{ color: s.isAutosave ? "#4fc3f7" : "rgba(255,255,255,0.65)" }}>
                     {isLoading ? "Loading…" : s.label}
                   </span>
@@ -130,11 +147,13 @@ function ScriptBrowser({
                     </span>
                   )}
                 </div>
+
+                {/* Delete */}
                 {!s.isAutosave && (
                   <button
                     onClick={(e) => handleDelete(s.id, e)}
                     disabled={isDeleting}
-                    className="text-white/20 hover:text-white/50 transition-colors text-base leading-none flex-shrink-0"
+                    className="text-white/20 hover:text-white/50 transition-colors text-base leading-none flex-shrink-0 px-1"
                   >
                     {isDeleting ? "…" : "×"}
                   </button>

@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
       label: "Autosave",
       blockCount: body.blocks.length,
       summary: body.summary,
+      coverUrl: body.coverUrl,
       isAutosave: true,
     };
     if (existingIdx >= 0) index[existingIdx] = meta;
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
       label: body.label ?? `Version · ${new Date(now).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`,
       blockCount: body.blocks.length,
       summary: body.summary,
+      coverUrl: body.coverUrl,
       isAutosave: false,
     };
 

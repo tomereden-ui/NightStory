@@ -6,6 +6,7 @@ export interface ScriptSaveMeta {
   label: string;
   blockCount: number;
   summary?: string;
+  coverUrl?: string;
   isAutosave: boolean;
 }
 
