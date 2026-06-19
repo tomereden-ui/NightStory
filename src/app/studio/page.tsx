@@ -3,14 +3,16 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { readDraft, writeDraft } from "@/lib/draftStore";
 import { useLanguage } from "@/context/LanguageContext";
+import { useRouter } from "next/navigation";
 import ScriptTab from "@/components/studio/ScriptTab";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
+import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import type { ScriptBlock, Voice } from "@/types";
+import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
-import Link from "next/link";
 
 // ─── Script saves browser ─────────────────────────────────────────────────────
 
@@ -208,7 +210,7 @@ function ScriptBrowser({
   );
 }
 
-
+// ─── Character Cards ──────────────────────────────────────────────────────────
 
 interface CastMember {
   characterName: string;
@@ -395,36 +397,106 @@ function CharacterCard({
   );
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+// ─── Prompt tab components ────────────────────────────────────────────────────
 
-function EmptyStudio() {
+function DurationSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
-    <div className="flex flex-col items-center py-20 text-center gap-5">
-      <span className="text-6xl opacity-30">🎬</span>
+    <div className="rounded-2xl px-4 py-3 flex flex-col gap-2"
+      style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+          Story length
+        </span>
+        <span className="text-sm font-bold" style={{ color: "#4fc3f7" }}>{value} min</span>
+      </div>
+      <input
+        type="range" min={1} max={10} step={1} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-1.5 rounded-full cursor-pointer"
+        style={{ accentColor: "#4fc3f7" }}
+      />
+      <div className="flex justify-between text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>
+        <span>1 min</span><span>5 min</span><span>10 min</span>
+      </div>
+    </div>
+  );
+}
+
+function PromptTabContent({
+  promptText, setPromptText,
+  durationMinutes, setDurationMinutes,
+  generating, onGenerate,
+}: {
+  promptText: string; setPromptText: (v: string) => void;
+  durationMinutes: number; setDurationMinutes: (v: number) => void;
+  generating: boolean; onGenerate: () => void;
+}) {
+  const canGenerate = promptText.trim().length > 0;
+
+  return (
+    <div className="flex flex-col gap-6">
       <div>
-        <p className="text-white/40 text-sm font-medium mb-2">No story in the studio yet</p>
-        <p className="text-white/20 text-xs leading-relaxed">
-          Generate a story in Create first,<br />then come here to direct and refine it.
+        <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">
+          Describe your story
+        </label>
+        <textarea
+          placeholder="A sleepy dragon who can't breathe fire befriends a firefly…"
+          value={promptText}
+          onChange={(e) => setPromptText(e.target.value)}
+          rows={8}
+          className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none resize-none leading-relaxed"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
+          onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+        />
+        <p className="text-white/15 text-[10px] mt-1 text-right">
+          {promptText.trim().split(/\s+/).filter(Boolean).length} words
         </p>
       </div>
-      <Link
-        href="/create"
-        className="mt-2 px-6 py-3 rounded-2xl text-sm font-semibold transition-all active:scale-95"
-        style={{ background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F" }}
+
+      <DurationSlider value={durationMinutes} onChange={setDurationMinutes} />
+
+      <button
+        onClick={onGenerate}
+        disabled={!canGenerate || generating}
+        className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
+        style={
+          canGenerate && !generating
+            ? { background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }
+            : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }
+        }
       >
-        ✨ Go to Create
-      </Link>
+        {generating
+          ? <span className="flex items-center justify-center gap-2"><span className="animate-pulse">✨</span>Generating…</span>
+          : "✨ Generate Story"}
+      </button>
     </div>
   );
 }
 
 // ─── Studio page ──────────────────────────────────────────────────────────────
 
-type StudioView = "script" | "producing" | "drama";
+type StudioTab = "prompt" | "five-question" | "script" | "producing" | "drama";
+
+const TABS: { id: "prompt" | "five-question" | "script"; label: string; emoji: string }[] = [
+  { id: "prompt",        label: "Prompt",       emoji: "💬" },
+  { id: "five-question", label: "5 Questions",  emoji: "🧚" },
+  { id: "script",        label: "Script",       emoji: "📄" },
+];
 
 export default function StudioPage() {
   const { isRTL } = useLanguage();
+  const router = useRouter();
 
+  // ─── Prompt tab state ─────────────────────────────────────────────────────
+  const [promptText, setPromptText]         = useState("");
+  const [generating, setGenerating]         = useState(false);
+  const [generateError, setGenerateError]   = useState<string | null>(null);
+
+  // ─── Script state ─────────────────────────────────────────────────────────
   const [scriptBlocks, setScriptBlocks]     = useState<ScriptBlock[]>([]);
   const [summary, setSummary]               = useState("");
   const [coverUrl, setCoverUrl]             = useState("");
@@ -434,25 +506,30 @@ export default function StudioPage() {
   const [voicePool, setVoicePool]           = useState<Voice[]>(PRESET_VOICE_POOL);
   const [loaded, setLoaded]                 = useState(false);
 
-  const [view, setView]                     = useState<StudioView>("script");
+  // ─── Tab / view state ─────────────────────────────────────────────────────
+  const [activeTab, setActiveTab]           = useState<StudioTab>("prompt");
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob]     = useState<Job | null>(null);
   const [isProducing, setIsProducing]       = useState(false);
   const [produceError, setProduceError]     = useState<string | null>(null);
   const [isFetchingCover, setIsFetchingCover] = useState(false);
 
+  // ─── Director's Note state ────────────────────────────────────────────────
   const [directorNote, setDirectorNote]     = useState("");
   const [isRevising, setIsRevising]         = useState(false);
   const [reviseError, setReviseError]       = useState<string | null>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
+  // ─── Character avatars ────────────────────────────────────────────────────
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
   const avatarSeedingRef = useRef(false);
 
+  // ─── Pending character directions ─────────────────────────────────────────
   const [pendingDirections, setPendingDirections] = useState<string[]>([]);
   const [showToast, setShowToast] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ─── Saves ────────────────────────────────────────────────────────────────
   const [savesRefreshKey, setSavesRefreshKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveLabel, setSaveLabel] = useState<"idle" | "saving" | "saved">("idle");
@@ -461,25 +538,29 @@ export default function StudioPage() {
   // Load voice pool
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
 
-  // Load draft on mount
+  // Load draft on mount; switch to script tab if draft has blocks
   useEffect(() => {
     const draft = readDraft();
     if (draft?.scriptBlocks?.length) {
       setScriptBlocks(draft.scriptBlocks);
+      setPromptText(draft.promptText ?? "");
       setSummary(draft.summary ?? "");
       setCoverUrl(draft.coverUrl ?? "");
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
       setCharacterAvatars(draft.characterAvatars ?? {});
+      setActiveTab("script");
+    } else {
+      setActiveTab("prompt");
     }
     setLoaded(true);
   }, []);
 
-  // Persist draft on change (including avatars)
+  // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText: "", scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars });
-  }, [scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars });
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -537,6 +618,47 @@ export default function StudioPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, scriptBlocks.length > 0]);
 
+  // ─── Generate story (Prompt tab) ──────────────────────────────────────────
+
+  const handleGenerate = useCallback(async () => {
+    if (!promptText.trim()) return;
+    setGenerating(true);
+    setGenerateError(null);
+    setEditingStoryId(null);
+
+    const body: GenerateStoryRequest = {
+      mode: "prompt",
+      promptText,
+      primaryVoiceId: voicePool[0]?.id ?? PRESET_VOICE_POOL[0].id,
+      durationMinutes,
+      childAgeGroup: MOCK_USER.preferredAgeGroup,
+    };
+
+    try {
+      const res  = await fetch("/api/generate-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed");
+      const blocks = data.blocks as ScriptBlock[];
+      const sm = data.summary ?? "";
+      const cp = data.coverPrompt ?? "";
+      setScriptBlocks(blocks);
+      setSummary(sm);
+      setCoverPrompt(cp);
+      setCoverUrl("");
+      // Write draft explicitly before switching tabs
+      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {} });
+      if (cp) fetchCover(cp, sm);
+      setActiveTab("script");
+    } catch (err: unknown) {
+      setGenerateError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setGenerating(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promptText, durationMinutes, voicePool]);
+
+  // ─── Revise script ────────────────────────────────────────────────────────
+
   const handleRevise = useCallback(async (instruction: string) => {
     if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return;
     setIsRevising(true);
@@ -554,7 +676,8 @@ export default function StudioPage() {
     }
   }, [scriptBlocks, isRevising]);
 
-  // Manual save
+  // ─── Manual save ──────────────────────────────────────────────────────────
+
   const handleManualSave = useCallback(async () => {
     if (scriptBlocks.length === 0 || isSaving) return;
     setIsSaving(true);
@@ -575,17 +698,19 @@ export default function StudioPage() {
     }
   }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving]);
 
-  // Load a save into the studio
+  // ─── Load a save into the studio ──────────────────────────────────────────
+
   const handleLoadSave = useCallback((save: ScriptSaveFull) => {
     setScriptBlocks(save.blocks);
-    if (save.summary)    setSummary(save.summary);
-    if (save.coverUrl)   setCoverUrl(save.coverUrl);
+    if (save.summary)     setSummary(save.summary);
+    if (save.coverUrl)    setCoverUrl(save.coverUrl);
     if (save.coverPrompt) setCoverPrompt(save.coverPrompt);
     setCharacterAvatars({});
     setPendingDirections([]);
   }, []);
 
-  // Queue a character direction; shows toast to prompt "Update Script"
+  // ─── Queue a character direction ──────────────────────────────────────────
+
   const handleQueueDirection = useCallback((instruction: string) => {
     setPendingDirections((prev) => [...prev, instruction]);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -593,7 +718,8 @@ export default function StudioPage() {
     toastTimerRef.current = setTimeout(() => setShowToast(false), 4500);
   }, []);
 
-  // Apply all queued directions at once
+  // ─── Apply all queued directions ──────────────────────────────────────────
+
   const handleUpdateScript = useCallback(async () => {
     if (pendingDirections.length === 0 || isRevising) return;
     const combined = pendingDirections.join(". Also: ");
@@ -601,6 +727,8 @@ export default function StudioPage() {
     setShowToast(false);
     await handleRevise(combined);
   }, [pendingDirections, isRevising, handleRevise]);
+
+  // ─── Fetch cover ──────────────────────────────────────────────────────────
 
   const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
     if (!prompt) return;
@@ -616,10 +744,12 @@ export default function StudioPage() {
     }
   }, []);
 
+  // ─── Produce audio ────────────────────────────────────────────────────────
+
   const handleProduce = useCallback(async (blocks: ScriptBlock[], duration: number) => {
     setIsProducing(true);
     setProduceError(null);
-    setView("producing");
+    setActiveTab("producing");
     try {
       const body: Record<string, unknown> = { blocks, durationMinutes: duration };
       if (editingStoryId) body.editingStoryId = editingStoryId;
@@ -636,33 +766,61 @@ export default function StudioPage() {
     } catch (err: unknown) {
       setProduceError(err instanceof Error ? err.message : "Production failed");
       setIsProducing(false);
-      setView("script");
+      setActiveTab("script");
     }
   }, [editingStoryId, summary, coverPrompt, coverUrl]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job);
     setIsProducing(false);
-    setView("drama");
+    setActiveTab("drama");
   }, []);
 
   const handleProductionError = useCallback((msg: string) => {
     setProduceError(msg);
     setIsProducing(false);
     setProductionJobId(null);
-    setView("script");
+    setActiveTab("script");
   }, []);
 
-  // ─── Views ─────────────────────────────────────────────────────────────────
+  // ─── Early returns ────────────────────────────────────────────────────────
 
   if (!loaded) return null;
 
-  if (view === "producing" && productionJobId) {
+  // Full-screen generating spinner
+  if (generating) {
+    return (
+      <div className="min-h-full flex flex-col items-center justify-center px-8 text-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-24 h-24 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full animate-ping opacity-20"
+              style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
+            <div className="absolute inset-2 rounded-full opacity-40 animate-pulse"
+              style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
+            <span className="relative text-5xl animate-pulse">✨</span>
+          </div>
+          <div>
+            <h2 className="text-white text-xl font-bold mb-2">Crafting your story…</h2>
+            <p className="text-white/35 text-sm">Weaving magic into every word</p>
+          </div>
+          <div className="flex gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className="w-2 h-2 rounded-full"
+                style={{ background: "linear-gradient(135deg,#4fc3f7,#0088AA)", animation: `bounce 1s ease-in-out ${i * 0.15}s infinite` }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Producing full-screen view
+  if (activeTab === "producing" && productionJobId) {
     return (
       <div className="min-h-full" dir={isRTL ? "rtl" : "ltr"}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
-            <button onClick={() => { setView("script"); setIsProducing(false); setProductionJobId(null); }}
+            <button onClick={() => { setActiveTab("script"); setIsProducing(false); setProductionJobId(null); }}
               className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Producing…</h1>
             <div className="w-8" />
@@ -673,49 +831,96 @@ export default function StudioPage() {
     );
   }
 
-  if (view === "drama" && completedJob) {
+  // Drama player full-screen view
+  if (activeTab === "drama" && completedJob) {
     return (
       <div className="min-h-full" dir={isRTL ? "rtl" : "ltr"}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
-            <button onClick={() => setView("script")} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+            <button onClick={() => setActiveTab("script")} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Drama Ready</h1>
             <div className="w-8" />
           </div>
-          <DramaPlayer job={completedJob} onGenerateAnother={() => { setView("script"); setCompletedJob(null); }} />
+          <DramaPlayer job={completedJob} onGenerateAnother={() => { setActiveTab("script"); setCompletedJob(null); }} />
         </div>
       </div>
     );
   }
 
-  // ─── Main script view ───────────────────────────────────────────────────────
+  // ─── Main tab shell ───────────────────────────────────────────────────────
+
+  const hasScript = scriptBlocks.length > 0;
 
   return (
     <div className="min-h-full" dir={isRTL ? "rtl" : "ltr"}>
       <div className="px-5 pt-12 pb-8">
-        {/* Header */}
-        <div className="flex items-center mb-6">
-          <a href="/create" className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</a>
+        {/* Header — no back button */}
+        <div className="flex items-center mb-7">
+          <div className="w-8" />
           <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🎬 Studio</h1>
           <div className="w-8" />
         </div>
 
-        {/* Error */}
-        {produceError && (
-          <div className="mb-4 px-4 py-3 rounded-2xl text-xs leading-relaxed"
+        {/* Tab bar */}
+        <div className="flex mb-7" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          {TABS.map(({ id, label, emoji }) => {
+            const isFiveQ    = id === "five-question";
+            const isScript   = id === "script";
+            const isDisabled = isScript && !hasScript;
+            const isActive   = activeTab === id;
+
+            return (
+              <button
+                key={id}
+                onClick={() => {
+                  if (isDisabled) return;
+                  if (isFiveQ) { router.push("/create/five-question"); return; }
+                  setActiveTab(id);
+                }}
+                disabled={isDisabled}
+                className={`relative flex-1 pb-3 text-[11px] font-bold tracking-wider uppercase transition-colors ${
+                  isActive ? "text-white" : isDisabled ? "text-white/15 cursor-not-allowed" : "text-white/30"
+                }`}
+              >
+                <span className="flex items-center justify-center gap-1.5">
+                  <span>{emoji}</span>
+                  <span>{label}</span>
+                  {isScript && hasScript && (
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#4fc3f7" }} />
+                  )}
+                </span>
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Error banner */}
+        {(generateError || produceError) && (
+          <div className="mb-5 px-4 py-3 rounded-2xl text-xs leading-relaxed"
             style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
-            ⚠ {produceError}
+            ⚠ {generateError ?? produceError}
           </div>
         )}
 
-        {scriptBlocks.length === 0 ? (
-          <EmptyStudio />
-        ) : (
+        {/* Prompt tab */}
+        {activeTab === "prompt" && (
+          <PromptTabContent
+            promptText={promptText} setPromptText={setPromptText}
+            durationMinutes={durationMinutes} setDurationMinutes={setDurationMinutes}
+            generating={generating} onGenerate={handleGenerate}
+          />
+        )}
+
+        {/* Script tab */}
+        {activeTab === "script" && hasScript && (
           <>
             {/* Script version browser */}
             <ScriptBrowser onLoad={handleLoadSave} refreshKey={savesRefreshKey} />
 
-            {/* Script blocks — CharacterCards injected between cover and blocks via belowCover */}
+            {/* Script blocks */}
             <ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
@@ -742,7 +947,7 @@ export default function StudioPage() {
               }
             />
 
-            {/* ── Director's Note — below the script, after the user has read it ── */}
+            {/* Director's Note */}
             <div
               className="mt-2 mb-3 rounded-2xl p-4 flex flex-col gap-3"
               style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.22)" }}
@@ -842,7 +1047,7 @@ export default function StudioPage() {
               )}
             </button>
 
-            {/* Produce Audio — pinned after Director's Note */}
+            {/* Produce Audio */}
             <button
               onClick={() => handleProduce(scriptBlocks, durationMinutes)}
               disabled={isProducing}
