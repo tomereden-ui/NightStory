@@ -8,7 +8,8 @@ const BUILD_LABEL = "Jun 12 · v4";
 
 const NAV = [
   { label: "Library", icon: "📚", href: "/library" },
-  { label: "Studio",  icon: "✨", href: "/create"  },
+  { label: "Create",  icon: "✨", href: "/create"  },
+  { label: "Studio",  icon: "🎬", href: "/studio"  },
   { label: "Voices",  icon: "🎙️", href: "/voices"  },
   { label: "Test",    icon: "🧪", href: "/test"    },
   { label: "Profile", icon: "👤", href: "/profile"  },
