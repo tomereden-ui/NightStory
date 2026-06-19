@@ -1,0 +1,294 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { writeDraft } from "@/lib/draftStore";
+import type { ClassicMeta } from "@/lib/classicStories";
+import type { ScriptBlock } from "@/types";
+
+function durationLabel(seconds: number): string {
+  const m = Math.round(seconds / 60);
+  return m <= 1 ? "1 min" : `${m} min`;
+}
+
+const CARD_PALETTES: [string, string][] = [
+  ["#4fc3f7", "#7c3aed"],
+  ["#f59e0b", "#ec4899"],
+  ["#10b981", "#4fc3f7"],
+  ["#a78bfa", "#f472b6"],
+  ["#38bdf8", "#818cf8"],
+  ["#fb923c", "#e879f9"],
+];
+function cardPalette(title: string): [string, string] {
+  let h = 0;
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) >>> 0;
+  return CARD_PALETTES[h % CARD_PALETTES.length];
+}
+
+export default function ClassicDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+
+  const [meta, setMeta] = useState<ClassicMeta | null>(null);
+  const [blocks, setBlocks] = useState<ScriptBlock[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [openingInStudio, setOpeningInStudio] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/classics", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data: ClassicMeta[]) => Array.isArray(data) ? data.find((c) => c.id === id) ?? null : null)
+        .catch(() => null),
+      fetch(`/api/classics/${id}`, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+    ]).then(([m, full]) => {
+      setMeta(m);
+      if (full?.blocks) setBlocks(full.blocks);
+    }).finally(() => setLoading(false));
+  }, [id]);
+
+  const handleOpenInStudio = useCallback(async () => {
+    if (!meta || !blocks) return;
+    setOpeningInStudio(true);
+    writeDraft({
+      promptText: `${meta.title} — ${meta.tagline}`,
+      scriptBlocks: blocks,
+      summary: meta.tagline,
+      coverPrompt: "",
+      coverUrl: meta.coverUrl ?? "",
+      editingStoryId: undefined,
+      characterAvatars: {},
+    });
+    router.push("/studio");
+  }, [meta, blocks, router]);
+
+  const handleUploadCover = () => fileInputRef.current?.click();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploadingCover(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/classics/${id}/cover`, { method: "POST", body: fd });
+      if (res.ok) {
+        const { coverUrl } = await res.json() as { coverUrl: string };
+        setMeta((m) => m ? { ...m, coverUrl } : m);
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="cosmic-page min-h-full flex items-center justify-center">
+        <span className="text-white/30 text-sm animate-pulse">Loading…</span>
+      </div>
+    );
+  }
+
+  if (!meta) {
+    return (
+      <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
+        <span className="text-4xl">✨</span>
+        <p className="text-white/30 text-sm">Classic not found.</p>
+        <button onClick={() => router.back()} className="text-xs" style={{ color: "rgba(79,195,247,0.5)" }}>
+          Go back
+        </button>
+      </div>
+    );
+  }
+
+  const [c1, c2] = cardPalette(meta.title);
+  const isReady = meta.status === "ready" && !!blocks;
+
+  return (
+    <div className="cosmic-page min-h-full">
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+      <div className="pb-36">
+        {/* Atmospheric cover area */}
+        <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
+          {meta.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={meta.coverUrl} alt={meta.title} className="w-full h-full object-cover" />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{
+                background: `radial-gradient(ellipse 70% 60% at 50% 35%, ${c1}28 0%, transparent 65%),
+                  linear-gradient(180deg,#060a18 0%,#0d1a3a 50%,#05080f 100%)`,
+              }}
+            >
+              <span className="text-8xl" style={{ filter: `drop-shadow(0 0 32px ${c1}66)` }}>
+                {meta.emoji}
+              </span>
+            </div>
+          )}
+
+          {/* Gradient fade to page bg */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-20"
+            style={{ background: "linear-gradient(to bottom, transparent, #05080F)" }}
+          />
+
+          {/* Classics badge */}
+          <div className="absolute bottom-6 left-5">
+            <span className="text-[9px] tracking-widest uppercase" style={{ color: `${c1}cc` }}>
+              ✨ Classic
+            </span>
+          </div>
+
+          {/* Back button */}
+          <button
+            onClick={() => router.back()}
+            className="absolute top-12 left-4 w-8 h-8 flex items-center justify-center rounded-full"
+            style={{
+              background: "rgba(5,8,20,0.6)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            <span className="text-white/60 text-sm">←</span>
+          </button>
+
+          {/* Upload cover button */}
+          {!uploadingCover && (
+            <button
+              onClick={handleUploadCover}
+              className="absolute top-12 right-4 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium transition-all active:scale-95"
+              style={{
+                background: "rgba(5,8,20,0.6)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              📷 {meta.coverUrl ? "Change" : "Upload cover"}
+            </button>
+          )}
+          {uploadingCover && (
+            <div
+              className="absolute top-12 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px]"
+              style={{ background: "rgba(5,8,20,0.6)", color: "rgba(255,255,255,0.3)" }}
+            >
+              <div className="w-3 h-3 rounded-full border border-t-transparent animate-spin" style={{ borderColor: `${c1} transparent transparent transparent` }} />
+              Uploading…
+            </div>
+          )}
+        </div>
+
+        {/* Meta */}
+        <div className="px-5 mt-3 mb-1">
+          <div className="w-10 h-0.5 rounded-full mb-3" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
+          <h1 className="text-xl font-light tracking-wide text-white mb-1">{meta.title}</h1>
+          <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+            {meta.tagline}
+          </p>
+          {meta.durationSeconds && (
+            <span
+              className="inline-block mt-2 text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+              style={{
+                background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
+                border: `1px solid ${c1}44`,
+                color: c1,
+              }}
+            >
+              {durationLabel(meta.durationSeconds)}
+            </span>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+
+        {/* Script blocks */}
+        {isReady ? (
+          <div className="px-5 flex flex-col gap-3">
+            {blocks!.map((block) => {
+              const isNarrator = block.characterName.toLowerCase().includes("narrat");
+              const isSfx = block.characterName === "SFX";
+              if (isSfx) return null;
+              return (
+                <div key={block.id}>
+                  {!isNarrator && (
+                    <p
+                      className="text-[9px] font-semibold uppercase tracking-widest mb-1 ml-3"
+                      style={{ color: "rgba(79,195,247,0.72)" }}
+                    >
+                      {block.characterName}
+                    </p>
+                  )}
+                  <div
+                    className="px-4 py-3 rounded-xl"
+                    style={isNarrator ? {
+                      color: "rgba(255,255,255,0.45)",
+                      fontStyle: "italic",
+                      fontSize: "11px",
+                      lineHeight: "1.6",
+                    } : {
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderLeft: "2px solid rgba(79,195,247,0.3)",
+                      color: "rgba(255,255,255,0.82)",
+                      fontSize: "11.5px",
+                      lineHeight: "1.6",
+                    }}
+                  >
+                    {block.textPayload.replace(/^\[.*?\]\s*/, "")}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-5 flex flex-col items-center gap-3 py-10">
+            {meta.status === "pending" || meta.status === "generating" ? (
+              <>
+                <div
+                  className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+                  style={{ borderColor: `${c1} transparent transparent transparent` }}
+                />
+                <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  {meta.status === "generating" ? "Generating script…" : "Preparing this classic…"}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>Script unavailable.</p>
+            )}
+          </div>
+        )}
+
+        {/* Open in Studio button */}
+        <div className="px-5 mt-8 mb-4">
+          <button
+            onClick={handleOpenInStudio}
+            disabled={!isReady || openingInStudio}
+            className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            style={isReady && !openingInStudio ? {
+              background: `linear-gradient(135deg, ${c1}18, ${c2}18)`,
+              border: `1px solid ${c1}44`,
+              color: c1,
+            } : {
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.2)",
+            }}
+          >
+            <span>🎬</span>
+            <span>{openingInStudio ? "Opening…" : "Open in Studio"}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

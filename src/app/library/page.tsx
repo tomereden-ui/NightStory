@@ -2,13 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
-import { writeDraft } from "@/lib/draftStore";
-import type { ScriptBlock } from "@/types";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -62,18 +59,13 @@ function cardPalette(title: string): [string, string] {
 // ── Classics tab ─────────────────────────────────────────────────────────────
 
 function ClassicsTab() {
-  const router = useRouter();
   const { effective } = useViewMode();
   const isMobile = effective === "mobile";
 
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
-  const [openingId, setOpeningId] = useState<string | null>(null);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const seedingRef = useRef(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetch("/api/classics", { cache: "no-store" })
@@ -117,78 +109,14 @@ function ClassicsTab() {
     })();
   }, [loading, classics]);
 
-  const handleUploadCover = (id: string) => {
-    uploadTargetRef.current = id;
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const id = uploadTargetRef.current;
-    if (!file || !id) return;
-    e.target.value = "";
-
-    setUploadingId(id);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`/api/classics/${id}/cover`, { method: "POST", body: fd });
-      if (res.ok) {
-        const { coverUrl } = await res.json() as { coverUrl: string };
-        setClassics((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, coverUrl } : item))
-        );
-      }
-    } catch {
-      // silently ignore
-    } finally {
-      setUploadingId(null);
-    }
-  };
-
-  const handleOpenInStudio = async (meta: ClassicMeta) => {
-    if (meta.status !== "ready") return;
-    setOpeningId(meta.id);
-    try {
-      const res = await fetch(`/api/classics/${meta.id}`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Not ready");
-      const { blocks, durationSeconds } = await res.json() as {
-        blocks: ScriptBlock[];
-        durationSeconds: number;
-      };
-
-      const def = { id: meta.id, title: meta.title, tagline: meta.tagline };
-      writeDraft({
-        promptText: `${def.title} — ${def.tagline}`,
-        scriptBlocks: blocks,
-        summary: meta.tagline,
-        coverPrompt: "",
-        coverUrl: meta.coverUrl ?? "",
-        editingStoryId: undefined,
-        characterAvatars: {},
-      });
-      router.push("/studio");
-    } catch {
-      // stay on page
-    } finally {
-      setOpeningId(null);
-    }
-  };
-
-  const cardCols = isMobile
-    ? "grid-cols-2"
-    : effective === "desktop"
-    ? "grid-cols-3"
-    : "grid-cols-2";
-
   if (loading) {
     return (
-      <div className={`grid ${cardCols} gap-4 pt-2`}>
-        {[0, 1, 2, 3, 4, 5].map((i) => (
+      <div className="flex flex-col gap-3 pt-2">
+        {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className="aspect-[3/4] rounded-3xl animate-pulse"
-            style={{ background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.08}s` }}
+            className="h-24 rounded-3xl animate-pulse"
+            style={{ background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.1}s` }}
           />
         ))}
       </div>
@@ -196,137 +124,110 @@ function ClassicsTab() {
   }
 
   return (
-    <div className={`grid ${cardCols} gap-4 pt-2`}>
-      {/* Hidden file input for cover uploads */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+    <div
+      className={isMobile ? "flex flex-col gap-3 pt-2" : "grid gap-4 pt-2"}
+      style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
+    >
       {classics.map((meta) => {
         const isGenerating = generatingId === meta.id;
-        const isOpening = openingId === meta.id;
-        const isUploading = uploadingId === meta.id;
         const [c1, c2] = cardPalette(meta.title);
-        const isReady = meta.status === "ready";
 
         return (
-          <div
+          <Link
             key={meta.id}
-            className="flex flex-col rounded-3xl overflow-hidden transition-all"
+            href={`/library/classics/${meta.id}`}
+            className="rounded-3xl overflow-hidden transition-all active:opacity-70"
             style={{
-              background: "rgba(255,255,255,0.03)",
+              background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 2px 20px rgba(0,0,0,0.3)",
+              boxShadow: "0 2px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
+              backdropFilter: "blur(16px)",
             }}
           >
-            {/* Cover */}
-            <div className="relative w-full aspect-square overflow-hidden">
-              {meta.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={meta.coverUrl}
-                  alt={meta.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center text-5xl"
-                  style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}33)` }}
-                >
-                  <span style={{ filter: `drop-shadow(0 0 16px ${c1}88)` }}>
-                    {isGenerating ? "✨" : meta.emoji}
-                  </span>
-                </div>
-              )}
-
-              {/* Generating / uploading overlay */}
-              {(isGenerating || isUploading) && (
-                <div
-                  className="absolute inset-0 flex flex-col items-center justify-center gap-2"
-                  style={{ background: "rgba(5,8,20,0.65)", backdropFilter: "blur(4px)" }}
-                >
-                  <div
-                    className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
-                    style={{ borderColor: `${c1} transparent transparent transparent` }}
+            <div className="flex items-stretch">
+              {/* Thumbnail */}
+              <div
+                className="w-20 flex-shrink-0 self-stretch relative overflow-hidden"
+                style={{ minHeight: 80 }}
+              >
+                {meta.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={meta.coverUrl}
+                    alt={meta.title}
+                    className="w-full h-full object-cover"
+                    style={{ minHeight: 80 }}
                   />
-                  <span className="text-[10px] text-white/50">
-                    {isUploading ? "Uploading…" : "Generating…"}
-                  </span>
-                </div>
-              )}
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-3xl"
+                    style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}33)`, minHeight: 80 }}
+                  >
+                    <span style={{ filter: `drop-shadow(0 0 10px ${c1}88)` }}>
+                      {isGenerating ? "✨" : meta.emoji}
+                    </span>
+                  </div>
+                )}
 
-              {/* Upload cover button — shown on cards that have no cover and aren't busy */}
-              {!meta.coverUrl && !isGenerating && !isUploading && (
-                <button
-                  onClick={() => handleUploadCover(meta.id)}
-                  className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-medium transition-all active:scale-95"
-                  style={{
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    color: "rgba(255,255,255,0.55)",
-                    backdropFilter: "blur(8px)",
-                  }}
-                >
-                  📷 Upload
-                </button>
-              )}
-            </div>
+                {/* Generating overlay */}
+                {isGenerating && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: "rgba(5,8,20,0.65)", backdropFilter: "blur(4px)" }}
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
+                      style={{ borderColor: `${c1} transparent transparent transparent` }}
+                    />
+                  </div>
+                )}
 
-            {/* Info */}
-            <div className="flex flex-col flex-1 p-3 gap-2">
-              <div>
+                {/* Gradient fade to card bg */}
                 <div
-                  className="w-6 h-0.5 rounded-full mb-1.5"
-                  style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
+                  className="absolute inset-y-0 right-0 w-8 pointer-events-none"
+                  style={{ background: "linear-gradient(to right, transparent, rgba(10,12,24,0.92))" }}
                 />
-                <p className="text-white text-xs font-semibold leading-snug">{meta.title}</p>
-                <p className="text-white/35 text-[10px] leading-snug mt-0.5 line-clamp-2">{meta.tagline}</p>
               </div>
 
-              {meta.durationSeconds && (
-                <span
-                  className="text-[9px] font-bold tracking-widest uppercase self-start px-2 py-0.5 rounded-full"
-                  style={{
-                    background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
-                    border: `1px solid ${c1}44`,
-                    color: c1,
-                  }}
-                >
-                  {durationLabel(meta.durationSeconds)}
-                </span>
-              )}
-
-              <button
-                onClick={() => handleOpenInStudio(meta)}
-                disabled={!isReady || isOpening || isGenerating}
-                className="mt-auto w-full py-2 rounded-2xl text-xs font-medium transition-all active:scale-[0.97]"
-                style={
-                  isReady
-                    ? {
-                        background: `linear-gradient(135deg, ${c1}22, ${c2}22)`,
+              {/* Info */}
+              <div className="flex-1 min-w-0 px-3 py-3.5">
+                <div
+                  className="w-8 h-0.5 rounded-full mb-2"
+                  style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
+                />
+                <p className="text-white text-sm font-semibold truncate leading-snug tracking-wide">
+                  {meta.title}
+                </p>
+                <p className="text-white/38 text-xs truncate mt-0.5 leading-snug">
+                  {meta.tagline}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  {meta.durationSeconds && (
+                    <span
+                      className="text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+                      style={{
+                        background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
                         border: `1px solid ${c1}44`,
                         color: c1,
-                      }
-                    : {
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        color: "rgba(255,255,255,0.2)",
-                      }
-                }
-              >
-                {isOpening
-                  ? "Opening…"
-                  : isGenerating
-                  ? "Preparing…"
-                  : isReady
-                  ? "Open in Studio"
-                  : "Pending…"}
-              </button>
+                      }}
+                    >
+                      {durationLabel(meta.durationSeconds)}
+                    </span>
+                  )}
+                  {isGenerating && (
+                    <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.28)" }}>
+                      Generating…
+                    </span>
+                  )}
+                  {meta.status === "pending" && !isGenerating && (
+                    <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>
+                      Pending
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>
