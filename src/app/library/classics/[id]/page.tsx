@@ -34,6 +34,7 @@ export default function ClassicDetailPage() {
   const [loading, setLoading] = useState(true);
   const [openingInStudio, setOpeningInStudio] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function ClassicDetailPage() {
         .catch(() => null),
     ]).then(([m, full]) => {
       setMeta(m);
+      setImgFailed(false);
       if (full?.blocks) setBlocks(full.blocks);
     }).finally(() => setLoading(false));
   }, [id]);
@@ -80,6 +82,7 @@ export default function ClassicDetailPage() {
       if (res.ok) {
         const { coverUrl } = await res.json() as { coverUrl: string };
         setMeta((m) => m ? { ...m, coverUrl } : m);
+        setImgFailed(false);
       }
     } catch {
       // silently ignore
@@ -110,17 +113,23 @@ export default function ClassicDetailPage() {
 
   const [c1, c2] = cardPalette(meta.title);
   const isReady = meta.status === "ready" && !!blocks;
+  const showCoverImg = !!meta.coverUrl && !imgFailed;
 
   return (
     <div className="cosmic-page min-h-full">
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
       <div className="pb-36">
-        {/* Atmospheric cover area */}
+        {/* Cover area */}
         <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
-          {meta.coverUrl ? (
+          {showCoverImg ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={meta.coverUrl} alt={meta.title} className="w-full h-full object-cover" />
+            <img
+              src={meta.coverUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              onError={() => setImgFailed(true)}
+            />
           ) : (
             <div
               className="w-full h-full flex items-center justify-center"
@@ -137,16 +146,9 @@ export default function ClassicDetailPage() {
 
           {/* Gradient fade to page bg */}
           <div
-            className="absolute bottom-0 left-0 right-0 h-20"
+            className="absolute bottom-0 left-0 right-0 h-24"
             style={{ background: "linear-gradient(to bottom, transparent, #05080F)" }}
           />
-
-          {/* Classics badge */}
-          <div className="absolute bottom-6 left-5">
-            <span className="text-[9px] tracking-widest uppercase" style={{ color: `${c1}cc` }}>
-              ✨ Classic
-            </span>
-          </div>
 
           {/* Back button */}
           <button
@@ -162,7 +164,7 @@ export default function ClassicDetailPage() {
           </button>
 
           {/* Upload cover button */}
-          {!uploadingCover && (
+          {!uploadingCover ? (
             <button
               onClick={handleUploadCover}
               className="absolute top-12 right-4 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium transition-all active:scale-95"
@@ -173,30 +175,61 @@ export default function ClassicDetailPage() {
                 color: "rgba(255,255,255,0.45)",
               }}
             >
-              📷 {meta.coverUrl ? "Change" : "Upload cover"}
+              📷 {meta.coverUrl && !imgFailed ? "Change" : "Upload cover"}
             </button>
-          )}
-          {uploadingCover && (
+          ) : (
             <div
               className="absolute top-12 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px]"
               style={{ background: "rgba(5,8,20,0.6)", color: "rgba(255,255,255,0.3)" }}
             >
-              <div className="w-3 h-3 rounded-full border border-t-transparent animate-spin" style={{ borderColor: `${c1} transparent transparent transparent` }} />
+              <div
+                className="w-3 h-3 rounded-full border border-t-transparent animate-spin"
+                style={{ borderColor: `${c1} transparent transparent transparent` }}
+              />
               Uploading…
             </div>
           )}
         </div>
 
-        {/* Meta */}
-        <div className="px-5 mt-3 mb-1">
-          <div className="w-10 h-0.5 rounded-full mb-3" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
-          <h1 className="text-xl font-light tracking-wide text-white mb-1">{meta.title}</h1>
-          <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+        {/* Title block — intentionally distinctive vs My Stories */}
+        <div className="px-5 pt-2 pb-1">
+          {/* Classics badge */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${c1}55, transparent)` }} />
+            <span
+              className="text-[9px] font-bold tracking-[0.2em] uppercase px-2.5 py-0.5 rounded-full"
+              style={{
+                background: `linear-gradient(135deg, ${c1}18, ${c2}18)`,
+                border: `1px solid ${c1}44`,
+                color: c1,
+              }}
+            >
+              ✨ Classic
+            </span>
+            <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, transparent, ${c2}55)` }} />
+          </div>
+
+          {/* Title with gradient */}
+          <h1
+            className="text-3xl font-bold tracking-tight leading-tight mb-2"
+            style={{
+              background: `linear-gradient(135deg, #ffffff 0%, ${c1} 55%, ${c2} 100%)`,
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              filter: `drop-shadow(0 0 20px ${c1}44)`,
+            }}
+          >
+            {meta.title}
+          </h1>
+
+          <p className="text-sm leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.5)" }}>
             {meta.tagline}
           </p>
+
           {meta.durationSeconds && (
             <span
-              className="inline-block mt-2 text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+              className="inline-block text-[9px] font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full"
               style={{
                 background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
                 border: `1px solid ${c1}44`,
@@ -220,14 +253,12 @@ export default function ClassicDetailPage() {
               if (isSfx) return null;
               return (
                 <div key={block.id}>
-                  {!isNarrator && (
-                    <p
-                      className="text-[9px] font-semibold uppercase tracking-widest mb-1 ml-3"
-                      style={{ color: "rgba(79,195,247,0.72)" }}
-                    >
-                      {block.characterName}
-                    </p>
-                  )}
+                  <p
+                    className="text-[9px] font-semibold uppercase tracking-widest mb-1 ml-3"
+                    style={{ color: isNarrator ? "rgba(255,255,255,0.25)" : "rgba(79,195,247,0.72)" }}
+                  >
+                    {isNarrator ? "Narrator" : block.characterName}
+                  </p>
                   <div
                     className="px-4 py-3 rounded-xl"
                     style={isNarrator ? {
