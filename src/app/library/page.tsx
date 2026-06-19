@@ -70,7 +70,10 @@ function ClassicsTab() {
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const seedingRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetch("/api/classics", { cache: "no-store" })
@@ -113,6 +116,35 @@ function ClassicsTab() {
       seedingRef.current = false;
     })();
   }, [loading, classics]);
+
+  const handleUploadCover = (id: string) => {
+    uploadTargetRef.current = id;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const id = uploadTargetRef.current;
+    if (!file || !id) return;
+    e.target.value = "";
+
+    setUploadingId(id);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/classics/${id}/cover`, { method: "POST", body: fd });
+      if (res.ok) {
+        const { coverUrl } = await res.json() as { coverUrl: string };
+        setClassics((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, coverUrl } : item))
+        );
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   const handleOpenInStudio = async (meta: ClassicMeta) => {
     if (meta.status !== "ready") return;
@@ -165,9 +197,18 @@ function ClassicsTab() {
 
   return (
     <div className={`grid ${cardCols} gap-4 pt-2`}>
+      {/* Hidden file input for cover uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
       {classics.map((meta) => {
         const isGenerating = generatingId === meta.id;
         const isOpening = openingId === meta.id;
+        const isUploading = uploadingId === meta.id;
         const [c1, c2] = cardPalette(meta.title);
         const isReady = meta.status === "ready";
 
@@ -201,8 +242,8 @@ function ClassicsTab() {
                 </div>
               )}
 
-              {/* Generating overlay */}
-              {isGenerating && (
+              {/* Generating / uploading overlay */}
+              {(isGenerating || isUploading) && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center gap-2"
                   style={{ background: "rgba(5,8,20,0.65)", backdropFilter: "blur(4px)" }}
@@ -211,8 +252,26 @@ function ClassicsTab() {
                     className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
                     style={{ borderColor: `${c1} transparent transparent transparent` }}
                   />
-                  <span className="text-[10px] text-white/50">Generating…</span>
+                  <span className="text-[10px] text-white/50">
+                    {isUploading ? "Uploading…" : "Generating…"}
+                  </span>
                 </div>
+              )}
+
+              {/* Upload cover button — shown on cards that have no cover and aren't busy */}
+              {!meta.coverUrl && !isGenerating && !isUploading && (
+                <button
+                  onClick={() => handleUploadCover(meta.id)}
+                  className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-medium transition-all active:scale-95"
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    color: "rgba(255,255,255,0.55)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  📷 Upload
+                </button>
               )}
             </div>
 
