@@ -22,6 +22,7 @@ interface ScriptTabProps {
   hideDirectorsNote?: boolean;
   hideDurationPicker?: boolean;
   hideProduceButton?: boolean;
+  studioMode?: boolean;
 }
 
 function makeId() {
@@ -134,6 +135,78 @@ function BlockSeparator({ onAddSfx, onAddText }: { onAddSfx: () => void; onAddTe
         </button>
       )}
       <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
+    </div>
+  );
+}
+
+// ─── AI block separator (studio mode) ────────────────────────────────────────
+
+function AIBlockSeparator({
+  onInsert,
+  isInserting,
+}: {
+  onInsert: (instruction: string) => void;
+  isInserting: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [text, setText] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (expanded) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [expanded]);
+
+  const submit = () => {
+    if (!text.trim() || isInserting) return;
+    onInsert(text.trim());
+    setText("");
+    setExpanded(false);
+  };
+
+  return (
+    <div className="w-full flex items-center gap-2 py-1.5 px-1">
+      {expanded ? (
+        <>
+          <input
+            ref={inputRef}
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+              if (e.key === "Escape") { setExpanded(false); setText(""); }
+            }}
+            placeholder='e.g. "Wendy says goodbye" or "add rain sounds"'
+            disabled={isInserting}
+            className="flex-1 rounded-xl px-3 py-1.5 text-xs outline-none text-white/75 placeholder-white/20 min-w-0"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.3)" }}
+          />
+          <button
+            onClick={submit}
+            disabled={!text.trim() || isInserting}
+            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all active:scale-95"
+            style={text.trim() && !isInserting
+              ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#A78BFA" }
+              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
+            }
+          >
+            {isInserting ? <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(139,92,246,0.3)", borderTopColor: "#A78BFA" }} /> : "↵"}
+          </button>
+          <button onClick={() => { setExpanded(false); setText(""); }} className="text-[10px] text-white/20 hover:text-white/40 flex-shrink-0">✕</button>
+        </>
+      ) : (
+        <>
+          <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
+          <button
+            onClick={() => setExpanded(true)}
+            className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-light transition-all"
+            style={{ color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}
+          >
+            +
+          </button>
+          <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
+        </>
+      )}
     </div>
   );
 }
@@ -312,7 +385,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -321,6 +394,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const [speechError, setSpeechError]     = useState<string | null>(null);
   const [insertingAt, setInsertingAt]         = useState<number | null>(null);
   const [insertingTextAt, setInsertingTextAt] = useState<number | null>(null);
+  const [aiInsertingAt, setAiInsertingAt]     = useState<number | null>(null);
   // Regenerate / validate state
   const [isDirty, setIsDirty]             = useState(false);
   const [isValidating, setIsValidating]   = useState(false);
@@ -437,6 +511,30 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
       markDirty();
     },
     [blocks, onBlocksChange, markDirty],
+  );
+
+  const handleAIInsert = useCallback(
+    async (afterIndex: number, instruction: string) => {
+      setAiInsertingAt(afterIndex);
+      try {
+        const res = await fetch("/api/insert-block", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blocks, afterIndex, instruction, summary }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.newBlocks?.length) throw new Error(data.error ?? "Insert failed");
+        const updated = [...blocks];
+        updated.splice(afterIndex + 1, 0, ...data.newBlocks);
+        onBlocksChange(updated.map((b, i) => ({ ...b, blockOrder: i + 1 })));
+        markDirty();
+      } catch (err) {
+        console.error("[AIInsert]", err);
+      } finally {
+        setAiInsertingAt(null);
+      }
+    },
+    [blocks, summary, onBlocksChange, markDirty],
   );
 
   // ─── Director revise ────────────────────────────────────────────────────────
@@ -624,8 +722,13 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {/* Block list with separators */}
         {blocks.map((block, idx) => (
           <div key={block.id}>
-            {/* Insert form or separator — BEFORE this block */}
-            {insertingAt === idx ? (
+            {/* Separator BEFORE this block */}
+            {studioMode ? (
+              <AIBlockSeparator
+                onInsert={(instruction) => handleAIInsert(idx - 1, instruction)}
+                isInserting={aiInsertingAt === idx - 1}
+              />
+            ) : insertingAt === idx ? (
               <SfxInsertForm
                 onInsert={(desc, dur) => handleInsertSfx(idx, desc, dur)}
                 onCancel={() => setInsertingAt(null)}
@@ -655,7 +758,12 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         ))}
 
         {/* After last block */}
-        {insertingAt === blocks.length ? (
+        {studioMode ? (
+          <AIBlockSeparator
+            onInsert={(instruction) => handleAIInsert(blocks.length - 1, instruction)}
+            isInserting={aiInsertingAt === blocks.length - 1}
+          />
+        ) : insertingAt === blocks.length ? (
           <SfxInsertForm
             onInsert={(desc, dur) => handleInsertSfx(blocks.length, desc, dur)}
             onCancel={() => setInsertingAt(null)}
@@ -850,8 +958,8 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         />
       )}
 
-      {/* Text insert modal */}
-      {insertingTextAt !== null && (
+      {/* Text insert modal — not used in studioMode */}
+      {!studioMode && insertingTextAt !== null && (
         <TextInsertModal
           voices={voices}
           existingCharacters={existingCharacters}

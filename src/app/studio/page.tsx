@@ -466,6 +466,7 @@ export default function StudioPage() {
               hideDirectorsNote
               hideDurationPicker
               hideProduceButton
+              studioMode
             />
 
             {/* ── Director's Note — below the script, after the user has read it ── */}
