@@ -6,7 +6,12 @@ import type { ScriptBlock } from "@/types";
 export const dynamic = "force-dynamic";
 
 const BUCKET = "script-saves";
-const INDEX  = "index.json";
+// Two separate index files so autosave and manual saves never contend on the
+// same file — eliminating the read-modify-write race condition where a
+// concurrent autosave could overwrite a freshly-written manual save index.
+const AUTOSAVE_META = "autosave-meta.json"; // single entry, only autosave writes
+const SAVES_INDEX   = "saves-index.json";   // list of manual saves only
+
 const MAX_MANUAL_SAVES = 10;
 
 async function ensureBucket() {
@@ -16,15 +21,26 @@ async function ensureBucket() {
   }
 }
 
-async function readIndex(): Promise<ScriptSaveMeta[]> {
-  const { data } = await supabase.storage.from(BUCKET).download(INDEX);
+async function readAutosaveMeta(): Promise<ScriptSaveMeta | null> {
+  const { data } = await supabase.storage.from(BUCKET).download(AUTOSAVE_META);
+  if (!data) return null;
+  try { return JSON.parse(await data.text()) as ScriptSaveMeta; } catch { return null; }
+}
+
+async function readManualIndex(): Promise<ScriptSaveMeta[]> {
+  const { data } = await supabase.storage.from(BUCKET).download(SAVES_INDEX);
   if (!data) return [];
   try { return JSON.parse(await data.text()) as ScriptSaveMeta[]; } catch { return []; }
 }
 
-async function writeIndex(index: ScriptSaveMeta[]): Promise<void> {
+async function writeAutosaveMeta(meta: ScriptSaveMeta): Promise<void> {
+  const blob = new Blob([JSON.stringify(meta)], { type: "application/json" });
+  await supabase.storage.from(BUCKET).upload(AUTOSAVE_META, blob, { upsert: true });
+}
+
+async function writeManualIndex(index: ScriptSaveMeta[]): Promise<void> {
   const blob = new Blob([JSON.stringify(index)], { type: "application/json" });
-  await supabase.storage.from(BUCKET).upload(INDEX, blob, { upsert: true });
+  await supabase.storage.from(BUCKET).upload(SAVES_INDEX, blob, { upsert: true });
 }
 
 async function writeSave(save: ScriptSaveFull): Promise<void> {
@@ -33,14 +49,16 @@ async function writeSave(save: ScriptSaveFull): Promise<void> {
   await supabase.storage.from(BUCKET).upload(path, blob, { upsert: true });
 }
 
-// GET — return index (metadata only, no blocks)
+// GET — return merged list: autosave first, then manual saves newest-first
 export async function GET() {
   await ensureBucket();
-  const index = await readIndex();
-  // newest first; autosave always first
+  const [autosaveMeta, manuals] = await Promise.all([
+    readAutosaveMeta(),
+    readManualIndex(),
+  ]);
   const sorted = [
-    ...index.filter((s) => s.isAutosave),
-    ...index.filter((s) => !s.isAutosave).sort((a, b) => b.savedAt - a.savedAt),
+    ...(autosaveMeta ? [autosaveMeta] : []),
+    ...manuals.sort((a, b) => b.savedAt - a.savedAt),
   ];
   return NextResponse.json(sorted);
 }
@@ -66,14 +84,13 @@ export async function POST(req: NextRequest) {
   }
 
   await ensureBucket();
-  const index = await readIndex();
 
   const now = Date.now();
   const isAutosave = Boolean(body.isAutosave);
 
   if (isAutosave) {
-    // Upsert single autosave entry in index
-    const existingIdx = index.findIndex((s) => s.isAutosave);
+    // Autosave writes ONLY to autosave-meta.json + autosave.json.
+    // It never touches saves-index.json, so it cannot overwrite manual saves.
     const meta: ScriptSaveMeta = {
       id: "autosave",
       savedAt: now,
@@ -83,15 +100,12 @@ export async function POST(req: NextRequest) {
       coverUrl: body.coverUrl,
       isAutosave: true,
     };
-    if (existingIdx >= 0) index[existingIdx] = meta;
-    else index.push(meta);
-
     const full: ScriptSaveFull = { ...meta, blocks: body.blocks, coverUrl: body.coverUrl, coverPrompt: body.coverPrompt };
-    await writeSave(full);
-    await writeIndex(index);
+    await Promise.all([writeSave(full), writeAutosaveMeta(meta)]);
     return NextResponse.json({ ok: true, meta });
   } else {
-    // Manual save — enforce cap
+    // Manual save writes ONLY to saves-index.json + its own file.
+    // It never touches autosave-meta.json.
     const id = `save-${now}`;
     const meta: ScriptSaveMeta = {
       id,
@@ -102,22 +116,17 @@ export async function POST(req: NextRequest) {
       coverUrl: body.coverUrl,
       isAutosave: false,
     };
-
     const full: ScriptSaveFull = { ...meta, blocks: body.blocks, coverUrl: body.coverUrl, coverPrompt: body.coverPrompt };
     await writeSave(full);
 
-    // Trim old manual saves to cap, then add new one
-    const manuals = index.filter((s) => !s.isAutosave).sort((a, b) => a.savedAt - b.savedAt);
+    // Trim oldest manual saves to stay within cap, then append new entry
+    const manuals = (await readManualIndex()).sort((a, b) => a.savedAt - b.savedAt);
     const toRemove = manuals.slice(0, Math.max(0, manuals.length - MAX_MANUAL_SAVES + 1));
-    for (const s of toRemove) {
-      await supabase.storage.from(BUCKET).remove([`${s.id}.json`]);
+    if (toRemove.length > 0) {
+      await supabase.storage.from(BUCKET).remove(toRemove.map((s) => `${s.id}.json`));
     }
-    const newIndex = [
-      ...index.filter((s) => s.isAutosave),
-      ...manuals.filter((s) => !toRemove.find((r) => r.id === s.id)),
-      meta,
-    ];
-    await writeIndex(newIndex);
+    const kept = manuals.filter((s) => !toRemove.find((r) => r.id === s.id));
+    await writeManualIndex([...kept, meta]);
     return NextResponse.json({ ok: true, meta });
   }
 }

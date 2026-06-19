@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
+import type { ScriptSaveFull, ScriptSaveMeta } from "@/lib/scriptSaves";
 
 export const dynamic = "force-dynamic";
 
-const BUCKET = "script-saves";
-const INDEX  = "index.json";
+const BUCKET     = "script-saves";
+const SAVES_INDEX = "saves-index.json";
 
-async function readIndex(): Promise<ScriptSaveMeta[]> {
-  const { data } = await supabase.storage.from(BUCKET).download(INDEX);
+async function readManualIndex(): Promise<ScriptSaveMeta[]> {
+  const { data } = await supabase.storage.from(BUCKET).download(SAVES_INDEX);
   if (!data) return [];
   try { return JSON.parse(await data.text()) as ScriptSaveMeta[]; } catch { return []; }
 }
 
-async function writeIndex(index: ScriptSaveMeta[]): Promise<void> {
+async function writeManualIndex(index: ScriptSaveMeta[]): Promise<void> {
   const blob = new Blob([JSON.stringify(index)], { type: "application/json" });
-  await supabase.storage.from(BUCKET).upload(INDEX, blob, { upsert: true });
+  await supabase.storage.from(BUCKET).upload(SAVES_INDEX, blob, { upsert: true });
 }
 
 // GET /api/script-saves/[id] — return full save with blocks
@@ -35,7 +35,7 @@ export async function GET(
   }
 }
 
-// DELETE /api/script-saves/[id]
+// DELETE /api/script-saves/[id] — only touches saves-index.json, never autosave-meta.json
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
@@ -44,9 +44,10 @@ export async function DELETE(
   if (id === "autosave") {
     return NextResponse.json({ error: "Cannot delete autosave" }, { status: 400 });
   }
-  const path = `${id}.json`;
-  await supabase.storage.from(BUCKET).remove([path]);
-  const index = await readIndex();
-  await writeIndex(index.filter((s) => s.id !== id));
+  const [, manuals] = await Promise.all([
+    supabase.storage.from(BUCKET).remove([`${id}.json`]),
+    readManualIndex(),
+  ]);
+  await writeManualIndex(manuals.filter((s) => s.id !== id));
   return NextResponse.json({ ok: true });
 }
