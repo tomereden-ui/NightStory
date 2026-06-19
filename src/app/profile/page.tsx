@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
+import type { UsageTotals } from "@/lib/usageTracker";
 
 // ─── Illustrated card (same pattern as 5-question flow) ──────────────────────
 
@@ -170,11 +171,28 @@ const SETTINGS = [
   { id: "volume",        label: "Volume",          emoji: "🔊", key: "profile-setting-volume",        value: "80%" },
 ];
 
+function fmt(n: number) {
+  return n >= 1_000_000
+    ? `${(n / 1_000_000).toFixed(1)}M`
+    : n >= 1_000
+    ? `${(n / 1_000).toFixed(1)}K`
+    : String(n);
+}
+
 export default function ProfilePage() {
   const { t, isRTL } = useLanguage();
   const { mode, setMode } = useViewMode();
   const user = MOCK_USER;
   const [profileImages, setProfileImages] = useState<Record<string, string>>({});
+  const [usage, setUsage] = useState<UsageTotals | null>(null);
+
+  // Load usage stats
+  useEffect(() => {
+    fetch("/api/usage")
+      .then((r) => r.json())
+      .then((data) => setUsage(data as UsageTotals))
+      .catch(() => {});
+  }, []);
 
   // Browser-side seeder — reuses the same seed-create-images API
   useEffect(() => {
@@ -288,7 +306,7 @@ export default function ProfilePage() {
         </div>
 
         {/* ── Settings ───────────────────────────────────────────────── */}
-        <div>
+        <div className="mb-7">
           <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
             {t("settings")}
           </p>
@@ -302,6 +320,85 @@ export default function ProfilePage() {
                 value={s.value}
               />
             ))}
+          </div>
+        </div>
+
+        {/* ── API Usage ──────────────────────────────────────────────── */}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
+            API Usage
+          </p>
+          <div className="flex flex-col gap-2">
+
+            {/* Gemini row */}
+            <div
+              className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
+              style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.12)" }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+                style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.2)" }}>
+                ✦
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white/80">Gemini</p>
+                <p className="text-[10px] text-white/30 mt-0.5">
+                  {usage ? `${fmt(usage.gemini_calls)} request${usage.gemini_calls !== 1 ? "s" : ""}` : "—"}
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-sm font-bold" style={{ color: "#4fc3f7" }}>
+                  {usage ? fmt(usage.gemini_tokens) : "—"}
+                </p>
+                <p className="text-[9px] text-white/25 mt-0.5">tokens</p>
+              </div>
+            </div>
+
+            {/* ElevenLabs TTS row */}
+            <div
+              className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
+              style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)" }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+                style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                🔊
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white/80">ElevenLabs · TTS</p>
+                <p className="text-[10px] text-white/30 mt-0.5">
+                  {usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-sm font-bold" style={{ color: "#F59E0B" }}>
+                  {usage ? fmt(usage.el_tts_chars) : "—"}
+                </p>
+                <p className="text-[9px] text-white/25 mt-0.5">chars</p>
+              </div>
+            </div>
+
+            {/* ElevenLabs SFX row */}
+            <div
+              className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
+              style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.12)" }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+                style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                🎵
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white/80">ElevenLabs · SFX</p>
+                <p className="text-[10px] text-white/30 mt-0.5">
+                  {usage ? `${fmt(usage.el_sfx_calls)} generation${usage.el_sfx_calls !== 1 ? "s" : ""}` : "—"}
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-sm font-bold" style={{ color: "#A78BFA" }}>
+                  {usage ? fmt(usage.el_sfx_chars) : "—"}
+                </p>
+                <p className="text-[9px] text-white/25 mt-0.5">prompt chars</p>
+              </div>
+            </div>
+
           </div>
         </div>
 

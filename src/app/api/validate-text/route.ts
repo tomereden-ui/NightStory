@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { geminiPost } from "@/lib/geminiClient";
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -27,20 +28,12 @@ Be PERMISSIVE — creative, unusual, or fantastical content is fine. Only reject
 Text: "${text.trim().slice(0, 800)}"`;
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: "application/json", temperature: 0 },
-        }),
-      }
-    );
-    const data = await res.json();
+    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json", temperature: 0 },
+    });
     const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw as string);
     return NextResponse.json({ valid: !!parsed.valid, reason: parsed.reason ?? "" });
   } catch {
     return NextResponse.json({ valid: true }); // fail open

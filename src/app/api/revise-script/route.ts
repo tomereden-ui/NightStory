@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { trackGemini } from "@/lib/usageTracker";
 import type { ScriptBlock } from "@/types";
 
 interface RawBlock {
@@ -54,6 +55,8 @@ Return ONLY the raw JSON array. No markdown fences, no explanation.`;
     const result = await model.generateContent(
       `Director's instruction: "${instruction.trim()}"\n\nScript:\n${scriptJson}`
     );
+    const _t = result.response.usageMetadata?.totalTokenCount;
+    if (_t) trackGemini(_t).catch(() => {});
     const text = result.response.text().trim()
       .replace(/^```(?:json)?\n?/, "")
       .replace(/\n?```$/, "")

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchPollinationsImage } from "@/lib/services/pollinationsClient";
+import { geminiPost, geminiText } from "@/lib/geminiClient";
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -21,16 +22,11 @@ export async function POST(req: NextRequest) {
   // ── Step 1: Gemini text → vivid character-first scene description ──────────
   let scenePrompt = prompt;
   try {
-    const enhanceRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: [{
-              text: `You are a children's book illustrator writing an image prompt. Describe ONLY what a camera would see in the foreground of this book cover — the characters, their expressions, what they are doing, and where they are standing.
+    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `You are a children's book illustrator writing an image prompt. Describe ONLY what a camera would see in the foreground of this book cover — the characters, their expressions, what they are doing, and where they are standing.
 
 RULES:
 - START with the main character(s): their species/appearance, clothing or fur color, size, emotion
@@ -44,19 +40,14 @@ RULES:
 ${storyContext}
 
 Write ONLY the image prompt. No labels, no quotes.`,
-            }],
-          }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 200, thinkingConfig: { thinkingBudget: 0 } },
-        }),
-      }
-    );
-    if (enhanceRes.ok) {
-      const enhanceData = await enhanceRes.json();
-      const enhanced = enhanceData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (enhanced && enhanced.length > 20) {
-        scenePrompt = enhanced;
-        console.log("[CoverGen] Enhanced scene prompt:", scenePrompt);
-      }
+        }],
+      }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 200, thinkingConfig: { thinkingBudget: 0 } },
+    });
+    const enhanced = geminiText(data);
+    if (enhanced && enhanced.length > 20) {
+      scenePrompt = enhanced;
+      console.log("[CoverGen] Enhanced scene prompt:", scenePrompt);
     }
   } catch {
     console.warn("[CoverGen] Enhancement failed, using raw prompt");

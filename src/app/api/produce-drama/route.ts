@@ -4,6 +4,7 @@ import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
 import { pickGeminiVoice as pickGeminiVoiceForChar } from "@/config/ttsDefaults";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { geminiPost, geminiText } from "@/lib/geminiClient";
 
 /**
  * Builds character → voice overrides from the user's per-block voice assignments
@@ -68,20 +69,12 @@ async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Prom
     .slice(0, 400);
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: `What language is this text written in? Reply with ONLY the ISO 639-1 two-letter code (e.g. "en", "he", "ar", "fr", "de", "es"). No explanation.\n\n${sample}` }] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 5, thinkingConfig: { thinkingBudget: 0 } },
-        }),
-      }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const code = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toLowerCase();
+    const { data, ok } = await geminiPost(apiKey, "gemini-2.5-flash", {
+      contents: [{ role: "user", parts: [{ text: `What language is this text written in? Reply with ONLY the ISO 639-1 two-letter code (e.g. "en", "he", "ar", "fr", "de", "es"). No explanation.\n\n${sample}` }] }],
+      generationConfig: { temperature: 0, maxOutputTokens: 5, thinkingConfig: { thinkingBudget: 0 } },
+    });
+    if (ok) {
+      const code = geminiText(data).toLowerCase();
       if (code && /^[a-z]{2}$/.test(code)) return code;
     }
   } catch (err) {

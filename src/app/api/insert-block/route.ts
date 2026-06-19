@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock } from "@/types";
+import { geminiPost, geminiText } from "@/lib/geminiClient";
 
 function makeId() {
   return `blk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -51,21 +52,13 @@ Each element: { "characterName": string, "textPayload": string }`;
   ].filter(Boolean).join("\n");
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents: [{ role: "user", parts: [{ text: userMessage }] }],
-          generationConfig: { temperature: 0.75, maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } },
-        }),
-      }
-    );
+    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      contents: [{ role: "user", parts: [{ text: userMessage }] }],
+      generationConfig: { temperature: 0.75, maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } },
+    });
 
-    const data = await res.json();
-    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+    const raw = geminiText(data);
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned) as Array<{ characterName: string; textPayload: string }>;
 

@@ -1,4 +1,5 @@
 import fs from "fs";
+import { trackELTts } from "@/lib/usageTracker";
 
 const ts = () => new Date().toTimeString().slice(0, 8);
 
@@ -81,6 +82,7 @@ async function synthesizeEL(
 
     const mp3 = Buffer.from(await res.arrayBuffer());
     fs.writeFileSync(outputPath.replace(/\.wav$/, ".mp3"), mp3);
+    trackELTts(text.length).catch(() => {});
     return;
   }
   throw new Error("EL TTS failed after 5 attempts");

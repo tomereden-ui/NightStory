@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchPollinationsImage } from "@/lib/services/pollinationsClient";
+import { geminiPost, geminiText } from "@/lib/geminiClient";
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -16,16 +17,11 @@ export async function POST(req: NextRequest) {
   // Step 1: Gemini writes a vivid portrait description of the character
   let portraitDesc = `${characterName}, children's book character portrait`;
   try {
-    const enhanceRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: [{
-              text: `You are a children's book illustrator writing a character portrait prompt for "${characterName}".
+    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `You are a children's book illustrator writing a character portrait prompt for "${characterName}".
 
 Story context: ${summary ?? "a magical bedtime adventure"}
 
@@ -35,19 +31,14 @@ Describe ONLY the character's face and upper body in 2 sentences:
 - What they are wearing (one detail only)
 
 Do NOT describe backgrounds, other characters, or scenery. Write ONLY the portrait description.`,
-            }],
-          }],
-          generationConfig: { temperature: 0.65, maxOutputTokens: 100, thinkingConfig: { thinkingBudget: 0 } },
-        }),
-      }
-    );
-    if (enhanceRes.ok) {
-      const data = await enhanceRes.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (text && text.length > 20) {
-        portraitDesc = text;
-        console.log("[AvatarGen] Portrait desc:", portraitDesc);
-      }
+        }],
+      }],
+      generationConfig: { temperature: 0.65, maxOutputTokens: 100, thinkingConfig: { thinkingBudget: 0 } },
+    });
+    const text = geminiText(data);
+    if (text && text.length > 20) {
+      portraitDesc = text;
+      console.log("[AvatarGen] Portrait desc:", portraitDesc);
     }
   } catch {
     console.warn("[AvatarGen] Gemini enhancement failed, using fallback");

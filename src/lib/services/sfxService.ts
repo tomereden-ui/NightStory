@@ -1,4 +1,5 @@
 import fs from "fs";
+import { trackELSfx } from "@/lib/usageTracker";
 
 /**
  * Calls ElevenLabs sound-generation API.
@@ -35,6 +36,7 @@ export async function generateSfx(
 
     const buf = Buffer.from(await res.arrayBuffer());
     fs.writeFileSync(outputPath, buf);
+    trackELSfx(description.length).catch(() => {});
     return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
