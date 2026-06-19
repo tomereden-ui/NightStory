@@ -730,6 +730,8 @@ export default function VoicesPage() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const blobUrlRef = useRef<string | null>(null);
+  const seedingRef = useRef(false);
+  const [seedingRemaining, setSeedingRemaining] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -786,12 +788,46 @@ export default function VoicesPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Load cached voice samples generated in the Test lab
+  // Load cached voice samples, then seed any that are missing in the background.
+  // Samples are stored in Supabase Storage so they only need to be generated once.
   useEffect(() => {
+    let cancelled = false;
     fetch("/api/voice-samples")
       .then((r) => r.json())
-      .then((data) => setVoiceSamples(data.samples ?? {}))
+      .then(async (data) => {
+        const cached: Record<string, string> = data.samples ?? {};
+        setVoiceSamples(cached);
+
+        // Find preset voices that don't have a cached sample yet
+        const missing = PRESET_VOICES.filter((pv) => !cached[pv.geminiVoiceName]);
+        if (missing.length === 0 || seedingRef.current) return;
+        seedingRef.current = true;
+        setSeedingRemaining(missing.length);
+
+        for (const pv of missing) {
+          if (cancelled) return;
+          try {
+            const res = await fetch("/api/voice-samples", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ voice: pv.geminiVoiceName }),
+            });
+            if (res.ok) {
+              const { url } = await res.json() as { url: string };
+              if (url && !cancelled) {
+                setVoiceSamples((prev) => ({ ...prev, [pv.geminiVoiceName]: url }));
+              }
+            }
+          } catch {
+            // ignore individual failures — next visit retries
+          }
+          setSeedingRemaining((n) => Math.max(0, n - 1));
+        }
+        setSeedingRemaining(0);
+        seedingRef.current = false;
+      })
       .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   // Load voices
