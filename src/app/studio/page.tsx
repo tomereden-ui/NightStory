@@ -402,6 +402,7 @@ export default function StudioPage() {
               onDurationChange={setDurationMinutes}
               hideDirectorsNote
               hideDurationPicker
+              hideProduceButton
             />
 
             {/* ── Director's Note — below the script, after the user has read it ── */}
@@ -481,6 +482,23 @@ export default function StudioPage() {
                 <p className="text-[10px]" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
               )}
             </div>
+
+            {/* Produce Audio — pinned after Director's Note */}
+            <button
+              onClick={() => handleProduce(scriptBlocks, durationMinutes)}
+              disabled={isProducing}
+              className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
+                !isProducing ? "btn-vivid" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
+              }`}
+            >
+              {isProducing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-pulse-slow">🎙️</span>Mixing audio tracks…
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">🎙️ Produce Audio</span>
+              )}
+            </button>
           </>
         )}
       </div>

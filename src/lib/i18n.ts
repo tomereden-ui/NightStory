@@ -73,7 +73,7 @@ export const translations = {
     // Script tab
     scriptEmpty: "Generate a story first to see the script",
     ready: "READY",
-    produceStory: "Produce Story",
+    produceStory: "Produce Audio",
     mixingAudio: "Mixing audio tracks…",
     tapToEdit: "tap to edit",
     changeVoice: "change",

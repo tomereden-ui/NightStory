@@ -21,6 +21,7 @@ interface ScriptTabProps {
   onDurationChange?: (v: number) => void;
   hideDirectorsNote?: boolean;
   hideDurationPicker?: boolean;
+  hideProduceButton?: boolean;
 }
 
 function makeId() {
@@ -311,7 +312,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -817,20 +818,22 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           )}
         </div>}
 
-        {/* Produce button */}
-        <button
-          onClick={() => onProduce(blocks, durationMinutes)}
-          disabled={isProducing}
-          className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
-            !isProducing ? "btn-vivid" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
-          }`}
-        >
-          {isProducing ? (
-            <span className="flex items-center justify-center gap-2"><span className="animate-pulse-slow">🎙️</span>{t("mixingAudio")}</span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">🎙️ {t("produceStory")}</span>
-          )}
-        </button>
+        {/* Produce button — hidden when parent renders its own below Director's Note */}
+        {!hideProduceButton && (
+          <button
+            onClick={() => onProduce(blocks, durationMinutes)}
+            disabled={isProducing}
+            className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
+              !isProducing ? "btn-vivid" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
+            }`}
+          >
+            {isProducing ? (
+              <span className="flex items-center justify-center gap-2"><span className="animate-pulse-slow">🎙️</span>{t("mixingAudio")}</span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">🎙️ {t("produceStory")}</span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* TTS preview modal */}
