@@ -75,93 +75,134 @@ function ScriptBrowser({
 
   return (
     <div
-      className="mb-4 rounded-2xl overflow-hidden transition-all"
-      style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.12)" }}
+      className="mb-5 rounded-2xl overflow-hidden"
+      style={{
+        background: "linear-gradient(145deg, rgba(10,18,40,0.95) 0%, rgba(5,8,20,0.98) 100%)",
+        border: "1px solid rgba(79,195,247,0.18)",
+        boxShadow: "0 4px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(79,195,247,0.06) inset",
+      }}
     >
-      {/* Header row */}
+      {/* Header */}
       <button
         onClick={() => setExpanded((p) => !p)}
         className="w-full flex items-center justify-between px-4 py-3 text-left"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm">📋</span>
-          <span className="text-xs font-semibold tracking-wide" style={{ color: "rgba(79,195,247,0.8)" }}>
-            Saved versions
+        <div className="flex items-center gap-2.5">
+          <span
+            className="flex items-center justify-center w-6 h-6 rounded-lg text-sm"
+            style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.2)" }}
+          >
+            📂
+          </span>
+          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.75)", letterSpacing: "0.08em" }}>
+            Saved Versions
           </span>
           <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-            style={{ background: "rgba(79,195,247,0.12)", color: "rgba(79,195,247,0.6)" }}
+            className="text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums"
+            style={{
+              background: "linear-gradient(135deg, rgba(79,195,247,0.2), rgba(79,195,247,0.08))",
+              color: "#4fc3f7",
+              border: "1px solid rgba(79,195,247,0.25)",
+            }}
           >
             {saves.length}
           </span>
         </div>
-        <span className="text-white/30 text-xs transition-transform" style={{ display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+        <span
+          className="text-white/40 text-xs transition-transform duration-200"
+          style={{ display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+        >
           ▾
         </span>
       </button>
 
-      {/* Save list */}
+      {/* Filmstrip */}
       {expanded && (
-        <div
-          className="flex flex-col gap-1.5 px-3 pb-3"
-          style={{ maxHeight: 260, overflowY: "auto", scrollbarWidth: "none" }}
-        >
-          {saves.map((s) => {
-            const isLoading  = loadingId === s.id;
-            const isDeleting = deletingId === s.id;
-            return (
-              <button
-                key={s.id}
-                onClick={() => handleLoad(s.id)}
-                disabled={isLoading}
-                className="w-full flex items-center gap-3 px-2 py-2 rounded-xl text-left transition-all active:scale-[0.98]"
-                style={{
-                  background: s.isAutosave ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
-                  border: s.isAutosave ? "1px solid rgba(79,195,247,0.22)" : "1px solid rgba(255,255,255,0.09)",
-                }}
-              >
-                {/* Cover thumbnail */}
-                <div
-                  className="flex-shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
-                  style={{ width: 44, height: 44, background: "rgba(255,255,255,0.05)" }}
-                >
-                  {s.coverUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={s.coverUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-lg">🌙</span>
-                  )}
-                </div>
-
-                {/* Text */}
-                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                  <span className="text-[11px] font-bold" style={{ color: s.isAutosave ? "#4fc3f7" : "rgba(255,255,255,0.65)" }}>
-                    {isLoading ? "Loading…" : s.label}
-                  </span>
-                  <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.25)" }}>
-                    {s.blockCount} lines · {timeAgo(s.savedAt)}
-                  </span>
-                  {s.summary && (
-                    <span className="text-[9px] leading-snug line-clamp-1 mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>
-                      {s.summary}
-                    </span>
-                  )}
-                </div>
-
-                {/* Delete */}
-                {!s.isAutosave && (
+        <>
+          <div
+            className="h-px mx-4"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(79,195,247,0.15), transparent)" }}
+          />
+          <div
+            className="flex gap-3 px-4 py-4"
+            style={{ overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+          >
+            {saves.map((s) => {
+              const isLoading  = loadingId === s.id;
+              const isDeleting = deletingId === s.id;
+              return (
+                <div key={s.id} className="relative flex-shrink-0" style={{ width: 120 }}>
                   <button
-                    onClick={(e) => handleDelete(s.id, e)}
-                    disabled={isDeleting}
-                    className="text-white/20 hover:text-white/50 transition-colors text-base leading-none flex-shrink-0 px-1"
+                    onClick={() => handleLoad(s.id)}
+                    disabled={isLoading}
+                    className="w-full flex flex-col rounded-xl overflow-hidden text-left transition-all active:scale-[0.96]"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: s.isAutosave
+                        ? "1px solid rgba(79,195,247,0.35)"
+                        : "1px solid rgba(255,255,255,0.1)",
+                      boxShadow: s.isAutosave
+                        ? "0 0 16px rgba(79,195,247,0.1)"
+                        : "0 2px 12px rgba(0,0,0,0.3)",
+                    }}
                   >
-                    {isDeleting ? "…" : "×"}
+                    {/* Cover art */}
+                    <div
+                      className="relative w-full flex items-center justify-center overflow-hidden"
+                      style={{ height: 90, background: "linear-gradient(135deg, rgba(20,30,60,1) 0%, rgba(10,15,35,1) 100%)" }}
+                    >
+                      {s.coverUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={s.coverUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-3xl opacity-30">🌙</span>
+                      )}
+                      {/* Gradient overlay at bottom */}
+                      <div
+                        className="absolute inset-x-0 bottom-0 h-8"
+                        style={{ background: "linear-gradient(to top, rgba(5,8,20,0.8), transparent)" }}
+                      />
+                      {/* Autosave badge */}
+                      {s.isAutosave && (
+                        <span
+                          className="absolute top-1.5 left-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded-md"
+                          style={{ background: "rgba(79,195,247,0.25)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.4)" }}
+                        >
+                          AUTO
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex flex-col gap-0.5 px-2.5 py-2">
+                      <span
+                        className="text-[10px] font-bold truncate"
+                        style={{ color: s.isAutosave ? "#4fc3f7" : "rgba(255,255,255,0.75)" }}
+                      >
+                        {isLoading ? "Loading…" : s.label}
+                      </span>
+                      <span className="text-[8px]" style={{ color: "rgba(255,255,255,0.28)" }}>
+                        {s.blockCount} lines · {timeAgo(s.savedAt)}
+                      </span>
+                    </div>
                   </button>
-                )}
-              </button>
-            );
-          })}
-        </div>
+
+                  {/* Delete button — floats top-right */}
+                  {!s.isAutosave && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(s.id, e); }}
+                      disabled={isDeleting}
+                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-all"
+                      style={{ background: "rgba(0,0,0,0.55)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.12)" }}
+                    >
+                      {isDeleting ? "…" : "×"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
