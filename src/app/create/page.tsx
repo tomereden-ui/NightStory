@@ -173,8 +173,10 @@ export default function CreatePage() {
       const cp = data.coverPrompt ?? "";
       setCoverPrompt(cp);
       setCoverUrl(""); // reset while we fetch
-      setActiveTab("script");
+      // Write draft explicitly before navigating (effect won't fire until next render)
+      writeDraft({ promptText, scriptBlocks: data.blocks as ScriptBlock[], summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: editingStoryId ?? undefined });
       if (cp) fetchCover(cp, sm);
+      router.push("/studio");
     } catch (err: unknown) {
       setGenerateError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

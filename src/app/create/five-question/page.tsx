@@ -916,9 +916,9 @@ export default function FiveQuestionPage() {
     setCoverPrompt(incomingCoverPrompt);
     setCoverUrl(""); // reset while we fetch
     writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "" });
-    setStep("done");
     if (incomingCoverPrompt) fetchCover(incomingCoverPrompt, incomingSummary);
-  }, [fetchCover]);
+    router.push("/studio");
+  }, [fetchCover, router]);
 
   const handleGenError = useCallback((msg: string) => {
     setError(msg);
