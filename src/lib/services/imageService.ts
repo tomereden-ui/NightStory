@@ -66,6 +66,7 @@ RULES:
 - Then the setting behind them with 2 specific visual details
 - End with one lighting detail
 - DO NOT mention sky or moon as the main subject
+- Describe characters by appearance only (clothing, color, size, emotion) — NEVER use their names
 - 3 sentences maximum
 
 ${storyContext}
