@@ -20,7 +20,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       style={{ background: "#0A0C14" }}
     >
       <BottomNav />
-      <main className={`flex-1 overflow-x-hidden ${isMobile ? "pb-24" : "pb-8"}`}>
+      <main className={`flex-1 overflow-x-clip ${isMobile ? "pb-24" : "pb-8"}`}>
         <div
           className="mx-auto"
           style={{

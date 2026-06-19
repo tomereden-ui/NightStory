@@ -51,7 +51,7 @@ function CharacterCards({
       <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
         Cast — tap to direct a character
       </p>
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: "none" }}>
+      <div className="flex gap-3 pb-2 -mx-5 px-5" style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
         {cast.map(({ characterName, voice }) => (
           <CharacterCard
             key={characterName}
@@ -127,6 +127,9 @@ function CharacterCard({
           {avatarUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
+          ) : voice?.avatarUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={voice.avatarUrl} alt={voice.name} className="w-full h-full object-cover" />
           ) : (
             <div
               className="w-full h-full flex items-center justify-center"
@@ -134,10 +137,6 @@ function CharacterCard({
             >
               {initial}
             </div>
-          )}
-          {/* Subtle shimmer while loading (no avatarUrl yet) */}
-          {!avatarUrl && (
-            <div className="absolute inset-0 opacity-20" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 60%)" }} />
           )}
         </div>
         <span
