@@ -79,19 +79,17 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
   ];
 
   const castMembers = Object.keys(voiceAssignments)
-    .filter((name) => !/^(narrator|sfx|sound|narrat)/i.test(name.trim()))
+    .filter((name) => !/^(sfx|sound)/i.test(name.trim()))
     .map((name, i) => ({
       name: name.charAt(0).toUpperCase() + name.slice(1),
       initial: name.charAt(0).toUpperCase(),
       color: CAST_PALETTE[i % CAST_PALETTE.length],
     }));
 
-  const activeTrack = dialogueTracks.find((t, i) => {
-    const nextStart = dialogueTracks[i + 1]?.start_ms ?? Infinity;
-    return (
-      currentTime * 1000 >= t.start_ms &&
-      currentTime * 1000 < nextStart
-    );
+  const nowMs = currentTime * 1000;
+  const activeTrack = dialogueTracks.find((t) => {
+    const end = t.end_ms ?? Infinity;
+    return nowMs >= t.start_ms && nowMs < end;
   });
 
   return (
@@ -238,12 +236,12 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <div className="relative h-8 rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
             {tracks.map((t) => {
               const left = (t.start_ms / 1000 / duration) * 100;
-              // Dialogue tracks never carry a duration_hint_ms (only SFX does) — estimate
-              // from word count using the same ~380ms/word rate the planner uses for timing,
-              // otherwise every line renders at the same fixed width regardless of length.
-              const dialogueMs = t.line
-                ? Math.max(600, t.line.replace(/\[.*?\]/g, "").trim().split(/\s+/).filter(Boolean).length * 380)
-                : 600;
+              // Use actual end_ms if stamped (post-mix); fall back to word-count estimate
+              const actualDurMs = t.end_ms ? t.end_ms - t.start_ms : null;
+              const dialogueMs = actualDurMs
+                ?? (t.line
+                  ? Math.max(600, t.line.replace(/\[.*?\]/g, "").trim().split(/\s+/).filter(Boolean).length * 380)
+                  : 600);
               const width = t.type === "sfx" && t.loop
                 ? 100 - left
                 : Math.max(1, ((t.type === "sfx" ? t.duration_hint_ms ?? 1500 : dialogueMs) / 1000 / duration) * 100);

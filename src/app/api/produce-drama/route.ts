@@ -347,6 +347,18 @@ async function runProduction(
       }),
     );
 
+    // Stamp actual start/end times onto each dialogue track so DramaPlayer
+    // can display accurate subtitles and timeline positions.
+    for (const t of dialogueTracks) {
+      const actualStart = adjustedStartMs.get(t.id) ?? t.start_ms;
+      const fp = [".wav", ".mp3"].map((e) => path.join(jobTmp, `${t.id}${e}`)).find((p) => fs.existsSync(p)) ?? "";
+      const actualDur = fp ? audioDurationMs(fp) : 2000;
+      t.start_ms = actualStart;
+      t.end_ms   = actualStart + actualDur;
+    }
+    // Re-save scriptJson with corrected timings before audio is uploaded
+    updateJob(jobId, { scriptJson: drama as unknown as object });
+
     const mixTrackList = drama.tracks
       .filter((t) => {
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);

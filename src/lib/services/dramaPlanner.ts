@@ -4,6 +4,7 @@ export interface DramaTrack {
   id: string;
   type: "dialogue" | "sfx";
   start_ms: number;
+  end_ms?: number;   // set after mixing; reflects actual audio position
   // dialogue
   character?: string;
   voice_style?: string;
