@@ -102,10 +102,7 @@ function ScriptBrowser({
 
       {/* Save list */}
       {expanded && (
-        <div
-          className="flex gap-2.5 px-3 pb-3 -mt-1"
-          style={{ overflowX: "scroll", scrollbarWidth: "none" } as React.CSSProperties}
-        >
+        <div className="flex flex-col gap-1.5 px-3 pb-3">
           {saves.map((s) => {
             const isLoading  = loadingId === s.id;
             const isDeleting = deletingId === s.id;
@@ -114,34 +111,33 @@ function ScriptBrowser({
                 key={s.id}
                 onClick={() => handleLoad(s.id)}
                 disabled={isLoading}
-                className="flex-shrink-0 flex flex-col gap-1 p-3 rounded-xl text-left transition-all active:scale-[0.97]"
+                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]"
                 style={{
-                  minWidth: 120,
                   background: s.isAutosave ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
                   border: s.isAutosave ? "1px solid rgba(79,195,247,0.22)" : "1px solid rgba(255,255,255,0.09)",
                 }}
               >
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-[10px] font-bold truncate max-w-[80px]" style={{ color: s.isAutosave ? "#4fc3f7" : "rgba(255,255,255,0.65)" }}>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-[11px] font-bold" style={{ color: s.isAutosave ? "#4fc3f7" : "rgba(255,255,255,0.65)" }}>
                     {isLoading ? "Loading…" : s.label}
                   </span>
-                  {!s.isAutosave && (
-                    <button
-                      onClick={(e) => handleDelete(s.id, e)}
-                      disabled={isDeleting}
-                      className="text-white/20 hover:text-white/50 transition-colors text-xs leading-none flex-shrink-0"
-                    >
-                      {isDeleting ? "…" : "×"}
-                    </button>
+                  <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                    {s.blockCount} lines · {timeAgo(s.savedAt)}
+                  </span>
+                  {s.summary && (
+                    <span className="text-[9px] leading-snug line-clamp-1 mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>
+                      {s.summary}
+                    </span>
                   )}
                 </div>
-                <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.25)" }}>
-                  {s.blockCount} lines · {timeAgo(s.savedAt)}
-                </span>
-                {s.summary && (
-                  <span className="text-[9px] leading-snug line-clamp-2" style={{ color: "rgba(255,255,255,0.2)" }}>
-                    {s.summary}
-                  </span>
+                {!s.isAutosave && (
+                  <button
+                    onClick={(e) => handleDelete(s.id, e)}
+                    disabled={isDeleting}
+                    className="text-white/20 hover:text-white/50 transition-colors text-base leading-none flex-shrink-0"
+                  >
+                    {isDeleting ? "…" : "×"}
+                  </button>
                 )}
               </button>
             );
