@@ -9,9 +9,150 @@ import DramaPlayer from "@/components/studio/DramaPlayer";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import type { ScriptBlock, Voice } from "@/types";
 import type { Job } from "@/lib/jobs";
+import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
 import Link from "next/link";
 
-// ─── Character Cards ──────────────────────────────────────────────────────────
+// ─── Script saves browser ─────────────────────────────────────────────────────
+
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function ScriptBrowser({
+  onLoad,
+  refreshKey,
+}: {
+  onLoad: (save: ScriptSaveFull) => void;
+  refreshKey: number;
+}) {
+  const [saves, setSaves] = useState<ScriptSaveMeta[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/script-saves", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setSaves(d); })
+      .catch(() => {});
+  }, [refreshKey]);
+
+  if (saves.length === 0) return null;
+
+  const handleLoad = async (id: string) => {
+    setLoadingId(id);
+    try {
+      const res = await fetch(`/api/script-saves/${id}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Not found");
+      const save = await res.json() as ScriptSaveFull;
+      onLoad(save);
+      setExpanded(false);
+    } catch {
+      // keep expanded
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingId(id);
+    try {
+      await fetch(`/api/script-saves/${id}`, { method: "DELETE" });
+      setSaves((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      // ignore
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  return (
+    <div
+      className="mb-4 rounded-2xl overflow-hidden transition-all"
+      style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.12)" }}
+    >
+      {/* Header row */}
+      <button
+        onClick={() => setExpanded((p) => !p)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm">📋</span>
+          <span className="text-xs font-semibold tracking-wide" style={{ color: "rgba(79,195,247,0.8)" }}>
+            Saved versions
+          </span>
+          <span
+            className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+            style={{ background: "rgba(79,195,247,0.12)", color: "rgba(79,195,247,0.6)" }}
+          >
+            {saves.length}
+          </span>
+        </div>
+        <span className="text-white/30 text-xs transition-transform" style={{ display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+          ▾
+        </span>
+      </button>
+
+      {/* Save list */}
+      {expanded && (
+        <div
+          className="flex gap-2.5 px-3 pb-3 -mt-1"
+          style={{ overflowX: "scroll", scrollbarWidth: "none" } as React.CSSProperties}
+        >
+          {saves.map((s) => {
+            const isLoading  = loadingId === s.id;
+            const isDeleting = deletingId === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => handleLoad(s.id)}
+                disabled={isLoading}
+                className="flex-shrink-0 flex flex-col gap-1 p-3 rounded-xl text-left transition-all active:scale-[0.97]"
+                style={{
+                  minWidth: 120,
+                  background: s.isAutosave ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
+                  border: s.isAutosave ? "1px solid rgba(79,195,247,0.22)" : "1px solid rgba(255,255,255,0.09)",
+                }}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] font-bold truncate max-w-[80px]" style={{ color: s.isAutosave ? "#4fc3f7" : "rgba(255,255,255,0.65)" }}>
+                    {isLoading ? "Loading…" : s.label}
+                  </span>
+                  {!s.isAutosave && (
+                    <button
+                      onClick={(e) => handleDelete(s.id, e)}
+                      disabled={isDeleting}
+                      className="text-white/20 hover:text-white/50 transition-colors text-xs leading-none flex-shrink-0"
+                    >
+                      {isDeleting ? "…" : "×"}
+                    </button>
+                  )}
+                </div>
+                <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  {s.blockCount} lines · {timeAgo(s.savedAt)}
+                </span>
+                {s.summary && (
+                  <span className="text-[9px] leading-snug line-clamp-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+                    {s.summary}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 
 interface CastMember {
   characterName: string;
@@ -256,6 +397,11 @@ export default function StudioPage() {
   const [showToast, setShowToast] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [savesRefreshKey, setSavesRefreshKey] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveLabel, setSaveLabel] = useState<"idle" | "saving" | "saved">("idle");
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Load voice pool
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
 
@@ -278,6 +424,23 @@ export default function StudioPage() {
     if (!loaded) return;
     writeDraft({ promptText: "", scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars });
   }, [scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, loaded]);
+
+  // Auto-save to Supabase — debounced 3s after any script change
+  useEffect(() => {
+    if (!loaded || scriptBlocks.length === 0) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      fetch("/api/script-saves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks: scriptBlocks, summary, coverUrl, coverPrompt, isAutosave: true }),
+      })
+        .then(() => setSavesRefreshKey((k) => k + 1))
+        .catch(() => {});
+    }, 3000);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scriptBlocks, loaded]);
 
   // Background-seed missing character avatars one by one
   useEffect(() => {
@@ -334,6 +497,37 @@ export default function StudioPage() {
       setIsRevising(false);
     }
   }, [scriptBlocks, isRevising]);
+
+  // Manual save
+  const handleManualSave = useCallback(async () => {
+    if (scriptBlocks.length === 0 || isSaving) return;
+    setIsSaving(true);
+    setSaveLabel("saving");
+    try {
+      await fetch("/api/script-saves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks: scriptBlocks, summary, coverUrl, coverPrompt, isAutosave: false }),
+      });
+      setSavesRefreshKey((k) => k + 1);
+      setSaveLabel("saved");
+      setTimeout(() => setSaveLabel("idle"), 2500);
+    } catch {
+      setSaveLabel("idle");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving]);
+
+  // Load a save into the studio
+  const handleLoadSave = useCallback((save: ScriptSaveFull) => {
+    setScriptBlocks(save.blocks);
+    if (save.summary)    setSummary(save.summary);
+    if (save.coverUrl)   setCoverUrl(save.coverUrl);
+    if (save.coverPrompt) setCoverPrompt(save.coverPrompt);
+    setCharacterAvatars({});
+    setPendingDirections([]);
+  }, []);
 
   // Queue a character direction; shows toast to prompt "Update Script"
   const handleQueueDirection = useCallback((instruction: string) => {
@@ -462,6 +656,9 @@ export default function StudioPage() {
           <EmptyStudio />
         ) : (
           <>
+            {/* Script version browser */}
+            <ScriptBrowser onLoad={handleLoadSave} refreshKey={savesRefreshKey} />
+
             {/* Script blocks — CharacterCards injected between cover and blocks via belowCover */}
             <ScriptTab
               blocks={scriptBlocks}
@@ -603,6 +800,25 @@ export default function StudioPage() {
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-2">🎙️ Produce Audio</span>
+              )}
+            </button>
+
+            {/* Save script version */}
+            <button
+              onClick={handleManualSave}
+              disabled={isSaving || saveLabel === "saved"}
+              className="w-full mt-2.5 py-3 rounded-2xl text-sm font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              style={saveLabel === "saved"
+                ? { background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#34d399" }
+                : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }
+              }
+            >
+              {saveLabel === "saving" ? (
+                <><span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.5)" }} />Saving…</>
+              ) : saveLabel === "saved" ? (
+                <>✓ Script saved</>
+              ) : (
+                <>💾 Save script version</>
               )}
             </button>
 
