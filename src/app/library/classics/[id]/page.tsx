@@ -43,6 +43,7 @@ export default function ClassicDetailPage() {
   const [openingInStudio, setOpeningInStudio] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
+  const [scriptExpanded, setScriptExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -278,43 +279,66 @@ export default function ClassicDetailPage() {
           );
         })()}
 
-        {/* Script blocks */}
-        {isReady ? (
-          <div className="px-5 flex flex-col gap-3">
-            {blocks!.map((block) => {
-              const isNarrator = block.characterName.toLowerCase().includes("narrat");
-              const isSfx = block.characterName === "SFX";
-              if (isSfx) return null;
-              return (
-                <div key={block.id}>
-                  <p
-                    className="text-[9px] font-semibold uppercase tracking-widest mb-1 ml-3"
-                    style={{ color: isNarrator ? "rgba(255,255,255,0.25)" : "rgba(79,195,247,0.72)" }}
-                  >
-                    {isNarrator ? "Narrator" : block.characterName}
-                  </p>
-                  <div
-                    className="px-4 py-3 rounded-xl"
-                    style={isNarrator ? {
-                      color: "rgba(255,255,255,0.45)",
-                      fontStyle: "italic",
-                      fontSize: "11px",
-                      lineHeight: "1.6",
-                    } : {
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderLeft: "2px solid rgba(79,195,247,0.3)",
-                      color: "rgba(255,255,255,0.82)",
-                      fontSize: "11.5px",
-                      lineHeight: "1.6",
-                    }}
-                  >
-                    {block.textPayload.replace(/^\[.*?\]\s*/, "")}
-                  </div>
-                </div>
-              );
-            })}
+        {/* Script toggle */}
+        {isReady && (
+          <div className="px-5 mb-3">
+            <button
+              onClick={() => setScriptExpanded((v) => !v)}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.98]"
+              style={{
+                background: scriptExpanded ? `${c1}10` : "rgba(255,255,255,0.04)",
+                border: scriptExpanded ? `1px solid ${c1}33` : "1px solid rgba(255,255,255,0.07)",
+                color: scriptExpanded ? `${c1}bb` : "rgba(255,255,255,0.3)",
+              }}
+            >
+              <span>{scriptExpanded ? "Hide script" : "View full script"}</span>
+              <span
+                className="transition-transform duration-200"
+                style={{ display: "inline-block", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+              >▾</span>
+            </button>
           </div>
+        )}
+
+        {/* Script blocks — on demand */}
+        {isReady ? (
+          scriptExpanded && (
+            <div className="px-5 flex flex-col gap-3">
+              {blocks!.map((block) => {
+                const isNarrator = block.characterName.toLowerCase().includes("narrat");
+                const isSfx = block.characterName === "SFX";
+                if (isSfx) return null;
+                return (
+                  <div key={block.id}>
+                    <p
+                      className="text-[9px] font-semibold uppercase tracking-widest mb-1 ml-3"
+                      style={{ color: isNarrator ? "rgba(255,255,255,0.25)" : "rgba(79,195,247,0.72)" }}
+                    >
+                      {isNarrator ? "Narrator" : block.characterName}
+                    </p>
+                    <div
+                      className="px-4 py-3 rounded-xl"
+                      style={isNarrator ? {
+                        color: "rgba(255,255,255,0.45)",
+                        fontStyle: "italic",
+                        fontSize: "11px",
+                        lineHeight: "1.6",
+                      } : {
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderLeft: `2px solid ${c1}4d`,
+                        color: "rgba(255,255,255,0.82)",
+                        fontSize: "11.5px",
+                        lineHeight: "1.6",
+                      }}
+                    >
+                      {block.textPayload.replace(/^\[.*?\]\s*/, "")}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         ) : (
           <div className="px-5 flex flex-col items-center gap-3 py-10">
             {meta.status === "pending" || meta.status === "generating" ? (
