@@ -424,8 +424,10 @@ export default function LibraryPage() {
       </div>
 
       <div className="px-4 pb-32">
-        {/* ── Classics tab ── */}
-        {activeTab === "classics" && <ClassicsTab />}
+        {/* ── Classics tab — keep mounted to avoid re-fetching on every tab switch ── */}
+        <div style={{ display: activeTab === "classics" ? undefined : "none" }}>
+          <ClassicsTab />
+        </div>
 
         {/* ── My Stories tab ── */}
         {activeTab === "my-stories" && (
