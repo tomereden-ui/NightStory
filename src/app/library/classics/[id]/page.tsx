@@ -42,6 +42,7 @@ export default function ClassicDetailPage() {
   const [loading, setLoading] = useState(true);
   const [openingInStudio, setOpeningInStudio] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [regeneratingCover, setRegeneratingCover] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const [scriptExpanded, setScriptExpanded] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
@@ -149,6 +150,22 @@ export default function ClassicDetailPage() {
     }
   };
 
+  const handleRegenerateCover = async () => {
+    setRegeneratingCover(true);
+    try {
+      const res = await fetch(`/api/classics/${id}/cover`, { method: "PUT" });
+      if (res.ok) {
+        const { coverUrl } = await res.json() as { coverUrl: string };
+        setMeta((m) => m ? { ...m, coverUrl } : m);
+        setImgFailed(false);
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setRegeneratingCover(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="cosmic-page min-h-full flex items-center justify-center">
@@ -221,32 +238,59 @@ export default function ClassicDetailPage() {
             <span className="text-white/60 text-sm">←</span>
           </button>
 
-          {/* Upload cover button */}
-          {!uploadingCover ? (
-            <button
-              onClick={handleUploadCover}
-              className="absolute top-12 right-4 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium transition-all active:scale-95"
-              style={{
-                background: "rgba(5,8,20,0.6)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              📷 {meta.coverUrl && !imgFailed ? "Change" : "Upload cover"}
-            </button>
-          ) : (
-            <div
-              className="absolute top-12 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px]"
-              style={{ background: "rgba(5,8,20,0.6)", color: "rgba(255,255,255,0.3)" }}
-            >
+          {/* Cover action buttons */}
+          <div className="absolute top-12 right-4 flex items-center gap-1.5">
+            {/* AI regenerate */}
+            {regeneratingCover ? (
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px]"
+                style={{ background: "rgba(5,8,20,0.6)", color: "rgba(255,255,255,0.3)" }}
+              >
+                <div className="w-3 h-3 rounded-full border border-t-transparent animate-spin"
+                  style={{ borderColor: `${c1} transparent transparent transparent` }} />
+                Generating…
+              </div>
+            ) : (
+              <button
+                onClick={handleRegenerateCover}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium transition-all active:scale-95"
+                style={{
+                  background: "rgba(5,8,20,0.6)",
+                  backdropFilter: "blur(8px)",
+                  border: `1px solid ${c1}44`,
+                  color: c1,
+                }}
+              >
+                🪄 AI cover
+              </button>
+            )}
+            {/* Manual upload */}
+            {!uploadingCover ? (
+              <button
+                onClick={handleUploadCover}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium transition-all active:scale-95"
+                style={{
+                  background: "rgba(5,8,20,0.6)",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                📷
+              </button>
+            ) : (
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px]"
+                style={{ background: "rgba(5,8,20,0.6)", color: "rgba(255,255,255,0.3)" }}
+              >
               <div
                 className="w-3 h-3 rounded-full border border-t-transparent animate-spin"
                 style={{ borderColor: `${c1} transparent transparent transparent` }}
               />
               Uploading…
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Title block — intentionally distinctive vs My Stories */}

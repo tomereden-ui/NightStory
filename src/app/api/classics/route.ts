@@ -30,20 +30,25 @@ export async function GET() {
 
   const metas: ClassicMeta[] = await Promise.all(
     CLASSIC_STORIES.map(async (def) => {
-      // Check if script exists in storage
-      const { data: scriptData } = await supabase.storage
-        .from(BUCKET)
-        .download(scriptPath(def.id));
+      // List the story's folder once — covers both script and cover checks
+      const { data: files } = await supabase.storage.from(BUCKET).list(def.id);
+      const fileNames = new Set((files ?? []).map((f) => f.name));
 
-      const hasScript = Boolean(scriptData);
-      const hasCover = hasScript; // cover is generated together with script
+      const hasScript = fileNames.has("script.json");
+      const hasCover = fileNames.has("cover.jpg") || fileNames.has("cover.png");
+      const coverExt = fileNames.has("cover.png") ? "png" : "jpg";
 
       let durationSeconds: number | undefined;
-      if (hasScript && scriptData) {
+      if (hasScript) {
         try {
-          const text = await scriptData.text();
-          const parsed = JSON.parse(text) as { blocks?: ScriptBlock[]; durationSeconds?: number };
-          durationSeconds = parsed.durationSeconds;
+          const { data: scriptData } = await supabase.storage
+            .from(BUCKET)
+            .download(scriptPath(def.id));
+          if (scriptData) {
+            const text = await scriptData.text();
+            const parsed = JSON.parse(text) as { blocks?: ScriptBlock[]; durationSeconds?: number };
+            durationSeconds = parsed.durationSeconds;
+          }
         } catch {}
       }
 
@@ -52,7 +57,7 @@ export async function GET() {
         title: def.title,
         emoji: def.emoji,
         tagline: def.tagline,
-        coverUrl: hasCover ? publicUrl(coverPath(def.id)) : undefined,
+        coverUrl: hasCover ? publicUrl(`${def.id}/cover.${coverExt}`) : undefined,
         durationSeconds,
         status: hasScript ? "ready" : "pending",
       } satisfies ClassicMeta;
