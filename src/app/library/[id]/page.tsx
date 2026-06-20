@@ -40,6 +40,7 @@ export default function StoryDetailPage() {
 
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [summaryPlaying, setSummaryPlaying] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [scriptExpanded, setScriptExpanded] = useState(false);
 
   useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
@@ -90,6 +91,7 @@ export default function StoryDetailPage() {
       coverPrompt: "",
       coverUrl: entry.coverUrl ?? "",
       editingStoryId: entry.id,
+      storyTitle: entry.title,
     });
     router.push("/studio");
   }, [entry, router]);
@@ -187,9 +189,28 @@ export default function StoryDetailPage() {
           </button>
         </div>
 
-        {/* Summary — just below the image */}
+        {/* Title — big, prominent */}
+        <div className="px-5 mt-4 mb-1">
+          <h1
+            className="text-2xl font-bold tracking-tight leading-tight mb-1"
+            style={{
+              background: "linear-gradient(135deg, #ffffff 0%, #4fc3f7 55%, #a78bfa 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              filter: "drop-shadow(0 0 14px rgba(79,195,247,0.3))",
+            }}
+          >
+            {entry.title}
+          </h1>
+          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+            {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
+          </p>
+        </div>
+
+        {/* Summary card */}
         {entry.summary && (
-          <div className="mx-5 mt-4 mb-1 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="mx-5 mt-3 mb-1 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
               <button
@@ -204,19 +225,23 @@ export default function StoryDetailPage() {
                 <span>{summaryPlaying ? "Stop" : "Play"}</span>
               </button>
             </div>
-            <p className="text-sm leading-relaxed italic" style={{ color: "rgba(255,255,255,0.65)" }}>
-              {entry.summary}
-            </p>
+            {(() => {
+              const LIMIT = 220;
+              const long = entry.summary.length > LIMIT;
+              const shown = !summaryExpanded && long ? entry.summary.slice(0, LIMIT).trimEnd() : entry.summary;
+              return (
+                <p style={{ fontSize: "13.5px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
+                  {shown}
+                  {long && !summaryExpanded && (
+                    <button onClick={() => setSummaryExpanded(true)} className="ml-1 font-semibold" style={{ color: "#4fc3f7", fontSize: "12px" }}>
+                      … more
+                    </button>
+                  )}
+                </p>
+              );
+            })()}
           </div>
         )}
-
-        {/* Meta */}
-        <div className="px-5 mt-3 mb-1">
-          <h1 className="text-xl font-light tracking-wide text-white mb-1">{entry.title}</h1>
-          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.38)" }}>
-            {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
-          </p>
-        </div>
 
         {/* Divider */}
         <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
@@ -281,15 +306,15 @@ export default function StoryDetailPage() {
           </div>
         )}
 
-        {/* Edit button */}
+        {/* Open in Studio button */}
         <div className="px-5 mt-8 mb-4">
           <button
             onClick={handleEdit}
             className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
             style={{
-              background: "rgba(139,92,246,0.12)",
-              border: "1px solid rgba(139,92,246,0.35)",
-              color: "rgba(139,92,246,0.9)",
+              background: "rgba(79,195,247,0.1)",
+              border: "1px solid rgba(79,195,247,0.3)",
+              color: "rgba(79,195,247,0.9)",
             }}
           >
             <span>🎬</span>

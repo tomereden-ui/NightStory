@@ -44,6 +44,7 @@ export default function ClassicDetailPage() {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const [scriptExpanded, setScriptExpanded] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -74,6 +75,7 @@ export default function ClassicDetailPage() {
       coverUrl: meta.coverUrl ?? "",
       editingStoryId: undefined,
       characterAvatars: {},
+      storyTitle: meta.title,
     });
     router.push("/studio");
   }, [meta, blocks, router]);
@@ -256,8 +258,11 @@ export default function ClassicDetailPage() {
 
         {/* Story summary — derived from opening narrator lines */}
         {isReady && (() => {
-          const summary = deriveClassicSummary(blocks!);
-          if (!summary) return null;
+          const classicSummary = deriveClassicSummary(blocks!);
+          if (!classicSummary) return null;
+          const LIMIT = 220;
+          const long = classicSummary.length > LIMIT;
+          const shown = !summaryExpanded && long ? classicSummary.slice(0, LIMIT).trimEnd() : classicSummary;
           return (
             <div
               className="mx-5 mb-5 px-4 py-3.5 rounded-2xl"
@@ -272,8 +277,17 @@ export default function ClassicDetailPage() {
               >
                 Story
               </p>
-              <p className="text-sm leading-relaxed italic" style={{ color: "rgba(255,255,255,0.6)" }}>
-                {summary}
+              <p style={{ fontSize: "13.5px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
+                {shown}
+                {long && !summaryExpanded && (
+                  <button
+                    onClick={() => setSummaryExpanded(true)}
+                    className="ml-1 font-semibold"
+                    style={{ color: "#4fc3f7", fontSize: "12px" }}
+                  >
+                    … more
+                  </button>
+                )}
               </p>
             </div>
           );

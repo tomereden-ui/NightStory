@@ -10,6 +10,7 @@ export interface DraftState {
   coverUrl: string;
   editingStoryId?: string;
   characterAvatars?: Record<string, string>;
+  storyTitle?: string;
 }
 
 export function readDraft(): DraftState | null {

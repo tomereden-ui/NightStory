@@ -14,6 +14,7 @@ interface ScriptTabProps {
   onProduce: (blocks: ScriptBlock[], durationMinutes: number) => void;
   isProducing: boolean;
   summary?: string;
+  title?: string;
   coverUrl?: string;
   isFetchingCover?: boolean;
   onRegenerateCover?: () => void;
@@ -386,7 +387,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -400,6 +401,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const [isDirty, setIsDirty]             = useState(false);
   const [isValidating, setIsValidating]   = useState(false);
   const [validationIssues, setValidationIssues] = useState<string[] | null>(null);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   const audioRef     = useRef<HTMLAudioElement | null>(null);
   const audioBlobUrl = useRef<string | null>(null);
@@ -722,6 +724,23 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 </div>
               )}
             </div>
+            {/* Story title */}
+            {title && (
+              <div className="px-4 pt-4 pb-0" style={{ background: "rgba(10,12,20,0.97)" }}>
+                <h2
+                  className="text-2xl font-bold tracking-tight leading-tight"
+                  style={{
+                    background: "linear-gradient(135deg, #ffffff 0%, #4fc3f7 60%, #a78bfa 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                    filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))",
+                  }}
+                >
+                  {title}
+                </h2>
+              </div>
+            )}
             {/* Summary text */}
             {summary && (
               <div className="px-4 pt-3 pb-4" style={{ background: "rgba(10,12,20,0.97)" }}>
@@ -739,7 +758,25 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                     <span>{summaryPlaying ? "Stop" : "Play"}</span>
                   </button>
                 </div>
-                <p className="text-sm leading-relaxed italic" style={{ color: "rgba(255,255,255,0.82)" }}>{summary}</p>
+                {(() => {
+                  const LIMIT = 220;
+                  const long = summary.length > LIMIT;
+                  const shown = !summaryExpanded && long ? summary.slice(0, LIMIT).trimEnd() : summary;
+                  return (
+                    <p style={{ fontSize: "13.5px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
+                      {shown}
+                      {long && !summaryExpanded && (
+                        <button
+                          onClick={() => setSummaryExpanded(true)}
+                          className="ml-1 font-semibold"
+                          style={{ color: "#4fc3f7", fontSize: "12px" }}
+                        >
+                          … more
+                        </button>
+                      )}
+                    </p>
+                  );
+                })()}
               </div>
             )}
           </div>

@@ -30,19 +30,23 @@ function timeAgo(ts: number): string {
 function ScriptBrowser({
   onLoad,
   refreshKey,
+  forceExpanded = false,
+  onCount,
 }: {
   onLoad: (save: ScriptSaveFull) => void;
   refreshKey: number;
+  forceExpanded?: boolean;
+  onCount?: (n: number) => void;
 }) {
   const [saves, setSaves] = useState<ScriptSaveMeta[]>([]);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(forceExpanded);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/script-saves", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d)) setSaves(d); })
+      .then((d) => { if (Array.isArray(d)) { setSaves(d); onCount?.(d.length); } })
       .catch(() => {});
   }, [refreshKey]);
 
@@ -86,38 +90,40 @@ function ScriptBrowser({
       }}
     >
       {/* Header */}
-      <button
-        onClick={() => setExpanded((p) => !p)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
-      >
-        <div className="flex items-center gap-2.5">
-          <span
-            className="flex items-center justify-center w-6 h-6 rounded-lg text-sm"
-            style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.2)" }}
-          >
-            📂
-          </span>
-          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.75)", letterSpacing: "0.08em" }}>
-            Saved Versions
-          </span>
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums"
-            style={{
-              background: "linear-gradient(135deg, rgba(79,195,247,0.2), rgba(79,195,247,0.08))",
-              color: "#4fc3f7",
-              border: "1px solid rgba(79,195,247,0.25)",
-            }}
-          >
-            {saves.length}
-          </span>
-        </div>
-        <span
-          className="text-white/40 text-xs transition-transform duration-200"
-          style={{ display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+      {!forceExpanded && (
+        <button
+          onClick={() => setExpanded((p) => !p)}
+          className="w-full flex items-center justify-between px-4 py-3 text-left"
         >
-          ▾
-        </span>
-      </button>
+          <div className="flex items-center gap-2.5">
+            <span
+              className="flex items-center justify-center w-6 h-6 rounded-lg text-sm"
+              style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.2)" }}
+            >
+              📂
+            </span>
+            <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.75)", letterSpacing: "0.08em" }}>
+              Saved Versions
+            </span>
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums"
+              style={{
+                background: "linear-gradient(135deg, rgba(79,195,247,0.2), rgba(79,195,247,0.08))",
+                color: "#4fc3f7",
+                border: "1px solid rgba(79,195,247,0.25)",
+              }}
+            >
+              {saves.length}
+            </span>
+          </div>
+          <span
+            className="text-white/40 text-xs transition-transform duration-200"
+            style={{ display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+          >
+            ▾
+          </span>
+        </button>
+      )}
 
       {/* Filmstrip */}
       {expanded && (
@@ -638,6 +644,11 @@ export default function StudioPage() {
   const [saveLabel, setSaveLabel] = useState<"idle" | "saving" | "saved">("idle");
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ─── Story title / versions sheet ────────────────────────────────────────
+  const [storyTitle, setStoryTitle] = useState("");
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [savesCount, setSavesCount] = useState(0);
+
   // Load voice pool
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
 
@@ -652,6 +663,7 @@ export default function StudioPage() {
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
       setCharacterAvatars(draft.characterAvatars ?? {});
+      setStoryTitle(draft.storyTitle ?? "");
       setActiveTab("script");
     } else {
       setActiveTab("prompt");
@@ -662,8 +674,8 @@ export default function StudioPage() {
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars });
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars, storyTitle });
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, storyTitle, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -965,7 +977,21 @@ export default function StudioPage() {
         <div className="flex items-center mb-7">
           <div className="w-8" />
           <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🎬 Studio</h1>
-          <div className="w-8" />
+          <button
+            onClick={() => setVersionsOpen(true)}
+            className="relative w-8 h-8 flex items-center justify-center rounded-xl transition-all"
+            style={{ color: savesCount > 0 ? "rgba(79,195,247,0.7)" : "rgba(255,255,255,0.2)" }}
+          >
+            <span className="text-sm">📂</span>
+            {savesCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 rounded-full text-[8px] font-bold flex items-center justify-center"
+                style={{ background: "rgba(79,195,247,0.85)", color: "#05080F" }}
+              >
+                {savesCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Tab bar */}
@@ -1041,9 +1067,6 @@ export default function StudioPage() {
         {/* Script tab */}
         {activeTab === "script" && hasScript && (
           <>
-            {/* Script version browser */}
-            <ScriptBrowser onLoad={handleLoadSave} refreshKey={savesRefreshKey} />
-
             {/* Script blocks */}
             <ScriptTab
               blocks={scriptBlocks}
@@ -1052,6 +1075,7 @@ export default function StudioPage() {
               onProduce={handleProduce}
               isProducing={isProducing}
               summary={summary}
+              title={storyTitle}
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
               onRegenerateCover={coverPrompt ? () => { setCoverUrl(""); fetchCover(coverPrompt, summary); } : undefined}
@@ -1265,6 +1289,38 @@ export default function StudioPage() {
           </>
         )}
       </div>
+
+      {/* Versions bottom sheet */}
+      {versionsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+          onClick={() => setVersionsOpen(false)}
+        >
+          <div
+            className="rounded-t-3xl pb-8 pt-4 px-4 mx-auto w-full"
+            style={{
+              background: "linear-gradient(180deg, rgba(14,20,45,0.99) 0%, rgba(8,12,28,1) 100%)",
+              border: "1px solid rgba(79,195,247,0.15)",
+              borderBottom: "none",
+              maxWidth: 560,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: "rgba(255,255,255,0.15)" }} />
+            <div className="flex items-center justify-between mb-4 px-1">
+              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved Versions</span>
+              <button onClick={() => setVersionsOpen(false)} className="text-white/30 text-lg leading-none">×</button>
+            </div>
+            <ScriptBrowser
+              onLoad={(save) => { handleLoadSave(save); setVersionsOpen(false); }}
+              refreshKey={savesRefreshKey}
+              forceExpanded
+              onCount={setSavesCount}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
