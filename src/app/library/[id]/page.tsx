@@ -38,6 +38,27 @@ export default function StoryDetailPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [summaryPlaying, setSummaryPlaying] = useState(false);
+
+  useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
+
+  const toggleSummaryPlay = useCallback(() => {
+    if (summaryPlaying) {
+      window.speechSynthesis.cancel();
+      setSummaryPlaying(false);
+      return;
+    }
+    if (!entry?.summary) return;
+    const utter = new SpeechSynthesisUtterance(entry.summary);
+    utter.rate = 0.88;
+    utter.onend = () => setSummaryPlaying(false);
+    utter.onerror = () => setSummaryPlaying(false);
+    utterRef.current = utter;
+    window.speechSynthesis.speak(utter);
+    setSummaryPlaying(true);
+  }, [entry?.summary, summaryPlaying]);
+
   useEffect(() => {
     fetch(`/api/library/${id}`)
       .then((r) => r.json())
@@ -167,8 +188,22 @@ export default function StoryDetailPage() {
 
         {/* Summary — just below the image */}
         {entry.summary && (
-          <div className="px-5 pt-4 pb-1">
-            <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <div className="mx-5 mt-4 mb-1 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
+              <button
+                onClick={toggleSummaryPlay}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all active:scale-95"
+                style={summaryPlaying
+                  ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+                  : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
+                }
+              >
+                <span>{summaryPlaying ? "⏸" : "▶"}</span>
+                <span>{summaryPlaying ? "Stop" : "Play"}</span>
+              </button>
+            </div>
+            <p className="text-sm leading-relaxed italic" style={{ color: "rgba(255,255,255,0.65)" }}>
               {entry.summary}
             </p>
           </div>

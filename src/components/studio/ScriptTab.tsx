@@ -404,6 +404,28 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const audioRef     = useRef<HTMLAudioElement | null>(null);
   const audioBlobUrl = useRef<string | null>(null);
 
+  // ─── Summary narration (Web Speech API) ────────────────────────────────────
+  const [summaryPlaying, setSummaryPlaying] = useState(false);
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
+
+  const toggleSummaryPlay = useCallback(() => {
+    if (summaryPlaying) {
+      window.speechSynthesis.cancel();
+      setSummaryPlaying(false);
+      return;
+    }
+    if (!summary) return;
+    const utter = new SpeechSynthesisUtterance(summary);
+    utter.rate = 0.88;
+    utter.onend = () => setSummaryPlaying(false);
+    utter.onerror = () => setSummaryPlaying(false);
+    utterRef.current = utter;
+    window.speechSynthesis.speak(utter);
+    setSummaryPlaying(true);
+  }, [summary, summaryPlaying]);
+
   const activeBlock = blocks.find((b) => b.id === activeBlockId) ?? null;
   const activeVoice = activeBlock
     ? (voices.find((v) => v.id === activeBlock.assignedVoiceId) ?? voices[0])
@@ -702,7 +724,20 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             {/* Summary text */}
             {summary && (
               <div className="px-4 pt-3 pb-4" style={{ background: "rgba(10,12,20,0.97)" }}>
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
+                  <button
+                    onClick={toggleSummaryPlay}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all active:scale-95"
+                    style={summaryPlaying
+                      ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+                      : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
+                    }
+                  >
+                    <span>{summaryPlaying ? "⏸" : "▶"}</span>
+                    <span>{summaryPlaying ? "Stop" : "Play"}</span>
+                  </button>
+                </div>
                 <p className="text-sm leading-relaxed italic" style={{ color: "rgba(255,255,255,0.82)" }}>{summary}</p>
               </div>
             )}

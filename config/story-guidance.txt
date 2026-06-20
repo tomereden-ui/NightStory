@@ -171,8 +171,20 @@ SCRIPT FORMAT
 =============
 Return a JSON object with exactly three top-level fields:
 
-  "summary"     — 2–3 engaging sentences describing the story for display as a subtitle.
-                  Written in the story language. No spoilers for the ending. Child-friendly tone.
+  "summary"     — 2–3 sentences that draw the listener in without giving the story away.
+                  Structure:
+                    • Sentence 1: Who is the hero and what is their world? Ground us in character
+                      and setting with a warm, specific detail.
+                    • Sentence 2: What journey or challenge lies ahead? Convey the emotional stakes
+                      and the central question the story will answer — but stop before the resolution.
+                    • Sentence 3 (optional): End on a note of quiet anticipation or wonder that
+                      makes the listener want to hear more.
+                  Rules:
+                    – Never reveal how the challenge is solved, what the surprising moment is,
+                      or how the story ends. Avoid "in the end…", "finally…", "they discover…",
+                      "and soon…" or any phrasing that implies the outcome.
+                    – Keep it under 55 words total. No lists. Pure flowing prose.
+                    – Written in the story language. Warm, child-friendly tone.
 
   "coverPrompt" — A single vivid sentence (no quotes, no labels) describing the KEY visual
                   moment of the story, for use as an AI image generation prompt.
