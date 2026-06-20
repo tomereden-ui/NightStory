@@ -66,12 +66,10 @@ function base64ToObjectUrl(base64: string, mimeType: string): string {
 
 function AvatarGallerySheet({
   currentValue,
-  systemAvatarUrls,
   onSelect,
   onClose,
 }: {
   currentValue: string;
-  systemAvatarUrls: Record<string, string>;
   onSelect: (value: string) => void;
   onClose: () => void;
 }) {
@@ -108,14 +106,7 @@ function AvatarGallerySheet({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
             <h2 className="text-white font-bold text-sm">Choose Avatar</h2>
-            {Object.keys(systemAvatarUrls).length === SYSTEM_AVATARS.length ? (
-              <p className="text-white/30 text-[11px] mt-0.5">{SYSTEM_AVATARS.length} avatars ready</p>
-            ) : (
-              <p className="text-[11px] mt-0.5 flex items-center gap-1.5" style={{ color: "rgba(79,195,247,0.6)" }}>
-                <span className="w-2 h-2 rounded-full inline-block animate-pulse" style={{ background: "#4fc3f7" }} />
-                Generating… {Object.keys(systemAvatarUrls).length} of {SYSTEM_AVATARS.length}
-              </p>
-            )}
+            <p className="text-white/30 text-[11px] mt-0.5">{SYSTEM_AVATARS.length} avatars</p>
           </div>
           <button
             onClick={onClose}
@@ -161,41 +152,26 @@ function AvatarGallerySheet({
         <div className="flex-1 overflow-y-auto px-4 pb-2">
           <div className="grid grid-cols-4 gap-2.5">
             {filtered.map((avatar) => {
-              const url = systemAvatarUrls[avatar.id];
-              const isSelected = currentValue === url || (!url && currentValue === avatar.emoji);
+              const isSelected = currentValue === avatar.url;
               return (
                 <button
                   key={avatar.id}
-                  onClick={() => {
-                    if (url) { onSelect(url); onClose(); }
-                  }}
-                  disabled={!url}
+                  onClick={() => { onSelect(avatar.url); onClose(); }}
                   className="flex flex-col items-center gap-1 p-2 rounded-2xl transition-all active:scale-95"
                   style={{
                     background: isSelected ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.03)",
                     border: isSelected
                       ? "1.5px solid rgba(79,195,247,0.5)"
                       : "1.5px solid rgba(255,255,255,0.06)",
-                    opacity: url ? 1 : 0.45,
-                    cursor: url ? "pointer" : "default",
                   }}
                 >
-                  {url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={url}
-                      alt={avatar.label}
-                      className="w-14 h-14 rounded-xl object-cover"
-                      style={{ imageRendering: "auto" }}
-                    />
-                  ) : (
-                    <div
-                      className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl"
-                      style={{ background: "rgba(255,255,255,0.05)" }}
-                    >
-                      <span className="animate-pulse text-white/20 text-lg">✦</span>
-                    </div>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={avatar.url}
+                    alt={avatar.label}
+                    className="w-14 h-14 rounded-xl object-cover"
+                    style={{ imageRendering: "auto" }}
+                  />
                   <span className="text-[9px] text-white/50 truncate w-full text-center leading-none">
                     {avatar.label}
                   </span>
@@ -237,14 +213,12 @@ function AvatarGallerySheet({
 function VoiceCard({
   voice,
   playingId,
-  systemAvatarUrls,
   onPlay,
   onDelete,
   onAvatarChange,
 }: {
   voice: VoiceRecord;
   playingId: string | null;
-  systemAvatarUrls: Record<string, string>;
   onPlay: (v: VoiceRecord) => void;
   onDelete: (id: string) => void;
   onAvatarChange: (id: string, value: string) => void;
@@ -331,7 +305,6 @@ function VoiceCard({
       {galleryOpen && mounted && (
         <AvatarGallerySheet
           currentValue={voice.avatar_emoji}
-          systemAvatarUrls={systemAvatarUrls}
           onSelect={(value) => {
             onAvatarChange(voice.id, value);
             setGalleryOpen(false);
@@ -406,12 +379,10 @@ function PresetCard({
 
 function AddVoiceSheet({
   language,
-  systemAvatarUrls,
   onClose,
   onSaved,
 }: {
   language: string;
-  systemAvatarUrls: Record<string, string>;
   onClose: () => void;
   onSaved: (voice: VoiceRecord) => void;
 }) {
@@ -797,7 +768,6 @@ function AddVoiceSheet({
       {avatarPickerOpen && (
         <AvatarGallerySheet
           currentValue={avatarValue}
-          systemAvatarUrls={systemAvatarUrls}
           onSelect={(v) => { setAvatarValue(v); setAvatarPickerOpen(false); }}
           onClose={() => setAvatarPickerOpen(false)}
         />
@@ -821,7 +791,6 @@ export default function VoicesPage() {
   const [mounted, setMounted] = useState(false);
   const [voiceSamples, setVoiceSamples] = useState<Record<string, string>>({});
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
-  const [systemAvatarUrls, setSystemAvatarUrls] = useState<Record<string, string>>({});
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const blobUrlRef = useRef<string | null>(null);
@@ -861,50 +830,6 @@ export default function VoicesPage() {
       } catch { /* ignore */ }
     }
     seedAvatars();
-    return () => { cancelled = true; };
-  }, []);
-
-  // Seed system avatars (48 gallery characters) — parallel batches of 6
-  useEffect(() => {
-    let cancelled = false;
-    async function seedOneAvatar(id: string, prompt: string) {
-      if (cancelled || !prompt) return;
-      try {
-        const seed = Math.floor(Math.random() * 999999);
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 1500))}?model=flux&width=384&height=384&seed=${seed}`;
-        const imgRes = await fetch(url);
-        if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) return;
-        if (cancelled) return;
-        const blob = await imgRes.blob();
-        const cacheRes = await fetch(`/api/admin/seed-system-avatars?avatarId=${id}`, {
-          method: "POST", body: blob, headers: { "Content-Type": blob.type },
-        });
-        if (cacheRes.ok) {
-          const { url: cachedUrl } = await cacheRes.json() as { url: string };
-          if (cachedUrl && !cancelled) setSystemAvatarUrls((prev) => ({ ...prev, [id]: cachedUrl }));
-        }
-      } catch { /* ignore individual failures */ }
-    }
-
-    async function seedSystemAvatars() {
-      try {
-        const res = await fetch("/api/admin/seed-system-avatars");
-        if (!res.ok) return;
-        const { missing, existingUrls } = await res.json() as {
-          missing: { id: string; prompt: string }[];
-          existingUrls: Record<string, string>;
-        };
-        if (existingUrls) setSystemAvatarUrls((prev) => ({ ...prev, ...existingUrls }));
-        if (!missing?.length) return;
-        // Run 6 concurrent downloads at a time (~6× faster than sequential)
-        const BATCH = 6;
-        for (let i = 0; i < missing.length; i += BATCH) {
-          if (cancelled) return;
-          await Promise.all(missing.slice(i, i + BATCH).map((a) => seedOneAvatar(a.id, a.prompt)));
-        }
-      } catch { /* ignore */ }
-    }
-    seedSystemAvatars();
     return () => { cancelled = true; };
   }, []);
 
@@ -1076,7 +1001,6 @@ export default function VoicesPage() {
               key={v.id}
               voice={v}
               playingId={playingId}
-              systemAvatarUrls={systemAvatarUrls}
               onPlay={handlePlayVoice}
               onDelete={handleDeleteVoice}
               onAvatarChange={handleAvatarChange}
@@ -1110,7 +1034,6 @@ export default function VoicesPage() {
       {showAddSheet && mounted && (
         <AddVoiceSheet
           language={language}
-          systemAvatarUrls={systemAvatarUrls}
           onClose={() => setShowAddSheet(false)}
           onSaved={handleVoiceSaved}
         />

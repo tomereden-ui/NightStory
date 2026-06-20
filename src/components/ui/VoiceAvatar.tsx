@@ -33,7 +33,7 @@ function getInitials(name: string): string {
 
 interface VoiceAvatarProps {
   avatarUrl?: string;
-  emoji: string;
+  emoji?: string;
   name?: string;
   size?: number;
   borderColor?: string;
@@ -107,10 +107,10 @@ export default function VoiceAvatar({
     );
   }
 
-  const gradient = GRADIENT_MAP[emoji];
+  const gradient = emoji ? GRADIENT_MAP[emoji] : undefined;
 
   if (gradient) {
-    const initials = getInitials(name || emoji);
+    const initials = getInitials(name || emoji || "");
     const fontSize = size * 0.36;
     return (
       <div
