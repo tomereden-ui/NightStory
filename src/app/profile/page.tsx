@@ -7,65 +7,17 @@ import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
 import type { UsageTotals } from "@/lib/usageTracker";
 
-// ─── Illustrated card (same pattern as 5-question flow) ──────────────────────
+// ─── SVG icon helper ──────────────────────────────────────────────────────────
 
-function IllustratedCard({
-  label, emoji, imageUrl, selected, onClick, dim,
-}: {
-  label: string; emoji: string; imageUrl?: string;
-  selected?: boolean; onClick?: () => void; dim?: boolean;
-}) {
-  const [imgLoaded, setImgLoaded] = useState(false);
-
+function Ico({ d, size = 15 }: { d: string; size?: number }) {
   return (
-    <button
-      onClick={onClick}
-      className="relative overflow-hidden rounded-2xl transition-transform active:scale-[0.97]"
-      style={{ aspectRatio: "4/3", cursor: onClick ? "pointer" : "default", opacity: dim ? 0.45 : 1 }}
+    <svg
+      width={size} height={size} viewBox="0 0 16 16"
+      fill="none" stroke="currentColor"
+      strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"
     >
-      {imageUrl && (
-        <img
-          src={imageUrl} alt={label}
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.5s ease" }}
-          onLoad={() => setImgLoaded(true)}
-        />
-      )}
-      {/* Gradient placeholder */}
-      <div
-        className="absolute inset-0 flex items-center justify-center"
-        style={{
-          background: "radial-gradient(ellipse at 40% 30%, rgba(79,195,247,0.2), rgba(10,12,24,0.95))",
-          opacity: imgLoaded ? 0 : 1,
-          transition: "opacity 0.4s ease",
-          pointerEvents: "none",
-        }}
-      >
-        <span className="text-4xl" style={{ filter: "drop-shadow(0 0 14px rgba(79,195,247,0.7))" }}>{emoji}</span>
-      </div>
-      {/* Cinematic overlay */}
-      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.05) 100%)" }} />
-      {/* Selection ring */}
-      <div
-        className="absolute inset-0 rounded-2xl transition-all duration-200"
-        style={selected
-          ? { border: "2px solid #4fc3f7", boxShadow: "inset 0 0 20px rgba(79,195,247,0.25), 0 0 16px rgba(79,195,247,0.35)" }
-          : { border: "1px solid rgba(255,255,255,0.1)" }}
-      />
-      {/* Label */}
-      <div className="absolute bottom-0 left-0 right-0 px-2 pb-2.5 text-center">
-        <span
-          className="text-[11px] font-semibold leading-tight"
-          style={{
-            color: selected ? "#4fc3f7" : "rgba(255,255,255,0.92)",
-            textShadow: "0 1px 8px rgba(0,0,0,1)",
-            display: "block",
-          }}
-        >
-          {label}
-        </span>
-      </div>
-    </button>
+      <path d={d} />
+    </svg>
   );
 }
 
@@ -78,30 +30,43 @@ const CHILD_PALETTES: [string, string][] = [
   ["#a78bfa", "#f472b6"],
 ];
 
-function ChildCard({ name, emoji, ageGroup }: { name: string; emoji: string; ageGroup: string }) {
+function childInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return parts.length === 1
+    ? parts[0].charAt(0).toUpperCase()
+    : (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function ChildCard({ name, ageGroup }: { name: string; ageGroup: string }) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   const [c1, c2] = CHILD_PALETTES[h % CHILD_PALETTES.length];
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl p-4 flex flex-col items-center gap-2"
-      style={{ background: `linear-gradient(145deg, ${c1}18, ${c2}25)`, border: `1px solid ${c1}33` }}
+      className="relative overflow-hidden rounded-2xl p-4 flex flex-col items-center gap-2.5"
+      style={{
+        background: `linear-gradient(145deg, ${c1}10, ${c2}18)`,
+        border: `1px solid ${c1}25`,
+      }}
     >
       <div
-        className="w-14 h-14 rounded-full flex items-center justify-center text-3xl"
+        className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl"
         style={{
-          background: `linear-gradient(145deg, ${c1}22, ${c2}33)`,
-          border: `2px solid ${c1}55`,
-          boxShadow: `0 0 20px ${c1}33`,
+          background: `linear-gradient(135deg, ${c1}30, ${c2}50)`,
+          border: `1.5px solid ${c1}50`,
+          color: "rgba(255,255,255,0.92)",
+          textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+          letterSpacing: "0.02em",
         }}
       >
-        {emoji}
+        {childInitials(name)}
       </div>
       <span className="text-white text-sm font-semibold">{name}</span>
       <span
         className="text-[10px] px-2.5 py-0.5 rounded-full font-bold tracking-widest uppercase"
-        style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}
+        style={{ background: `${c1}14`, border: `1px solid ${c1}30`, color: c1 }}
       >
         {ageGroup} yrs
       </span>
@@ -109,143 +74,145 @@ function ChildCard({ name, emoji, ageGroup }: { name: string; emoji: string; age
   );
 }
 
-// ─── Settings row ─────────────────────────────────────────────────────────────
+// ─── View mode button ─────────────────────────────────────────────────────────
 
-function SettingCard({
-  label, imageUrl, emoji, value,
-}: {
-  label: string; imageUrl?: string; emoji: string; value?: string;
-}) {
-  const [imgLoaded, setImgLoaded] = useState(false);
+const D_AUTO    = "M8 1.5l1.2 3.7 3.9.6-2.8 2.7.7 3.9L8 10.6l-3 1.8.7-3.9L3 5.8l3.9-.6z";
+const D_MOBILE  = "M5 1h6a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V2a1 1 0 011-1zM7.5 13h1";
+const D_TABLET  = "M3 1h10a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1zM7 13.5h2";
+const D_DESKTOP = "M1 2h14a1 1 0 011 1v9a1 1 0 01-1 1H1a1 1 0 01-1-1V3a1 1 0 011-1zM5 15h6M8 13v2";
 
+const VIEW_MODES: { mode: ViewMode; label: string; iconD: string }[] = [
+  { mode: "auto",    label: "Auto",    iconD: D_AUTO    },
+  { mode: "mobile",  label: "Mobile",  iconD: D_MOBILE  },
+  { mode: "tablet",  label: "Tablet",  iconD: D_TABLET  },
+  { mode: "desktop", label: "Desktop", iconD: D_DESKTOP },
+];
+
+function ViewModeBtn({
+  label, iconD, selected, onClick,
+}: { label: string; iconD: string; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-2.5 py-4 rounded-2xl transition-all active:scale-[0.97]"
+      style={{
+        background: selected ? "rgba(79,195,247,0.07)" : "rgba(255,255,255,0.03)",
+        border: selected ? "1.5px solid rgba(79,195,247,0.35)" : "1px solid rgba(255,255,255,0.07)",
+        boxShadow: selected ? "0 0 20px rgba(79,195,247,0.1)" : "none",
+      }}
+    >
+      <span style={{ color: selected ? "#4fc3f7" : "rgba(255,255,255,0.3)" }}>
+        <Ico d={iconD} size={22} />
+      </span>
+      <span
+        className="text-[11px] font-semibold"
+        style={{ color: selected ? "#4fc3f7" : "rgba(255,255,255,0.35)" }}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
+// ─── Setting row ──────────────────────────────────────────────────────────────
+
+const D_BELL   = "M8 1v1M8 2a5 5 0 015 5v3l1.5 2h-13L3 10V7A5 5 0 018 2zM6 14a2 2 0 004 0";
+const D_MOON   = "M12.5 9A5.5 5.5 0 116 3.5a4 4 0 006.5 5.5z";
+const D_VOLUME = "M5 6H2v4h3l4 4V2L5 6zM10 5.5a4 4 0 010 5M12.5 3a7.5 7.5 0 010 10";
+
+const SETTINGS = [
+  { id: "notifications", label: "Notifications", iconD: D_BELL,   accent: "#4fc3f7", value: "On"     },
+  { id: "nightmode",     label: "Night mode",     iconD: D_MOON,   accent: "#8B5CF6", value: "Always" },
+  { id: "volume",        label: "Volume",          iconD: D_VOLUME, accent: "#10D9A0", value: "80%"   },
+];
+
+function SettingRow({
+  label, iconD, accent, value,
+}: { label: string; iconD: string; accent: string; value?: string }) {
   return (
     <div
-      className="relative overflow-hidden rounded-2xl flex items-center gap-0"
-      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+      className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all"
+      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
     >
-      {/* Left image panel */}
-      <div className="w-16 flex-shrink-0 self-stretch relative overflow-hidden" style={{ minHeight: 56 }}>
-        {imageUrl && (
-          <img
-            src={imageUrl} alt={label}
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.5s" }}
-            onLoad={() => setImgLoaded(true)}
-          />
-        )}
-        {(!imageUrl || !imgLoaded) && (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ background: "radial-gradient(ellipse at 40% 40%, rgba(79,195,247,0.2), rgba(10,12,24,0.95))" }}
-          >
-            <span className="text-2xl" style={{ filter: "drop-shadow(0 0 10px rgba(79,195,247,0.6))" }}>{emoji}</span>
-          </div>
-        )}
-        <div className="absolute inset-y-0 right-0 w-6" style={{ background: "linear-gradient(to right, transparent, rgba(10,12,24,0.92))" }} />
+      <div
+        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: `${accent}18`, border: `1px solid ${accent}28`, color: accent }}
+      >
+        <Ico d={iconD} size={15} />
       </div>
-
-      <div className="flex-1 px-3 py-3.5">
-        <p className="text-white/80 text-sm font-medium">{label}</p>
-      </div>
-
-      {value && (
-        <span className="text-white/30 text-xs pr-3 flex-shrink-0">{value}</span>
-      )}
-      <span className="text-white/15 text-sm pr-3 flex-shrink-0">›</span>
+      <span className="flex-1 text-white/80 text-sm font-medium">{label}</span>
+      {value && <span className="text-white/30 text-xs">{value}</span>}
+      <span className="text-white/15 text-base ml-1">›</span>
     </div>
   );
 }
 
-// ─── Profile page ─────────────────────────────────────────────────────────────
+// ─── API usage row ────────────────────────────────────────────────────────────
 
-const VIEW_MODES: { mode: ViewMode; label: string; emoji: string; key: string }[] = [
-  { mode: "auto",    label: "Auto",    emoji: "✦",  key: "profile-mode-auto" },
-  { mode: "mobile",  label: "Mobile",  emoji: "📱", key: "profile-mode-mobile" },
-  { mode: "tablet",  label: "Tablet",  emoji: "📲", key: "profile-mode-tablet" },
-  { mode: "desktop", label: "Desktop", emoji: "🖥️", key: "profile-mode-desktop" },
-];
+const D_SPARKLE = "M8 1.5l1.2 3.7 3.9.6-2.8 2.7.7 3.9L8 10.6l-3 1.8.7-3.9L3 5.8l3.9-.6z";
+const D_WAVEFORM = "M1 8h1.5M3.5 5v6M6 3v10M8.5 5.5v5M11 4v8M13.5 6v4M15 8h0.5";
+const D_MUSIC  = "M9 13V4l5-1.5v9.5M4 14a2 2 0 100-4 2 2 0 000 4zM14 12.5a2 2 0 100-4 2 2 0 000 4z";
 
-const SETTINGS = [
-  { id: "notifications", label: "Notifications", emoji: "🔔", key: "profile-setting-notifications", value: "On" },
-  { id: "nightmode",     label: "Night mode",     emoji: "🌙", key: "profile-setting-nightmode",     value: "Always" },
-  { id: "volume",        label: "Volume",          emoji: "🔊", key: "profile-setting-volume",        value: "80%" },
-];
+function UsageRow({
+  iconD, accent, label, sub, value, unit,
+}: {
+  iconD: string; accent: string; label: string; sub: string;
+  value: string; unit: string;
+}) {
+  return (
+    <div
+      className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl"
+      style={{ background: `${accent}08`, border: `1px solid ${accent}18` }}
+    >
+      <div
+        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: `${accent}15`, border: `1px solid ${accent}28`, color: accent }}
+      >
+        <Ico d={iconD} size={15} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white/80 text-xs font-semibold">{label}</p>
+        <p className="text-white/30 text-[10px] mt-0.5">{sub}</p>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <p className="text-sm font-bold" style={{ color: accent }}>{value}</p>
+        <p className="text-[9px] text-white/25 mt-0.5">{unit}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
+      {label}
+    </p>
+  );
+}
+
+// ─── Number formatter ─────────────────────────────────────────────────────────
 
 function fmt(n: number) {
-  return n >= 1_000_000
-    ? `${(n / 1_000_000).toFixed(1)}M`
-    : n >= 1_000
-    ? `${(n / 1_000).toFixed(1)}K`
+  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M`
+    : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K`
     : String(n);
 }
+
+// ─── Profile page ─────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
   const { t, isRTL } = useLanguage();
   const { mode, setMode } = useViewMode();
   const user = MOCK_USER;
-  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
   const [usage, setUsage] = useState<UsageTotals | null>(null);
 
-  // Load usage stats
   useEffect(() => {
     fetch("/api/usage")
       .then((r) => r.json())
       .then((data) => setUsage(data as UsageTotals))
       .catch(() => {});
-  }, []);
-
-  // Browser-side seeder — reuses the same seed-create-images API
-  useEffect(() => {
-    let cancelled = false;
-    async function seedImages() {
-      try {
-        const res = await fetch("/api/admin/seed-create-images");
-        if (!res.ok) return;
-        const { missing, existingImageUrls } = await res.json() as {
-          missing: { key: string; prompt: string }[];
-          existingImageUrls: Record<string, string>;
-        };
-
-        // Load any already-cached profile images
-        const profKeys = new Set([
-          ...VIEW_MODES.map((m) => m.key),
-          ...SETTINGS.map((s) => s.key),
-        ]);
-        const cached: Record<string, string> = {};
-        for (const [k, v] of Object.entries(existingImageUrls)) {
-          if (profKeys.has(k)) cached[k] = v as string;
-        }
-        if (Object.keys(cached).length) setProfileImages((prev) => ({ ...prev, ...cached }));
-
-        // Generate missing profile images
-        const missingProf = (missing ?? []).filter(({ key }: { key: string }) => profKeys.has(key));
-        for (const { key, prompt } of missingProf as { key: string; prompt: string }[]) {
-          if (cancelled) return;
-          try {
-            const encoded = encodeURIComponent(prompt.slice(0, 1500));
-            const seed = Math.floor(Math.random() * 999999);
-            const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=512&height=384&seed=${seed}`;
-            const imgRes = await fetch(url);
-            if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
-            if (cancelled) return;
-            const blob = await imgRes.blob();
-            const cacheRes = await fetch(`/api/admin/seed-create-images?key=${encodeURIComponent(`${key}.jpg`)}`, {
-              method: "POST", body: blob, headers: { "Content-Type": blob.type },
-            });
-            if (cacheRes.ok) {
-              const { imageKey, url: cachedUrl } = await cacheRes.json() as { imageKey: string; url: string };
-              if (imageKey && cachedUrl) setProfileImages((prev) => ({ ...prev, [imageKey]: cachedUrl }));
-            }
-          } catch {
-            // ignore individual failures
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-    seedImages();
-    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -254,151 +221,97 @@ export default function ProfilePage() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-base font-semibold text-white tracking-wide">{t("profile")}</h1>
+          <div>
+            <h1 className="text-base font-semibold text-white tracking-wide mb-0.5">{t("profile")}</h1>
+            <p className="text-white/30 text-xs">Manage your account & preferences</p>
+          </div>
           <LanguageToggle />
         </div>
 
-        {/* ── Child profiles ─────────────────────────────────────────── */}
+        {/* ── Child profiles ──────────────────────────────────────── */}
         <div className="mb-7">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
-            {t("childProfiles")}
-          </p>
+          <SectionHeader label={t("childProfiles")} />
           <div className="grid grid-cols-2 gap-2.5">
             {user.childProfiles.map((child) => (
-              <ChildCard key={child.id} name={child.name} emoji={child.avatarEmoji} ageGroup={child.ageGroup} />
+              <ChildCard key={child.id} name={child.name} ageGroup={child.ageGroup} />
             ))}
-            {/* Add child slot */}
             <button
-              className="relative overflow-hidden rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.97]"
+              className="rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.97]"
               style={{
-                aspectRatio: "unset",
-                minHeight: 120,
-                background: "rgba(255,255,255,0.03)",
-                border: "1.5px dashed rgba(255,255,255,0.12)",
+                minHeight: 130,
+                background: "rgba(255,255,255,0.02)",
+                border: "1.5px dashed rgba(255,255,255,0.1)",
               }}
             >
-              <span className="text-2xl" style={{ color: "rgba(255,255,255,0.2)" }}>＋</span>
-              <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.25)" }}>Add child</span>
+              <span className="text-xl font-light" style={{ color: "rgba(255,255,255,0.18)" }}>＋</span>
+              <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.22)" }}>Add child</span>
             </button>
           </div>
         </div>
 
-        {/* ── Display modes ──────────────────────────────────────────── */}
+        {/* ── Display mode ─────────────────────────────────────────── */}
         <div className="mb-7">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
-            Display
-          </p>
-          <div className="grid grid-cols-2 gap-2.5">
+          <SectionHeader label="Display" />
+          <div className="grid grid-cols-4 gap-2">
             {VIEW_MODES.map((opt) => (
-              <IllustratedCard
+              <ViewModeBtn
                 key={opt.mode}
                 label={opt.label}
-                emoji={opt.emoji}
-                imageUrl={profileImages[opt.key]}
+                iconD={opt.iconD}
                 selected={mode === opt.mode}
                 onClick={() => setMode(opt.mode)}
               />
             ))}
           </div>
-          <p className="text-white/20 text-[10px] mt-2 leading-relaxed">
+          <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
             Forces the layout to a specific screen size regardless of your device.
           </p>
         </div>
 
-        {/* ── Settings ───────────────────────────────────────────────── */}
+        {/* ── Settings ─────────────────────────────────────────────── */}
         <div className="mb-7">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
-            {t("settings")}
-          </p>
+          <SectionHeader label={t("settings")} />
           <div className="flex flex-col gap-2">
             {SETTINGS.map((s) => (
-              <SettingCard
+              <SettingRow
                 key={s.id}
                 label={s.label}
-                emoji={s.emoji}
-                imageUrl={profileImages[s.key]}
+                iconD={s.iconD}
+                accent={s.accent}
                 value={s.value}
               />
             ))}
           </div>
         </div>
 
-        {/* ── API Usage ──────────────────────────────────────────────── */}
+        {/* ── API Usage ─────────────────────────────────────────────── */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
-            API Usage
-          </p>
+          <SectionHeader label="API Usage" />
           <div className="flex flex-col gap-2">
-
-            {/* Gemini row */}
-            <div
-              className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
-              style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.12)" }}
-            >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
-                style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.2)" }}>
-                ✦
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white/80">Gemini</p>
-                <p className="text-[10px] text-white/30 mt-0.5">
-                  {usage ? `${fmt(usage.gemini_calls)} request${usage.gemini_calls !== 1 ? "s" : ""}` : "—"}
-                </p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-bold" style={{ color: "#4fc3f7" }}>
-                  {usage ? fmt(usage.gemini_tokens) : "—"}
-                </p>
-                <p className="text-[9px] text-white/25 mt-0.5">tokens</p>
-              </div>
-            </div>
-
-            {/* ElevenLabs TTS row */}
-            <div
-              className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
-              style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)" }}
-            >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
-                style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                🔊
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white/80">ElevenLabs · TTS</p>
-                <p className="text-[10px] text-white/30 mt-0.5">
-                  {usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
-                </p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-bold" style={{ color: "#F59E0B" }}>
-                  {usage ? fmt(usage.el_tts_chars) : "—"}
-                </p>
-                <p className="text-[9px] text-white/25 mt-0.5">chars</p>
-              </div>
-            </div>
-
-            {/* ElevenLabs SFX row */}
-            <div
-              className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
-              style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.12)" }}
-            >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
-                style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)" }}>
-                🎵
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white/80">ElevenLabs · SFX</p>
-                <p className="text-[10px] text-white/30 mt-0.5">
-                  {usage ? `${fmt(usage.el_sfx_calls)} generation${usage.el_sfx_calls !== 1 ? "s" : ""}` : "—"}
-                </p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-bold" style={{ color: "#A78BFA" }}>
-                  {usage ? fmt(usage.el_sfx_chars) : "—"}
-                </p>
-                <p className="text-[9px] text-white/25 mt-0.5">prompt chars</p>
-              </div>
-            </div>
-
+            <UsageRow
+              iconD={D_SPARKLE}
+              accent="#4fc3f7"
+              label="Gemini"
+              sub={usage ? `${fmt(usage.gemini_calls)} request${usage.gemini_calls !== 1 ? "s" : ""}` : "—"}
+              value={usage ? fmt(usage.gemini_tokens) : "—"}
+              unit="tokens"
+            />
+            <UsageRow
+              iconD={D_WAVEFORM}
+              accent="#F59E0B"
+              label="ElevenLabs · TTS"
+              sub={usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
+              value={usage ? fmt(usage.el_tts_chars) : "—"}
+              unit="chars"
+            />
+            <UsageRow
+              iconD={D_MUSIC}
+              accent="#A78BFA"
+              label="ElevenLabs · SFX"
+              sub={usage ? `${fmt(usage.el_sfx_calls)} generation${usage.el_sfx_calls !== 1 ? "s" : ""}` : "—"}
+              value={usage ? fmt(usage.el_sfx_chars) : "—"}
+              unit="prompt chars"
+            />
           </div>
         </div>
 
