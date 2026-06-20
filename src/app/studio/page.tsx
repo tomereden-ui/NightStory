@@ -649,6 +649,14 @@ export default function StudioPage() {
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [savesCount, setSavesCount] = useState(0);
 
+  // Keep badge count fresh independently of the sheet being open
+  useEffect(() => {
+    fetch("/api/script-saves", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setSavesCount(d.length); })
+      .catch(() => {});
+  }, [savesRefreshKey]);
+
   // Load voice pool
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
 
