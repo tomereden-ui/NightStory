@@ -166,7 +166,7 @@ export default function StoryDetailPage() {
         <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
           {entry.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover" />
+            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover ken-burns" />
           ) : (
             <div
               className="w-full h-full"

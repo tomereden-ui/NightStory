@@ -213,7 +213,7 @@ export default function ClassicDetailPage() {
             <img
               src={meta.coverUrl}
               alt=""
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover ken-burns"
               onError={() => setImgFailed(true)}
             />
           ) : (

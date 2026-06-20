@@ -678,7 +678,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
               {coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={coverUrl} alt="Story cover" className="w-full h-full object-cover" />
+                <img src={coverUrl} alt="Story cover" className="w-full h-full object-cover ken-burns" />
               ) : (
                 <div
                   className="w-full h-full flex items-center justify-center"
