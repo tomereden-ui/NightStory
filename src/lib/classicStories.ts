@@ -32,7 +32,7 @@ Tone: magical, warm, gently exciting, ends peacefully and sleepily.`,
     emoji: "🐝",
     tagline: "A little bee who dared to explore",
     coverPrompt:
-      "Cute cartoon bumblebee with big expressive eyes flying over village rooftops at golden dusk, trail of amber sparkles, warm orange and deep blue sky filled with glowing four-pointed stars, silhouette of chimneys below, children's book illustration style, no text",
+      "A small golden bee with delicate wings resting on a bright wildflower in a sunlit meadow, a butterfly and friendly cricket nearby, warm dappled afternoon light, tall grass swaying gently, distant beehive glowing softly, painterly children's book illustration, soft dreamy atmosphere, no text",
     scriptPrompt:
       `Write a bedtime story script for "Maya the Bee" following the original Waldemar Bonsels story.
 Audience: children aged 4–8. Duration: ~3 minutes when read aloud.

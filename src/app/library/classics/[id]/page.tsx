@@ -45,7 +45,20 @@ export default function ClassicDetailPage() {
   const [imgFailed, setImgFailed] = useState(false);
   const [scriptExpanded, setScriptExpanded] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [summaryPlaying, setSummaryPlaying] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (summaryAudioRef.current) {
+        summaryAudioRef.current.pause();
+        summaryAudioRef.current.src = "";
+        summaryAudioRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -79,6 +92,39 @@ export default function ClassicDetailPage() {
     });
     router.push("/studio");
   }, [meta, blocks, router]);
+
+  const toggleSummaryPlay = useCallback(async () => {
+    if (summaryPlaying) {
+      summaryAudioRef.current?.pause();
+      setSummaryPlaying(false);
+      return;
+    }
+    if (!blocks) return;
+    const summary = deriveClassicSummary(blocks);
+    if (!summary) return;
+    setSummaryLoading(true);
+    try {
+      const res = await fetch("/api/synthesize-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: summary, characterName: "Narrator", assignedVoiceId: "Charon" }),
+      });
+      const { audioData, mimeType } = await res.json();
+      const bytes = Uint8Array.from(atob(audioData), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => setSummaryPlaying(false);
+      audio.onerror = () => setSummaryPlaying(false);
+      summaryAudioRef.current = audio;
+      await audio.play();
+      setSummaryPlaying(true);
+    } catch {
+      setSummaryPlaying(false);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [summaryPlaying, blocks]);
 
   const handleUploadCover = () => fileInputRef.current?.click();
 
@@ -271,12 +317,26 @@ export default function ClassicDetailPage() {
                 border: `1px solid ${c1}28`,
               }}
             >
-              <p
-                className="text-[9px] font-bold tracking-[0.18em] uppercase mb-2"
-                style={{ color: `${c1}bb` }}
-              >
-                Story
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p
+                  className="text-[9px] font-bold tracking-[0.18em] uppercase"
+                  style={{ color: `${c1}bb` }}
+                >
+                  Story
+                </p>
+                <button
+                  onClick={toggleSummaryPlay}
+                  disabled={summaryLoading}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all active:scale-95"
+                  style={summaryPlaying
+                    ? { background: `${c1}28`, border: `1px solid ${c1}55`, color: c1 }
+                    : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
+                  }
+                >
+                  <span>{summaryPlaying ? "⏸" : summaryLoading ? "…" : "▶"}</span>
+                  <span>{summaryPlaying ? "Stop" : summaryLoading ? "Loading" : "Play"}</span>
+                </button>
+              </div>
               <p style={{ fontSize: "13.5px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
                 {shown}
                 {long && !summaryExpanded && (

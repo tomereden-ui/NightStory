@@ -243,7 +243,11 @@ export default function LibraryPage() {
   const { effective } = useViewMode();
   const isMobile = effective === "mobile";
 
-  const [activeTab, setActiveTab] = useState<LibraryTab>("my-stories");
+  const [activeTab, setActiveTab] = useState<LibraryTab>(() => {
+    if (typeof window === "undefined") return "my-stories";
+    const saved = sessionStorage.getItem("library-tab");
+    return saved === "classics" ? "classics" : "my-stories";
+  });
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trashCount, setTrashCount] = useState(0);
@@ -333,7 +337,7 @@ export default function LibraryPage() {
             return (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => { setActiveTab(tab); sessionStorage.setItem("library-tab", tab); }}
                 className="flex-1 py-2 rounded-xl text-xs font-medium tracking-wide transition-all"
                 style={active
                   ? {

@@ -38,27 +38,51 @@ export default function StoryDetailPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
   const [summaryPlaying, setSummaryPlaying] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [scriptExpanded, setScriptExpanded] = useState(false);
 
-  useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
+  useEffect(() => {
+    return () => {
+      if (summaryAudioRef.current) {
+        summaryAudioRef.current.pause();
+        summaryAudioRef.current.src = "";
+        summaryAudioRef.current = null;
+      }
+    };
+  }, []);
 
-  const toggleSummaryPlay = useCallback(() => {
+  const toggleSummaryPlay = useCallback(async () => {
     if (summaryPlaying) {
-      window.speechSynthesis.cancel();
+      summaryAudioRef.current?.pause();
       setSummaryPlaying(false);
       return;
     }
     if (!entry?.summary) return;
-    const utter = new SpeechSynthesisUtterance(entry.summary);
-    utter.rate = 0.88;
-    utter.onend = () => setSummaryPlaying(false);
-    utter.onerror = () => setSummaryPlaying(false);
-    utterRef.current = utter;
-    window.speechSynthesis.speak(utter);
-    setSummaryPlaying(true);
+    setSummaryLoading(true);
+    try {
+      const res = await fetch("/api/synthesize-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: entry.summary, characterName: "Narrator", assignedVoiceId: "Charon" }),
+      });
+      const { audioData, mimeType } = await res.json();
+      const bytes = Uint8Array.from(atob(audioData), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => setSummaryPlaying(false);
+      audio.onerror = () => setSummaryPlaying(false);
+      summaryAudioRef.current = audio;
+      await audio.play();
+      setSummaryPlaying(true);
+    } catch {
+      setSummaryPlaying(false);
+    } finally {
+      setSummaryLoading(false);
+    }
   }, [entry?.summary, summaryPlaying]);
 
   useEffect(() => {
@@ -215,14 +239,15 @@ export default function StoryDetailPage() {
               <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
               <button
                 onClick={toggleSummaryPlay}
+                disabled={summaryLoading}
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all active:scale-95"
                 style={summaryPlaying
                   ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
                   : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
                 }
               >
-                <span>{summaryPlaying ? "⏸" : "▶"}</span>
-                <span>{summaryPlaying ? "Stop" : "Play"}</span>
+                <span>{summaryPlaying ? "⏸" : summaryLoading ? "…" : "▶"}</span>
+                <span>{summaryPlaying ? "Stop" : summaryLoading ? "Loading" : "Play"}</span>
               </button>
             </div>
             {(() => {
