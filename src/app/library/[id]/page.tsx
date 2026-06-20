@@ -39,6 +39,7 @@ export default function StoryDetailPage() {
   const [duration, setDuration] = useState(0);
 
   const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
+  const cachedAudioUrlRef = useRef<string | null>(null);
   const [summaryPlaying, setSummaryPlaying] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
@@ -61,18 +62,28 @@ export default function StoryDetailPage() {
       return;
     }
     if (!entry?.summary) return;
+
+    // Reuse cached audio from this session
+    if (cachedAudioUrlRef.current) {
+      const audio = new Audio(cachedAudioUrlRef.current);
+      audio.onended = () => setSummaryPlaying(false);
+      audio.onerror = () => setSummaryPlaying(false);
+      summaryAudioRef.current = audio;
+      await audio.play();
+      setSummaryPlaying(true);
+      return;
+    }
+
     setSummaryLoading(true);
     try {
-      const res = await fetch("/api/synthesize-speech", {
+      const res = await fetch("/api/summary-audio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: entry.summary, characterName: "Narrator", assignedVoiceId: "Charon" }),
+        body: JSON.stringify({ text: entry.summary, cacheKey: `story-${entry.id}` }),
       });
-      const { audioData, mimeType } = await res.json();
-      const bytes = Uint8Array.from(atob(audioData), (c) => c.charCodeAt(0));
-      const blob = new Blob([bytes], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      const { audioUrl } = await res.json() as { audioUrl: string };
+      cachedAudioUrlRef.current = audioUrl;
+      const audio = new Audio(audioUrl);
       audio.onended = () => setSummaryPlaying(false);
       audio.onerror = () => setSummaryPlaying(false);
       summaryAudioRef.current = audio;
@@ -83,7 +94,7 @@ export default function StoryDetailPage() {
     } finally {
       setSummaryLoading(false);
     }
-  }, [entry?.summary, summaryPlaying]);
+  }, [entry?.id, entry?.summary, summaryPlaying]);
 
   useEffect(() => {
     fetch(`/api/library/${id}`)
