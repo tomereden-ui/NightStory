@@ -209,7 +209,7 @@ export default function ProfilePage() {
   const [usage, setUsage] = useState<UsageTotals | null>(null);
 
   useEffect(() => {
-    fetch("/api/usage")
+    fetch("/api/usage", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setUsage(data as UsageTotals))
       .catch(() => {});
