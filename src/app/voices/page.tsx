@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
-import VoiceAvatar from "@/components/ui/VoiceAvatar";
+import VoiceAvatar, { AVATAR_STYLES } from "@/components/ui/VoiceAvatar";
 import { PRESET_VOICES, type PresetVoiceConfig } from "@/config/presetVoices";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,7 +29,6 @@ type PreviewState = "idle" | "loading" | "ready";
 
 type PresetVoice = PresetVoiceConfig;
 
-const EMOJI_OPTIONS = ["🎙", "👩", "👨", "👴", "👵", "🧒", "🧑", "🎤", "🌟", "🦁"];
 
 const SAMPLE_TEXTS: Record<string, string> = {
   en: "This is me and I will be happy to join your story",
@@ -61,61 +60,121 @@ function VoiceCard({
   playingId,
   onPlay,
   onDelete,
+  onAvatarChange,
 }: {
   voice: VoiceRecord;
   playingId: string | null;
   onPlay: (v: VoiceRecord) => void;
   onDelete: (id: string) => void;
+  onAvatarChange: (id: string, key: string) => void;
 }) {
   const isPlaying = playingId === voice.id;
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
-    <div
-      className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
-      style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.07)",
-      }}
-    >
-      <VoiceAvatar emoji={voice.avatar_emoji} size={44} borderColor="rgba(79,195,247,0.25)" />
+    <div className="flex flex-col gap-0">
+      <div
+        className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
+        style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderBottomLeftRadius: pickerOpen ? 0 : undefined,
+          borderBottomRightRadius: pickerOpen ? 0 : undefined,
+        }}
+      >
+        {/* Clickable avatar */}
+        <div className="relative flex-shrink-0">
+          <VoiceAvatar
+            emoji={voice.avatar_emoji}
+            name={voice.name}
+            size={44}
+            borderColor={pickerOpen ? "rgba(79,195,247,0.6)" : "rgba(79,195,247,0.25)"}
+            onClick={() => setPickerOpen((o) => !o)}
+          />
+          <span
+            className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center pointer-events-none"
+            style={{
+              background: "rgba(8,12,24,0.9)",
+              border: "1px solid rgba(79,195,247,0.4)",
+              fontSize: 8,
+              color: "#4fc3f7",
+            }}
+          >
+            ✎
+          </span>
+        </div>
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-semibold truncate">{voice.name}</p>
-        <p className="text-white/45 text-xs truncate mt-0.5">
-          {voice.description ?? voice.gemini_voice_name ?? (voice.type === "recorded" ? "Cloned voice" : "AI voice")}
-        </p>
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-white text-sm font-semibold truncate">{voice.name}</p>
+          <p className="text-white/45 text-xs truncate mt-0.5">
+            {voice.description ?? voice.gemini_voice_name ?? (voice.type === "recorded" ? "Cloned voice" : "AI voice")}
+          </p>
+        </div>
+
+        {/* Play */}
+        <button
+          disabled={!voice.sample_url}
+          onClick={() => onPlay(voice)}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 transition-all active:scale-95"
+          style={{
+            background: isPlaying ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)",
+            color: isPlaying ? "#4fc3f7" : voice.sample_url ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.15)",
+            border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)",
+            cursor: voice.sample_url ? "pointer" : "not-allowed",
+          }}
+          title={voice.sample_url ? (isPlaying ? "Stop" : "Play sample") : "No sample available"}
+        >
+          {isPlaying ? "⏹" : "▶"}
+        </button>
+
+        {/* Delete */}
+        <button
+          onClick={() => onDelete(voice.id)}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 transition-all active:scale-95"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            color: "rgba(255,255,255,0.3)",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
+          title="Delete voice"
+        >
+          ×
+        </button>
       </div>
 
-      {/* Play */}
-      <button
-        disabled={!voice.sample_url}
-        onClick={() => onPlay(voice)}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 transition-all active:scale-95"
-        style={{
-          background: isPlaying ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)",
-          color: isPlaying ? "#4fc3f7" : voice.sample_url ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.15)",
-          border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)",
-          cursor: voice.sample_url ? "pointer" : "not-allowed",
-        }}
-        title={voice.sample_url ? (isPlaying ? "Stop" : "Play sample") : "No sample available"}
-      >
-        {isPlaying ? "⏹" : "▶"}
-      </button>
-
-      {/* Delete */}
-      <button
-        onClick={() => onDelete(voice.id)}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 transition-all active:scale-95"
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          color: "rgba(255,255,255,0.3)",
-          border: "1px solid rgba(255,255,255,0.07)",
-        }}
-        title="Delete voice"
-      >
-        ×
-      </button>
+      {/* Inline avatar picker */}
+      {pickerOpen && (
+        <div
+          className="px-4 py-3 rounded-b-2xl flex items-center gap-2.5 flex-wrap"
+          style={{
+            background: "rgba(255,255,255,0.025)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          <span className="text-white/30 text-[10px] mr-1 flex-shrink-0">Style</span>
+          {AVATAR_STYLES.map(({ key, gradient, label }) => (
+            <button
+              key={key}
+              onClick={() => { onAvatarChange(voice.id, key); setPickerOpen(false); }}
+              title={label}
+              className="rounded-full transition-all active:scale-90 flex-shrink-0"
+              style={{
+                width: 28,
+                height: 28,
+                background: gradient,
+                border: voice.avatar_emoji === key
+                  ? "2px solid #4fc3f7"
+                  : "2px solid rgba(255,255,255,0.1)",
+                boxShadow: voice.avatar_emoji === key
+                  ? "0 0 0 2px rgba(79,195,247,0.25)"
+                  : "none",
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -187,7 +246,7 @@ function AddVoiceSheet({
   const { effective } = useViewMode();
   const sheetMaxWidth = effective === "mobile" ? 448 : 512;
   const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("🎙");
+  const [emoji, setEmoji] = useState("azure");
   const [method, setMethod] = useState<AddMethod>("text");
   const [description, setDescription] = useState("");
   const [recordState, setRecordState] = useState<RecordState>("idle");
@@ -456,22 +515,24 @@ function AddVoiceSheet({
             />
           </div>
 
-          {/* Emoji selector */}
+          {/* Avatar style selector */}
           <div className="mb-5">
-            <label className="text-white/50 text-xs mb-2 block">Avatar</label>
-            <div className="flex gap-2 flex-wrap">
-              {EMOJI_OPTIONS.map((e) => (
+            <label className="text-white/50 text-xs mb-2 block">Avatar style</label>
+            <div className="flex gap-2.5 flex-wrap">
+              {AVATAR_STYLES.map(({ key, gradient, label }) => (
                 <button
-                  key={e}
-                  onClick={() => setEmoji(e)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all active:scale-90"
+                  key={key}
+                  onClick={() => setEmoji(key)}
+                  title={label}
+                  className="rounded-full transition-all active:scale-90"
                   style={{
-                    background: emoji === e ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)",
-                    border: emoji === e ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                    width: 36,
+                    height: 36,
+                    background: gradient,
+                    border: emoji === key ? "2px solid #4fc3f7" : "2px solid rgba(255,255,255,0.12)",
+                    boxShadow: emoji === key ? "0 0 0 2px rgba(79,195,247,0.25)" : "none",
                   }}
-                >
-                  {e}
-                </button>
+                />
               ))}
             </div>
           </div>
@@ -962,6 +1023,15 @@ export default function VoicesPage() {
     setVoices((prev) => [voice, ...prev]);
   }, []);
 
+  const handleAvatarChange = useCallback(async (id: string, key: string) => {
+    setVoices((prev) => prev.map((v) => v.id === id ? { ...v, avatar_emoji: key } : v));
+    await fetch(`/api/voices/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatarEmoji: key }),
+    });
+  }, []);
+
   const familyVoices = voices.filter((v) => v.category === "family");
 
   return (
@@ -1039,6 +1109,7 @@ export default function VoicesPage() {
               playingId={playingId}
               onPlay={handlePlayVoice}
               onDelete={handleDeleteVoice}
+              onAvatarChange={handleAvatarChange}
             />
           ))}
         </div>
