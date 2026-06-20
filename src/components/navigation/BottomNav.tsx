@@ -7,7 +7,7 @@ import { useViewMode } from "@/context/ViewModeContext";
 const BUILD_LABEL = "Jun 12 · v4";
 
 const NAV = [
-  { label: "Library", icon: "📚", href: "/library" },
+  { label: "Magic Tales", icon: "✨", href: "/library" },
   // { label: "Create",  icon: "✨", href: "/create"  },
   { label: "Studio",  icon: "🎬", href: "/studio"  },
   { label: "Voices",  icon: "🎙️", href: "/voices"  },

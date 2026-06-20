@@ -325,7 +325,7 @@ export default function LibraryPage() {
               filter: "drop-shadow(0 0 12px rgba(79,195,247,0.3))",
             }}
           >
-            {t("myStories")}
+            Magic Tales
           </h1>
           <div className="w-9" />
         </div>
