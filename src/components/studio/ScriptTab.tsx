@@ -748,30 +748,32 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {/* Slot rendered between cover/summary and script blocks (e.g. CharacterCards) */}
         {belowCover}
 
-        {/* Stats row + script toggle */}
-        <button
-          onClick={() => setScriptExpanded((v) => !v)}
-          className="w-full flex items-center justify-between mb-3 group"
-        >
-          <p className="text-white/30 text-xs group-active:text-white/50 transition-colors">
+        {/* Stats row */}
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-white/30 text-xs">
             {speechBlocks.length} lines · {sfxBlocks.length} sfx · ~{estMin}:{String(estSec).padStart(2, "0")} min
           </p>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-              <span className="text-teal text-[10px] font-semibold tracking-widest">{t("ready")}</span>
-            </div>
-            <span
-              className="text-[10px] font-medium transition-transform duration-200"
-              style={{
-                color: "rgba(255,255,255,0.25)",
-                display: "inline-block",
-                transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)",
-              }}
-            >
-              ▾
-            </span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
+            <span className="text-teal text-[10px] font-semibold tracking-widest">{t("ready")}</span>
           </div>
+        </div>
+
+        {/* Script expand toggle */}
+        <button
+          onClick={() => setScriptExpanded((v) => !v)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 mb-3 rounded-xl text-[11px] font-medium transition-all active:scale-[0.98]"
+          style={{
+            background: scriptExpanded ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
+            border: scriptExpanded ? "1px solid rgba(79,195,247,0.2)" : "1px solid rgba(255,255,255,0.07)",
+            color: scriptExpanded ? "rgba(79,195,247,0.7)" : "rgba(255,255,255,0.3)",
+          }}
+        >
+          <span>{scriptExpanded ? "Hide script" : "View full script"}</span>
+          <span
+            className="transition-transform duration-200"
+            style={{ display: "inline-block", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+          >▾</span>
         </button>
 
         {/* Block list — collapsed by default */}
