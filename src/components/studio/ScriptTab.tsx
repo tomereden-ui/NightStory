@@ -406,6 +406,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
   // ─── Summary narration (Web Speech API) ────────────────────────────────────
   const [summaryPlaying, setSummaryPlaying] = useState(false);
+  const [scriptExpanded, setScriptExpanded] = useState(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
@@ -747,19 +748,34 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {/* Slot rendered between cover/summary and script blocks (e.g. CharacterCards) */}
         {belowCover}
 
-        {/* Stats row */}
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-white/30 text-xs">
+        {/* Stats row + script toggle */}
+        <button
+          onClick={() => setScriptExpanded((v) => !v)}
+          className="w-full flex items-center justify-between mb-3 group"
+        >
+          <p className="text-white/30 text-xs group-active:text-white/50 transition-colors">
             {speechBlocks.length} lines · {sfxBlocks.length} sfx · ~{estMin}:{String(estSec).padStart(2, "0")} min
           </p>
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-            <span className="text-teal text-[10px] font-semibold tracking-widest">{t("ready")}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
+              <span className="text-teal text-[10px] font-semibold tracking-widest">{t("ready")}</span>
+            </div>
+            <span
+              className="text-[10px] font-medium transition-transform duration-200"
+              style={{
+                color: "rgba(255,255,255,0.25)",
+                display: "inline-block",
+                transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)",
+              }}
+            >
+              ▾
+            </span>
           </div>
-        </div>
+        </button>
 
-        {/* Block list with separators */}
-        {blocks.map((block, idx) => (
+        {/* Block list — collapsed by default */}
+        {scriptExpanded && blocks.map((block, idx) => (
           <div key={block.id}>
             {/* Separator BEFORE this block */}
             {studioMode ? (
@@ -796,25 +812,29 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </div>
         ))}
 
-        {/* After last block */}
-        {studioMode ? (
-          <AIBlockSeparator
-            onInsert={(instruction) => handleAIInsert(blocks.length - 1, instruction)}
-            isInserting={aiInsertingAt === blocks.length - 1}
-          />
-        ) : insertingAt === blocks.length ? (
-          <SfxInsertForm
-            onInsert={(desc, dur) => handleInsertSfx(blocks.length, desc, dur)}
-            onCancel={() => setInsertingAt(null)}
-          />
-        ) : (
-          <BlockSeparator
-            onAddSfx={() => setInsertingAt(blocks.length)}
-            onAddText={() => setInsertingTextAt(blocks.length)}
-          />
-        )}
+        {scriptExpanded && (
+          <>
+            {/* After last block */}
+            {studioMode ? (
+              <AIBlockSeparator
+                onInsert={(instruction) => handleAIInsert(blocks.length - 1, instruction)}
+                isInserting={aiInsertingAt === blocks.length - 1}
+              />
+            ) : insertingAt === blocks.length ? (
+              <SfxInsertForm
+                onInsert={(desc, dur) => handleInsertSfx(blocks.length, desc, dur)}
+                onCancel={() => setInsertingAt(null)}
+              />
+            ) : (
+              <BlockSeparator
+                onAddSfx={() => setInsertingAt(blocks.length)}
+                onAddText={() => setInsertingTextAt(blocks.length)}
+              />
+            )}
 
-        {!studioMode && <div className="h-px my-3" style={{ background: "rgba(255,255,255,0.07)" }} />}
+            {!studioMode && <div className="h-px my-3" style={{ background: "rgba(255,255,255,0.07)" }} />}
+          </>
+        )}
 
         {/* Regenerate / validation panel — hidden in Studio (revise handled by Director's Note outside ScriptTab) */}
         {isDirty && !studioMode && (
