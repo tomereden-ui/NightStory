@@ -48,6 +48,7 @@ async function buildVoiceOverrides(
 // path/fs via require so no ES-module hoisting issues alongside dynamic imports
 const path = require("path") as typeof import("path"); // eslint-disable-line
 const fs   = require("fs")   as typeof import("fs");   // eslint-disable-line
+const os   = require("os")   as typeof import("os");   // eslint-disable-line
 
 const ts = () => new Date().toTimeString().slice(0, 8);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -83,7 +84,7 @@ async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Prom
   return "en";
 }
 
-const TMP_DIR = path.join(process.cwd(), "tmp", "audio");
+const TMP_DIR = path.join(os.tmpdir(), "nightstory-audio");
 
 /** Read actual duration of a WAV file from its header. */
 function wavDurationMs(filePath: string): number {

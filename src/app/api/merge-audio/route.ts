@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { mixTracks } from "@/lib/services/audioMixer";
 
-const OUT_DIR = path.join(process.cwd(), "public", "output");
+const OUT_DIR = path.join(os.tmpdir(), "nightstory-output");
 
 export async function POST(req: NextRequest) {
   let body: { speechUrl: string; sfxUrl: string };

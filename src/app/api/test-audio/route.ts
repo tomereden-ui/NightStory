@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { synthesizeLine } from "@/lib/services/ttsService";
 import { generateSfx, writeSilence } from "@/lib/services/sfxService";
 import { synthesizeCloudTts } from "@/lib/services/cloudTtsService";
 
-const OUT_DIR = path.join(process.cwd(), "public", "output");
+const OUT_DIR = path.join(os.tmpdir(), "nightstory-output");
 
 export async function POST(req: NextRequest) {
   const geminiKey = process.env.GEMINI_API_KEY;
