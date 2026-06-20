@@ -26,6 +26,7 @@ interface RawBlock {
 }
 
 interface RawResponse {
+  title?: string;
   summary: string;
   coverPrompt: string;
   blocks: RawBlock[];
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
       textPayload: block.textPayload,
     }));
 
-    return NextResponse.json({ blocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "" });
+    return NextResponse.json({ blocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

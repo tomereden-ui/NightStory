@@ -752,6 +752,7 @@ export default function StudioPage() {
     setGenerating(true);
     setGenerateError(null);
     setEditingStoryId(null);
+    setStoryTitle("");
 
     const body: GenerateStoryRequest = {
       mode: "prompt",
@@ -768,12 +769,14 @@ export default function StudioPage() {
       const blocks = data.blocks as ScriptBlock[];
       const sm = data.summary ?? "";
       const cp = data.coverPrompt ?? "";
+      const title = (data.title as string | undefined) ?? "";
       setScriptBlocks(blocks);
       setSummary(sm);
       setCoverPrompt(cp);
       setCoverUrl("");
+      setStoryTitle(title);
       // Write draft explicitly before switching tabs
-      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {} });
+      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, storyTitle: title });
       if (cp) fetchCover(cp, sm);
       setActiveTab("script");
     } catch (err: unknown) {

@@ -169,7 +169,11 @@ about texture, environment, and emotional quality.
 
 SCRIPT FORMAT
 =============
-Return a JSON object with exactly three top-level fields:
+Return a JSON object with exactly four top-level fields:
+
+  "title"       — A short, evocative story title (3–6 words). Warm and imaginative.
+                  Examples: "The Moonlit Garden", "Pip and the Fallen Star", "A Secret in the Snow".
+                  Written in the story language. No quotes around it.
 
   "summary"     — 2–3 sentences that draw the listener in without giving the story away.
                   Structure:
@@ -201,6 +205,7 @@ SFX block format (exact):
 
 Example response:
 {
+  "title": "Pip and the Fallen Star",
   "summary": "Milo and his dragon Pip discover a lost star that has fallen into the Whispering Woods. Together they must carry it back to the sky before sunrise.",
   "coverPrompt": "A small brave child and a tiny glowing dragon carrying a fallen star through a dark magical forest, warm golden light, ethereal atmosphere",
   "blocks": [
