@@ -332,14 +332,18 @@ async function runProduction(
     // Fix dialogue timing: drama planner uses estimated durations; actual audio
     // may be longer, causing overlaps. Recalculate start_ms from real file durations.
     const adjustedStartMs = fixDialogueTiming(dialogueTracks, jobTmp);
-    const adjustedTotal = Math.max(
-      totalDurationMs,
-      ...Array.from(adjustedStartMs.values()).map((s, i) => {
-        const t = dialogueTracks[i];
-        const fp = [".wav", ".mp3"].map((e) => path.join(jobTmp, `${t?.id}${e}`)).find((p) => fs.existsSync(p)) ?? "";
-        return s + (fp ? audioDurationMs(fp) : 0);
+    // Compute true end time by pairing each adjusted start with its own file's duration
+    // (not dialogueTracks[i] which is unsorted and mismatches adjustedStartMs order).
+    const lastDialogueEnd = Math.max(
+      0,
+      ...Array.from(adjustedStartMs.entries()).map(([id, s]) => {
+        const fp = [".wav", ".mp3"].map((e) => path.join(jobTmp, `${id}${e}`)).find((p) => fs.existsSync(p)) ?? "";
+        return s + (fp ? audioDurationMs(fp) : 2000);
       }),
     );
+    // Add 2 s grace buffer so the last line isn't clipped, then cap at planned duration
+    // if that's longer (e.g. when the drama planner intentionally left trailing ambience).
+    const adjustedTotal = Math.max(totalDurationMs, lastDialogueEnd + 2000);
 
     // Stamp actual start/end times onto each dialogue track so DramaPlayer
     // can display accurate subtitles and timeline positions.
@@ -400,8 +404,8 @@ async function runProduction(
         audioUrl = supabase.storage.from("audio").getPublicUrl(storageKey).data.publicUrl;
       } else {
         console.warn(`[${ts()}][Storage] Audio upload failed:`, uploadErr.message);
-        // Copy to public/output as fallback
-        const OUT_DIR_FALLBACK = path.join(process.cwd(), "public", "output");
+        // Copy to tmp as fallback
+        const OUT_DIR_FALLBACK = path.join(os.tmpdir(), "nightstory-output");
         fs.mkdirSync(OUT_DIR_FALLBACK, { recursive: true });
         const fallbackName = `drama_${storyId}.${audioExt}`;
         fs.copyFileSync(localAudioPath, path.join(OUT_DIR_FALLBACK, fallbackName));
