@@ -108,9 +108,14 @@ function AvatarGallerySheet({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
             <h2 className="text-white font-bold text-sm">Choose Avatar</h2>
-            <p className="text-white/30 text-[11px] mt-0.5">
-              {Object.keys(systemAvatarUrls).length} of {SYSTEM_AVATARS.length} ready
-            </p>
+            {Object.keys(systemAvatarUrls).length === SYSTEM_AVATARS.length ? (
+              <p className="text-white/30 text-[11px] mt-0.5">{SYSTEM_AVATARS.length} avatars ready</p>
+            ) : (
+              <p className="text-[11px] mt-0.5 flex items-center gap-1.5" style={{ color: "rgba(79,195,247,0.6)" }}>
+                <span className="w-2 h-2 rounded-full inline-block animate-pulse" style={{ background: "#4fc3f7" }} />
+                Generating… {Object.keys(systemAvatarUrls).length} of {SYSTEM_AVATARS.length}
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -859,9 +864,28 @@ export default function VoicesPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Seed system avatars (48 gallery characters)
+  // Seed system avatars (48 gallery characters) — parallel batches of 6
   useEffect(() => {
     let cancelled = false;
+    async function seedOneAvatar(id: string, prompt: string) {
+      if (cancelled || !prompt) return;
+      try {
+        const seed = Math.floor(Math.random() * 999999);
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 1500))}?model=flux&width=384&height=384&seed=${seed}`;
+        const imgRes = await fetch(url);
+        if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) return;
+        if (cancelled) return;
+        const blob = await imgRes.blob();
+        const cacheRes = await fetch(`/api/admin/seed-system-avatars?avatarId=${id}`, {
+          method: "POST", body: blob, headers: { "Content-Type": blob.type },
+        });
+        if (cacheRes.ok) {
+          const { url: cachedUrl } = await cacheRes.json() as { url: string };
+          if (cachedUrl && !cancelled) setSystemAvatarUrls((prev) => ({ ...prev, [id]: cachedUrl }));
+        }
+      } catch { /* ignore individual failures */ }
+    }
+
     async function seedSystemAvatars() {
       try {
         const res = await fetch("/api/admin/seed-system-avatars");
@@ -872,21 +896,11 @@ export default function VoicesPage() {
         };
         if (existingUrls) setSystemAvatarUrls((prev) => ({ ...prev, ...existingUrls }));
         if (!missing?.length) return;
-        for (const { id, prompt } of missing) {
-          if (cancelled || !prompt) continue;
-          try {
-            const seed = Math.floor(Math.random() * 999999);
-            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.slice(0, 1500))}?model=flux&width=384&height=384&seed=${seed}`;
-            const imgRes = await fetch(url);
-            if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
-            if (cancelled) return;
-            const blob = await imgRes.blob();
-            const cacheRes = await fetch(`/api/admin/seed-system-avatars?avatarId=${id}`, { method: "POST", body: blob, headers: { "Content-Type": blob.type } });
-            if (cacheRes.ok) {
-              const { url: cachedUrl } = await cacheRes.json() as { url: string };
-              if (cachedUrl) setSystemAvatarUrls((prev) => ({ ...prev, [id]: cachedUrl }));
-            }
-          } catch { /* ignore individual failures */ }
+        // Run 6 concurrent downloads at a time (~6× faster than sequential)
+        const BATCH = 6;
+        for (let i = 0; i < missing.length; i += BATCH) {
+          if (cancelled) return;
+          await Promise.all(missing.slice(i, i + BATCH).map((a) => seedOneAvatar(a.id, a.prompt)));
         }
       } catch { /* ignore */ }
     }
