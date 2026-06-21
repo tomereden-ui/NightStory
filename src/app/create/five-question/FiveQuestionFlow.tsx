@@ -946,9 +946,18 @@ export function FiveQuestionFlow({ onComplete }: { onComplete?: (data: FiveQuest
         body: JSON.stringify({ prompt, summary: storySummary }),
       });
       const data = await res.json();
-      if (res.ok && data.imageData) {
-        const url = `data:${data.mimeType ?? "image/jpeg"};base64,${data.imageData}`;
-        setCoverUrl(url);
+      if (res.ok && data.fullPrompt) {
+        const encodedPrompt = encodeURIComponent(data.fullPrompt);
+        const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true`);
+        if (imgRes.ok) {
+          const blob = await imgRes.blob();
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          setCoverUrl(dataUrl);
+        }
       } else {
         console.error("[fetchCover] API error:", data);
       }

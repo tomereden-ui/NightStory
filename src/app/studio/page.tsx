@@ -896,10 +896,19 @@ export default function StudioPage() {
             body: JSON.stringify({ characterName: name, summary }),
           });
           if (res.ok) {
-            const { imageData, mimeType } = await res.json() as { imageData: string; mimeType: string };
-            if (imageData && !cancelled) {
-              const dataUrl = `data:${mimeType};base64,${imageData}`;
-              setCharacterAvatars((prev) => ({ ...prev, [name]: dataUrl }));
+            const { prompt: avatarPrompt } = await res.json() as { prompt: string };
+            if (avatarPrompt && !cancelled) {
+              const encodedPrompt = encodeURIComponent(avatarPrompt);
+              const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true`);
+              if (imgRes.ok && !cancelled) {
+                const blob = await imgRes.blob();
+                const dataUrl = await new Promise<string>((resolve) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result as string);
+                  reader.readAsDataURL(blob);
+                });
+                setCharacterAvatars((prev) => ({ ...prev, [name]: dataUrl }));
+              }
             }
           }
         } catch {
@@ -1032,10 +1041,20 @@ export default function StudioPage() {
     if (!prompt) return;
     setIsFetchingCover(true);
     try {
-      const res  = await fetch("/api/generate-cover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, summary: storySummary }) });
+      const res = await fetch("/api/generate-cover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, summary: storySummary }) });
       const data = await res.json();
-      if (res.ok && data.imageData) {
-        setCoverUrl(`data:${data.mimeType ?? "image/jpeg"};base64,${data.imageData}`);
+      if (res.ok && data.fullPrompt) {
+        const encodedPrompt = encodeURIComponent(data.fullPrompt);
+        const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true`);
+        if (imgRes.ok) {
+          const blob = await imgRes.blob();
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          setCoverUrl(dataUrl);
+        }
       }
     } finally {
       setIsFetchingCover(false);

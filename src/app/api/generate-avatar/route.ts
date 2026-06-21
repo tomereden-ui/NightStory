@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchPollinationsImage } from "@/lib/services/pollinationsClient";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
 
 export async function POST(req: NextRequest) {
@@ -44,19 +43,11 @@ Do NOT describe backgrounds, other characters, or scenery. Write ONLY the portra
     console.warn("[AvatarGen] Gemini enhancement failed, using fallback");
   }
 
-  // Step 2: Pollinations renders the portrait in the NightStory visual style
+  // Return the full prompt; the browser will fetch Pollinations directly (avoids shared server-IP rate limiting)
   const fullPrompt = `${portraitDesc}
 
 Soft children's book illustration, circular avatar portrait, glowing blue-teal-indigo night palette, gentle bioluminescent rim light, dreamy and magical, smooth flat gradients, face centered and large, painted portrait style — no text, no letters, no background clutter.`;
 
-  const result = await fetchPollinationsImage(fullPrompt, "AvatarGen", { width: 256, height: 256 });
-  if (result) {
-    console.log("[AvatarGen] Generated avatar for:", characterName);
-    return NextResponse.json({
-      imageData: result.buf.toString("base64"),
-      mimeType: result.mimeType,
-    });
-  }
-
-  return NextResponse.json({ error: "Generation failed" }, { status: 502 });
+  console.log("[AvatarGen] Returning prompt for:", characterName);
+  return NextResponse.json({ prompt: fullPrompt });
 }

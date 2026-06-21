@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchPollinationsImage } from "@/lib/services/pollinationsClient";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
 
 export async function POST(req: NextRequest) {
@@ -19,7 +18,7 @@ export async function POST(req: NextRequest) {
     summary ? `Full story: ${summary}` : "",
   ].filter(Boolean).join("\n");
 
-  // ── Step 1: Gemini text → vivid character-first scene description ──────────
+  // Gemini text → vivid character-first scene description
   let scenePrompt = prompt;
   try {
     const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
@@ -45,30 +44,16 @@ Write ONLY the image prompt. No labels, no quotes.`,
       generationConfig: { temperature: 0.7, maxOutputTokens: 200, thinkingConfig: { thinkingBudget: 0 } },
     });
     const enhanced = geminiText(data);
-    if (enhanced && enhanced.length > 20) {
-      scenePrompt = enhanced;
-      console.log("[CoverGen] Enhanced scene prompt:", scenePrompt);
-    }
+    if (enhanced && enhanced.length > 20) scenePrompt = enhanced;
   } catch {
-    console.warn("[CoverGen] Enhancement failed, using raw prompt");
+    console.warn("[CoverGen] Gemini enhancement failed, using raw prompt");
   }
 
-  // ── Step 2: natural language prompt — character description first ────────────
+  // Build the full Pollinations prompt (including style suffix) and return it.
+  // The browser fetches Pollinations directly to avoid server-IP rate limiting.
   const fullPrompt = `${scenePrompt}
 
 Illustrated as a glowing monochromatic blue-and-teal cosmic night scene for a children's bedtime book cover. The characters/subject described above are large and centered, rendered as a soft silhouette or gently lit shape glowing from within against a deep navy-black night sky. Scattered stars and a faint nebula-like glow surround the subject. Square composition, dreamy bioluminescent lighting, smooth gradients, minimal flat illustration style — no warm or amber tones, only cool blues, teals, and indigo. No text, no letters, no numbers anywhere in the image.`;
 
-  console.log("[CoverGen] Final image prompt:", fullPrompt.slice(0, 300));
-
-  // ── Pollinations.ai — free, no key, retried with backoff (flaky under load) ──
-  const result = await fetchPollinationsImage(fullPrompt, "CoverGen", { width: 768, height: 768 });
-  if (result) {
-    console.log("[CoverGen] Generated with Pollinations.ai");
-    return NextResponse.json({
-      imageData: result.buf.toString("base64"),
-      mimeType: result.mimeType,
-    });
-  }
-
-  return NextResponse.json({ error: "No image in response from any model" }, { status: 502 });
+  return NextResponse.json({ fullPrompt });
 }
