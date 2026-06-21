@@ -1,5 +1,5 @@
 import fs from "fs";
-import { trackELTts } from "@/lib/usageTracker";
+import { trackELTts, trackGeminiTts } from "@/lib/usageTracker";
 
 const ts = () => new Date().toTimeString().slice(0, 8);
 
@@ -199,6 +199,7 @@ async function synthesizeGemini(
       else if (isWavMagic) fs.writeFileSync(outputPath, rawBuf);
       else fs.writeFileSync(outputPath.replace(/\.wav$/i, ".bin"), rawBuf);
     }
+    trackGeminiTts(text.length).catch(() => {});
     return { mimeType: mime };
   }
   throw new Error(lastError || "Gemini TTS failed");

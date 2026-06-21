@@ -149,15 +149,16 @@ function SettingRow({
 
 // ─── API usage row ────────────────────────────────────────────────────────────
 
-const D_SPARKLE = "M8 1.5l1.2 3.7 3.9.6-2.8 2.7.7 3.9L8 10.6l-3 1.8.7-3.9L3 5.8l3.9-.6z";
+const D_SPARKLE  = "M8 1.5l1.2 3.7 3.9.6-2.8 2.7.7 3.9L8 10.6l-3 1.8.7-3.9L3 5.8l3.9-.6z";
 const D_WAVEFORM = "M1 8h1.5M3.5 5v6M6 3v10M8.5 5.5v5M11 4v8M13.5 6v4M15 8h0.5";
-const D_MUSIC  = "M9 13V4l5-1.5v9.5M4 14a2 2 0 100-4 2 2 0 000 4zM14 12.5a2 2 0 100-4 2 2 0 000 4z";
+const D_MUSIC    = "M9 13V4l5-1.5v9.5M4 14a2 2 0 100-4 2 2 0 000 4zM14 12.5a2 2 0 100-4 2 2 0 000 4z";
+const D_MIC      = "M8 1a3 3 0 013 3v4a3 3 0 01-6 0V4a3 3 0 013-3zM3 7a5 5 0 0010 0M8 14v1M5 15h6";
 
 function UsageRow({
-  iconD, accent, label, sub, value, unit,
+  iconD, accent, label, sub, value, unit, cost,
 }: {
   iconD: string; accent: string; label: string; sub: string;
-  value: string; unit: string;
+  value: string; unit: string; cost?: string;
 }) {
   return (
     <div
@@ -177,9 +178,26 @@ function UsageRow({
       <div className="text-right flex-shrink-0">
         <p className="text-sm font-bold" style={{ color: accent }}>{value}</p>
         <p className="text-[9px] text-white/25 mt-0.5">{unit}</p>
+        {cost && <p className="text-[9px] mt-0.5 font-semibold" style={{ color: `${accent}99` }}>~{cost}</p>}
       </div>
     </div>
   );
+}
+
+// ─── Cost estimator ───────────────────────────────────────────────────────────
+
+function estimateCosts(u: UsageTotals) {
+  // Gemini 2.5 Flash: blended ~$0.15/1M tokens (input ~$0.075 + output ~$0.30, roughly half-half)
+  const geminiText = (u.gemini_tokens / 1_000_000) * 0.15;
+  // Gemini TTS: ~$0.05/1K chars (preview rate, approximate)
+  const geminiTts  = (u.gemini_tts_chars / 1_000) * 0.05;
+  // ElevenLabs TTS: ~$0.30/1K chars
+  const elTts      = (u.el_tts_chars / 1_000) * 0.30;
+  // ElevenLabs SFX: ~$0.08/1K chars
+  const elSfx      = (u.el_sfx_chars / 1_000) * 0.08;
+  const total      = geminiText + geminiTts + elTts + elSfx;
+  const fmtCost    = (n: number) => n < 0.01 ? "<$0.01" : `$${n.toFixed(2)}`;
+  return { geminiText: fmtCost(geminiText), geminiTts: fmtCost(geminiTts), elTts: fmtCost(elTts), elSfx: fmtCost(elSfx), total: fmtCost(total) };
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -287,14 +305,42 @@ export default function ProfilePage() {
         {/* ── API Usage ─────────────────────────────────────────────── */}
         <div>
           <SectionHeader label="API Usage" />
+
+          {/* Estimated total cost banner */}
+          {usage && (() => {
+            const costs = estimateCosts(usage);
+            return (
+              <div
+                className="mb-3 px-4 py-3 rounded-2xl flex items-center justify-between"
+                style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
+              >
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Estimated spend</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>Rough estimate · verify in each provider dashboard</p>
+                </div>
+                <p className="text-xl font-bold" style={{ color: "#4fc3f7" }}>{costs.total}</p>
+              </div>
+            );
+          })()}
+
           <div className="flex flex-col gap-2">
             <UsageRow
               iconD={D_SPARKLE}
               accent="#4fc3f7"
-              label="Gemini"
+              label="Gemini · Text"
               sub={usage ? `${fmt(usage.gemini_calls)} request${usage.gemini_calls !== 1 ? "s" : ""}` : "—"}
               value={usage ? fmt(usage.gemini_tokens) : "—"}
               unit="tokens"
+              cost={usage ? estimateCosts(usage).geminiText : undefined}
+            />
+            <UsageRow
+              iconD={D_MIC}
+              accent="#38bdf8"
+              label="Gemini · TTS"
+              sub={usage ? `${fmt(usage.gemini_tts_calls)} synthesis call${usage.gemini_tts_calls !== 1 ? "s" : ""}` : "—"}
+              value={usage ? fmt(usage.gemini_tts_chars) : "—"}
+              unit="chars"
+              cost={usage ? estimateCosts(usage).geminiTts : undefined}
             />
             <UsageRow
               iconD={D_WAVEFORM}
@@ -303,6 +349,7 @@ export default function ProfilePage() {
               sub={usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
               value={usage ? fmt(usage.el_tts_chars) : "—"}
               unit="chars"
+              cost={usage ? estimateCosts(usage).elTts : undefined}
             />
             <UsageRow
               iconD={D_MUSIC}
@@ -311,6 +358,7 @@ export default function ProfilePage() {
               sub={usage ? `${fmt(usage.el_sfx_calls)} generation${usage.el_sfx_calls !== 1 ? "s" : ""}` : "—"}
               value={usage ? fmt(usage.el_sfx_chars) : "—"}
               unit="prompt chars"
+              cost={usage ? estimateCosts(usage).elSfx : undefined}
             />
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { trackGemini } from "@/lib/usageTracker";
 import fs from "fs";
 import path from "path";
 
@@ -62,6 +63,8 @@ Return ONLY the raw JSON object. No markdown fences, no explanation outside the 
     const genAI  = new GoogleGenerativeAI(apiKey);
     const model  = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
     const result = await model.generateContent(`Review this script:\n\n${scriptJson}`);
+    const _t = result.response.usageMetadata?.totalTokenCount;
+    if (_t) trackGemini(_t).catch(() => {});
     const text   = result.response.text().trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
 
     let parsed: ValidateResponse;

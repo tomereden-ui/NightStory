@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import { trackGemini } from "@/lib/usageTracker";
 import type { ScriptBlock } from "@/types";
 
 export interface GenerateStoryRequest {
@@ -165,6 +166,8 @@ export async function POST(req: NextRequest) {
       console.warn("[generate-story] First Gemini attempt failed, retrying once:", err);
       result = await model.generateContent(prompt, { timeout: 120_000 });
     }
+    const _t = result.response.usageMetadata?.totalTokenCount;
+    if (_t) trackGemini(_t).catch(() => {});
     const text = result.response.text().trim();
 
     const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();

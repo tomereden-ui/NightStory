@@ -8,18 +8,21 @@ const BUCKET = "usage-stats";
 const FILE   = "totals.json";
 
 export interface UsageTotals {
-  gemini_tokens: number;
-  gemini_calls:  number;
-  el_tts_chars:  number;
-  el_tts_calls:  number;
-  el_sfx_chars:  number;
-  el_sfx_calls:  number;
+  gemini_tokens:   number;
+  gemini_calls:    number;
+  gemini_tts_chars: number;
+  gemini_tts_calls: number;
+  el_tts_chars:    number;
+  el_tts_calls:    number;
+  el_sfx_chars:    number;
+  el_sfx_calls:    number;
 }
 
 const ZERO: UsageTotals = {
-  gemini_tokens: 0, gemini_calls: 0,
-  el_tts_chars:  0, el_tts_calls: 0,
-  el_sfx_chars:  0, el_sfx_calls: 0,
+  gemini_tokens:    0, gemini_calls:     0,
+  gemini_tts_chars: 0, gemini_tts_calls: 0,
+  el_tts_chars:     0, el_tts_calls:     0,
+  el_sfx_chars:     0, el_sfx_calls:     0,
 };
 
 async function ensureUsageBucket() {
@@ -63,6 +66,14 @@ export async function trackGemini(tokens: number): Promise<void> {
   const current = await readTotals().catch(() => ({ ...ZERO }));
   current.gemini_tokens += tokens;
   current.gemini_calls  += 1;
+  await writeTotals(current).catch(() => {});
+}
+
+export async function trackGeminiTts(chars: number): Promise<void> {
+  if (!chars || chars <= 0) return;
+  const current = await readTotals().catch(() => ({ ...ZERO }));
+  current.gemini_tts_chars += chars;
+  current.gemini_tts_calls += 1;
   await writeTotals(current).catch(() => {});
 }
 

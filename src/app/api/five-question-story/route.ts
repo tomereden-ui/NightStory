@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { trackGemini } from "@/lib/usageTracker";
 import fs from "fs";
 import path from "path";
 import { inferCompanionAbility } from "@/utils/inferCompanionAbility";
@@ -99,6 +100,8 @@ export async function POST(req: NextRequest) {
     });
 
     const result = await model.generateContent(userPrompt);
+    const _t = result.response.usageMetadata?.totalTokenCount;
+    if (_t) trackGemini(_t).catch(() => {});
     const text = result.response.text().trim();
 
     const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
