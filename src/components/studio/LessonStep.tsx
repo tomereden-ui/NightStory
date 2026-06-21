@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 
-const LESSONS = [
+export const LESSONS = [
   { icon: "🦁", label: "Bravery",               desc: "Facing fears, trying scary things" },
   { icon: "🤝", label: "Friendship",             desc: "Sharing, including others, resolving conflict" },
   { icon: "💝", label: "Kindness",               desc: "Noticing when others need help" },
@@ -15,30 +15,33 @@ const LESSONS = [
   { icon: "🙏", label: "Gratitude",              desc: "Appreciating what you have" },
 ] as const;
 
-type LessonLabel = typeof LESSONS[number]["label"];
+export type LessonLabel = typeof LESSONS[number]["label"];
 
 export default function LessonStep({
   onSelect,
   onBack,
 }: {
-  onSelect: (lesson: string | null) => void;
+  onSelect: (lessons: string[]) => void;
   onBack?: () => void;
 }) {
-  const [selected, setSelected] = useState<LessonLabel | null>(null);
+  const [selected, setSelected] = useState<LessonLabel[]>([]);
   const [custom, setCustom] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleCardTap = (label: LessonLabel) => {
-    if (custom.trim()) return; // custom text takes priority — don't auto-advance
-    setSelected(label);
-    onSelect(label);
+  const toggleLabel = (label: LessonLabel) => {
+    setSelected((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+    );
   };
 
-  const handleCustomContinue = () => {
-    const val = custom.trim();
-    if (!val) return;
-    onSelect(val);
+  const buildLessons = (): string[] => {
+    const result: string[] = [...selected];
+    const customTrimmed = custom.trim();
+    if (customTrimmed) result.push(customTrimmed);
+    return result;
   };
+
+  const canConfirm = selected.length > 0 || custom.trim().length > 0;
 
   const selectedStyle = {
     background: "rgba(79,195,247,0.12)",
@@ -77,7 +80,7 @@ export default function LessonStep({
             Want today&apos;s story to teach something?
           </h2>
           <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>
-            Pick a value and it will be woven into the story naturally — not stated out loud.
+            Pick one or more values — they&apos;ll be woven in naturally, never stated out loud.
           </p>
         </div>
       </div>
@@ -85,15 +88,20 @@ export default function LessonStep({
       {/* Lesson grid */}
       <div className="grid grid-cols-2 gap-2.5">
         {LESSONS.map(({ icon, label, desc }) => {
-          const isSelected = selected === label && !custom.trim();
+          const isSelected = selected.includes(label);
           return (
             <button
               key={label}
-              onClick={() => handleCardTap(label)}
+              onClick={() => toggleLabel(label)}
               className="flex flex-col gap-1.5 px-3.5 py-3 rounded-2xl text-left transition-all active:scale-[0.97]"
               style={isSelected ? selectedStyle : defaultCardStyle}
             >
-              <span className="text-2xl leading-none">{icon}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl leading-none">{icon}</span>
+                {isSelected && (
+                  <span className="text-[10px] font-bold" style={{ color: "#4fc3f7" }}>✓</span>
+                )}
+              </div>
               <span
                 className="text-xs font-bold leading-tight"
                 style={{ color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.85)" }}
@@ -108,7 +116,7 @@ export default function LessonStep({
         })}
       </div>
 
-      {/* Custom lesson input — card-shaped */}
+      {/* Custom lesson input */}
       <div
         className="rounded-2xl px-4 py-3.5 transition-all"
         style={custom.trim()
@@ -123,27 +131,34 @@ export default function LessonStep({
           ref={inputRef}
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && custom.trim()) { e.preventDefault(); handleCustomContinue(); } }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && canConfirm) {
+              e.preventDefault();
+              onSelect(buildLessons());
+            }
+          }}
           rows={2}
-          placeholder="Or describe your own lesson…"
+          placeholder="e.g. learning to ask for help…"
           className="w-full bg-transparent outline-none resize-none text-sm leading-relaxed placeholder-white/20 text-white/80"
           style={{ caretColor: "#4fc3f7" }}
         />
-        {custom.trim() && (
-          <button
-            onClick={handleCustomContinue}
-            className="mt-2 w-full py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-            style={{ background: "linear-gradient(90deg,#4fc3f7,#8B5CF6)", color: "#fff", boxShadow: "0 4px 20px rgba(79,195,247,0.2)" }}
-          >
-            <span>✨</span>
-            <span>Write My Story</span>
-          </button>
-        )}
       </div>
 
-      {/* Skip option — equal visual weight to lesson cards */}
+      {/* Confirm button — shown when anything is selected */}
+      {canConfirm && (
+        <button
+          onClick={() => onSelect(buildLessons())}
+          className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+          style={{ background: "linear-gradient(90deg,#4fc3f7,#8B5CF6)", color: "#fff", boxShadow: "0 4px 28px rgba(79,195,247,0.25), 0 2px 8px rgba(139,92,246,0.25)" }}
+        >
+          <span>✨</span>
+          <span>Write My Story{selected.length > 1 ? ` with ${selected.length} lessons` : ""}</span>
+        </button>
+      )}
+
+      {/* Skip option */}
       <button
-        onClick={() => onSelect(null)}
+        onClick={() => onSelect([])}
         className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
         style={{
           background: "rgba(255,255,255,0.04)",

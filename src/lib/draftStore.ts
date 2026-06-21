@@ -12,6 +12,7 @@ export interface DraftState {
   characterAvatars?: Record<string, string>;
   storyTitle?: string;
   lesson?: string | null;
+  lessons?: string[];
 }
 
 export function readDraft(key = KEY): DraftState | null {

@@ -8,6 +8,7 @@ import ScriptTab from "@/components/studio/ScriptTab";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
 import LessonStep from "@/components/studio/LessonStep";
+import LessonEditor from "@/components/studio/LessonEditor";
 import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import type { ScriptBlock, Voice } from "@/types";
@@ -668,7 +669,7 @@ export default function Studio2Page() {
   const [loaded, setLoaded]                 = useState(false);
 
   // ─── Lesson state ───────────────────────────────────────────────────────────
-  const [lesson, setLesson]                 = useState<string | null>(null);
+  const [lessons, setLessons]               = useState<string[]>([]);
 
   // ─── Tab / view state ───────────────────────────────────────────────────────
   const [activeTab, setActiveTab]           = useState<StudioTab>("prompt");
@@ -725,7 +726,8 @@ export default function Studio2Page() {
       setEditingStoryId(draft.editingStoryId ?? null);
       setCharacterAvatars(draft.characterAvatars ?? {});
       setStoryTitle(draft.storyTitle ?? "");
-      setLesson(draft.lesson ?? null);
+      // Migrate: support both old string `lesson` and new array `lessons`
+      setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
       setActiveTab("script");
     } else {
       setActiveTab("prompt");
@@ -736,8 +738,8 @@ export default function Studio2Page() {
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars, storyTitle, lesson }, DRAFT_KEY);
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, storyTitle, lesson, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars, storyTitle, lessons }, DRAFT_KEY);
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, storyTitle, lessons, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -809,9 +811,9 @@ export default function Studio2Page() {
 
   // ─── Generate story ─────────────────────────────────────────────────────────
 
-  const handleGenerate = useCallback(async (selectedLesson: string | null) => {
+  const handleGenerate = useCallback(async (selectedLessons: string[]) => {
     if (!promptText.trim()) return;
-    setLesson(selectedLesson);
+    setLessons(selectedLessons);
     setGenerating(true);
     setGenerateError(null);
     setEditingStoryId(null);
@@ -823,7 +825,7 @@ export default function Studio2Page() {
       primaryVoiceId: voicePool[0]?.id ?? PRESET_VOICE_POOL[0].id,
       durationMinutes,
       childAgeGroup: MOCK_USER.preferredAgeGroup,
-      ...(selectedLesson ? { lesson: selectedLesson } : {}),
+      ...(selectedLessons.length > 0 ? { lessons: selectedLessons } : {}),
     };
 
     try {
@@ -839,7 +841,7 @@ export default function Studio2Page() {
       setCoverPrompt(cp);
       setCoverUrl("");
       setStoryTitle(title);
-      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, storyTitle: title, lesson: selectedLesson }, DRAFT_KEY);
+      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, storyTitle: title, lessons: selectedLessons }, DRAFT_KEY);
       if (cp) fetchCover(cp, sm);
       setActiveTab("script");
     } catch (err: unknown) {
@@ -1005,9 +1007,9 @@ export default function Studio2Page() {
           </div>
           <div>
             <h2 className="text-white text-xl font-bold mb-2">Crafting your story…</h2>
-            {lesson && (
+            {lessons.length > 0 && (
               <p className="text-white/50 text-sm mb-1">
-                Weaving in <span className="text-teal-300 font-medium">{lesson}</span>
+                Weaving in <span className="text-teal-300 font-medium">{lessons.join(" · ")}</span>
               </p>
             )}
             <p className="text-white/35 text-sm">Weaving magic into every word</p>
@@ -1146,7 +1148,7 @@ export default function Studio2Page() {
         {/* Lesson step — interstitial between prompt and generation */}
         {activeTab === "lesson" && (
           <LessonStep
-            onSelect={(selectedLesson) => handleGenerate(selectedLesson)}
+            onSelect={(selectedLessons) => handleGenerate(selectedLessons)}
             onBack={() => setActiveTab("prompt")}
           />
         )}
@@ -1160,8 +1162,8 @@ export default function Studio2Page() {
                 setSummary(sm);
                 setCoverPrompt(cp);
                 setCoverUrl("");
-                setLesson(null);
-                writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lesson: null }, DRAFT_KEY);
+                setLessons([]);
+                writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [] }, DRAFT_KEY);
                 if (cp) fetchCover(cp, sm);
                 setActiveTab("script");
               }}
@@ -1172,23 +1174,12 @@ export default function Studio2Page() {
         {/* Script tab */}
         {activeTab === "script" && hasScript && (
           <>
-            {/* Lesson badge — shown when a lesson was selected */}
-            {lesson && (
-              <div className="mb-4 flex items-center gap-2">
-                <span
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold"
-                  style={{
-                    background: "rgba(139,92,246,0.12)",
-                    border: "1px solid rgba(139,92,246,0.3)",
-                    color: "#C4B5FD",
-                  }}
-                >
-                  <span>✦</span>
-                  <span>{lesson}</span>
-                </span>
-                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>woven into this story</span>
-              </div>
-            )}
+            {/* Lesson editor — always visible in script tab */}
+            <LessonEditor
+              lessons={lessons}
+              onChange={(next) => setLessons(next)}
+              onRewrite={(instruction) => handleRevise(instruction)}
+            />
 
             <ScriptTab
               blocks={scriptBlocks}
