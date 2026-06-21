@@ -9,14 +9,22 @@ function isPreset(l: string): l is LessonLabel {
   return PRESET_LABELS.includes(l as LessonLabel);
 }
 
+interface LessonImpl {
+  lesson: string;
+  implemented: boolean;
+  how: string;
+}
+
 export default function LessonEditor({
   lessons,
   onChange,
   onRewrite,
+  lessonImplementations,
 }: {
   lessons: string[];
   onChange: (lessons: string[]) => void;
   onRewrite?: (instruction: string) => void;
+  lessonImplementations?: LessonImpl[];
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -86,26 +94,44 @@ export default function LessonEditor({
         </div>
 
         {hasLessons ? (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-col gap-2">
             {lessons.map((lesson) => {
               const preset = LESSONS.find((l) => l.label === lesson);
+              const impl   = lessonImplementations?.find((i) => i.lesson === lesson);
+              const statusIcon = impl
+                ? impl.implemented ? "✓" : "⚠"
+                : null;
+              const statusColor = impl
+                ? impl.implemented ? "#34d399" : "#fbbf24"
+                : "#C4B5FD";
               return (
-                <span
-                  key={lesson}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                  style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
-                >
-                  {preset && <span>{preset.icon}</span>}
-                  <span>{lesson}</span>
-                  <button
-                    onClick={() => removeLesson(lesson)}
-                    className="ml-0.5 leading-none text-xs opacity-50 hover:opacity-100 transition-opacity"
-                    style={{ color: "#C4B5FD" }}
-                    aria-label={`Remove ${lesson}`}
-                  >
-                    ×
-                  </button>
-                </span>
+                <div key={lesson}>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                      style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
+                    >
+                      {preset && <span>{preset.icon}</span>}
+                      <span>{lesson}</span>
+                      {statusIcon && (
+                        <span className="font-bold ml-0.5" style={{ color: statusColor }}>{statusIcon}</span>
+                      )}
+                    </span>
+                    <button
+                      onClick={() => removeLesson(lesson)}
+                      className="text-[10px] opacity-30 hover:opacity-70 transition-opacity leading-none"
+                      style={{ color: "#C4B5FD" }}
+                      aria-label={`Remove ${lesson}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {impl && (
+                    <p className="mt-1 text-[10px] leading-snug ml-1" style={{ color: impl.implemented ? "rgba(52,211,153,0.65)" : "rgba(251,191,36,0.65)" }}>
+                      {impl.implemented ? impl.how : "Could not be naturally integrated with this story"}
+                    </p>
+                  )}
+                </div>
               );
             })}
           </div>

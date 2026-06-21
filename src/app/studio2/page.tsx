@@ -670,6 +670,7 @@ export default function Studio2Page() {
 
   // ─── Lesson state ───────────────────────────────────────────────────────────
   const [lessons, setLessons]               = useState<string[]>([]);
+  const [lessonImplementations, setLessonImplementations] = useState<{ lesson: string; implemented: boolean; how: string }[]>([]);
 
   // ─── Tab / view state ───────────────────────────────────────────────────────
   const [activeTab, setActiveTab]           = useState<StudioTab>("prompt");
@@ -728,6 +729,7 @@ export default function Studio2Page() {
       setStoryTitle(draft.storyTitle ?? "");
       // Migrate: support both old string `lesson` and new array `lessons`
       setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
+      setLessonImplementations(draft.lessonImplementations ?? []);
       setActiveTab("script");
     } else {
       setActiveTab("prompt");
@@ -738,8 +740,8 @@ export default function Studio2Page() {
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars, storyTitle, lessons }, DRAFT_KEY);
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, storyTitle, lessons, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars, storyTitle, lessons, lessonImplementations }, DRAFT_KEY);
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, storyTitle, lessons, lessonImplementations, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -836,12 +838,14 @@ export default function Studio2Page() {
       const sm = data.summary ?? "";
       const cp = data.coverPrompt ?? "";
       const title = (data.title as string | undefined) ?? "";
+      const impls = (data.lessonImplementations ?? []) as { lesson: string; implemented: boolean; how: string }[];
       setScriptBlocks(blocks);
       setSummary(sm);
       setCoverPrompt(cp);
       setCoverUrl("");
       setStoryTitle(title);
-      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, storyTitle: title, lessons: selectedLessons }, DRAFT_KEY);
+      setLessonImplementations(impls);
+      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
       if (cp) fetchCover(cp, sm);
       setActiveTab("script");
     } catch (err: unknown) {
@@ -1163,7 +1167,8 @@ export default function Studio2Page() {
                 setCoverPrompt(cp);
                 setCoverUrl("");
                 setLessons([]);
-                writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [] }, DRAFT_KEY);
+                setLessonImplementations([]);
+                writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [] }, DRAFT_KEY);
                 if (cp) fetchCover(cp, sm);
                 setActiveTab("script");
               }}
@@ -1179,6 +1184,7 @@ export default function Studio2Page() {
               lessons={lessons}
               onChange={(next) => setLessons(next)}
               onRewrite={(instruction) => handleRevise(instruction)}
+              lessonImplementations={lessonImplementations}
             />
 
             <ScriptTab

@@ -106,6 +106,7 @@ export interface ScriptBlock {
   characterName: string;
   assignedVoiceId: string;
   textPayload: string;
+  lessonHighlight?: { lesson: string; how: string };
 }
 
 export interface GeneratedScriptState {

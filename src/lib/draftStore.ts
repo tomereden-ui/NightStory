@@ -13,6 +13,7 @@ export interface DraftState {
   storyTitle?: string;
   lesson?: string | null;
   lessons?: string[];
+  lessonImplementations?: { lesson: string; implemented: boolean; how: string }[];
 }
 
 export function readDraft(key = KEY): DraftState | null {

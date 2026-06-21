@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import type { ScriptBlock } from "@/types";
 
 export interface GenerateStoryRequest {
   mode: "wizard" | "prompt";
@@ -28,11 +29,25 @@ interface RawBlock {
   textPayload: string;
 }
 
+interface RawLessonImpl {
+  lesson: string;
+  implemented: boolean;
+  how: string;
+  blockIndices: number[];
+}
+
 interface RawResponse {
   title?: string;
   summary: string;
   coverPrompt: string;
   blocks: RawBlock[];
+  lessonImplementations?: RawLessonImpl[];
+}
+
+export interface LessonImplementation {
+  lesson: string;
+  implemented: boolean;
+  how: string;
 }
 
 // ─── Load external story guidance ────────────────────────────────────────────
@@ -91,7 +106,7 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, child
   // Merge lessons[] and legacy lesson string into one deduplicated list
   const allLessons  = Array.from(new Set([...(lessons ?? []), ...(lesson ? [lesson] : [])])).filter(Boolean);
   const lessonPart  = allLessons.length > 0
-    ? `\n\nSTORY VALUES\n------------\nEmbed the following values into the story through concrete actions the protagonist takes. Do NOT state the morals explicitly — let the character's choices show them:\n${allLessons.map((l, i) => `${i + 1}. ${l}`).join("\n")}`
+    ? `\n\nSTORY VALUES\n------------\nEmbed the following values into the story through concrete actions the protagonist takes. Do NOT state the morals explicitly — let the character's choices show them:\n${allLessons.map((l, i) => `${i + 1}. ${l}`).join("\n")}\n\nAfter the blocks array, add a "lessonImplementations" array to the JSON. One object per lesson:\n{ "lesson": "<exact lesson name>", "implemented": true|false, "how": "<one sentence describing the specific moment>", "blockIndices": [<0-based index>, ...] }\nblockIndices = the 0-based positions in the blocks array where the lesson moment occurs (1–2 blocks max per lesson). If a lesson could not be naturally integrated, set implemented: false, how: "Could not integrate naturally with this story premise.", blockIndices: [].`
     : "";
 
   return `${guidance}${lessonPart}${agePart}
@@ -163,7 +178,7 @@ export async function POST(req: NextRequest) {
 
     const heroName = body.hero ?? "";
     const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], heroName, body.primaryVoiceId);
-    const blocks = (raw.blocks ?? []).map((block, i) => ({
+    const blocks: ScriptBlock[] = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,
       characterName: block.characterName,
@@ -171,7 +186,22 @@ export async function POST(req: NextRequest) {
       textPayload: block.textPayload,
     }));
 
-    return NextResponse.json({ blocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "" });
+    // Annotate blocks with lesson highlights
+    const lessonImplementations: LessonImplementation[] = [];
+    if (raw.lessonImplementations) {
+      for (const impl of raw.lessonImplementations) {
+        lessonImplementations.push({ lesson: impl.lesson, implemented: impl.implemented, how: impl.how });
+        if (impl.implemented && Array.isArray(impl.blockIndices)) {
+          for (const idx of impl.blockIndices) {
+            if (idx >= 0 && idx < blocks.length) {
+              blocks[idx] = { ...blocks[idx], lessonHighlight: { lesson: impl.lesson, how: impl.how } };
+            }
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ blocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

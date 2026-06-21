@@ -838,6 +838,20 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
             {/* The block card */}
             <div className="mb-0.5">
+              {block.lessonHighlight && (
+                <div className="flex items-center gap-1.5 mb-0.5 px-0.5">
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold"
+                    style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.28)", color: "#C4B5FD" }}
+                  >
+                    <span>✦</span>
+                    <span>{block.lessonHighlight.lesson}</span>
+                  </span>
+                  <span className="text-[9px] truncate" style={{ color: "rgba(196,181,253,0.4)" }}>
+                    {block.lessonHighlight.how}
+                  </span>
+                </div>
+              )}
               <ScriptBlockCard
                 block={block}
                 voices={voices}
