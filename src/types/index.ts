@@ -81,6 +81,7 @@ export interface ChildProfile {
   name: string;
   avatarEmoji: string;
   ageGroup: AgeGroup;
+  age?: number;
   favoriteCategories: StoryCategory[];
 }
 

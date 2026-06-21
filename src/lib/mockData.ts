@@ -154,8 +154,8 @@ export const MOCK_USER: UserProfile = {
   subscriptionTier: "premium",
   subscriptionExpiresAt: "2025-01-01",
   childProfiles: [
-    { id: "c1", name: "Maya", avatarEmoji: "🌸", ageGroup: "4-6", favoriteCategories: ["fantasy", "animals", "bedtime"] },
-    { id: "c2", name: "Lior", avatarEmoji: "🚀", ageGroup: "6-8", favoriteCategories: ["adventure", "space"] },
+    { id: "c1", name: "Maya", avatarEmoji: "🌸", ageGroup: "4-6", age: 5, favoriteCategories: ["fantasy", "animals", "bedtime"] },
+    { id: "c2", name: "Lior", avatarEmoji: "🚀", ageGroup: "6-8", age: 7, favoriteCategories: ["adventure", "space"] },
   ],
   createdAt: "2024-01-01",
 };

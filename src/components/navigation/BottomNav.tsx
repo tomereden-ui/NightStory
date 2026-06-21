@@ -6,14 +6,58 @@ import { useViewMode } from "@/context/ViewModeContext";
 
 const BUILD_LABEL = "Jun 12 · v4";
 
+// ── Magical SVG icons ──────────────────────────────────────────────────────────
+
+function IconMagicTales() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+      <path d="M12 9l.7 2.1 2.2.3-1.6 1.5.4 2.2L12 14l-1.7 1.1.4-2.2-1.6-1.5 2.2-.3z" />
+    </svg>
+  );
+}
+
+function IconStudio() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21l9-9" />
+      <path d="M10.5 13.5l7.5-7.5a2.121 2.121 0 00-3-3L7.5 10.5" />
+      <path d="M16 3l.5 1.5L18 5l-1.5.5L16 7l-.5-1.5L14 5l1.5-.5z" />
+      <path d="M20 10l.4 1.2 1.2.4-1.2.4L20 13.2l-.4-1.2-1.2-.4 1.2-.4z" />
+      <path d="M4 6l.4 1.2 1.2.4-1.2.4L4 9.2l-.4-1.2-1.2-.4 1.2-.4z" />
+    </svg>
+  );
+}
+
+function IconVoices() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a3 3 0 013 3v7a3 3 0 01-6 0V5a3 3 0 013-3z" />
+      <path d="M19 10v2a7 7 0 01-14 0v-2" />
+      <path d="M12 19v3" />
+      <path d="M8 22h8" />
+      <path d="M18 5l1.5-1.5" />
+      <path d="M19 8.5h1.5" />
+      <path d="M18 12l1.5 1.5" />
+    </svg>
+  );
+}
+
+function IconProfile() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+      <path d="M17.5 3.5l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z" />
+    </svg>
+  );
+}
+
 const NAV = [
-  { label: "Magic Tales", icon: "📖", href: "/library" },
-  // { label: "Create",  icon: "✨", href: "/create"  },
-  // { label: "Studio",  icon: "🎬", href: "/studio"  },
-  { label: "Studio 2", icon: "🌟", href: "/studio2" },
-  { label: "Voices",  icon: "🎙️", href: "/voices"  },
-  // { label: "Test",    icon: "🧪", href: "/test"    },
-  { label: "Profile", icon: "👤", href: "/profile"  },
+  { label: "Magic Tales", Icon: IconMagicTales, href: "/library" },
+  { label: "Studio 2",    Icon: IconStudio,     href: "/studio2" },
+  { label: "Voices",      Icon: IconVoices,     href: "/voices"  },
+  { label: "Profile",     Icon: IconProfile,    href: "/profile" },
 ];
 
 export default function BottomNav() {
@@ -61,13 +105,18 @@ export default function BottomNav() {
                         style={{ background: "#4fc3f7", boxShadow: "0 0 6px rgba(79,195,247,0.7)" }}
                       />
                     )}
-                    <span className={`text-xl transition-transform ${isActive ? "scale-110" : "group-hover:scale-105"}`}
-                      style={isActive ? { filter: "drop-shadow(0 0 6px rgba(79,195,247,0.7))" } : {}}>
-                      {item.icon}
+                    <span
+                      className={`transition-transform ${isActive ? "scale-110" : "group-hover:scale-105"}`}
+                      style={{
+                        color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.35)",
+                        filter: isActive ? "drop-shadow(0 0 6px rgba(79,195,247,0.7))" : undefined,
+                      }}
+                    >
+                      <item.Icon />
                     </span>
                   </span>
                   <span
-                    className="text-[12px] font-medium tracking-wide"
+                    className="text-[10px] font-medium tracking-wide"
                     style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.28)" }}
                   >
                     {item.label}
@@ -137,13 +186,18 @@ export default function BottomNav() {
                       style={{ background: "#4fc3f7", boxShadow: "0 0 6px rgba(79,195,247,0.7)" }}
                     />
                   )}
-                  <span className={`text-xl transition-transform ${isActive ? "scale-110" : "group-hover:scale-105"}`}
-                    style={isActive ? { filter: "drop-shadow(0 0 6px rgba(79,195,247,0.7))" } : {}}>
-                    {item.icon}
+                  <span
+                    className={`transition-transform ${isActive ? "scale-110" : "group-hover:scale-105"}`}
+                    style={{
+                      color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.35)",
+                      filter: isActive ? "drop-shadow(0 0 6px rgba(79,195,247,0.7))" : undefined,
+                    }}
+                  >
+                    <item.Icon />
                   </span>
                 </span>
                 <span
-                  className="text-[12px] font-medium tracking-wide"
+                  className="text-[10px] font-medium tracking-wide"
                   style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.28)" }}
                 >
                   {item.label}

@@ -121,6 +121,11 @@ export const translations = {
     // Production
     dramaReady: "Drama Ready",
     producingDrama: "Producing Drama",
+    display: "Display",
+    addChild: "Add child",
+    age: "Age",
+    save: "Save",
+    name: "Name",
   },
 
   he: {
@@ -205,6 +210,11 @@ export const translations = {
     children: "ילדים",
     dramaReady: "הדרמה מוכנה",
     producingDrama: "מפיק דרמה",
+    display: "תצוגה",
+    addChild: "הוסף ילד",
+    age: "גיל",
+    save: "שמור",
+    name: "שם",
   },
 
   es: {
@@ -289,6 +299,11 @@ export const translations = {
     children: "Niños",
     dramaReady: "Drama Listo",
     producingDrama: "Produciendo Drama",
+    display: "Pantalla",
+    addChild: "Agregar niño",
+    age: "Edad",
+    save: "Guardar",
+    name: "Nombre",
   },
 
   fr: {
@@ -373,6 +388,11 @@ export const translations = {
     children: "Enfants",
     dramaReady: "Drame Prêt",
     producingDrama: "Production du Drame",
+    display: "Affichage",
+    addChild: "Ajouter un enfant",
+    age: "Âge",
+    save: "Enregistrer",
+    name: "Prénom",
   },
 
   de: {
@@ -457,6 +477,11 @@ export const translations = {
     children: "Kinder",
     dramaReady: "Drama Bereit",
     producingDrama: "Drama wird produziert",
+    display: "Anzeige",
+    addChild: "Kind hinzufügen",
+    age: "Alter",
+    save: "Speichern",
+    name: "Name",
   },
 
   pt: {
@@ -541,6 +566,11 @@ export const translations = {
     children: "Crianças",
     dramaReady: "Drama Pronto",
     producingDrama: "Produzindo Drama",
+    display: "Exibição",
+    addChild: "Adicionar criança",
+    age: "Idade",
+    save: "Salvar",
+    name: "Nome",
   },
 
   ar: {
@@ -625,6 +655,11 @@ export const translations = {
     children: "أطفال",
     dramaReady: "الدراما جاهزة",
     producingDrama: "إنتاج الدراما",
+    display: "العرض",
+    addChild: "إضافة طفل",
+    age: "العمر",
+    save: "حفظ",
+    name: "الاسم",
   },
 
   zh: {
@@ -709,6 +744,11 @@ export const translations = {
     children: "儿童",
     dramaReady: "故事已就绪",
     producingDrama: "正在制作",
+    display: "显示",
+    addChild: "添加孩子",
+    age: "年龄",
+    save: "保存",
+    name: "姓名",
   },
 
   ja: {
@@ -793,6 +833,11 @@ export const translations = {
     children: "子ども",
     dramaReady: "ドラマ完成",
     producingDrama: "制作中",
+    display: "表示",
+    addChild: "子供を追加",
+    age: "年齢",
+    save: "保存",
+    name: "名前",
   },
 
   it: {
@@ -877,6 +922,11 @@ export const translations = {
     children: "Bambini",
     dramaReady: "Drama Pronto",
     producingDrama: "Produzione in Corso",
+    display: "Visualizzazione",
+    addChild: "Aggiungi bambino",
+    age: "Età",
+    save: "Salva",
+    name: "Nome",
   },
 } as const;
 
