@@ -169,8 +169,8 @@ export default function ClassicDetailPage() {
       editingStoryId: undefined,
       characterAvatars: {},
       storyTitle: meta.title,
-    });
-    router.push("/studio");
+    }, "nightstory_studio2_draft_v1");
+    router.push("/studio2");
   }, [meta, blocks, router]);
 
   const toggleSummaryPlay = useCallback(async () => {

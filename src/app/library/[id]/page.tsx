@@ -130,8 +130,8 @@ export default function StoryDetailPage() {
       coverUrl: entry.coverUrl ?? "",
       editingStoryId: entry.id,
       storyTitle: entry.title,
-    });
-    router.push("/studio");
+    }, "nightstory_studio2_draft_v1");
+    router.push("/studio2");
   }, [entry, router]);
 
   if (loading) {
