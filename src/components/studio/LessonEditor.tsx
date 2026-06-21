@@ -142,6 +142,12 @@ export default function LessonEditor({
         )}
 
         {/* Rewrite shortcut — shown after lessons change or always when lessons present */}
+        {hasLessons && lessonImplementations && lessonImplementations.length === 0 && (
+          <p className="mt-2 text-[10px]" style={{ color: "rgba(139,92,246,0.45)" }}>
+            ✦ Lesson badges appear in the script after generating a story with these lessons from the Prompt tab.
+          </p>
+        )}
+
         {hasLessons && onRewrite && (
           <button
             onClick={() => onRewrite(buildRewriteInstruction(lessons))}
