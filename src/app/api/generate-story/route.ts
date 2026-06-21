@@ -106,7 +106,7 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, child
   // Merge lessons[] and legacy lesson string into one deduplicated list
   const allLessons  = Array.from(new Set([...(lessons ?? []), ...(lesson ? [lesson] : [])])).filter(Boolean);
   const lessonPart  = allLessons.length > 0
-    ? `\n\nSTORY VALUES\n------------\nEmbed the following values into the story through concrete actions the protagonist takes. Do NOT state the morals explicitly — let the character's choices show them:\n${allLessons.map((l, i) => `${i + 1}. ${l}`).join("\n")}\n\nAfter the blocks array, add a "lessonImplementations" array to the JSON. One object per lesson:\n{ "lesson": "<exact lesson name>", "implemented": true|false, "how": "<one sentence describing the specific moment>", "blockIndices": [<0-based index>, ...] }\nblockIndices = the 0-based positions in the blocks array where the lesson moment occurs (1–2 blocks max per lesson). If a lesson could not be naturally integrated, set implemented: false, how: "Could not integrate naturally with this story premise.", blockIndices: [].`
+    ? `\n\nSTORY VALUES\n------------\nEmbed the following values into the story through concrete actions the protagonist takes. Do NOT state the morals explicitly — let the character's choices show them:\n${allLessons.map((l, i) => `${i + 1}. ${l}`).join("\n")}\n\nAs specified in the script format, include the "lessonImplementations" field in your JSON response.`
     : "";
 
   return `${guidance}${lessonPart}${agePart}

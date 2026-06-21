@@ -199,7 +199,7 @@ about texture, environment, and emotional quality.
 
 SCRIPT FORMAT
 =============
-Return a JSON object with exactly four top-level fields:
+Return a JSON object with the following top-level fields:
 
   "title"       — A short, evocative story title (3–6 words). Warm and imaginative.
                   Examples: "The Moonlit Garden", "Pip and the Fallen Star", "A Secret in the Snow".
@@ -230,10 +230,23 @@ Return a JSON object with exactly four top-level fields:
                     "textPayload"   — for speech: the line starting with a performance tag
                                       for SFX: the descriptor in the format below
 
+  "lessonImplementations" — REQUIRED when a STORY VALUES section is provided in the system
+                  instructions. Omit this field entirely when no STORY VALUES are given.
+                  An array with one object per requested lesson value:
+                    "lesson"       — the exact lesson name as given in STORY VALUES
+                    "implemented"  — true if the value was woven into the story; false otherwise
+                    "how"          — one sentence describing the specific moment where it appears
+                                     (e.g. "When Luna chooses to cross the dark forest alone to
+                                     help her friend, despite being afraid"). If implemented is
+                                     false, write: "Could not integrate naturally with this story."
+                    "blockIndices" — array of 0-based indices into the blocks array identifying
+                                     the 1–2 blocks where this lesson moment occurs.
+                                     Empty array [] when implemented is false.
+
 SFX block format (exact):
   [SFX: {natural-language description} | {duration}s]
 
-Example response:
+Example response (no STORY VALUES — four fields only):
 {
   "title": "Pip and the Fallen Star",
   "summary": "Milo and his dragon Pip discover a lost star that has fallen into the Whispering Woods. Together they must carry it back to the sky before sunrise.",
@@ -242,6 +255,27 @@ Example response:
     { "characterName": "SFX",      "textPayload": "[SFX: gentle underwater bubbles rising slowly, soft and dreamlike | 5s]" },
     { "characterName": "Narrator", "textPayload": "[warmly] Deep beneath the waves, where the light turns silver..." },
     { "characterName": "SFX",      "textPayload": "[SFX: soft wind through tall grass fading slowly into silence, peaceful | 6s]" }
+  ]
+}
+
+Example response (with STORY VALUES — five fields, lessonImplementations required):
+{
+  "title": "Pip and the Fallen Star",
+  "summary": "Milo and his dragon Pip discover a lost star that has fallen into the Whispering Woods. Together they must carry it back to the sky before sunrise.",
+  "coverPrompt": "A small brave child and a tiny glowing dragon carrying a fallen star through a dark magical forest, warm golden light, ethereal atmosphere",
+  "blocks": [
+    { "characterName": "SFX",      "textPayload": "[SFX: gentle forest night sounds, crickets and a soft breeze | 5s]" },
+    { "characterName": "Narrator", "textPayload": "[warmly] Deep in the Whispering Woods, Milo felt his heart pounding..." },
+    { "characterName": "Milo",     "textPayload": "[bravely, though a little scared] I'll do it. Pip needs me." },
+    { "characterName": "SFX",      "textPayload": "[SFX: soft wind through tall grass fading slowly into silence, peaceful | 6s]" }
+  ],
+  "lessonImplementations": [
+    {
+      "lesson": "Bravery",
+      "implemented": true,
+      "how": "When Milo chooses to cross the dark part of the forest alone to reach Pip, despite trembling with fear.",
+      "blockIndices": [2]
+    }
   ]
 }
 
