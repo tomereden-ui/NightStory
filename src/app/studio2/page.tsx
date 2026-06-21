@@ -876,6 +876,26 @@ export default function Studio2Page() {
     }
   }, [scriptBlocks, isRevising]);
 
+  // ─── Rewrite with lessons (passes lessons so blocks get tagged) ─────────────
+
+  const handleLessonRewrite = useCallback(async (instruction: string) => {
+    if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return;
+    setIsRevising(true);
+    setReviseError(null);
+    try {
+      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: scriptBlocks, instruction: instruction.trim(), lessons }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Revision failed");
+      setScriptBlocks(data.blocks);
+      if (data.lessonImplementations) setLessonImplementations(data.lessonImplementations);
+      setDirectorNote("");
+    } catch (err: unknown) {
+      setReviseError(err instanceof Error ? err.message : "Revision failed");
+    } finally {
+      setIsRevising(false);
+    }
+  }, [scriptBlocks, isRevising, lessons]);
+
   // ─── Manual save ────────────────────────────────────────────────────────────
 
   const handleManualSave = useCallback(async () => {
@@ -1183,7 +1203,7 @@ export default function Studio2Page() {
             <LessonEditor
               lessons={lessons}
               onChange={(next) => setLessons(next)}
-              onRewrite={(instruction) => handleRevise(instruction)}
+              onRewrite={(instruction) => handleLessonRewrite(instruction)}
               lessonImplementations={lessonImplementations}
             />
 
