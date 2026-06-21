@@ -14,6 +14,7 @@ import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
 import { FiveQuestionFlow } from "@/app/create/five-question/FiveQuestionFlow";
+import { SCENE_CHARS } from "@/config/sceneCharacters";
 
 // ─── Script saves browser ─────────────────────────────────────────────────────
 
@@ -520,18 +521,16 @@ const STORY_SEEDS = [
   { icon: "🦊", text: "A clever fox discovers the forest hides a secret library" },
 ];
 
-// Characters for the cinematic scene header — using deterministic DiceBear URLs
-const DB = "https://api.dicebear.com/9.x";
-const SCENE_CHARS = [
-  { label: "Sparky",   url: `${DB}/pixel-art/svg?seed=TinyDragon-green-spark&backgroundColor=e8f5e9&radius=50`,    glow: "#10D9A0", size: 66, x: "1%",  y: 34 },
-  { label: "Luna",     url: `${DB}/adventurer/svg?seed=Luna-star-child&backgroundColor=b6e3f4&radius=50`,           glow: "#4fc3f7", size: 58, x: "16%", y: 8  },
-  { label: "Merlin",   url: `${DB}/adventurer-neutral/svg?seed=StarWizard-white-beard&backgroundColor=1a237e&radius=50`, glow: "#8B5CF6", size: 80, x: "32%", y: 18 },
-  { label: "Fae",      url: `${DB}/adventurer/svg?seed=FairyFae-iridescent-wings&backgroundColor=f3e5f5&radius=50`, glow: "#EC4899", size: 60, x: "55%", y: 4  },
-  { label: "Celeste",  url: `${DB}/adventurer/svg?seed=MagicUnicorn-rainbow-mane&backgroundColor=fce4ec&radius=50`, glow: "#F59E0B", size: 70, x: "70%", y: 22 },
-  { label: "Sterling", url: `${DB}/adventurer-neutral/svg?seed=BraveKnight-silver-armor&backgroundColor=e3f2fd&radius=50`, glow: "#94A3B8", size: 56, x: "87%", y: 10 },
-];
-
 function SceneHeader() {
+  const [cachedUrls, setCachedUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("/api/admin/seed-scene-characters")
+      .then((r) => r.json())
+      .then((data: { urls?: Record<string, string> }) => { if (data.urls) setCachedUrls(data.urls); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div
       className="relative w-full overflow-hidden rounded-2xl"
@@ -583,7 +582,7 @@ function SceneHeader() {
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={c.url} alt={c.label} className="w-full h-full" style={{ imageRendering: "auto" }} />
+            <img src={cachedUrls[c.label] ?? c.url} alt={c.label} className="w-full h-full" style={{ imageRendering: "auto" }} />
           </div>
           <span
             className="mt-1 text-[9px] font-semibold tracking-wide"
