@@ -6,6 +6,9 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 
+// Persists summary audio URLs across component mounts within a session
+const summaryAudioCache = new Map<string, string>();
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -39,7 +42,6 @@ export default function StoryDetailPage() {
   const [duration, setDuration] = useState(0);
 
   const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
-  const cachedAudioUrlRef = useRef<string | null>(null);
   const [summaryPlaying, setSummaryPlaying] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
@@ -63,9 +65,10 @@ export default function StoryDetailPage() {
     }
     if (!entry?.summary) return;
 
-    // Reuse cached audio from this session
-    if (cachedAudioUrlRef.current) {
-      const audio = new Audio(cachedAudioUrlRef.current);
+    // Reuse cached audio URL from this session (survives component remounts)
+    const sessionCached = entry?.id ? summaryAudioCache.get(entry.id) : undefined;
+    if (sessionCached) {
+      const audio = new Audio(sessionCached);
       audio.onended = () => setSummaryPlaying(false);
       audio.onerror = () => setSummaryPlaying(false);
       summaryAudioRef.current = audio;
@@ -82,7 +85,7 @@ export default function StoryDetailPage() {
         body: JSON.stringify({ text: entry.summary, cacheKey: `story-${entry.id}` }),
       });
       const { audioUrl } = await res.json() as { audioUrl: string };
-      cachedAudioUrlRef.current = audioUrl;
+      if (entry?.id) summaryAudioCache.set(entry.id, audioUrl);
       const audio = new Audio(audioUrl);
       audio.onended = () => setSummaryPlaying(false);
       audio.onerror = () => setSummaryPlaying(false);

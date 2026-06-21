@@ -7,6 +7,9 @@ import { useViewMode } from "@/context/ViewModeContext";
 import type { ClassicMeta } from "@/lib/classicStories";
 import type { ScriptBlock } from "@/types";
 
+// Persists summary audio URLs across component mounts within a session
+const summaryAudioCache = new Map<string, string>();
+
 function durationLabel(seconds: number): string {
   const m = Math.round(seconds / 60);
   return m <= 1 ? "1 min" : `${m} min`;
@@ -58,7 +61,6 @@ export default function ClassicDetailPage() {
   const [summaryPlaying, setSummaryPlaying] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
-  const cachedAudioUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Story audio player ────────────────────────────────────────────────────
@@ -181,9 +183,10 @@ export default function ClassicDetailPage() {
     const summary = deriveClassicSummary(blocks);
     if (!summary) return;
 
-    // Reuse cached audio from this session
-    if (cachedAudioUrlRef.current) {
-      const audio = new Audio(cachedAudioUrlRef.current);
+    // Reuse cached audio URL from this session (survives component remounts)
+    const sessionCached = summaryAudioCache.get(id);
+    if (sessionCached) {
+      const audio = new Audio(sessionCached);
       audio.onended = () => setSummaryPlaying(false);
       audio.onerror = () => setSummaryPlaying(false);
       summaryAudioRef.current = audio;
@@ -200,7 +203,7 @@ export default function ClassicDetailPage() {
         body: JSON.stringify({ text: summary, cacheKey: `classic-${id}` }),
       });
       const { audioUrl } = await res.json() as { audioUrl: string };
-      cachedAudioUrlRef.current = audioUrl;
+      summaryAudioCache.set(id, audioUrl);
       const audio = new Audio(audioUrl);
       audio.onended = () => setSummaryPlaying(false);
       audio.onerror = () => setSummaryPlaying(false);
