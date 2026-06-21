@@ -18,6 +18,8 @@ export interface GenerateStoryRequest {
   durationMinutes?: number;
   // child's age group from profile (e.g. "4-6", "6-8", "8-10")
   childAgeGroup?: string;
+  // optional moral lesson to weave into the story
+  lesson?: string;
 }
 
 interface RawBlock {
@@ -80,13 +82,16 @@ function ageLanguageRules(ageGroup: string): string {
   );
 }
 
-function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
   const agePart     = childAgeGroup ? `\n\n${ageLanguageRules(childAgeGroup)}` : "";
+  const lessonPart  = lesson
+    ? `\n\nSTORY VALUE\n-----------\nEmbed the value of "${lesson}" into the story through a concrete action the protagonist takes. Do NOT state the moral explicitly — let the character's choice show it.`
+    : "";
 
-  return `${guidance}${agePart}
+  return `${guidance}${lessonPart}${agePart}
 
 RUNTIME TARGETS FOR THIS STORY
 -------------------------------
@@ -129,7 +134,7 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup),
+      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson),
     });
 
     // Gemini occasionally stalls or errors transiently — retry once before

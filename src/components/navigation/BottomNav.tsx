@@ -10,6 +10,7 @@ const NAV = [
   { label: "Magic Tales", icon: "✨", href: "/library" },
   // { label: "Create",  icon: "✨", href: "/create"  },
   { label: "Studio",  icon: "🎬", href: "/studio"  },
+  { label: "Studio 2", icon: "🌟", href: "/studio2" },
   { label: "Voices",  icon: "🎙️", href: "/voices"  },
   // { label: "Test",    icon: "🧪", href: "/test"    },
   { label: "Profile", icon: "👤", href: "/profile"  },

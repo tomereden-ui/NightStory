@@ -11,22 +11,23 @@ export interface DraftState {
   editingStoryId?: string;
   characterAvatars?: Record<string, string>;
   storyTitle?: string;
+  lesson?: string | null;
 }
 
-export function readDraft(): DraftState | null {
+export function readDraft(key = KEY): DraftState | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as DraftState) : null;
   } catch {
     return null;
   }
 }
 
-export function writeDraft(state: DraftState): void {
+export function writeDraft(state: DraftState, key = KEY): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(key, JSON.stringify(state));
   } catch {
     // quota exceeded — silently ignore
   }
