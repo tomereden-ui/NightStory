@@ -508,28 +508,17 @@ function CharacterCard({
 
 // ─── Prompt tab components ────────────────────────────────────────────────────
 
-function DurationSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return (
-    <div className="rounded-2xl px-4 py-3 flex flex-col gap-2"
-      style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
-          Story length
-        </span>
-        <span className="text-sm font-bold" style={{ color: "#4fc3f7" }}>{value} min</span>
-      </div>
-      <input
-        type="range" min={1} max={10} step={1} value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full cursor-pointer"
-        style={{ accentColor: "#4fc3f7" }}
-      />
-      <div className="flex justify-between text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>
-        <span>1 min</span><span>5 min</span><span>10 min</span>
-      </div>
-    </div>
-  );
-}
+const DURATION_PRESETS = [
+  { value: 2, label: "Short",  desc: "~2 min",  icon: "⚡" },
+  { value: 5, label: "Medium", desc: "~5 min",  icon: "🌙" },
+  { value: 10, label: "Long",  desc: "~10 min", icon: "✨" },
+];
+
+const STORY_SEEDS = [
+  { icon: "🐉", text: "A dragon who can't breathe fire befriends a glowing firefly" },
+  { icon: "🧙", text: "A forgetful wizard must solve a mystery using only kindness" },
+  { icon: "🦊", text: "A clever fox discovers the forest hides a secret library" },
+];
 
 function PromptTabContent({
   promptText, setPromptText,
@@ -541,46 +530,161 @@ function PromptTabContent({
   generating: boolean; onGenerate: () => void;
 }) {
   const canGenerate = promptText.trim().length > 0;
+  const wordCount = promptText.trim().split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <label className="block text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">
-          Describe your story
-        </label>
-        <textarea
-          placeholder="A sleepy dragon who can't breathe fire befriends a firefly…"
-          value={promptText}
-          onChange={(e) => setPromptText(e.target.value)}
-          rows={8}
-          className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none resize-none leading-relaxed"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
-          onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
-        />
-        <p className="text-white/15 text-[10px] mt-1 text-right">
-          {promptText.trim().split(/\s+/).filter(Boolean).length} words
+    <div className="flex flex-col gap-5">
+
+      {/* ── Hero header ─────────────────────────────────────────────────── */}
+      <div
+        className="relative rounded-2xl px-5 py-5 overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, rgba(10,18,50,0.95) 0%, rgba(20,8,45,0.95) 100%)",
+          border: "1px solid rgba(139,92,246,0.2)",
+        }}
+      >
+        {/* Background glow orbs */}
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(79,195,247,0.12) 0%, transparent 70%)", transform: "translate(30%,-30%)" }} />
+        <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)", transform: "translate(-30%,30%)" }} />
+
+        {/* Floating icons row */}
+        <div className="flex items-center gap-3 mb-3">
+          {["🌙","📖","✨","🎭","⭐"].map((em, i) => (
+            <span key={i} className="text-lg select-none" style={{ opacity: 0.6 + i * 0.08, filter: "drop-shadow(0 0 6px rgba(139,92,246,0.5))" }}>{em}</span>
+          ))}
+        </div>
+
+        <h2 className="text-lg font-bold mb-0.5 leading-tight"
+          style={{ background: "linear-gradient(90deg,#fff 0%,#4fc3f7 50%,#a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}
+        >
+          What happens tonight?
+        </h2>
+        <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+          Describe your idea — the magic does the rest
         </p>
       </div>
 
-      <DurationSlider value={durationMinutes} onChange={setDurationMinutes} />
+      {/* ── Story prompt textarea ──────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+            Your story idea
+          </label>
+          {wordCount > 0 && (
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>{wordCount} words</span>
+          )}
+        </div>
+        <div className="relative">
+          <textarea
+            placeholder={"A sleepy dragon who can't breathe fire befriends a firefly…"}
+            value={promptText}
+            onChange={(e) => setPromptText(e.target.value)}
+            rows={5}
+            className="w-full rounded-2xl px-4 py-3.5 text-sm text-white placeholder-white/20 outline-none resize-none leading-relaxed"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              transition: "border-color 0.2s",
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
+            onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+          />
+          {/* Glow when has content */}
+          {canGenerate && (
+            <div className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{ boxShadow: "0 0 0 1px rgba(79,195,247,0.15), 0 4px 20px rgba(79,195,247,0.06)" }} />
+          )}
+        </div>
+      </div>
 
+      {/* ── Quick-seed example pills ───────────────────────────────────── */}
+      {!promptText && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+            Or try an idea
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {STORY_SEEDS.map((seed) => (
+              <button
+                key={seed.text}
+                onClick={() => setPromptText(seed.text)}
+                className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                }}
+              >
+                <span className="text-base flex-shrink-0">{seed.icon}</span>
+                <span className="text-xs leading-snug" style={{ color: "rgba(255,255,255,0.5)" }}>{seed.text}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Duration selector ─────────────────────────────────────────── */}
+      <div
+        className="rounded-2xl px-4 py-3.5"
+        style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+            Story length
+          </span>
+          <span className="text-sm font-bold tabular-nums" style={{ color: "#4fc3f7" }}>
+            {durationMinutes} min
+          </span>
+        </div>
+        <div className="flex gap-2">
+          {DURATION_PRESETS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setDurationMinutes(p.value)}
+              className="flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all active:scale-95"
+              style={durationMinutes === p.value
+                ? { background: "rgba(79,195,247,0.16)", border: "1.5px solid rgba(79,195,247,0.45)", boxShadow: "0 0 10px rgba(79,195,247,0.15)" }
+                : { background: "rgba(255,255,255,0.04)", border: "1.5px solid rgba(255,255,255,0.08)" }
+              }
+            >
+              <span className="text-base mb-0.5">{p.icon}</span>
+              <span className="text-[10px] font-bold" style={{ color: durationMinutes === p.value ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>{p.label}</span>
+              <span className="text-[9px]" style={{ color: durationMinutes === p.value ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>{p.desc}</span>
+            </button>
+          ))}
+        </div>
+        {/* Fine-tune slider for values outside presets */}
+        <input
+          type="range" min={1} max={10} step={1} value={durationMinutes}
+          onChange={(e) => setDurationMinutes(Number(e.target.value))}
+          className="w-full cursor-pointer mt-3"
+          style={{ accentColor: "#4fc3f7" }}
+        />
+      </div>
+
+      {/* ── Generate button ────────────────────────────────────────────── */}
       <button
         onClick={onGenerate}
         disabled={!canGenerate || generating}
-        className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
+        className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
         style={
           canGenerate && !generating
-            ? { background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }
+            ? { background: "linear-gradient(90deg,#4fc3f7,#8B5CF6)", color: "#fff", boxShadow: "0 4px 28px rgba(79,195,247,0.3), 0 2px 8px rgba(139,92,246,0.3)" }
             : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }
         }
       >
-        {generating
-          ? <span className="flex items-center justify-center gap-2"><span className="animate-pulse">✨</span>Generating…</span>
-          : "✨ Generate Story"}
+        {generating ? (
+          <>
+            <span className="animate-spin text-base">✦</span>
+            <span>Weaving your story…</span>
+          </>
+        ) : (
+          <>
+            <span>✨</span>
+            <span>Write My Story</span>
+          </>
+        )}
       </button>
     </div>
   );
@@ -876,13 +980,14 @@ export default function StudioPage() {
 
   // ─── Produce audio ────────────────────────────────────────────────────────
 
-  const handleProduce = useCallback(async (blocks: ScriptBlock[], duration: number) => {
+  const handleProduce = useCallback(async (blocks: ScriptBlock[], duration: number, force = false) => {
     setIsProducing(true);
     setProduceError(null);
     setActiveTab("producing");
     try {
       const body: Record<string, unknown> = { blocks, durationMinutes: duration };
       if (editingStoryId) body.editingStoryId = editingStoryId;
+      if (force) body.force = true;
       if (summary) body.summary = summary;
       if (coverPrompt) body.coverPrompt = coverPrompt;
       const coverMatch = coverUrl.match(/^data:([^;]+);base64,(.+)$/);

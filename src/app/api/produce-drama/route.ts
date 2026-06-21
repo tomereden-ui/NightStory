@@ -175,6 +175,7 @@ async function runProduction(
   durationMinutes: number,
   coverPrompt?: string,
   existingCover?: { data: string; mimeType: string },
+  force?: boolean,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -191,6 +192,29 @@ async function runProduction(
     const { profileCharacters } = await import("@/lib/services/characterProfiler");
     const { supabase, ensureBuckets } = await import("@/lib/supabase");
     await ensureBuckets();
+
+    // ── Guard: return cached audio if this story is already produced ────────
+    // storyId === jobId only for brand-new stories (no editingStoryId); for
+    // edits the IDs differ — so this check only fires for existing library stories.
+    if (!force && storyId !== jobId) {
+      const { data: cached } = await supabase
+        .from("stories")
+        .select("audio_url, cover_url")
+        .eq("id", storyId)
+        .maybeSingle();
+      if (cached?.audio_url) {
+        console.log(`[${ts()}][produce-drama] Story ${storyId} already produced — returning cached audio`);
+        updateJob(jobId, {
+          status: "done",
+          step: "✅ Loaded from library",
+          progress: 100,
+          audioUrl: cached.audio_url,
+          coverUrl: cached.cover_url ?? undefined,
+          skippedLines: [],
+        });
+        return;
+      }
+    }
 
     // ── Step 1: Drama planning + voice profiling (parallel) ───────────────
     updateJob(jobId, {
@@ -500,6 +524,7 @@ export async function POST(req: NextRequest) {
       coverPrompt?: string;
       coverImageData?: string;
       coverImageMimeType?: string;
+      force?: boolean;
     };
     try {
       body = await req.json();
@@ -531,7 +556,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {
