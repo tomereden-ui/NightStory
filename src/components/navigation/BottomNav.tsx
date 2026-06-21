@@ -7,7 +7,7 @@ import { useViewMode } from "@/context/ViewModeContext";
 const BUILD_LABEL = "Jun 12 · v4";
 
 const NAV = [
-  { label: "Magic Tales", icon: "✨", href: "/library" },
+  { label: "Magic Tales", icon: "📖", href: "/library" },
   // { label: "Create",  icon: "✨", href: "/create"  },
   { label: "Studio",  icon: "🎬", href: "/studio"  },
   { label: "Studio 2", icon: "🌟", href: "/studio2" },
@@ -67,7 +67,7 @@ export default function BottomNav() {
                     </span>
                   </span>
                   <span
-                    className="text-[10px] font-medium tracking-wide"
+                    className="text-[12px] font-medium tracking-wide"
                     style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.28)" }}
                   >
                     {item.label}
@@ -143,7 +143,7 @@ export default function BottomNav() {
                   </span>
                 </span>
                 <span
-                  className="text-[10px] font-medium tracking-wide"
+                  className="text-[12px] font-medium tracking-wide"
                   style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.28)" }}
                 >
                   {item.label}
