@@ -191,6 +191,8 @@ async function runProduction(
     const { generateCoverImage } = await import("@/lib/services/imageService");
     const { profileCharacters } = await import("@/lib/services/characterProfiler");
     const { supabase, ensureBuckets } = await import("@/lib/supabase");
+    const { getElementsForStory, uploadElementAudio, saveStoryElements,
+            hashDialogue, hashSfx, downloadToFile } = await import("@/lib/elementStore");
     await ensureBuckets();
 
     // ── Guard: return cached audio if this story is already produced ────────
@@ -254,9 +256,21 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
+    // ── Element audio cache ─────────────────────────────────────────────────
+    // Load cached per-element audio for this story. On the first produce this
+    // will be empty; on re-produces only changed lines are regenerated.
+    const elementCache = await getElementsForStory(storyId);
+    type PendingUpload = { hash: string; localPath: string; type: "dialogue" | "sfx"; char?: string; text: string };
+    const pendingUploads: PendingUpload[] = [];
+    const newElements: Parameters<typeof saveStoryElements>[0] = [];
+    let cacheDialogueHits = 0;
+    let cacheSfxHits = 0;
+    console.log(`[${ts()}][ElementStore] Loaded ${elementCache.size} cached elements for story ${storyId}`);
+
     // Gemini TTS quota is tight — process dialogue one at a time
     for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart++) {
       const batch = [dialogueTracks[batchStart]];
+      let batchFromCache = false;
 
       await Promise.all(
         batch.map(async (track) => {
@@ -278,9 +292,37 @@ async function runProduction(
           if (!line) {
             writeSilence(500, path.join(jobTmp, `${track.id}.wav`));
           } else {
+            // ── Cache lookup ───────────────────────────────────────────────
+            const voiceKey = `${useELForChar ? "el" : "gm"}:${voice}`;
+            const contentHash = hashDialogue(charName, line, voiceKey);
+            const cached = elementCache.get(contentHash);
+
+            if (cached) {
+              const cachedLocalPath = path.join(jobTmp, `${track.id}.mp3`);
+              const ok = await downloadToFile(cached.audioUrl, cachedLocalPath);
+              if (ok) {
+                cacheDialogueHits++;
+                batchFromCache = true;
+                console.log(`[${ts()}][Cache HIT] ${charName}: "${line.slice(0, 50)}"`);
+                dialogueDone++;
+                updateJob(jobId, {
+                  step: `🎙️ Recording dialogue (${dialogueDone}/${dialogueTracks.length})…`,
+                  progress: 20 + Math.round((dialogueDone / dialogueTracks.length) * 35),
+                });
+                return; // skip TTS — audio already in temp dir
+              }
+            }
+
+            // ── Cache miss: synthesise and queue for upload ────────────────
             const persona = profile?.persona;
             try {
               await synthesizeLine(line, voice, ttsKey, outPath, persona, useELForChar, profile?.stability, profile?.style, scriptLanguage);
+              const resolvedPath = [`${track.id}.mp3`, `${track.id}.wav`]
+                .map((n) => path.join(jobTmp, n))
+                .find((p) => fs.existsSync(p));
+              if (resolvedPath) {
+                pendingUploads.push({ hash: contentHash, localPath: resolvedPath, type: "dialogue", char: charName, text: line });
+              }
             } catch (err) {
               console.warn(`[${ts()}][TTS] Skipping ${track.id} (${charName}): "${line.slice(0, 80)}${line.length > 80 ? "…" : ""}"`, err instanceof Error ? err.message : err);
               skippedLines.push(track.id);
@@ -294,8 +336,8 @@ async function runProduction(
           });
         }),
       );
-      // Small pause between requests to stay within Gemini TTS quota
-      if (batchStart < dialogueTracks.length - 1) await sleep(500);
+      // Skip Gemini quota delay for cache hits (no API call was made)
+      if (batchStart < dialogueTracks.length - 1 && !batchFromCache) await sleep(500);
     }
 
     // ── Step 3: SFX generation ────────────────────────────────────────────
@@ -315,14 +357,31 @@ async function runProduction(
           const durationHint = track.loop
             ? Math.min(22000, totalDurationMs)
             : (track.duration_hint_ms ?? 3000);
+          const desc = track.description ?? "";
 
-          const sfxResult = await generateSfx(
-            track.description ?? "",
-            durationHint,
-            elevenKey,
-            outPath,
-          );
-          if (!sfxResult.ok) writeSilence(durationHint, outPath.replace(".mp3", ".wav"));
+          // ── SFX cache lookup ─────────────────────────────────────────────
+          const sfxHash = hashSfx(desc);
+          const cachedSfx = elementCache.get(sfxHash);
+          if (cachedSfx) {
+            const ok = await downloadToFile(cachedSfx.audioUrl, outPath);
+            if (ok) {
+              cacheSfxHits++;
+              sfxDone++;
+              updateJob(jobId, {
+                step: `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`,
+                progress: 57 + Math.round((sfxDone / sfxTracks.length) * 15),
+              });
+              return; // skip generation
+            }
+          }
+
+          // ── Cache miss: generate and queue for upload ────────────────────
+          const sfxResult = await generateSfx(desc, durationHint, elevenKey, outPath);
+          if (!sfxResult.ok) {
+            writeSilence(durationHint, outPath.replace(".mp3", ".wav"));
+          } else {
+            pendingUploads.push({ hash: sfxHash, localPath: outPath, type: "sfx", text: desc });
+          }
 
           sfxDone++;
           updateJob(jobId, {
@@ -331,6 +390,31 @@ async function runProduction(
           });
         }));
       }
+    }
+
+    // ── Step 3b: Upload newly generated elements to element-audio bucket ─────
+    // Done in parallel after all synthesis is complete so it doesn't block TTS.
+    if (pendingUploads.length > 0) {
+      await Promise.all(pendingUploads.map(async (pu) => {
+        try {
+          const audioUrl = await uploadElementAudio(storyId, pu.hash, pu.localPath);
+          const durationMs = audioDurationMs(pu.localPath);
+          newElements.push({
+            id: `el-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            storyId,
+            elementType: pu.type,
+            contentHash: pu.hash,
+            audioUrl,
+            durationMs,
+            characterName: pu.char,
+            textPayload: pu.text,
+            createdAt: Date.now(),
+          });
+        } catch (uploadErr) {
+          console.warn(`[${ts()}][ElementStore] Upload failed for ${pu.hash.slice(0, 8)}:`, uploadErr);
+        }
+      }));
+      console.log(`[${ts()}][ElementStore] Uploaded ${newElements.length}/${pendingUploads.length} new elements`);
     }
 
     // ── Step 4: Audio mixing ──────────────────────────────────────────────
@@ -485,6 +569,16 @@ async function runProduction(
       } catch (retryErr) {
         libraryError = retryErr instanceof Error ? retryErr.message : "Failed to save to library";
         console.error(`[${ts()}][produce-drama] addEntry retry failed:`, libraryError);
+      }
+    }
+
+    // ── Persist new element records to DB (non-fatal if it fails) ────────────
+    if (newElements.length > 0) {
+      try {
+        await saveStoryElements(newElements);
+        console.log(`[${ts()}][ElementStore] Saved ${newElements.length} new elements (dialogue hits: ${cacheDialogueHits}, SFX hits: ${cacheSfxHits})`);
+      } catch (elErr) {
+        console.warn(`[${ts()}][ElementStore] saveStoryElements failed:`, elErr);
       }
     }
 
