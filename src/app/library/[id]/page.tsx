@@ -161,7 +161,7 @@ export default function StoryDetailPage() {
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
       />
 
-      <div className="pb-52">
+      <div className="pb-64">
         {/* Atmospheric cover area */}
         <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
           {entry.coverUrl ? (
@@ -246,19 +246,21 @@ export default function StoryDetailPage() {
         {/* Summary card */}
         {entry.summary && (
           <div className="mx-5 mt-3 mb-1 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2.5">
               <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
               <button
                 onClick={toggleSummaryPlay}
                 disabled={summaryLoading}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
                 style={summaryPlaying
-                  ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
-                  : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
+                  ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7", boxShadow: "0 0 10px rgba(79,195,247,0.2)" }
+                  : summaryLoading
+                    ? { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }
+                    : { background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.25)", color: "rgba(79,195,247,0.8)" }
                 }
               >
-                <span>{summaryPlaying ? "⏸" : summaryLoading ? "…" : "▶"}</span>
-                <span>{summaryPlaying ? "Stop" : summaryLoading ? "Loading" : "Play"}</span>
+                <span style={{ fontSize: 11 }}>{summaryPlaying ? "⏸" : summaryLoading ? "…" : "▶"}</span>
+                <span>{summaryPlaying ? "Stop" : summaryLoading ? "Loading…" : "Play summary"}</span>
               </button>
             </div>
             {(() => {
@@ -362,9 +364,9 @@ export default function StoryDetailPage() {
       {/* Sticky player bar — constrained to app width */}
       <div
         className="fixed bottom-0 left-0 right-0 pt-6"
-        style={{ background: "linear-gradient(to top, #05080F 70%, transparent)" }}
+        style={{ background: "linear-gradient(to top, #05080F 70%, transparent)", zIndex: 40 }}
       >
-        <div className="mx-auto px-4 pb-8" style={{ maxWidth: stickyMaxWidth }}>
+        <div className="mx-auto px-4 pb-20" style={{ maxWidth: stickyMaxWidth }}>
           <div
             className="rounded-2xl px-4 py-3.5"
             style={{
