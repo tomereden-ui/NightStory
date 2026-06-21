@@ -520,6 +520,99 @@ const STORY_SEEDS = [
   { icon: "🦊", text: "A clever fox discovers the forest hides a secret library" },
 ];
 
+// Characters for the cinematic scene header — using deterministic DiceBear URLs
+const DB = "https://api.dicebear.com/9.x";
+const SCENE_CHARS = [
+  { label: "Sparky",   url: `${DB}/pixel-art/svg?seed=TinyDragon-green-spark&backgroundColor=e8f5e9&radius=50`,    glow: "#10D9A0", size: 66, x: "1%",  y: 34 },
+  { label: "Luna",     url: `${DB}/adventurer/svg?seed=Luna-star-child&backgroundColor=b6e3f4&radius=50`,           glow: "#4fc3f7", size: 58, x: "16%", y: 8  },
+  { label: "Merlin",   url: `${DB}/adventurer-neutral/svg?seed=StarWizard-white-beard&backgroundColor=1a237e&radius=50`, glow: "#8B5CF6", size: 80, x: "32%", y: 18 },
+  { label: "Fae",      url: `${DB}/adventurer/svg?seed=FairyFae-iridescent-wings&backgroundColor=f3e5f5&radius=50`, glow: "#EC4899", size: 60, x: "55%", y: 4  },
+  { label: "Celeste",  url: `${DB}/adventurer/svg?seed=MagicUnicorn-rainbow-mane&backgroundColor=fce4ec&radius=50`, glow: "#F59E0B", size: 70, x: "70%", y: 22 },
+  { label: "Sterling", url: `${DB}/adventurer-neutral/svg?seed=BraveKnight-silver-armor&backgroundColor=e3f2fd&radius=50`, glow: "#94A3B8", size: 56, x: "87%", y: 10 },
+];
+
+function SceneHeader() {
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded-2xl"
+      style={{ height: 196, background: "linear-gradient(160deg, #060b1e 0%, #120626 40%, #081428 100%)" }}
+    >
+      {/* Star field */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 196" fill="none" aria-hidden>
+        {[
+          [18,12],[55,28],[90,8],[130,22],[175,6],[220,18],[265,30],[310,10],[350,24],[385,14],
+          [35,55],[72,42],[108,60],[145,48],[188,62],[230,50],[272,58],[315,44],[360,56],[395,40],
+          [25,90],[60,80],[95,95],[135,85],[165,100],[200,78],[245,92],[285,82],[325,98],[370,88],
+          [42,130],[78,118],[112,135],[150,125],[195,140],[235,120],[270,138],[308,128],[345,142],[388,118],
+          [20,165],[58,155],[98,170],[140,160],[178,175],[218,158],[260,168],[300,162],[340,178],[382,152],
+        ].map(([cx, cy], i) => (
+          <circle key={i} cx={cx} cy={cy} r={i % 4 === 0 ? 1.1 : 0.7} fill={i % 5 === 0 ? "#a78bfa" : "white"} opacity={0.3 + (i % 5) * 0.1} />
+        ))}
+        {/* Large accent stars */}
+        <circle cx="48"  cy="38" r="1.8" fill="#4fc3f7" opacity="0.7" />
+        <circle cx="202" cy="15" r="1.5" fill="#a78bfa" opacity="0.8" />
+        <circle cx="330" cy="50" r="1.6" fill="#EC4899" opacity="0.6" />
+        <circle cx="370" cy="20" r="1.4" fill="#F59E0B" opacity="0.7" />
+      </svg>
+
+      {/* Atmospheric glow pools beneath characters */}
+      {SCENE_CHARS.map((c) => (
+        <div key={c.label} className="absolute rounded-full pointer-events-none"
+          style={{
+            width: c.size * 1.8,
+            height: c.size * 1.8,
+            left: c.x,
+            top: c.y + c.size * 0.3,
+            transform: "translateX(-50%)",
+            background: `radial-gradient(circle, ${c.glow}22 0%, transparent 70%)`,
+            filter: "blur(8px)",
+          }}
+        />
+      ))}
+
+      {/* Characters */}
+      {SCENE_CHARS.map((c) => (
+        <div key={c.label} className="absolute flex flex-col items-center" style={{ left: c.x, top: c.y, transform: "translateX(-50%)" }}>
+          <div
+            className="rounded-full overflow-hidden flex-shrink-0"
+            style={{
+              width: c.size,
+              height: c.size,
+              boxShadow: `0 0 0 2.5px ${c.glow}55, 0 0 16px ${c.glow}44, 0 4px 12px rgba(0,0,0,0.5)`,
+              border: `1.5px solid ${c.glow}66`,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={c.url} alt={c.label} className="w-full h-full" style={{ imageRendering: "auto" }} />
+          </div>
+          <span
+            className="mt-1 text-[9px] font-semibold tracking-wide"
+            style={{ color: `${c.glow}cc`, textShadow: `0 0 8px ${c.glow}88` }}
+          >
+            {c.label}
+          </span>
+        </div>
+      ))}
+
+      {/* Bottom gradient + headline */}
+      <div
+        className="absolute bottom-0 left-0 right-0 px-4 pt-8 pb-3"
+        style={{ background: "linear-gradient(to top, rgba(6,11,30,0.97) 0%, rgba(6,11,30,0.7) 60%, transparent 100%)" }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-0.5" style={{ color: "rgba(139,92,246,0.7)" }}>
+          Nightstory Studio
+        </p>
+        <h2
+          className="text-base font-bold leading-tight"
+          style={{ background: "linear-gradient(90deg,#fff 0%,#4fc3f7 55%,#a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}
+        >
+          What happens tonight?
+        </h2>
+      </div>
+    </div>
+  );
+}
+
 function PromptTabContent({
   promptText, setPromptText,
   durationMinutes, setDurationMinutes,
@@ -535,36 +628,8 @@ function PromptTabContent({
   return (
     <div className="flex flex-col gap-5">
 
-      {/* ── Hero header ─────────────────────────────────────────────────── */}
-      <div
-        className="relative rounded-2xl px-5 py-5 overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, rgba(10,18,50,0.95) 0%, rgba(20,8,45,0.95) 100%)",
-          border: "1px solid rgba(139,92,246,0.2)",
-        }}
-      >
-        {/* Background glow orbs */}
-        <div className="absolute top-0 right-0 w-32 h-32 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(79,195,247,0.12) 0%, transparent 70%)", transform: "translate(30%,-30%)" }} />
-        <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)", transform: "translate(-30%,30%)" }} />
-
-        {/* Floating icons row */}
-        <div className="flex items-center gap-3 mb-3">
-          {["🌙","📖","✨","🎭","⭐"].map((em, i) => (
-            <span key={i} className="text-lg select-none" style={{ opacity: 0.6 + i * 0.08, filter: "drop-shadow(0 0 6px rgba(139,92,246,0.5))" }}>{em}</span>
-          ))}
-        </div>
-
-        <h2 className="text-lg font-bold mb-0.5 leading-tight"
-          style={{ background: "linear-gradient(90deg,#fff 0%,#4fc3f7 50%,#a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}
-        >
-          What happens tonight?
-        </h2>
-        <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-          Describe your idea — the magic does the rest
-        </p>
-      </div>
+      {/* ── Cinematic character scene header ──────────────────────────── */}
+      <SceneHeader />
 
       {/* ── Story prompt textarea ──────────────────────────────────────── */}
       <div>
