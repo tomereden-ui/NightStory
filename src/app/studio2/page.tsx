@@ -372,20 +372,13 @@ function CharacterCard({
   const isNarrator = characterName === "Narrator";
   const initial = characterName.charAt(0).toUpperCase();
 
-  type ImgStage = "generated" | "voice" | "initial";
-  const firstStage: ImgStage = avatarUrl ? "generated" : voice?.avatarUrl ? "voice" : "initial";
+  type ImgStage = "generated" | "initial";
+  const firstStage: ImgStage = avatarUrl ? "generated" : "initial";
   const [imgStage, setImgStage] = useState<ImgStage>(firstStage);
 
   useEffect(() => {
     if (avatarUrl) setImgStage("generated");
   }, [avatarUrl]);
-
-  const advanceStage = () => {
-    setImgStage((s) => {
-      if (s === "generated") return voice?.avatarUrl ? "voice" : "initial";
-      return "initial";
-    });
-  };
 
   const accentColor = isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)";
 
@@ -401,11 +394,7 @@ function CharacterCard({
         >
           {imgStage === "generated" && avatarUrl && (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" onError={advanceStage} />
-          )}
-          {imgStage === "voice" && voice?.avatarUrl && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={voice.avatarUrl} alt={voice.name} className="w-full h-full object-cover" onError={advanceStage} />
+            <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" onError={() => setImgStage("initial")} />
           )}
           {imgStage === "initial" && (
             <div className="w-full h-full flex flex-col items-center justify-center gap-0.5"
@@ -699,6 +688,8 @@ export default function Studio2Page() {
   const [savesRefreshKey, setSavesRefreshKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveLabel, setSaveLabel] = useState<"idle" | "saving" | "saved">("idle");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const blocksChangeCountRef = useRef(0);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── Story title / versions sheet ───────────────────────────────────────────
@@ -714,6 +705,14 @@ export default function Studio2Page() {
   }, [savesRefreshKey]);
 
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
+
+  // Track unsaved changes — skip the first two sets (initial mount + draft load)
+  useEffect(() => {
+    if (scriptBlocks.length === 0) return;
+    blocksChangeCountRef.current += 1;
+    if (blocksChangeCountRef.current <= 1) return; // skip initial load
+    setHasUnsavedChanges(true);
+  }, [scriptBlocks]);
 
   // Load draft on mount (Studio2 uses its own localStorage key)
   useEffect(() => {
@@ -910,6 +909,7 @@ export default function Studio2Page() {
       });
       setSavesRefreshKey((k) => k + 1);
       setSaveLabel("saved");
+      setHasUnsavedChanges(false);
       setTimeout(() => setSaveLabel("idle"), 2500);
     } catch {
       setSaveLabel("idle");
@@ -1199,14 +1199,6 @@ export default function Studio2Page() {
         {/* Script tab */}
         {activeTab === "script" && hasScript && (
           <>
-            {/* Lesson editor — always visible in script tab */}
-            <LessonEditor
-              lessons={lessons}
-              onChange={(next) => setLessons(next)}
-              onRewrite={(instruction) => handleLessonRewrite(instruction)}
-              lessonImplementations={lessonImplementations}
-            />
-
             <ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
@@ -1226,12 +1218,20 @@ export default function Studio2Page() {
               studioMode
               characterAvatars={characterAvatars}
               belowCover={
-                <CharacterCards
-                  blocks={scriptBlocks}
-                  voicePool={voicePool}
-                  avatars={characterAvatars}
-                  onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
-                />
+                <>
+                  <CharacterCards
+                    blocks={scriptBlocks}
+                    voicePool={voicePool}
+                    avatars={characterAvatars}
+                    onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
+                  />
+                  <LessonEditor
+                    lessons={lessons}
+                    onChange={(next) => setLessons(next)}
+                    onRewrite={(instruction) => handleLessonRewrite(instruction)}
+                    lessonImplementations={lessonImplementations}
+                  />
+                </>
               }
             />
 
@@ -1336,8 +1336,8 @@ export default function Studio2Page() {
                 disabled={!hasPending || isRevising}
                 className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-2.5"
                 style={hasPending && !isRevising
-                  ? { background: "rgba(79,195,247,0.1)", border: "1.5px solid rgba(79,195,247,0.35)", color: "#4fc3f7", boxShadow: "0 0 16px rgba(79,195,247,0.08)" }
-                  : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
+                  ? { background: "rgba(79,195,247,0.15)", border: "1.5px solid rgba(79,195,247,0.55)", color: "#4fc3f7", boxShadow: "0 0 22px rgba(79,195,247,0.2)" }
+                  : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.18)", cursor: "not-allowed" }
                 }
               >
                 {isRevising ? (
@@ -1392,11 +1392,13 @@ export default function Studio2Page() {
             {/* Save script version */}
             <button
               onClick={handleManualSave}
-              disabled={isSaving || saveLabel === "saved"}
+              disabled={isSaving || saveLabel === "saved" || !hasUnsavedChanges}
               className="w-full mt-2.5 py-3 rounded-2xl text-sm font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               style={saveLabel === "saved"
                 ? { background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#34d399" }
-                : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }
+                : hasUnsavedChanges
+                ? { background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.35)", color: "#c4b5fd", boxShadow: "0 0 14px rgba(139,92,246,0.12)" }
+                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
               }
             >
               {saveLabel === "saving" ? (

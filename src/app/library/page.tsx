@@ -389,36 +389,6 @@ export default function LibraryPage() {
               )}
             </div>
 
-            {entries.length > 0 && (
-              <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
-                {DURATION_FILTERS.map(({ key, label, icon }) => {
-                  const active = durationFilter === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setDurationFilter(key)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium flex-shrink-0 transition-all"
-                      style={{
-                        background: active ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
-                        border: active ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                        color: active ? "#4fc3f7" : "rgba(255,255,255,0.35)",
-                      }}
-                    >
-                      <span>{icon}</span>
-                      {label}
-                    </button>
-                  );
-                })}
-                {entries.length > 0 && (
-                  <span
-                    className="flex items-center px-3 py-1.5 rounded-full text-xs flex-shrink-0"
-                    style={{ color: "rgba(255,255,255,0.2)" }}
-                  >
-                    {filtered.length} {filtered.length === 1 ? "story" : "stories"}
-                  </span>
-                )}
-              </div>
-            )}
           </>
         )}
       </div>
