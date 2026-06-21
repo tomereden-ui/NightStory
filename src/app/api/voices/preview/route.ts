@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackELTts, trackGemini, trackGeminiTts } from "@/lib/usageTracker";
 
 // ─── Sample texts ─────────────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ async function callGeminiTTS(
       throw new Error("No audio data in Gemini response");
     }
 
+    trackGeminiTts(text.length).catch(() => {});
     return { audioBase64: inlineData.data, mimeType: inlineData.mimeType };
   }
 
@@ -144,6 +146,8 @@ Return ONLY the voice name. Nothing else.`;
   }
 
   const json = await res.json();
+  const _t = json.usageMetadata?.totalTokenCount;
+  if (_t) trackGemini(_t).catch(() => {});
   const raw: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   const cleaned = raw.trim().split(/\s/)[0];
 
@@ -214,6 +218,7 @@ async function ttsEL(apiKey: string, voiceId: string, text: string): Promise<str
   }
 
   const arrayBuffer = await res.arrayBuffer();
+  trackELTts(text.length).catch(() => {});
   return Buffer.from(arrayBuffer).toString("base64");
 }
 
