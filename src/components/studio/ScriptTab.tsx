@@ -409,7 +409,8 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
   // ─── Summary narration (Web Speech API) ────────────────────────────────────
   const [summaryPlaying, setSummaryPlaying] = useState(false);
-  const [scriptExpanded, setScriptExpanded] = useState(false);
+  // Auto-expand in studioMode so lesson badges and block cards are immediately visible
+  const [scriptExpanded, setScriptExpanded] = useState(studioMode);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);

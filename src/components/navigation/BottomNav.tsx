@@ -43,7 +43,7 @@ export default function BottomNav() {
 
         <ul className="flex flex-col items-center gap-2 flex-1">
           {NAV.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
 
             return (
               <li key={item.href}>

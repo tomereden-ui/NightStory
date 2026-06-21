@@ -1075,7 +1075,7 @@ export default function Studio2Page() {
           ) : (
             <div className="w-8" />
           )}
-          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🎬 Studio</h1>
+          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🌟 Studio 2</h1>
           <button
             onClick={() => setVersionsOpen(true)}
             className="relative w-8 h-8 flex items-center justify-center rounded-xl transition-all"
