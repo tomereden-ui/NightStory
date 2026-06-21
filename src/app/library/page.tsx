@@ -6,6 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
+import { LANGUAGE_META } from "@/lib/i18n";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -549,6 +550,11 @@ export default function LibraryPage() {
                               >
                                 {durationLabel(entry.durationSeconds)}
                               </span>
+                              {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
+                                <span className="text-[11px]" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
+                                  {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
+                                </span>
+                              )}
                               <span className="text-white/20 text-[10px]">{timeAgo(entry.createdAt)}</span>
                             </div>
                           </div>

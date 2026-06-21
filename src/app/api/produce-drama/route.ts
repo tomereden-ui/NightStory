@@ -559,6 +559,7 @@ async function runProduction(
       durationSeconds: drama.duration_estimate_seconds,
       createdAt: Date.now(),
       blocks,
+      language: scriptLanguage,
     };
     try {
       await addEntry(entry);

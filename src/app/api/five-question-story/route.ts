@@ -12,6 +12,7 @@ import { PRESET_VOICES } from "@/config/presetVoices";
 export interface FiveQuestionStoryRequest {
   seeds: StorySeeds;
   durationMinutes: number;
+  language?: string;
 }
 
 interface RawBlock {
@@ -36,12 +37,15 @@ function readGuidance(): string {
   }
 }
 
-function buildSystemInstruction(guidance: string, durationMinutes: number): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, language?: string): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
+  const langPart = language && language !== "en"
+    ? `\n\nLANGUAGE\n--------\nWrite the ENTIRE story in ${language} (ISO 639-1: "${language}"). All dialogue, narration, SFX labels, and the title must be in this language.`
+    : "";
 
-  return `${guidance}
+  return `${guidance}${langPart}
 
 RUNTIME TARGETS FOR THIS STORY
 -------------------------------
@@ -89,7 +93,7 @@ export async function POST(req: NextRequest) {
 
   const clampedDuration = Math.min(15, Math.max(1, durationMinutes));
   const guidance = readGuidance();
-  const systemInstruction = buildSystemInstruction(guidance, clampedDuration);
+  const systemInstruction = buildSystemInstruction(guidance, clampedDuration, body.language);
   const userPrompt = buildUserPrompt(seeds);
 
   try {

@@ -17,6 +17,7 @@ import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
 import { FiveQuestionFlow } from "@/app/create/five-question/FiveQuestionFlow";
 import { SCENE_CHARS } from "@/config/sceneCharacters";
+import { LANGUAGE_META } from "@/lib/i18n";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
@@ -508,12 +509,13 @@ function SceneHeader() {
 function PromptTabContent({
   promptText, setPromptText,
   durationMinutes, setDurationMinutes,
-  generating, onNext,
+  generating, onNext, language,
 }: {
   promptText: string; setPromptText: (v: string) => void;
   durationMinutes: number; setDurationMinutes: (v: number) => void;
   generating: boolean;
   onNext: () => void;
+  language: string;
 }) {
   const canGenerate = promptText.trim().length > 0;
   const wordCount = promptText.trim().split(/\s+/).filter(Boolean).length;
@@ -600,6 +602,20 @@ function PromptTabContent({
         />
       </div>
 
+      {/* Language indicator */}
+      {(() => {
+        const meta = LANGUAGE_META[language as keyof typeof LANGUAGE_META];
+        if (!meta) return null;
+        return (
+          <div className="flex items-center justify-center gap-1.5 py-1.5">
+            <span className="text-base">{meta.flag}</span>
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Story will be generated in <span style={{ color: "rgba(255,255,255,0.55)" }}>{meta.label}</span>
+            </span>
+          </div>
+        );
+      })()}
+
       {/* Next → lesson step button */}
       <button
         onClick={onNext}
@@ -639,7 +655,7 @@ const TABS: { id: "prompt" | "five-question" | "script"; label: string; emoji: s
 ];
 
 export default function Studio2Page() {
-  const { isRTL } = useLanguage();
+  const { isRTL, language } = useLanguage();
   const router = useRouter();
 
   // ─── Prompt tab state ───────────────────────────────────────────────────────
@@ -826,6 +842,7 @@ export default function Studio2Page() {
       primaryVoiceId: voicePool[0]?.id ?? PRESET_VOICE_POOL[0].id,
       durationMinutes,
       childAgeGroup: MOCK_USER.preferredAgeGroup,
+      language,
       ...(selectedLessons.length > 0 ? { lessons: selectedLessons } : {}),
     };
 
@@ -1166,6 +1183,7 @@ export default function Studio2Page() {
             durationMinutes={durationMinutes} setDurationMinutes={setDurationMinutes}
             generating={generating}
             onNext={() => setActiveTab("lesson")}
+            language={language}
           />
         )}
 

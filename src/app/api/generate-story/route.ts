@@ -23,6 +23,8 @@ export interface GenerateStoryRequest {
   // optional moral lesson(s) to weave into the story
   lesson?: string;
   lessons?: string[];
+  // language for story generation (ISO 639-1 code)
+  language?: string;
 }
 
 interface RawBlock {
@@ -99,7 +101,7 @@ function ageLanguageRules(ageGroup: string): string {
   );
 }
 
-function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string, lessons?: string[]): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string, lessons?: string[], language?: string): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
@@ -110,7 +112,11 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, child
     ? `\n\nSTORY VALUES\n------------\nEmbed the following values into the story through concrete actions the protagonist takes. Do NOT state the morals explicitly — let the character's choices show them:\n${allLessons.map((l, i) => `${i + 1}. ${l}`).join("\n")}\n\nAs specified in the script format, include the "lessonImplementations" field in your JSON response.`
     : "";
 
-  return `${guidance}${lessonPart}${agePart}
+  const langPart = language && language !== "en"
+    ? `\n\nLANGUAGE\n--------\nWrite the ENTIRE story in ${language} (ISO 639-1: "${language}"). All dialogue, narration, SFX labels, and the title must be in this language.`
+    : "";
+
+  return `${guidance}${lessonPart}${agePart}${langPart}
 
 RUNTIME TARGETS FOR THIS STORY
 -------------------------------
@@ -153,7 +159,7 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons),
+      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons, body.language),
     });
 
     // Gemini occasionally stalls or errors transiently — retry once before

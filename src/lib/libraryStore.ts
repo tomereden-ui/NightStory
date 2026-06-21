@@ -10,6 +10,7 @@ export interface LibraryEntry {
   durationSeconds: number;
   createdAt: number;
   blocks: ScriptBlock[];
+  language?: string;
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -28,6 +29,7 @@ function toEntry(row: any): LibraryEntry { // eslint-disable-line
     durationSeconds: row.duration_seconds,
     createdAt: row.created_at,
     blocks: row.blocks ?? [],
+    language: row.language ?? undefined,
   };
 }
 
@@ -48,6 +50,7 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
     duration_seconds: entry.durationSeconds,
     created_at: entry.createdAt,
     blocks: entry.blocks,
+    language: entry.language ?? null,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
 }
