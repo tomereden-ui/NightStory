@@ -30,6 +30,7 @@ interface ScriptBlockCardProps {
   onDelete: (id: string) => void;
   onReviseBlock?: (id: string, instruction: string) => void;
   isRevising?: boolean;
+  characterAvatarUrl?: string;
 }
 
 // ─── SFX card ─────────────────────────────────────────────────────────────────
@@ -266,6 +267,7 @@ function SpeechCard({
   onDelete,
   onReviseBlock,
   isRevising,
+  characterAvatarUrl,
 }: ScriptBlockCardProps) {
   const { t } = useLanguage();
   const textareaRef   = useRef<HTMLTextAreaElement>(null);
@@ -296,19 +298,44 @@ function SpeechCard({
     >
     <div className="flex gap-3">
 
-      {/* Voice avatar — click to change voice */}
+      {/* Character / voice avatar — click to change voice */}
       <div className="relative flex-shrink-0 pt-0.5 group/voice">
         <button
           onClick={() => setShowPicker((p) => !p)}
-          className={`rounded-full flex items-center justify-center transition-all ${
-            showPicker ? "ring-2 ring-teal shadow-teal-sm" : "hover:ring-2 hover:ring-teal/40"
-          }`}
+          className="relative flex items-center justify-center transition-all"
           aria-label={`Voice: ${assignedVoice?.name ?? ""}. Tap to change.`}
           title="Change voice"
         >
-          <VoiceAvatar avatarUrl={assignedVoice?.avatarUrl} emoji={assignedVoice?.avatarEmoji ?? "🎙️"} size={36} borderColor="rgba(79,195,247,0.2)" />
+          {characterAvatarUrl ? (
+            /* Character portrait as primary avatar */
+            <div
+              className="w-11 h-11 rounded-full overflow-hidden relative"
+              style={{
+                border: showPicker ? "2px solid #4fc3f7" : "1.5px solid rgba(255,255,255,0.12)",
+                boxShadow: showPicker ? "0 0 10px rgba(79,195,247,0.3)" : "none",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={characterAvatarUrl} alt={block.characterName} className="w-full h-full object-cover" />
+              {/* Voice indicator — small overlay in corner */}
+              {assignedVoice?.avatarUrl && (
+                <div
+                  className="absolute bottom-0 right-0 w-4 h-4 rounded-full overflow-hidden"
+                  style={{ border: "1.5px solid rgba(5,8,20,1)", boxShadow: "0 0 4px rgba(0,0,0,0.6)" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={assignedVoice.avatarUrl} alt={assignedVoice.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Fallback: voice avatar */
+            <div className={showPicker ? "ring-2 ring-teal shadow-teal-sm rounded-full" : ""}>
+              <VoiceAvatar avatarUrl={assignedVoice?.avatarUrl} emoji={assignedVoice?.avatarEmoji ?? "🎙️"} size={36} borderColor="rgba(79,195,247,0.2)" />
+            </div>
+          )}
         </button>
-        {/* "change voice" tooltip under avatar */}
+        {/* "change voice" tooltip */}
         {!showPicker && (
           <span
             className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-[8px] font-semibold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover/voice:opacity-100 transition-opacity pointer-events-none"

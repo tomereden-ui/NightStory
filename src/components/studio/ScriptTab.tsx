@@ -25,6 +25,7 @@ interface ScriptTabProps {
   hideProduceButton?: boolean;
   studioMode?: boolean;
   belowCover?: React.ReactNode;
+  characterAvatars?: Record<string, string>;
 }
 
 function makeId() {
@@ -387,7 +388,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -676,7 +677,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               boxShadow: "0 4px 20px rgba(79,195,247,0.06)",
             }}>
             {/* Cover image */}
-            <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
+            <div className="relative w-full" style={{ aspectRatio: "16/9", background: "rgba(10,12,20,1)" }}>
               {coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={coverUrl} alt="Story cover" className="w-full h-full object-cover ken-burns" />
@@ -694,7 +695,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               {/* Dark gradient at bottom for text overlap */}
               <div
                 className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none"
-                style={{ background: "linear-gradient(to top, rgba(10,12,20,0.95), transparent)" }}
+                style={{ background: "linear-gradient(to top, rgba(10,12,20,1) 0%, rgba(10,12,20,0.6) 40%, transparent 100%)" }}
               />
               {/* Regenerate cover button */}
               {onRegenerateCover && !isFetchingCover && (
@@ -847,6 +848,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 onDelete={handleDelete}
                 onReviseBlock={handleReviseBlock}
                 isRevising={isRevising}
+                characterAvatarUrl={block.characterName !== "SFX" ? characterAvatars?.[block.characterName] : undefined}
               />
             </div>
           </div>

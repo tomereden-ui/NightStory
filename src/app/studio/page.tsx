@@ -1265,6 +1265,7 @@ export default function StudioPage() {
               hideDurationPicker
               hideProduceButton
               studioMode
+              characterAvatars={characterAvatars}
               belowCover={
                 <CharacterCards
                   blocks={scriptBlocks}
