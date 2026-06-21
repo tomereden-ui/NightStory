@@ -3,12 +3,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { writeDraft } from "@/lib/draftStore";
+import { useViewMode } from "@/context/ViewModeContext";
 import type { ClassicMeta } from "@/lib/classicStories";
 import type { ScriptBlock } from "@/types";
 
 function durationLabel(seconds: number): string {
   const m = Math.round(seconds / 60);
   return m <= 1 ? "1 min" : `${m} min`;
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function deriveClassicSummary(blocks: ScriptBlock[]): string {
@@ -36,6 +43,8 @@ function cardPalette(title: string): [string, string] {
 export default function ClassicDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { effective } = useViewMode();
+  const stickyMaxWidth = effective === "desktop" ? 896 : effective === "tablet" ? 672 : 448;
 
   const [meta, setMeta] = useState<ClassicMeta | null>(null);
   const [blocks, setBlocks] = useState<ScriptBlock[] | null>(null);
@@ -52,8 +61,20 @@ export default function ClassicDetailPage() {
   const cachedAudioUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Story audio player ────────────────────────────────────────────────────
+  const storyAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [storyAudioUrl, setStoryAudioUrl] = useState<string | null>(null);
+  const [producing, setProducing] = useState(false);
+  const [produceProgress, setProduceProgress] = useState(0);
+  const [produceStep, setProduceStep] = useState("");
+  const produceCancelRef = useRef(false);
+
   useEffect(() => {
     return () => {
+      produceCancelRef.current = true;
       if (summaryAudioRef.current) {
         summaryAudioRef.current.pause();
         summaryAudioRef.current.src = "";
@@ -61,6 +82,61 @@ export default function ClassicDetailPage() {
       }
     };
   }, []);
+
+  const handlePlayPause = useCallback(() => {
+    const audio = storyAudioRef.current;
+    if (!audio) return;
+    if (playing) audio.pause();
+    else audio.play().catch(() => {});
+  }, [playing]);
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = storyAudioRef.current;
+    if (!audio) return;
+    audio.currentTime = Number(e.target.value);
+  };
+
+  const handleProduceAudio = useCallback(async () => {
+    if (!blocks || !meta || producing) return;
+    produceCancelRef.current = false;
+    setProducing(true);
+    setProduceProgress(0);
+    setProduceStep("Starting…");
+
+    try {
+      const summary = deriveClassicSummary(blocks);
+      const durationMinutes = meta.durationSeconds ? Math.max(1, Math.round(meta.durationSeconds / 60)) : 3;
+      const res = await fetch("/api/produce-drama", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks, durationMinutes, summary }),
+      });
+      const { jobId, error } = await res.json() as { jobId?: string; error?: string };
+      if (error || !jobId) throw new Error(error ?? "Production failed");
+
+      while (!produceCancelRef.current) {
+        await new Promise((r) => setTimeout(r, 2000));
+        if (produceCancelRef.current) break;
+        const status = await fetch(`/api/drama-status/${jobId}`).then((r) => r.json()) as {
+          status: string; progress?: number; step?: string; audioUrl?: string;
+        };
+        if (produceCancelRef.current) break;
+        setProduceProgress(status.progress ?? 0);
+        setProduceStep(status.step ?? "…");
+        if (status.status === "done" && status.audioUrl) {
+          setStoryAudioUrl(status.audioUrl);
+          setProducing(false);
+          return;
+        }
+        if (status.status === "error") {
+          setProducing(false);
+          return;
+        }
+      }
+    } catch {
+      if (!produceCancelRef.current) setProducing(false);
+    }
+  }, [blocks, meta, producing]);
 
   useEffect(() => {
     Promise.all([
@@ -205,7 +281,19 @@ export default function ClassicDetailPage() {
     <div className="cosmic-page min-h-full">
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
-      <div className="pb-36">
+      {storyAudioUrl && (
+        <audio
+          ref={storyAudioRef}
+          src={storyAudioUrl}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={() => { setPlaying(false); setCurrentTime(0); }}
+          onTimeUpdate={() => setCurrentTime(storyAudioRef.current?.currentTime ?? 0)}
+          onLoadedMetadata={() => setAudioDuration(storyAudioRef.current?.duration ?? 0)}
+        />
+      )}
+
+      <div className="pb-64">
         {/* Cover area */}
         <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
           {showCoverImg ? (
@@ -505,6 +593,89 @@ export default function ClassicDetailPage() {
             <span>🎬</span>
             <span>{openingInStudio ? "Opening…" : "Open in Studio"}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Sticky audio player — constrained to app width */}
+      <div
+        className="fixed bottom-0 left-0 right-0 pt-6"
+        style={{ background: "linear-gradient(to top, #05080F 70%, transparent)", zIndex: 40 }}
+      >
+        <div className="mx-auto px-4 pb-20" style={{ maxWidth: stickyMaxWidth }}>
+          {storyAudioUrl ? (
+            <div
+              className="rounded-2xl px-4 py-3.5"
+              style={{ background: "rgba(5,8,20,0.92)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(20px)" }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <button
+                  onClick={handlePlayPause}
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-lg flex-shrink-0 active:scale-95 transition-transform"
+                  style={{ background: "rgba(79,195,247,0.14)", border: "1.5px solid rgba(79,195,247,0.45)", boxShadow: "0 0 14px rgba(79,195,247,0.3)" }}
+                >
+                  {playing ? "⏸" : "▶"}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate leading-snug">{meta.title}</p>
+                  <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.3)" }}>✨ Classic story</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  {formatTime(currentTime)}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={audioDuration || (meta.durationSeconds ?? 180)}
+                  step={0.5}
+                  value={currentTime}
+                  onChange={handleSeek}
+                  className="flex-1 cursor-pointer"
+                  style={{ accentColor: "#4fc3f7" }}
+                />
+                <span className="text-[10px] w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  {formatTime(audioDuration || (meta.durationSeconds ?? 180))}
+                </span>
+              </div>
+            </div>
+          ) : producing ? (
+            <div
+              className="rounded-2xl px-4 py-4"
+              style={{ background: "rgba(5,8,20,0.92)", border: `1px solid ${c1}33`, backdropFilter: "blur(20px)" }}
+            >
+              <div className="flex items-center gap-3 mb-2.5">
+                <div
+                  className="w-9 h-9 rounded-full flex-shrink-0 animate-spin"
+                  style={{ border: `1.5px solid ${c1}44`, borderTopColor: c1 }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{produceStep}</p>
+                  <p className="text-xs truncate" style={{ color: `${c1}88` }}>Producing "{meta.title}"…</p>
+                </div>
+              </div>
+              <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${produceProgress}%`, background: `linear-gradient(90deg, ${c1}, ${c2})` }}
+                />
+              </div>
+            </div>
+          ) : isReady ? (
+            <button
+              onClick={handleProduceAudio}
+              className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              style={{
+                background: `linear-gradient(135deg, ${c1}22, ${c2}22)`,
+                border: `1px solid ${c1}55`,
+                color: c1,
+                backdropFilter: "blur(20px)",
+              }}
+            >
+              <span>🎙️</span>
+              <span>Generate & play audio story</span>
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

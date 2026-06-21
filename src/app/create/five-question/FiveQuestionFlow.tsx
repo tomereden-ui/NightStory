@@ -33,6 +33,59 @@ interface Answers {
   q5_mood: ResolutionMood | null;
 }
 
+// ─── FairyFigure: animated Bluebell fairy portrait ───────────────────────────
+
+const FAIRY_AVATAR_URL =
+  "https://api.dicebear.com/9.x/adventurer/svg?seed=FairyFae-iridescent-wings&backgroundColor=f3e5f5&radius=50";
+
+function FairyFigure({ size = 80 }: { size?: number }) {
+  return (
+    <div style={{ position: "relative", display: "inline-block", width: size, height: size }}>
+      <style>{`
+        @keyframes _fairyFloat {
+          0%,100% { transform: translateY(0px) rotate(0deg); }
+          30% { transform: translateY(-9px) rotate(-2.5deg); }
+          70% { transform: translateY(-5px) rotate(2deg); }
+        }
+        @keyframes _fairyGlow {
+          0%,100% { opacity: 0.55; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.18); }
+        }
+        @keyframes _fairySparkle {
+          0%,100% { opacity: 0; transform: scale(0) rotate(0deg); }
+          50% { opacity: 1; transform: scale(1) rotate(160deg); }
+        }
+      `}</style>
+      {/* Soft glow halo */}
+      <div style={{
+        position: "absolute",
+        inset: -size * 0.25,
+        borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(236,72,153,0.45) 0%, rgba(167,139,250,0.25) 40%, transparent 68%)",
+        animation: "_fairyGlow 2.4s ease-in-out infinite",
+        pointerEvents: "none",
+      }} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={FAIRY_AVATAR_URL}
+        alt="Bluebell"
+        style={{
+          width: size,
+          height: size,
+          position: "relative",
+          zIndex: 1,
+          animation: "_fairyFloat 3.2s ease-in-out infinite",
+          filter: "drop-shadow(0 0 10px rgba(236,72,153,0.65)) drop-shadow(0 2px 6px rgba(167,139,250,0.5))",
+        }}
+      />
+      {/* Sparkles */}
+      <span style={{ position: "absolute", top: 0, right: -size * 0.18, fontSize: size * 0.22, zIndex: 2, animation: "_fairySparkle 2.1s ease-in-out infinite", lineHeight: 1 }}>✨</span>
+      <span style={{ position: "absolute", bottom: size * 0.05, left: -size * 0.22, fontSize: size * 0.16, zIndex: 2, animation: "_fairySparkle 2.8s ease-in-out infinite 0.7s", lineHeight: 1 }}>⭐</span>
+      <span style={{ position: "absolute", top: size * 0.18, left: -size * 0.15, fontSize: size * 0.13, zIndex: 2, animation: "_fairySparkle 1.9s ease-in-out infinite 0.35s", lineHeight: 1 }}>✦</span>
+    </div>
+  );
+}
+
 // ─── BluebellLine: progressive word-by-word reveal ───────────────────────────
 
 function BluebellLine({
@@ -251,7 +304,7 @@ function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebe
           : <div className="w-8" />
         }
         <div className="flex-1 flex justify-center">
-          <span className="text-2xl" style={{ filter: audioUrl ? "drop-shadow(0 0 8px rgba(79,195,247,0.6))" : "none" }}>🧚</span>
+          <FairyFigure size={52} />
         </div>
         <div className="w-8" />
       </div>
@@ -301,7 +354,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl }: { initi
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
-      <span className="text-4xl mb-6">🧚</span>
+      <FairyFigure size={80} />
       <p className="text-white text-xl font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
     </div>
   );
@@ -380,7 +433,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, optionImages, audioUrl
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
-      <span className="text-4xl mb-6">🧚</span>
+      <FairyFigure size={80} />
       <p className="text-xl font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
     </div>
   );
@@ -438,7 +491,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
-      <span className="text-4xl mb-6">🧚</span>
+      <FairyFigure size={80} />
       <p className="text-xl font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
     </div>
   );
@@ -508,14 +561,14 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
 
   if (phase === "reaction1") return (
     <div className="flex flex-col min-h-full items-center justify-center px-5 gap-5">
-      <span className="text-4xl">🧚</span>
+      <FairyFigure size={72} />
       <BluebellLine text={BLUEBELL.q4Reaction1} speed={90} onComplete={() => setTimeout(() => setPhase("reaction2"), 600)} />
     </div>
   );
 
   if (phase === "reaction2") return (
     <div className="flex flex-col min-h-full items-center justify-center px-5 gap-5">
-      <span className="text-4xl">🧚</span>
+      <FairyFigure size={72} />
       <p className="text-xl font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{BLUEBELL.q4Confirm(confirmedEngine)}</p>
       <AutoAdvance delay={1200} onAdvance={() => onNext(confirmedEngine)} />
     </div>
@@ -621,7 +674,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
     <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
       <div className="flex items-center mb-8">
         <button onClick={() => onEditStep("q5")} className="w-8 h-8 flex items-center justify-center text-white/40 text-base">←</button>
-        <div className="flex-1 text-center"><span className="text-2xl">🧚</span></div>
+        <div className="flex-1 flex justify-center"><FairyFigure size={52} /></div>
         <div className="w-8" />
       </div>
 
@@ -729,10 +782,10 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
 
   return (
     <div className="flex flex-col min-h-full items-center justify-center px-8 text-center gap-8" style={{ background: "transparent" }}>
-      <div className="relative w-28 h-28 flex items-center justify-center">
-        <div className="absolute inset-0 rounded-full animate-ping opacity-15" style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
-        <div className="absolute inset-3 rounded-full opacity-30 animate-pulse" style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
-        <span className="relative text-5xl">🧚</span>
+      <div className="relative w-36 h-36 flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full animate-ping opacity-10" style={{ background: "radial-gradient(circle, rgba(236,72,153,0.6), rgba(79,195,247,0.3))" }} />
+        <div className="absolute inset-4 rounded-full opacity-25 animate-pulse" style={{ background: "radial-gradient(circle, rgba(167,139,250,0.6), rgba(236,72,153,0.3))" }} />
+        <div className="relative z-10"><FairyFigure size={100} /></div>
       </div>
       <div className="flex flex-col gap-2">
         <p className="text-white text-base font-medium">{messages[msgIdx]}</p>

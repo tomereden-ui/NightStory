@@ -671,6 +671,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {(summary || isFetchingCover) && (
           <div className="mb-5 rounded-2xl overflow-hidden"
             style={{
+              background: "rgba(10,12,20,1)",
               border: "1px solid rgba(79,195,247,0.12)",
               boxShadow: "0 4px 20px rgba(79,195,247,0.06)",
             }}>
@@ -726,7 +727,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             </div>
             {/* Story title */}
             {title && (
-              <div className="px-4 pt-4 pb-0" style={{ background: "rgba(10,12,20,0.97)" }}>
+              <div className="px-4 pt-4 pb-0" style={{ background: "rgba(10,12,20,1)" }}>
                 <h2
                   className="text-2xl font-bold tracking-tight leading-tight"
                   style={{
@@ -743,7 +744,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             )}
             {/* Summary text */}
             {summary && (
-              <div className="px-4 pt-3 pb-4" style={{ background: "rgba(10,12,20,0.97)" }}>
+              <div className="px-4 pt-3 pb-4" style={{ background: "rgba(10,12,20,1)" }}>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
                   <button
