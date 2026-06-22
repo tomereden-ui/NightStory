@@ -663,6 +663,7 @@ export default function Studio2Page() {
 
   // ─── Active child profile ────────────────────────────────────────────────────
   const [activeChild, setActiveChild]       = useState<DBChildProfile | null>(null);
+  const [chatLocked, setChatLocked]         = useState(false);
 
   // ─── Prompt tab state ───────────────────────────────────────────────────────
   const [promptText, setPromptText]         = useState("");
@@ -809,8 +810,13 @@ export default function Studio2Page() {
             const { prompt: avatarPrompt } = await res.json() as { prompt: string };
             if (avatarPrompt && !cancelled) {
               const encodedPrompt = encodeURIComponent(avatarPrompt);
-              const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true`);
-              if (imgRes.ok && !cancelled) {
+              const avatarUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true`;
+              let imgRes = await fetch(avatarUrl).catch(() => null);
+              if (!imgRes?.ok && !cancelled) {
+                await new Promise((r) => setTimeout(r, 3000));
+                imgRes = await fetch(avatarUrl).catch(() => null);
+              }
+              if (imgRes?.ok && !cancelled) {
                 const blob = await imgRes.blob();
                 const dataUrl = await new Promise<string>((resolve) => {
                   const reader = new FileReader();
@@ -828,7 +834,7 @@ export default function Studio2Page() {
       avatarSeedingRef.current = false;
     })();
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; avatarSeedingRef.current = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, scriptBlocks.length > 0]);
 
@@ -983,8 +989,13 @@ export default function Studio2Page() {
       const data = await res.json();
       if (res.ok && data.fullPrompt) {
         const encodedPrompt = encodeURIComponent(data.fullPrompt);
-        const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true`);
-        if (imgRes.ok) {
+        const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true`;
+        let imgRes = await fetch(pollinationsUrl).catch(() => null);
+        if (!imgRes?.ok) {
+          await new Promise((r) => setTimeout(r, 4000));
+          imgRes = await fetch(pollinationsUrl).catch(() => null);
+        }
+        if (imgRes?.ok) {
           const blob = await imgRes.blob();
           const dataUrl = await new Promise<string>((resolve) => {
             const reader = new FileReader();
@@ -998,6 +1009,14 @@ export default function Studio2Page() {
       setIsFetchingCover(false);
     }
   }, []);
+
+  // Auto-fetch cover when a draft is loaded that has a coverPrompt but no coverUrl
+  useEffect(() => {
+    if (loaded && coverPrompt && !coverUrl && !isFetchingCover) {
+      fetchCover(coverPrompt, summary);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
   // ─── Produce audio ──────────────────────────────────────────────────────────
 
@@ -1140,7 +1159,7 @@ export default function Studio2Page() {
 
         {/* Child profile picker */}
         {showTabBar && (
-          <ChildProfilePicker selected={activeChild} onChange={setActiveChild} />
+          <ChildProfilePicker selected={activeChild} onChange={(p) => { setActiveChild(p); setChatLocked(false); }} disabled={chatLocked} />
         )}
 
         {/* Tab bar — hidden during lesson step */}
@@ -1193,6 +1212,8 @@ export default function Studio2Page() {
         {activeTab === "chat" && (
           <LunaChatPanel
             activeChild={activeChild}
+            onFirstMessage={() => setChatLocked(true)}
+            onDiscard={() => setChatLocked(false)}
             onScriptReady={(draft) => {
               writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
               setScriptBlocks(draft.scriptBlocks);
