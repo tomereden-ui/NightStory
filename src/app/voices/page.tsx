@@ -6,12 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import VoiceAvatar, { AVATAR_STYLES } from "@/components/ui/VoiceAvatar";
 import { PRESET_VOICES, type PresetVoiceConfig } from "@/config/presetVoices";
-import {
-  SYSTEM_AVATARS,
-  SYSTEM_AVATAR_CATEGORIES,
-  CATEGORY_LABELS,
-  type SystemAvatarCategory,
-} from "@/config/systemAvatars";
+import { SYSTEM_AVATARS } from "@/config/systemAvatars";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -81,13 +76,6 @@ function AvatarGallerySheet({
 }) {
   const { effective } = useViewMode();
   const sheetMaxWidth = effective === "mobile" ? 448 : 512;
-  const [activeCategory, setActiveCategory] = useState<SystemAvatarCategory | "all">("all");
-
-  const filtered =
-    activeCategory === "all"
-      ? SYSTEM_AVATARS
-      : SYSTEM_AVATARS.filter((a) => a.category === activeCategory);
-
   return createPortal(
     <>
       <div
@@ -130,49 +118,26 @@ function AvatarGallerySheet({
           </button>
         </div>
 
-        {/* Category filter */}
-        <div className="px-5 pb-3 flex-shrink-0">
-          <div className="flex gap-1.5 overflow-x-auto hide-scrollbar">
-            <button
-              onClick={() => setActiveCategory("all")}
-              className="flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold transition-all"
-              style={
-                activeCategory === "all"
-                  ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
-                  : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
-              }
-            >
-              All
-            </button>
-            {SYSTEM_AVATAR_CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className="flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold transition-all"
-                style={
-                  activeCategory === cat
-                    ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
-                    : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
-                }
-              >
-                {CATEGORY_LABELS[cat]}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Scrollable avatar grid */}
         <div className="flex-1 overflow-y-auto px-4 pb-2">
           <div className="grid grid-cols-4 gap-2.5">
-            {filtered.map((avatar) => {
-              // Use AI portrait if seeded, else DiceBear fallback
-              const displayUrl = systemAvatarUrls[avatar.id] ?? avatar.url;
-              const isPortrait = !!systemAvatarUrls[avatar.id];
-              const isSelected = currentValue === displayUrl || currentValue === avatar.url;
+            {SYSTEM_AVATARS.map((avatar, i) => {
+              const portraitUrl = systemAvatarUrls[avatar.id];
+              const isSelected = currentValue === portraitUrl || currentValue === avatar.url;
+              // Cycle through app-palette gradients for placeholder cards
+              const GRADIENTS = [
+                "linear-gradient(135deg,#1E3A5F,#4FC3F7)",
+                "linear-gradient(135deg,#2D1B69,#8B5CF6)",
+                "linear-gradient(135deg,#0D3D3D,#10D9A0)",
+                "linear-gradient(135deg,#1A1A4E,#818CF8)",
+                "linear-gradient(135deg,#4A1942,#EC4899)",
+                "linear-gradient(135deg,#3D2000,#F59E0B)",
+              ];
+              const grad = GRADIENTS[i % GRADIENTS.length];
               return (
                 <button
                   key={avatar.id}
-                  onClick={() => { onSelect(displayUrl); onClose(); }}
+                  onClick={() => { onSelect(portraitUrl ?? avatar.url); onClose(); }}
                   className="flex flex-col items-center gap-1 p-2 rounded-2xl transition-all active:scale-95"
                   style={{
                     background: isSelected ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.03)",
@@ -181,13 +146,17 @@ function AvatarGallerySheet({
                       : "1.5px solid rgba(255,255,255,0.06)",
                   }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={displayUrl}
-                    alt={avatar.label}
-                    className="w-14 h-14 rounded-xl object-cover"
-                    style={{ imageRendering: isPortrait ? "auto" : "crisp-edges" }}
-                  />
+                  {portraitUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={portraitUrl} alt={avatar.label} className="w-14 h-14 rounded-xl object-cover" />
+                  ) : (
+                    <div
+                      className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl"
+                      style={{ background: grad }}
+                    >
+                      {avatar.emoji}
+                    </div>
+                  )}
                   <span className="text-[9px] text-white/50 truncate w-full text-center leading-none">
                     {avatar.label}
                   </span>
