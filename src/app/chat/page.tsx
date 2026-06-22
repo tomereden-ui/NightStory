@@ -116,8 +116,9 @@ export default function ChatPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: [], childProfile: activeChild }),
     })
-      .then((r) => r.json())
-      .then((data: ChatResponse) => {
+      .then(async (r) => {
+        const data: ChatResponse = await r.json();
+        if (!r.ok || !data.reply) throw new Error(data.reply ?? "no reply");
         setMessages([{ role: "model", content: data.reply }]);
       })
       .catch(() => {
@@ -150,6 +151,7 @@ export default function ChatPage() {
         body: JSON.stringify({ messages: next, childProfile: activeChild }),
       });
       const data: ChatResponse = await res.json();
+      if (!res.ok || !data.reply) throw new Error((data as { error?: string }).error ?? "no reply");
       setMessages((prev) => [...prev, { role: "model", content: data.reply }]);
       if (data.storyReady && data.storyParams) {
         setStoryReady(true);
