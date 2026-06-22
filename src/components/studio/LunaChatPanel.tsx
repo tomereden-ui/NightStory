@@ -43,7 +43,7 @@ function TypingDots() {
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
 
-function MessageBubble({ msg }: { msg: Message }) {
+function MessageBubble({ msg, childEmoji }: { msg: Message; childEmoji?: string }) {
   const isLuna = msg.role === "model";
   return (
     <div className={`flex gap-2 items-end ${isLuna ? "justify-start" : "justify-end"}`}>
@@ -69,6 +69,12 @@ function MessageBubble({ msg }: { msg: Message }) {
       >
         {msg.content}
       </div>
+      {!isLuna && (
+        <div className="w-7 h-7 rounded-full flex items-center justify-center text-base flex-shrink-0"
+          style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.2)", flexShrink: 0 }}>
+          {childEmoji ?? "👤"}
+        </div>
+      )}
     </div>
   );
 }
@@ -78,9 +84,13 @@ function MessageBubble({ msg }: { msg: Message }) {
 export default function LunaChatPanel({
   activeChild,
   onScriptReady,
+  onFirstMessage,
+  onDiscard,
 }: {
   activeChild: DBChildProfile | null;
   onScriptReady: (draft: Omit<DraftState, "coverUrl">) => void;
+  onFirstMessage?: () => void;
+  onDiscard?: () => void;
 }) {
   const [messages, setMessages]         = useState<Message[]>([]);
   const [input, setInput]               = useState("");
@@ -92,14 +102,16 @@ export default function LunaChatPanel({
   const [greeted, setGreeted]           = useState(false);
   const [muted, setMuted]               = useState(false);
   const [ttsLoading, setTtsLoading]     = useState(false);
+  const [discardConfirm, setDiscardConfirm] = useState(false);
   const bottomRef    = useRef<HTMLDivElement>(null);
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const audioRef     = useRef<HTMLAudioElement | null>(null);
-  const ttsAbortRef  = useRef<AbortController | null>(null);
+  const ttsAbortRef   = useRef<AbortController | null>(null);
+  const greetAbortRef = useRef<AbortController | null>(null);
+  const firstMsgSent  = useRef(false);
 
   const speakLuna = useCallback(async (text: string) => {
     if (muted) return;
-    // Cancel any in-flight TTS request and stop current playback
     ttsAbortRef.current?.abort();
     audioRef.current?.pause();
     audioRef.current = null;
@@ -130,19 +142,24 @@ export default function LunaChatPanel({
 
   useEffect(() => { scrollToBottom(); }, [messages, loading, scrollToBottom]);
 
-  // Fetch greeting on first render (reset when child changes)
+  // Reset when child changes — also aborts any in-flight greeting
   useEffect(() => {
+    greetAbortRef.current?.abort();
     setMessages([]);
     setStoryReady(false);
     setStoryParams(null);
     setGreeted(false);
+    firstMsgSent.current = false;
   }, [activeChild?.id]);
 
+  // Greeting — no cleanup abort here (would break React Strict Mode dev double-invoke)
   useEffect(() => {
     if (greeted) return;
     setGreeted(true);
     setLoading(true);
+
     const ctrl = new AbortController();
+    greetAbortRef.current = ctrl;
 
     fetch("/api/chat", {
       method: "POST",
@@ -162,15 +179,70 @@ export default function LunaChatPanel({
         setMessages([{ role: "model", content: fallback }]);
         speakLuna(fallback);
       })
-      .finally(() => { if (!ctrl.signal.aborted) setLoading(false); });
-
-    return () => ctrl.abort();
+      .finally(() => setLoading(false));
   }, [greeted, activeChild]);
+
+  function getChildAgeGroup() {
+    const age = activeChild?.age;
+    if (age == null) return undefined;
+    return age <= 4 ? "2-4" : age <= 6 ? "4-6" : age <= 8 ? "6-8" : age <= 10 ? "8-10" : "10-12";
+  }
 
   async function sendMessage() {
     const text = input.trim();
     if (!text || loading) return;
 
+    // Fire onFirstMessage once
+    if (!firstMsgSent.current) {
+      firstMsgSent.current = true;
+      onFirstMessage?.();
+    }
+
+    // "prompt:" shortcut — bypass chat, generate story directly
+    if (text.toLowerCase().startsWith("prompt:")) {
+      const promptText = text.slice(7).trim();
+      if (!promptText) return;
+      setMessages((prev) => [...prev, { role: "user", content: text }]);
+      setInput("");
+      setLoading(true);
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      try {
+        const res = await fetch("/api/generate-story", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "prompt",
+            promptText,
+            durationMinutes: 3,
+            childAgeGroup: getChildAgeGroup(),
+            language: "en",
+          }),
+        });
+        if (!res.ok) throw new Error("Generation failed");
+        const data = await res.json() as {
+          blocks: ScriptBlock[];
+          title?: string;
+          summary?: string;
+          coverPrompt?: string;
+        };
+        onScriptReady({
+          promptText,
+          scriptBlocks: data.blocks ?? [],
+          summary: data.summary ?? "",
+          coverPrompt: data.coverPrompt ?? "",
+          storyTitle: data.title ?? "",
+        });
+      } catch {
+        setMessages((prev) => [...prev, {
+          role: "model",
+          content: "Couldn't generate the story — please try again or describe it differently.",
+        }]);
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Normal chat flow
     const next: Message[] = [...messages, { role: "user", content: text }];
     setMessages(next);
     setInput("");
@@ -212,14 +284,24 @@ export default function LunaChatPanel({
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
   }
 
+  function handleDiscard() {
+    ttsAbortRef.current?.abort();
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setTtsLoading(false);
+    setMessages([]);
+    setStoryReady(false);
+    setStoryParams(null);
+    setGreeted(false);
+    setDiscardConfirm(false);
+    firstMsgSent.current = false;
+    onDiscard?.();
+  }
+
   async function handleCreateStory() {
     if (!storyParams || creating) return;
     setCreating(true);
     setCreateError(null);
-
-    const age = activeChild?.age;
-    const childAgeGroup = age == null ? undefined
-      : age <= 4 ? "2-4" : age <= 6 ? "4-6" : age <= 8 ? "6-8" : age <= 10 ? "8-10" : "10-12";
 
     try {
       const res = await fetch("/api/generate-story", {
@@ -232,7 +314,7 @@ export default function LunaChatPanel({
           plot: storyParams.plot ?? "",
           primaryVoiceId: storyParams.primaryVoiceId ?? "v1",
           durationMinutes: 3,
-          childAgeGroup,
+          childAgeGroup: getChildAgeGroup(),
           language: "en",
         }),
       });
@@ -258,11 +340,14 @@ export default function LunaChatPanel({
     }
   }
 
+  const childEmoji = activeChild?.avatar_emoji;
+  const hasUserMessages = messages.some((m) => m.role === "user");
+
   return (
-    <div className="flex flex-col" style={{ height: "calc(100vh - 280px)", minHeight: 360 }}>
+    <div className="flex flex-col gap-3">
 
       {/* Luna status strip */}
-      <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
           style={{ background: "linear-gradient(135deg,#1a1a4e,#4fc3f7)", boxShadow: "0 0 10px rgba(79,195,247,0.25)" }}>
           🌙
@@ -288,15 +373,17 @@ export default function LunaChatPanel({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1">
-        {messages.map((msg, i) => <MessageBubble key={i} msg={msg} />)}
+      <div className="flex flex-col gap-3">
+        {messages.map((msg, i) => (
+          <MessageBubble key={i} msg={msg} childEmoji={msg.role === "user" ? childEmoji : undefined} />
+        ))}
         {loading && <TypingDots />}
         <div ref={bottomRef} />
       </div>
 
       {/* Story ready CTA */}
       {storyReady && (
-        <div className="flex-shrink-0 pt-3">
+        <div>
           {createError && (
             <p className="text-center text-xs mb-2" style={{ color: "#f87171" }}>{createError}</p>
           )}
@@ -315,7 +402,7 @@ export default function LunaChatPanel({
       )}
 
       {/* Input */}
-      <div className="flex-shrink-0 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
         <div className="flex items-end gap-2.5 px-3 py-2.5 rounded-2xl"
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}>
           <textarea
@@ -347,6 +434,40 @@ export default function LunaChatPanel({
           Enter to send · Shift+Enter for new line
         </p>
       </div>
+
+      {/* Discard */}
+      {hasUserMessages && (
+        <div className="flex justify-center pt-1 pb-2">
+          {discardConfirm ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Discard this chat?</span>
+              <button
+                onClick={handleDiscard}
+                className="text-xs px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+                style={{ background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
+              >
+                Yes, discard
+              </button>
+              <button
+                onClick={() => setDiscardConfirm(false)}
+                className="text-xs px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setDiscardConfirm(true)}
+              className="text-[11px] transition-all active:scale-95"
+              style={{ color: "rgba(255,255,255,0.2)" }}
+            >
+              ✕ Discard chat
+            </button>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }

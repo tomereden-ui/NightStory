@@ -200,9 +200,11 @@ function AddProfileModal({
 export default function ChildProfilePicker({
   selected,
   onChange,
+  disabled = false,
 }: {
   selected: DBChildProfile | null;
   onChange: (profile: DBChildProfile | null) => void;
+  disabled?: boolean;
 }) {
   const [profiles, setProfiles] = useState<DBChildProfile[]>([]);
   const [showAdd, setShowAdd]   = useState(false);
@@ -259,12 +261,14 @@ export default function ChildProfilePicker({
             return (
               <button
                 key={p.id}
-                onClick={() => onChange(isActive ? null : p)}
+                onClick={() => { if (!disabled) onChange(isActive ? null : p); }}
                 className="flex items-center gap-2 px-3 py-2 rounded-2xl flex-shrink-0 transition-all active:scale-95"
                 style={{
                   background: isActive ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.04)",
                   border: isActive ? "1.5px solid rgba(79,195,247,0.45)" : "1px solid rgba(255,255,255,0.08)",
                   boxShadow: isActive ? "0 0 14px rgba(79,195,247,0.15)" : "none",
+                  opacity: disabled && !isActive ? 0.35 : 1,
+                  cursor: disabled ? "default" : "pointer",
                 }}
               >
                 <span className="text-base leading-none">{p.avatar_emoji}</span>
@@ -285,7 +289,7 @@ export default function ChildProfilePicker({
           })}
 
           {/* Add profile button */}
-          <button
+          {!disabled && <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-2xl flex-shrink-0 transition-all active:scale-95"
             style={{
@@ -296,7 +300,7 @@ export default function ChildProfilePicker({
           >
             <span className="text-base leading-none font-light">＋</span>
             <span className="text-xs font-medium">Add</span>
-          </button>
+          </button>}
         </div>
       </div>
 
