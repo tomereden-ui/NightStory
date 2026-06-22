@@ -30,6 +30,17 @@ function IconStudio() {
   );
 }
 
+function IconChat() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+      <path d="M8 10h.01" />
+      <path d="M12 10h.01" />
+      <path d="M16 10h.01" />
+    </svg>
+  );
+}
+
 function IconVoices() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -55,7 +66,7 @@ function IconProfile() {
 
 const NAV = [
   { label: "Magic Tales", Icon: IconMagicTales, href: "/library" },
-  { label: "Studio 2",    Icon: IconStudio,     href: "/studio2" },
+  { label: "Chat",        Icon: IconChat,       href: "/chat"    },
   { label: "Voices",      Icon: IconVoices,     href: "/voices"  },
   { label: "Profile",     Icon: IconProfile,    href: "/profile" },
 ];
