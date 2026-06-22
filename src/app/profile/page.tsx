@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
+import { SYSTEM_AVATARS } from "@/config/systemAvatars";
 import type { UsageTotals } from "@/lib/usageTracker";
 import type { ChildProfile } from "@/types";
 
@@ -22,13 +23,15 @@ function Ico({ d, size = 15 }: { d: string; size?: number }) {
   );
 }
 
-// ─── Avatar emoji options ─────────────────────────────────────────────────────
+// ─── Avatar tile gradients (cycles by index) ──────────────────────────────────
 
-const AVATAR_EMOJIS = [
-  "🌸","🚀","🦁","🌙","⭐","🦋","🐉","🌈",
-  "🦄","🎠","🧚","🌟","🐬","🦊","🐼","🌺",
-  "🎪","🏰","🎈","🎭","🧙","🌊","🐸","🦝",
-  "🌵","🍄","🦜","🐧","🌻","🍀","🦔","🐙",
+const AVATAR_GRADIENTS = [
+  "linear-gradient(135deg,#1E3A5F,#4FC3F7)",
+  "linear-gradient(135deg,#2D1B69,#8B5CF6)",
+  "linear-gradient(135deg,#0D3D3D,#10D9A0)",
+  "linear-gradient(135deg,#1A1A4E,#818CF8)",
+  "linear-gradient(135deg,#4A1942,#EC4899)",
+  "linear-gradient(135deg,#3D2000,#F59E0B)",
 ];
 
 // ─── Child profile card ────────────────────────────────────────────────────────
@@ -117,28 +120,41 @@ function AvatarPicker({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-3xl p-5 pb-8"
+        className="w-full max-w-md rounded-t-3xl p-5 pb-8 max-h-[70vh] flex flex-col"
         style={{ background: "#111526", border: "1px solid rgba(255,255,255,0.08)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <p className="text-white/70 text-xs uppercase tracking-widest font-bold">Choose Avatar</p>
           <button onClick={onClose} className="text-white/30 text-lg leading-none">✕</button>
         </div>
-        <div className="grid grid-cols-8 gap-2">
-          {AVATAR_EMOJIS.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => { onSelect(emoji); onClose(); }}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-xl transition-all hover:scale-110 active:scale-95"
-              style={{
-                background: emoji === current ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)",
-                border: emoji === current ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              {emoji}
-            </button>
-          ))}
+        <div className="grid grid-cols-4 gap-2.5 overflow-y-auto">
+          {SYSTEM_AVATARS.map((avatar, i) => {
+            const grad = AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
+            const isSelected = avatar.emoji === current;
+            return (
+              <button
+                key={avatar.id}
+                onClick={() => { onSelect(avatar.emoji); onClose(); }}
+                className="flex flex-col items-center gap-1.5 rounded-2xl py-3 px-1 transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: isSelected ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.03)",
+                  border: isSelected ? "1.5px solid rgba(79,195,247,0.55)" : "1px solid rgba(255,255,255,0.07)",
+                  boxShadow: isSelected ? "0 0 16px rgba(79,195,247,0.2)" : "none",
+                }}
+              >
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                  style={{ background: grad }}
+                >
+                  {avatar.emoji}
+                </div>
+                <span className="text-[9px] font-semibold text-white/40 truncate w-full text-center px-0.5">
+                  {avatar.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -158,7 +174,7 @@ function AddChildModal({
 }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
-  const [emoji, setEmoji] = useState("⭐");
+  const [emoji, setEmoji] = useState(SYSTEM_AVATARS[0].emoji);
   const [pickingAvatar, setPickingAvatar] = useState(false);
 
   function handleSave() {
