@@ -66,7 +66,7 @@ function IconProfile() {
 
 const NAV = [
   { label: "Magic Tales", Icon: IconMagicTales, href: "/library" },
-  { label: "Chat",        Icon: IconChat,       href: "/chat"    },
+  { label: "Studio",      Icon: IconStudio,     href: "/studio2" },
   { label: "Voices",      Icon: IconVoices,     href: "/voices"  },
   { label: "Profile",     Icon: IconProfile,    href: "/profile" },
 ];

@@ -19,6 +19,7 @@ import { FiveQuestionFlow } from "@/app/create/five-question/FiveQuestionFlow";
 import { SCENE_CHARS } from "@/config/sceneCharacters";
 import { LANGUAGE_META } from "@/lib/i18n";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
+import LunaChatPanel from "@/components/studio/LunaChatPanel";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
@@ -647,12 +648,12 @@ function PromptTabContent({
 
 // ─── Studio 2 page ────────────────────────────────────────────────────────────
 
-type StudioTab = "prompt" | "five-question" | "lesson" | "script" | "producing" | "drama";
+type StudioTab = "chat" | "step-by-step" | "lesson" | "script" | "producing" | "drama";
 
-const TABS: { id: "prompt" | "five-question" | "script"; label: string; emoji: string }[] = [
-  { id: "prompt",        label: "Prompt",       emoji: "💬" },
-  { id: "five-question", label: "5 Questions",  emoji: "🧚" },
-  { id: "script",        label: "Script",       emoji: "📄" },
+const TABS: { id: "chat" | "step-by-step" | "script"; label: string; emoji: string }[] = [
+  { id: "chat",         label: "Chat",         emoji: "💬" },
+  { id: "step-by-step", label: "Step-by-step", emoji: "🧚" },
+  { id: "script",       label: "Script",       emoji: "📄" },
 ];
 
 export default function Studio2Page() {
@@ -682,7 +683,7 @@ export default function Studio2Page() {
   const [lessonImplementations, setLessonImplementations] = useState<{ lesson: string; implemented: boolean; how: string }[]>([]);
 
   // ─── Tab / view state ───────────────────────────────────────────────────────
-  const [activeTab, setActiveTab]           = useState<StudioTab>("prompt");
+  const [activeTab, setActiveTab]           = useState<StudioTab>("chat");
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob]     = useState<Job | null>(null);
   const [isProducing, setIsProducing]       = useState(false);
@@ -751,7 +752,7 @@ export default function Studio2Page() {
       setLessonImplementations(draft.lessonImplementations ?? []);
       setActiveTab("script");
     } else {
-      setActiveTab("prompt");
+      setActiveTab("chat");
     }
     setLoaded(true);
   }, []);
@@ -872,7 +873,7 @@ export default function Studio2Page() {
       setActiveTab("script");
     } catch (err: unknown) {
       setGenerateError(err instanceof Error ? err.message : "Something went wrong");
-      setActiveTab("prompt");
+      setActiveTab("step-by-step");
     } finally {
       setGenerating(false);
     }
@@ -1145,17 +1146,17 @@ export default function Studio2Page() {
         {showTabBar && (
           <div className="flex mb-7" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
             {TABS.map(({ id, label, emoji }) => {
-              const isFiveQ    = id === "five-question";
-              const isScript   = id === "script";
-              const isDisabled = isScript && !hasScript;
-              const isActive   = activeTab === id;
+              const isStepByStep = id === "step-by-step";
+              const isScript     = id === "script";
+              const isDisabled   = isScript && !hasScript;
+              const isActive     = activeTab === id;
 
               return (
                 <button
                   key={id}
                   onClick={() => {
                     if (isDisabled) return;
-                    if (isFiveQ) { setActiveTab("five-question"); return; }
+                    if (isStepByStep) { setActiveTab("step-by-step"); return; }
                     setActiveTab(id);
                   }}
                   disabled={isDisabled}
@@ -1187,27 +1188,35 @@ export default function Studio2Page() {
           </div>
         )}
 
-        {/* Prompt tab */}
-        {activeTab === "prompt" && (
-          <PromptTabContent
-            promptText={promptText} setPromptText={setPromptText}
-            durationMinutes={durationMinutes} setDurationMinutes={setDurationMinutes}
-            generating={generating}
-            onNext={() => setActiveTab("lesson")}
-            language={language}
+        {/* Chat tab */}
+        {activeTab === "chat" && (
+          <LunaChatPanel
+            activeChild={activeChild}
+            onScriptReady={(draft) => {
+              writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
+              setScriptBlocks(draft.scriptBlocks);
+              setSummary(draft.summary);
+              setCoverPrompt(draft.coverPrompt);
+              setCoverUrl("");
+              setStoryTitle(draft.storyTitle ?? "");
+              setLessons([]);
+              setLessonImplementations([]);
+              setActiveTab("script");
+              if (draft.coverPrompt) fetchCover(draft.coverPrompt, draft.summary);
+            }}
           />
         )}
 
-        {/* Lesson step — interstitial between prompt and generation */}
+        {/* Lesson step — interstitial between step-by-step and generation */}
         {activeTab === "lesson" && (
           <LessonStep
             onSelect={(selectedLessons) => handleGenerate(selectedLessons)}
-            onBack={() => setActiveTab("prompt")}
+            onBack={() => setActiveTab("step-by-step")}
           />
         )}
 
-        {/* 5 Questions tab */}
-        {activeTab === "five-question" && (
+        {/* Step-by-step tab */}
+        {activeTab === "step-by-step" && (
           <div className="-mx-5">
             <FiveQuestionFlow
               onComplete={({ blocks, summary: sm, coverPrompt: cp }) => {
