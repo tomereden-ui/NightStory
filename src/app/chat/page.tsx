@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
+import { writeDraft } from "@/lib/draftStore";
 
 interface Message {
   role: "user" | "model";
@@ -96,6 +97,8 @@ export default function ChatPage() {
   const [storyParams, setStoryParams] = useState<Record<string, string> | null>(null);
   const [greeted, setGreeted] = useState(false);
   const [activeChild, setActiveChild] = useState<DBChildProfile | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -181,10 +184,54 @@ export default function ChatPage() {
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
   }
 
-  function handleCreateStory() {
-    if (!storyParams) return;
-    const qs = new URLSearchParams(storyParams).toString();
-    router.push(`/studio${qs ? `?${qs}` : ""}`);
+  async function handleCreateStory() {
+    if (!storyParams || creating) return;
+    setCreating(true);
+    setCreateError(null);
+
+    const age = activeChild?.age;
+    const childAgeGroup = age == null ? undefined
+      : age <= 4 ? "2-4" : age <= 6 ? "4-6" : age <= 8 ? "6-8" : age <= 10 ? "8-10" : "10-12";
+
+    try {
+      const res = await fetch("/api/generate-story", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "wizard",
+          hero: storyParams.hero ?? "",
+          setting: storyParams.setting ?? "",
+          plot: storyParams.plot ?? "",
+          primaryVoiceId: storyParams.primaryVoiceId ?? "v1",
+          durationMinutes: 3,
+          childAgeGroup,
+          language: "en",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Story generation failed");
+      const data = await res.json() as {
+        blocks: import("@/types").ScriptBlock[];
+        title?: string;
+        summary?: string;
+        coverPrompt?: string;
+      };
+
+      // Write to studio2's draft so it loads the new story on arrival
+      writeDraft({
+        promptText: [storyParams.hero, storyParams.plot].filter(Boolean).join(" — "),
+        scriptBlocks: data.blocks ?? [],
+        summary: data.summary ?? "",
+        coverPrompt: data.coverPrompt ?? "",
+        coverUrl: "",
+        storyTitle: data.title ?? "",
+      }, "nightstory_studio2_draft_v1");
+
+      router.push("/studio2");
+    } catch {
+      setCreateError("Couldn't create the story — please try again.");
+      setCreating(false);
+    }
   }
 
   return (
@@ -235,15 +282,19 @@ export default function ChatPage() {
       {/* ── Story ready CTA ─────────────────────────────────────────────── */}
       {storyReady && (
         <div className="flex-shrink-0 px-4 pb-3">
+          {createError && (
+            <p className="text-center text-xs mb-2" style={{ color: "#f87171" }}>{createError}</p>
+          )}
           <button
             onClick={handleCreateStory}
-            className="w-full py-4 rounded-2xl font-bold text-white text-sm transition-all active:scale-[0.98]"
+            disabled={creating}
+            className="w-full py-4 rounded-2xl font-bold text-white text-sm transition-all active:scale-[0.98] disabled:opacity-70"
             style={{
               background: "linear-gradient(135deg, #4fc3f7, #8B5CF6)",
               boxShadow: "0 0 32px rgba(79,195,247,0.35), 0 0 8px rgba(139,92,246,0.2)",
             }}
           >
-            ✨ Create my story
+            {creating ? "Writing your story… ✨" : "✨ Create my story"}
           </button>
         </div>
       )}
