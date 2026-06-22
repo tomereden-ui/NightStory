@@ -1,0 +1,500 @@
+From 4d6d71dcdd29704679e9f3240ac1263729b5b1a3 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 22 Jun 2026 11:11:45 +0000
+Subject: [PATCH 1/2] fix(chat): prevent duplicate TTS and show voice loading
+ indicator
+
+- speakLuna now uses AbortController: each new TTS call cancels any
+  in-flight request from the previous call, so duplicate greetings
+  (null-child vs loaded-child) never result in two voices playing
+- Greeting useEffect returns a cleanup that aborts the chat fetch,
+  preventing a stale greeting from completing after the child loads
+- ttsLoading state drives a small bar-chart animation in the Luna
+  status strip so the 4-5s TTS latency feels intentional, not broken
+- Mute button also aborts the in-flight TTS fetch immediately
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_015q4ocvtUkmcgg6tzScAi1d
+---
+ src/components/studio/LunaChatPanel.tsx | 39 ++++++++++++++++++++-----
+ 1 file changed, 31 insertions(+), 8 deletions(-)
+
+diff --git a/src/components/studio/LunaChatPanel.tsx b/src/components/studio/LunaChatPanel.tsx
+index 8b97233..0370eae 100644
+--- a/src/components/studio/LunaChatPanel.tsx
++++ b/src/components/studio/LunaChatPanel.tsx
+@@ -91,27 +91,37 @@ export default function LunaChatPanel({
+   const [createError, setCreateError]   = useState<string | null>(null);
+   const [greeted, setGreeted]           = useState(false);
+   const [muted, setMuted]               = useState(false);
+-  const bottomRef   = useRef<HTMLDivElement>(null);
+-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+-  const audioRef    = useRef<HTMLAudioElement | null>(null);
++  const [ttsLoading, setTtsLoading]     = useState(false);
++  const bottomRef    = useRef<HTMLDivElement>(null);
++  const textareaRef  = useRef<HTMLTextAreaElement>(null);
++  const audioRef     = useRef<HTMLAudioElement | null>(null);
++  const ttsAbortRef  = useRef<AbortController | null>(null);
+ 
+   const speakLuna = useCallback(async (text: string) => {
+     if (muted) return;
++    // Cancel any in-flight TTS request and stop current playback
++    ttsAbortRef.current?.abort();
+     audioRef.current?.pause();
+     audioRef.current = null;
++
++    const ctrl = new AbortController();
++    ttsAbortRef.current = ctrl;
++    setTtsLoading(true);
+     try {
+       const res = await fetch("/api/synthesize-speech", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId() }),
++        signal: ctrl.signal,
+       });
+       if (!res.ok) return;
+       const { audioData, mimeType } = await res.json() as { audioData: string; mimeType: string };
+-      if (!audioData) return;
++      if (!audioData || ctrl.signal.aborted) return;
+       const audio = new Audio(`data:${mimeType};base64,${audioData}`);
+       audioRef.current = audio;
+       audio.play().catch(() => {});
+-    } catch { /* silent fail — TTS is best-effort */ }
++    } catch { /* AbortError or network error — silent fail */ }
++    finally { if (!ctrl.signal.aborted) setTtsLoading(false); }
+   }, [muted]);
+ 
+   const scrollToBottom = useCallback(() => {
+@@ -132,11 +142,13 @@ export default function LunaChatPanel({
+     if (greeted) return;
+     setGreeted(true);
+     setLoading(true);
++    const ctrl = new AbortController();
+ 
+     fetch("/api/chat", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ messages: [], childProfile: activeChild }),
++      signal: ctrl.signal,
+     })
+       .then(async (r) => {
+         const data: ChatResponse = await r.json();
+@@ -144,12 +156,15 @@ export default function LunaChatPanel({
+         setMessages([{ role: "model", content: data.reply }]);
+         speakLuna(data.reply);
+       })
+-      .catch(() => {
++      .catch((err) => {
++        if ((err as Error).name === "AbortError") return;
+         const fallback = "Hello! 🌙 I'm Luna, your story guide. Tonight we're going to dream up something magical together.\n\nSo — who's going to be the hero of our story?";
+         setMessages([{ role: "model", content: fallback }]);
+         speakLuna(fallback);
+       })
+-      .finally(() => setLoading(false));
++      .finally(() => { if (!ctrl.signal.aborted) setLoading(false); });
++
++    return () => ctrl.abort();
+   }, [greeted, activeChild]);
+ 
+   async function sendMessage() {
+@@ -254,8 +269,16 @@ export default function LunaChatPanel({
+         </div>
+         <span className="text-white/70 text-xs font-semibold">Luna · Story guide</span>
+         <span className="w-1.5 h-1.5 rounded-full animate-pulse ml-1" style={{ background: "#10D9A0" }} />
++        {ttsLoading && !muted && (
++          <span className="flex items-center gap-0.5 ml-1" title="Loading voice…">
++            {[0, 1, 2].map((i) => (
++              <span key={i} className="w-0.5 rounded-full animate-bounce"
++                style={{ height: 8 + i * 3, background: "#4fc3f7", animationDelay: `${i * 0.12}s`, animationDuration: "0.7s", opacity: 0.7 }} />
++            ))}
++          </span>
++        )}
+         <button
+-          onClick={() => { setMuted((m) => { if (!m) { audioRef.current?.pause(); audioRef.current = null; } return !m; }); }}
++          onClick={() => { setMuted((m) => { if (!m) { ttsAbortRef.current?.abort(); audioRef.current?.pause(); audioRef.current = null; setTtsLoading(false); } return !m; }); }}
+           className="ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
+           style={{ background: muted ? "rgba(255,255,255,0.04)" : "rgba(79,195,247,0.1)", border: muted ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(79,195,247,0.3)" }}
+           title={muted ? "Unmute Luna" : "Mute Luna"}
+-- 
+2.43.0
+
+
+From 1d737a6b0503342a2b2eec4930053d4e905ee9d5 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 22 Jun 2026 11:20:43 +0000
+Subject: [PATCH 2/2] feat(chat): prompt shortcut, layout fix, child avatar,
+ profile lock, discard
+
+- "prompt: <text>" in the chat input bypasses Luna's conversation and
+  calls generate-story directly with mode "prompt", then jumps to Script
+- Layout: removed fixed-height container so the input appears immediately
+  below the last message instead of floating at the bottom of the screen
+- User message bubbles now show the selected child's avatar emoji on the right
+- First user message locks the child profile picker (ChildProfilePicker gains
+  a disabled prop); picker unlocks when profile is manually changed or chat
+  is discarded
+- Discard button appears after the first user message; requires inline
+  confirmation before wiping the chat and restarting the greeting
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_015q4ocvtUkmcgg6tzScAi1d
+---
+ src/app/studio2/page.tsx                     |   5 +-
+ src/components/studio/ChildProfilePicker.tsx |  10 +-
+ src/components/studio/LunaChatPanel.tsx      | 147 +++++++++++++++++--
+ 3 files changed, 144 insertions(+), 18 deletions(-)
+
+diff --git a/src/app/studio2/page.tsx b/src/app/studio2/page.tsx
+index 6c35524..444ef6a 100644
+--- a/src/app/studio2/page.tsx
++++ b/src/app/studio2/page.tsx
+@@ -663,6 +663,7 @@ export default function Studio2Page() {
+ 
+   // ─── Active child profile ────────────────────────────────────────────────────
+   const [activeChild, setActiveChild]       = useState<DBChildProfile | null>(null);
++  const [chatLocked, setChatLocked]         = useState(false);
+ 
+   // ─── Prompt tab state ───────────────────────────────────────────────────────
+   const [promptText, setPromptText]         = useState("");
+@@ -1140,7 +1141,7 @@ export default function Studio2Page() {
+ 
+         {/* Child profile picker */}
+         {showTabBar && (
+-          <ChildProfilePicker selected={activeChild} onChange={setActiveChild} />
++          <ChildProfilePicker selected={activeChild} onChange={(p) => { setActiveChild(p); setChatLocked(false); }} disabled={chatLocked} />
+         )}
+ 
+         {/* Tab bar — hidden during lesson step */}
+@@ -1193,6 +1194,8 @@ export default function Studio2Page() {
+         {activeTab === "chat" && (
+           <LunaChatPanel
+             activeChild={activeChild}
++            onFirstMessage={() => setChatLocked(true)}
++            onDiscard={() => setChatLocked(false)}
+             onScriptReady={(draft) => {
+               writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
+               setScriptBlocks(draft.scriptBlocks);
+diff --git a/src/components/studio/ChildProfilePicker.tsx b/src/components/studio/ChildProfilePicker.tsx
+index 0c160be..5606b6a 100644
+--- a/src/components/studio/ChildProfilePicker.tsx
++++ b/src/components/studio/ChildProfilePicker.tsx
+@@ -200,9 +200,11 @@ function AddProfileModal({
+ export default function ChildProfilePicker({
+   selected,
+   onChange,
++  disabled = false,
+ }: {
+   selected: DBChildProfile | null;
+   onChange: (profile: DBChildProfile | null) => void;
++  disabled?: boolean;
+ }) {
+   const [profiles, setProfiles] = useState<DBChildProfile[]>([]);
+   const [showAdd, setShowAdd]   = useState(false);
+@@ -259,12 +261,14 @@ export default function ChildProfilePicker({
+             return (
+               <button
+                 key={p.id}
+-                onClick={() => onChange(isActive ? null : p)}
++                onClick={() => { if (!disabled) onChange(isActive ? null : p); }}
+                 className="flex items-center gap-2 px-3 py-2 rounded-2xl flex-shrink-0 transition-all active:scale-95"
+                 style={{
+                   background: isActive ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.04)",
+                   border: isActive ? "1.5px solid rgba(79,195,247,0.45)" : "1px solid rgba(255,255,255,0.08)",
+                   boxShadow: isActive ? "0 0 14px rgba(79,195,247,0.15)" : "none",
++                  opacity: disabled && !isActive ? 0.35 : 1,
++                  cursor: disabled ? "default" : "pointer",
+                 }}
+               >
+                 <span className="text-base leading-none">{p.avatar_emoji}</span>
+@@ -285,7 +289,7 @@ export default function ChildProfilePicker({
+           })}
+ 
+           {/* Add profile button */}
+-          <button
++          {!disabled && <button
+             onClick={() => setShowAdd(true)}
+             className="flex items-center gap-1.5 px-3 py-2 rounded-2xl flex-shrink-0 transition-all active:scale-95"
+             style={{
+@@ -296,7 +300,7 @@ export default function ChildProfilePicker({
+           >
+             <span className="text-base leading-none font-light">＋</span>
+             <span className="text-xs font-medium">Add</span>
+-          </button>
++          </button>}
+         </div>
+       </div>
+ 
+diff --git a/src/components/studio/LunaChatPanel.tsx b/src/components/studio/LunaChatPanel.tsx
+index 0370eae..0eda17b 100644
+--- a/src/components/studio/LunaChatPanel.tsx
++++ b/src/components/studio/LunaChatPanel.tsx
+@@ -43,7 +43,7 @@ function TypingDots() {
+ 
+ // ─── Message bubble ───────────────────────────────────────────────────────────
+ 
+-function MessageBubble({ msg }: { msg: Message }) {
++function MessageBubble({ msg, childEmoji }: { msg: Message; childEmoji?: string }) {
+   const isLuna = msg.role === "model";
+   return (
+     <div className={`flex gap-2 items-end ${isLuna ? "justify-start" : "justify-end"}`}>
+@@ -69,6 +69,12 @@ function MessageBubble({ msg }: { msg: Message }) {
+       >
+         {msg.content}
+       </div>
++      {!isLuna && (
++        <div className="w-7 h-7 rounded-full flex items-center justify-center text-base flex-shrink-0"
++          style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.2)", flexShrink: 0 }}>
++          {childEmoji ?? "👤"}
++        </div>
++      )}
+     </div>
+   );
+ }
+@@ -78,9 +84,13 @@ function MessageBubble({ msg }: { msg: Message }) {
+ export default function LunaChatPanel({
+   activeChild,
+   onScriptReady,
++  onFirstMessage,
++  onDiscard,
+ }: {
+   activeChild: DBChildProfile | null;
+   onScriptReady: (draft: Omit<DraftState, "coverUrl">) => void;
++  onFirstMessage?: () => void;
++  onDiscard?: () => void;
+ }) {
+   const [messages, setMessages]         = useState<Message[]>([]);
+   const [input, setInput]               = useState("");
+@@ -92,14 +102,15 @@ export default function LunaChatPanel({
+   const [greeted, setGreeted]           = useState(false);
+   const [muted, setMuted]               = useState(false);
+   const [ttsLoading, setTtsLoading]     = useState(false);
++  const [discardConfirm, setDiscardConfirm] = useState(false);
+   const bottomRef    = useRef<HTMLDivElement>(null);
+   const textareaRef  = useRef<HTMLTextAreaElement>(null);
+   const audioRef     = useRef<HTMLAudioElement | null>(null);
+   const ttsAbortRef  = useRef<AbortController | null>(null);
++  const firstMsgSent = useRef(false);
+ 
+   const speakLuna = useCallback(async (text: string) => {
+     if (muted) return;
+-    // Cancel any in-flight TTS request and stop current playback
+     ttsAbortRef.current?.abort();
+     audioRef.current?.pause();
+     audioRef.current = null;
+@@ -130,14 +141,16 @@ export default function LunaChatPanel({
+ 
+   useEffect(() => { scrollToBottom(); }, [messages, loading, scrollToBottom]);
+ 
+-  // Fetch greeting on first render (reset when child changes)
++  // Reset when child changes
+   useEffect(() => {
+     setMessages([]);
+     setStoryReady(false);
+     setStoryParams(null);
+     setGreeted(false);
++    firstMsgSent.current = false;
+   }, [activeChild?.id]);
+ 
++  // Greeting
+   useEffect(() => {
+     if (greeted) return;
+     setGreeted(true);
+@@ -167,10 +180,67 @@ export default function LunaChatPanel({
+     return () => ctrl.abort();
+   }, [greeted, activeChild]);
+ 
++  function getChildAgeGroup() {
++    const age = activeChild?.age;
++    if (age == null) return undefined;
++    return age <= 4 ? "2-4" : age <= 6 ? "4-6" : age <= 8 ? "6-8" : age <= 10 ? "8-10" : "10-12";
++  }
++
+   async function sendMessage() {
+     const text = input.trim();
+     if (!text || loading) return;
+ 
++    // Fire onFirstMessage once
++    if (!firstMsgSent.current) {
++      firstMsgSent.current = true;
++      onFirstMessage?.();
++    }
++
++    // "prompt:" shortcut — bypass chat, generate story directly
++    if (text.toLowerCase().startsWith("prompt:")) {
++      const promptText = text.slice(7).trim();
++      if (!promptText) return;
++      setMessages((prev) => [...prev, { role: "user", content: text }]);
++      setInput("");
++      setLoading(true);
++      if (textareaRef.current) textareaRef.current.style.height = "auto";
++      try {
++        const res = await fetch("/api/generate-story", {
++          method: "POST",
++          headers: { "Content-Type": "application/json" },
++          body: JSON.stringify({
++            mode: "prompt",
++            promptText,
++            durationMinutes: 3,
++            childAgeGroup: getChildAgeGroup(),
++            language: "en",
++          }),
++        });
++        if (!res.ok) throw new Error("Generation failed");
++        const data = await res.json() as {
++          blocks: ScriptBlock[];
++          title?: string;
++          summary?: string;
++          coverPrompt?: string;
++        };
++        onScriptReady({
++          promptText,
++          scriptBlocks: data.blocks ?? [],
++          summary: data.summary ?? "",
++          coverPrompt: data.coverPrompt ?? "",
++          storyTitle: data.title ?? "",
++        });
++      } catch {
++        setMessages((prev) => [...prev, {
++          role: "model",
++          content: "Couldn't generate the story — please try again or describe it differently.",
++        }]);
++        setLoading(false);
++      }
++      return;
++    }
++
++    // Normal chat flow
+     const next: Message[] = [...messages, { role: "user", content: text }];
+     setMessages(next);
+     setInput("");
+@@ -212,15 +282,25 @@ export default function LunaChatPanel({
+     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+   }
+ 
++  function handleDiscard() {
++    ttsAbortRef.current?.abort();
++    audioRef.current?.pause();
++    audioRef.current = null;
++    setTtsLoading(false);
++    setMessages([]);
++    setStoryReady(false);
++    setStoryParams(null);
++    setGreeted(false);
++    setDiscardConfirm(false);
++    firstMsgSent.current = false;
++    onDiscard?.();
++  }
++
+   async function handleCreateStory() {
+     if (!storyParams || creating) return;
+     setCreating(true);
+     setCreateError(null);
+ 
+-    const age = activeChild?.age;
+-    const childAgeGroup = age == null ? undefined
+-      : age <= 4 ? "2-4" : age <= 6 ? "4-6" : age <= 8 ? "6-8" : age <= 10 ? "8-10" : "10-12";
+-
+     try {
+       const res = await fetch("/api/generate-story", {
+         method: "POST",
+@@ -232,7 +312,7 @@ export default function LunaChatPanel({
+           plot: storyParams.plot ?? "",
+           primaryVoiceId: storyParams.primaryVoiceId ?? "v1",
+           durationMinutes: 3,
+-          childAgeGroup,
++          childAgeGroup: getChildAgeGroup(),
+           language: "en",
+         }),
+       });
+@@ -258,11 +338,14 @@ export default function LunaChatPanel({
+     }
+   }
+ 
++  const childEmoji = activeChild?.avatar_emoji;
++  const hasUserMessages = messages.some((m) => m.role === "user");
++
+   return (
+-    <div className="flex flex-col" style={{ height: "calc(100vh - 280px)", minHeight: 360 }}>
++    <div className="flex flex-col gap-3">
+ 
+       {/* Luna status strip */}
+-      <div className="flex items-center gap-2 mb-3 flex-shrink-0">
++      <div className="flex items-center gap-2 flex-shrink-0">
+         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
+           style={{ background: "linear-gradient(135deg,#1a1a4e,#4fc3f7)", boxShadow: "0 0 10px rgba(79,195,247,0.25)" }}>
+           🌙
+@@ -288,15 +371,17 @@ export default function LunaChatPanel({
+       </div>
+ 
+       {/* Messages */}
+-      <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1">
+-        {messages.map((msg, i) => <MessageBubble key={i} msg={msg} />)}
++      <div className="flex flex-col gap-3">
++        {messages.map((msg, i) => (
++          <MessageBubble key={i} msg={msg} childEmoji={msg.role === "user" ? childEmoji : undefined} />
++        ))}
+         {loading && <TypingDots />}
+         <div ref={bottomRef} />
+       </div>
+ 
+       {/* Story ready CTA */}
+       {storyReady && (
+-        <div className="flex-shrink-0 pt-3">
++        <div>
+           {createError && (
+             <p className="text-center text-xs mb-2" style={{ color: "#f87171" }}>{createError}</p>
+           )}
+@@ -315,7 +400,7 @@ export default function LunaChatPanel({
+       )}
+ 
+       {/* Input */}
+-      <div className="flex-shrink-0 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
++      <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
+         <div className="flex items-end gap-2.5 px-3 py-2.5 rounded-2xl"
+           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}>
+           <textarea
+@@ -347,6 +432,40 @@ export default function LunaChatPanel({
+           Enter to send · Shift+Enter for new line
+         </p>
+       </div>
++
++      {/* Discard */}
++      {hasUserMessages && (
++        <div className="flex justify-center pt-1 pb-2">
++          {discardConfirm ? (
++            <div className="flex items-center gap-3">
++              <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Discard this chat?</span>
++              <button
++                onClick={handleDiscard}
++                className="text-xs px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
++                style={{ background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
++              >
++                Yes, discard
++              </button>
++              <button
++                onClick={() => setDiscardConfirm(false)}
++                className="text-xs px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
++                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
++              >
++                Cancel
++              </button>
++            </div>
++          ) : (
++            <button
++              onClick={() => setDiscardConfirm(true)}
++              className="text-[11px] transition-all active:scale-95"
++              style={{ color: "rgba(255,255,255,0.2)" }}
++            >
++              ✕ Discard chat
++            </button>
++          )}
++        </div>
++      )}
++
+     </div>
+   );
+ }
+-- 
+2.43.0
+
