@@ -121,19 +121,10 @@ function AvatarGallerySheet({
         {/* Scrollable avatar grid */}
         <div className="flex-1 overflow-y-auto px-4 pb-2">
           <div className="grid grid-cols-4 gap-2.5">
-            {SYSTEM_AVATARS.map((avatar, i) => {
+            {SYSTEM_AVATARS.map((avatar) => {
               const portraitUrl = systemAvatarUrls[avatar.id];
+              const displayUrl = portraitUrl ?? avatar.url;
               const isSelected = currentValue === portraitUrl || currentValue === avatar.url;
-              // Cycle through app-palette gradients for placeholder cards
-              const GRADIENTS = [
-                "linear-gradient(135deg,#1E3A5F,#4FC3F7)",
-                "linear-gradient(135deg,#2D1B69,#8B5CF6)",
-                "linear-gradient(135deg,#0D3D3D,#10D9A0)",
-                "linear-gradient(135deg,#1A1A4E,#818CF8)",
-                "linear-gradient(135deg,#4A1942,#EC4899)",
-                "linear-gradient(135deg,#3D2000,#F59E0B)",
-              ];
-              const grad = GRADIENTS[i % GRADIENTS.length];
               return (
                 <button
                   key={avatar.id}
@@ -146,17 +137,8 @@ function AvatarGallerySheet({
                       : "1.5px solid rgba(255,255,255,0.06)",
                   }}
                 >
-                  {portraitUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={portraitUrl} alt={avatar.label} className="w-14 h-14 rounded-xl object-cover" />
-                  ) : (
-                    <div
-                      className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl"
-                      style={{ background: grad }}
-                    >
-                      {avatar.emoji}
-                    </div>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={displayUrl} alt={avatar.label} className="w-14 h-14 rounded-xl object-cover" />
                   <span className="text-[9px] text-white/50 truncate w-full text-center leading-none">
                     {avatar.label}
                   </span>

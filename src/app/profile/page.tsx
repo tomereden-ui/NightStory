@@ -23,16 +23,6 @@ function Ico({ d, size = 15 }: { d: string; size?: number }) {
   );
 }
 
-// ─── Avatar tile gradients (cycles by index) ──────────────────────────────────
-
-const AVATAR_GRADIENTS = [
-  "linear-gradient(135deg,#1E3A5F,#4FC3F7)",
-  "linear-gradient(135deg,#2D1B69,#8B5CF6)",
-  "linear-gradient(135deg,#0D3D3D,#10D9A0)",
-  "linear-gradient(135deg,#1A1A4E,#818CF8)",
-  "linear-gradient(135deg,#4A1942,#EC4899)",
-  "linear-gradient(135deg,#3D2000,#F59E0B)",
-];
 
 // ─── Child profile card ────────────────────────────────────────────────────────
 
@@ -157,10 +147,10 @@ function AvatarPicker({
         </div>
 
         <div className="grid grid-cols-4 gap-2.5 overflow-y-auto px-4 pb-6">
-          {SYSTEM_AVATARS.map((avatar, i) => {
+          {SYSTEM_AVATARS.map((avatar) => {
             const portraitUrl = portraitUrls[avatar.id];
+            const displayUrl = portraitUrl ?? avatar.url;
             const isSelected = avatar.emoji === current;
-            const grad = AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
             return (
               <button
                 key={avatar.id}
@@ -172,31 +162,17 @@ function AvatarPicker({
                   boxShadow: isSelected ? "0 0 18px rgba(79,195,247,0.18)" : "none",
                 }}
               >
-                {portraitUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={portraitUrl}
-                    alt={avatar.label}
-                    className="w-14 h-14 rounded-full object-cover flex-shrink-0"
-                    style={{
-                      border: isSelected
-                        ? "2px solid rgba(79,195,247,0.65)"
-                        : "1.5px solid rgba(255,255,255,0.13)",
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="w-14 h-14 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{
-                      background: grad,
-                      border: isSelected
-                        ? "2px solid rgba(79,195,247,0.65)"
-                        : "1.5px solid rgba(255,255,255,0.13)",
-                    }}
-                  >
-                    {avatar.emoji}
-                  </div>
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={displayUrl}
+                  alt={avatar.label}
+                  className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+                  style={{
+                    border: isSelected
+                      ? "2px solid rgba(79,195,247,0.65)"
+                      : "1.5px solid rgba(255,255,255,0.13)",
+                  }}
+                />
                 <span className="text-[9px] font-semibold text-white/40 truncate w-full text-center leading-tight">
                   {avatar.label}
                 </span>
