@@ -6,6 +6,7 @@ import ScriptBlockCard, { buildSfxPayload } from "./ScriptBlockCard";
 import SpeechPlayerModal from "./SpeechPlayerModal";
 import { useLanguage } from "@/context/LanguageContext";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
+import { getNarratorVoiceId } from "@/lib/narratorPreference";
 
 interface ScriptTabProps {
   blocks: ScriptBlock[];
@@ -407,29 +408,55 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   const audioRef     = useRef<HTMLAudioElement | null>(null);
   const audioBlobUrl = useRef<string | null>(null);
 
-  // ─── Summary narration (Web Speech API) ────────────────────────────────────
+  // ─── Summary narration (Gemini TTS) ───────────────────────────────────────
   const [summaryPlaying, setSummaryPlaying] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   // Auto-expand in studioMode so lesson badges and block cards are immediately visible
   const [scriptExpanded, setScriptExpanded] = useState(studioMode);
-  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
+  const summaryAbortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
+  useEffect(() => () => {
+    summaryAbortRef.current?.abort();
+    summaryAudioRef.current?.pause();
+  }, []);
 
-  const toggleSummaryPlay = useCallback(() => {
-    if (summaryPlaying) {
-      window.speechSynthesis.cancel();
+  const toggleSummaryPlay = useCallback(async () => {
+    if (summaryPlaying || summaryLoading) {
+      summaryAbortRef.current?.abort();
+      summaryAudioRef.current?.pause();
+      summaryAudioRef.current = null;
       setSummaryPlaying(false);
+      setSummaryLoading(false);
       return;
     }
     if (!summary) return;
-    const utter = new SpeechSynthesisUtterance(summary);
-    utter.rate = 0.88;
-    utter.onend = () => setSummaryPlaying(false);
-    utter.onerror = () => setSummaryPlaying(false);
-    utterRef.current = utter;
-    window.speechSynthesis.speak(utter);
-    setSummaryPlaying(true);
-  }, [summary, summaryPlaying]);
+
+    const ctrl = new AbortController();
+    summaryAbortRef.current = ctrl;
+    setSummaryLoading(true);
+    try {
+      const res = await fetch("/api/synthesize-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: summary, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId() }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok || ctrl.signal.aborted) return;
+      const data = await res.json() as { audioData: string; mimeType: string };
+      if (!data.audioData || ctrl.signal.aborted) return;
+      const audio = new Audio(`data:${data.mimeType};base64,${data.audioData}`);
+      summaryAudioRef.current = audio;
+      audio.onended = () => { setSummaryPlaying(false); summaryAudioRef.current = null; };
+      audio.onerror = () => { setSummaryPlaying(false); summaryAudioRef.current = null; };
+      setSummaryLoading(false);
+      setSummaryPlaying(true);
+      audio.play().catch(() => setSummaryPlaying(false));
+    } catch {
+      setSummaryPlaying(false);
+      setSummaryLoading(false);
+    }
+  }, [summary, summaryPlaying, summaryLoading]);
 
   const activeBlock = blocks.find((b) => b.id === activeBlockId) ?? null;
   const activeVoice = activeBlock
@@ -752,13 +779,16 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                   <button
                     onClick={toggleSummaryPlay}
                     className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all active:scale-95"
-                    style={summaryPlaying
+                    style={summaryPlaying || summaryLoading
                       ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
                       : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
                     }
                   >
-                    <span>{summaryPlaying ? "⏸" : "▶"}</span>
-                    <span>{summaryPlaying ? "Stop" : "Play"}</span>
+                    {summaryLoading
+                      ? <span className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
+                      : <span>{summaryPlaying ? "⏸" : "▶"}</span>
+                    }
+                    <span>{summaryLoading ? "Loading…" : summaryPlaying ? "Stop" : "Play"}</span>
                   </button>
                 </div>
                 {(() => {
