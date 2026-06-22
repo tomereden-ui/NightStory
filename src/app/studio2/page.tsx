@@ -20,6 +20,7 @@ import { SCENE_CHARS } from "@/config/sceneCharacters";
 import { LANGUAGE_META } from "@/lib/i18n";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
 import LunaChatPanel from "@/components/studio/LunaChatPanel";
+import { getNarratorVoiceId } from "@/lib/narratorPreference";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
@@ -1005,7 +1006,7 @@ export default function Studio2Page() {
     setProduceError(null);
     setActiveTab("producing");
     try {
-      const body: Record<string, unknown> = { blocks, durationMinutes: duration };
+      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId() };
       if (editingStoryId) body.editingStoryId = editingStoryId;
       if (force) body.force = true;
       if (summary) body.summary = summary;

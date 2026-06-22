@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import type { DraftState } from "@/lib/draftStore";
 import type { ScriptBlock } from "@/types";
+import { getNarratorVoiceId } from "@/lib/narratorPreference";
 
 interface Message {
   role: "user" | "model";
@@ -89,8 +90,29 @@ export default function LunaChatPanel({
   const [creating, setCreating]         = useState(false);
   const [createError, setCreateError]   = useState<string | null>(null);
   const [greeted, setGreeted]           = useState(false);
+  const [muted, setMuted]               = useState(false);
   const bottomRef   = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const audioRef    = useRef<HTMLAudioElement | null>(null);
+
+  const speakLuna = useCallback(async (text: string) => {
+    if (muted) return;
+    audioRef.current?.pause();
+    audioRef.current = null;
+    try {
+      const res = await fetch("/api/synthesize-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId() }),
+      });
+      if (!res.ok) return;
+      const { audioData, mimeType } = await res.json() as { audioData: string; mimeType: string };
+      if (!audioData) return;
+      const audio = new Audio(`data:${mimeType};base64,${audioData}`);
+      audioRef.current = audio;
+      audio.play().catch(() => {});
+    } catch { /* silent fail — TTS is best-effort */ }
+  }, [muted]);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -120,12 +142,12 @@ export default function LunaChatPanel({
         const data: ChatResponse = await r.json();
         if (!r.ok || !data.reply) throw new Error("no reply");
         setMessages([{ role: "model", content: data.reply }]);
+        speakLuna(data.reply);
       })
       .catch(() => {
-        setMessages([{
-          role: "model",
-          content: "Hello! 🌙 I'm Luna, your story guide. Tonight we're going to dream up something magical together.\n\nSo — who's going to be the hero of our story?",
-        }]);
+        const fallback = "Hello! 🌙 I'm Luna, your story guide. Tonight we're going to dream up something magical together.\n\nSo — who's going to be the hero of our story?";
+        setMessages([{ role: "model", content: fallback }]);
+        speakLuna(fallback);
       })
       .finally(() => setLoading(false));
   }, [greeted, activeChild]);
@@ -149,6 +171,7 @@ export default function LunaChatPanel({
       const data: ChatResponse = await res.json();
       if (!res.ok || !data.reply) throw new Error((data as { error?: string }).error ?? "no reply");
       setMessages((prev) => [...prev, { role: "model", content: data.reply }]);
+      speakLuna(data.reply);
       if (data.storyReady && data.storyParams) {
         setStoryReady(true);
         setStoryParams(data.storyParams);
@@ -231,6 +254,14 @@ export default function LunaChatPanel({
         </div>
         <span className="text-white/70 text-xs font-semibold">Luna · Story guide</span>
         <span className="w-1.5 h-1.5 rounded-full animate-pulse ml-1" style={{ background: "#10D9A0" }} />
+        <button
+          onClick={() => { setMuted((m) => { if (!m) { audioRef.current?.pause(); audioRef.current = null; } return !m; }); }}
+          className="ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
+          style={{ background: muted ? "rgba(255,255,255,0.04)" : "rgba(79,195,247,0.1)", border: muted ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(79,195,247,0.3)" }}
+          title={muted ? "Unmute Luna" : "Mute Luna"}
+        >
+          <span className="text-[11px]">{muted ? "🔇" : "🔊"}</span>
+        </button>
       </div>
 
       {/* Messages */}

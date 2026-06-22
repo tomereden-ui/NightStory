@@ -176,6 +176,7 @@ async function runProduction(
   coverPrompt?: string,
   existingCover?: { data: string; mimeType: string },
   force?: boolean,
+  narratorVoiceId?: string,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -253,6 +254,12 @@ async function runProduction(
 
     const voiceMap = new VoiceMap();
     const voiceOverrides = await buildVoiceOverrides(blocks, supabase);
+
+    // Apply user's default narrator voice if no per-block override exists
+    if (narratorVoiceId && !voiceOverrides["Narrator"]) {
+      (voiceOverrides as Record<string, { geminiVoiceName?: string }>)["Narrator"] = { geminiVoiceName: narratorVoiceId };
+    }
+
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
@@ -620,6 +627,7 @@ export async function POST(req: NextRequest) {
       coverImageData?: string;
       coverImageMimeType?: string;
       force?: boolean;
+      narratorVoiceId?: string;
     };
     try {
       body = await req.json();
@@ -651,7 +659,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

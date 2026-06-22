@@ -6,6 +6,8 @@ import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
 import { SYSTEM_AVATARS } from "@/config/systemAvatars";
+import { PRESET_VOICES } from "@/config/presetVoices";
+import { getNarratorVoiceId, setNarratorVoiceId } from "@/lib/narratorPreference";
 import type { UsageTotals } from "@/lib/usageTracker";
 import type { ChildProfile } from "@/types";
 
@@ -505,6 +507,57 @@ function ageToGroup(age: number): import("@/types").AgeGroup {
   return "10-12";
 }
 
+// ─── Narrator voice picker ────────────────────────────────────────────────────
+
+function NarratorVoicePicker() {
+  const [selected, setSelected] = useState<string>(() => getNarratorVoiceId());
+
+  function pick(id: string) {
+    setSelected(id);
+    setNarratorVoiceId(id);
+  }
+
+  return (
+    <div
+      className="-mx-1 flex gap-2.5 overflow-x-auto pb-1"
+      style={{ scrollbarWidth: "none" }}
+    >
+      {PRESET_VOICES.map((v) => {
+        const isActive = selected === v.id;
+        return (
+          <button
+            key={v.id}
+            onClick={() => pick(v.id)}
+            className="flex-shrink-0 flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-2xl transition-all active:scale-95"
+            style={{
+              width: 72,
+              background: isActive ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.03)",
+              border: isActive ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.07)",
+              boxShadow: isActive ? "0 0 16px rgba(79,195,247,0.15)" : "none",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={v.avatarUrl}
+              alt={v.name}
+              className="w-11 h-11 rounded-full object-cover"
+              style={{ border: isActive ? "2px solid rgba(79,195,247,0.6)" : "1.5px solid rgba(255,255,255,0.12)" }}
+            />
+            <span className="text-[10px] font-semibold truncate w-full text-center"
+              style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>
+              {v.name}
+            </span>
+            <span className="text-[9px] text-center leading-tight"
+              style={{ color: isActive ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>
+              {v.desc.split(" ")[0]}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Profile page ─────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -604,6 +657,15 @@ export default function ProfilePage() {
             </div>
             <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
               Forces the layout to a specific screen size regardless of your device.
+            </p>
+          </div>
+
+          {/* ── Narrator voice ───────────────────────────────────────── */}
+          <div className="mb-7">
+            <SectionHeader label="Default Narrator Voice" />
+            <NarratorVoicePicker />
+            <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
+              Used for Luna&apos;s chat voice and as the narrator in new stories.
             </p>
           </div>
 
