@@ -18,6 +18,7 @@ import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
 import { FiveQuestionFlow } from "@/app/create/five-question/FiveQuestionFlow";
 import { SCENE_CHARS } from "@/config/sceneCharacters";
 import { LANGUAGE_META } from "@/lib/i18n";
+import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
@@ -658,6 +659,9 @@ export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
   const router = useRouter();
 
+  // ─── Active child profile ────────────────────────────────────────────────────
+  const [activeChild, setActiveChild]       = useState<DBChildProfile | null>(null);
+
   // ─── Prompt tab state ───────────────────────────────────────────────────────
   const [promptText, setPromptText]         = useState("");
   const [generating, setGenerating]         = useState(false);
@@ -841,7 +845,9 @@ export default function Studio2Page() {
       promptText,
       primaryVoiceId: voicePool[0]?.id ?? PRESET_VOICE_POOL[0].id,
       durationMinutes,
-      childAgeGroup: MOCK_USER.preferredAgeGroup,
+      childAgeGroup: activeChild
+        ? (activeChild.age <= 4 ? "2-4" : activeChild.age <= 6 ? "4-6" : activeChild.age <= 8 ? "6-8" : activeChild.age <= 10 ? "8-10" : "10-12")
+        : MOCK_USER.preferredAgeGroup,
       language,
       ...(selectedLessons.length > 0 ? { lessons: selectedLessons } : {}),
     };
@@ -1129,6 +1135,11 @@ export default function Studio2Page() {
             )}
           </button>
         </div>
+
+        {/* Child profile picker */}
+        {showTabBar && (
+          <ChildProfilePicker selected={activeChild} onChange={setActiveChild} />
+        )}
 
         {/* Tab bar — hidden during lesson step */}
         {showTabBar && (

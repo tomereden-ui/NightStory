@@ -52,3 +52,18 @@ create table if not exists public.story_elements (
 
 create index if not exists idx_story_elements_lookup
   on public.story_elements (story_id, content_hash);
+
+-- Child profiles — personalization data for story creation and chat
+create table if not exists public.child_profiles (
+  id text primary key,
+  name text not null,
+  age integer not null,
+  gender text not null default 'other',          -- 'boy' | 'girl' | 'other'
+  avatar_emoji text not null default '⭐',
+  favorite_animals jsonb not null default '[]',  -- e.g. ["fox","dragon","rabbit"]
+  favorite_themes jsonb not null default '[]',   -- e.g. ["adventure","fantasy","animals"]
+  interests text,                                -- free-form: "dinosaurs, robots, soccer"
+  notes text,                                    -- extra context for Luna / story generation
+  created_at bigint not null,
+  updated_at bigint not null
+);

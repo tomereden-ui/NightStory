@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
 
 interface Message {
   role: "user" | "model";
@@ -94,6 +95,7 @@ export default function ChatPage() {
   const [storyReady, setStoryReady] = useState(false);
   const [storyParams, setStoryParams] = useState<Record<string, string> | null>(null);
   const [greeted, setGreeted] = useState(false);
+  const [activeChild, setActiveChild] = useState<DBChildProfile | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -112,7 +114,7 @@ export default function ChatPage() {
     fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: [] }),
+      body: JSON.stringify({ messages: [], childProfile: activeChild }),
     })
       .then((r) => r.json())
       .then((data: ChatResponse) => {
@@ -145,7 +147,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: next, childProfile: activeChild }),
       });
       const data: ChatResponse = await res.json();
       setMessages((prev) => [...prev, { role: "model", content: data.reply }]);
@@ -211,6 +213,11 @@ export default function ChatPage() {
           />
           <span className="text-[10px] font-medium" style={{ color: "#10D9A0" }}>Online</span>
         </div>
+      </div>
+
+      {/* ── Child profile picker ────────────────────────────────────────── */}
+      <div className="flex-shrink-0 px-5 pt-3 pb-1">
+        <ChildProfilePicker selected={activeChild} onChange={setActiveChild} />
       </div>
 
       {/* ── Messages ────────────────────────────────────────────────────── */}

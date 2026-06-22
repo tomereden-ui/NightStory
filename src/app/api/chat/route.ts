@@ -11,6 +11,23 @@ interface ChatMessage {
   content: string;
 }
 
+interface ChildProfileCtx {
+  name?: string;
+  age?: number;
+  gender?: string;
+  favorite_themes?: string[];
+  interests?: string;
+}
+
+function buildChildContext(p: ChildProfileCtx | null | undefined): string {
+  if (!p || !p.name) return "";
+  const parts: string[] = [`Child's name: ${p.name}`, `Age: ${p.age ?? "unknown"}`];
+  if (p.gender && p.gender !== "other") parts.push(`Gender: ${p.gender}`);
+  if (p.favorite_themes?.length) parts.push(`Favourite story themes: ${p.favorite_themes.join(", ")}`);
+  if (p.interests) parts.push(`Interests: ${p.interests}`);
+  return `\n\nACTIVE CHILD PROFILE\n====================\n${parts.join("\n")}\nUse this profile to personalise your greeting (use the child's name!) and to bias story suggestions toward their interests and age-appropriate language.`;
+}
+
 function loadChatGuide(): string {
   try {
     return fs.readFileSync(path.join(process.cwd(), "config", "gemini-chat-guide.txt"), "utf-8");
@@ -26,9 +43,11 @@ export async function POST(req: NextRequest) {
   }
 
   let messages: ChatMessage[];
+  let childProfile: ChildProfileCtx | null = null;
   try {
     const body = await req.json();
     messages = body.messages ?? [];
+    childProfile = body.childProfile ?? null;
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -37,7 +56,7 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
-      systemInstruction: loadChatGuide(),
+      systemInstruction: loadChatGuide() + buildChildContext(childProfile),
     });
 
     // Empty messages = initial greeting trigger
