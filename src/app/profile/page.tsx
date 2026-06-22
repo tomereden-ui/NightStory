@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
@@ -104,14 +104,59 @@ function AvatarPicker({
   onClose: () => void;
 }) {
   const [portraitUrls, setPortraitUrls] = useState<Record<string, string>>({});
+  const [painting, setPainting] = useState(0);
+  const [paintingTotal, setPaintingTotal] = useState(0);
+  const seedingRef = useRef(false);
 
   useEffect(() => {
-    fetch("/api/admin/seed-system-avatars")
-      .then((r) => r.json())
-      .then((data: { existingUrls?: Record<string, string> }) => {
-        if (data.existingUrls) setPortraitUrls(data.existingUrls);
-      })
-      .catch(() => {});
+    if (seedingRef.current) return;
+    seedingRef.current = true;
+    let cancelled = false;
+
+    async function seedPortraits() {
+      try {
+        const res = await fetch("/api/admin/seed-system-avatars");
+        if (!res.ok) return;
+        const { missing, existingUrls } = await res.json() as {
+          missing: { id: string; prompt: string }[];
+          existingUrls: Record<string, string>;
+        };
+        if (existingUrls) setPortraitUrls((p) => ({ ...p, ...existingUrls }));
+        if (!missing?.length) return;
+        setPaintingTotal(Object.keys(existingUrls ?? {}).length + missing.length);
+        setPainting(Object.keys(existingUrls ?? {}).length);
+
+        for (const { id, prompt } of missing) {
+          if (cancelled) return;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const seed = Math.floor(Math.random() * 999999);
+              const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=flux&width=512&height=512&seed=${seed}&nologo=true`;
+              const imgRes = await fetch(imgUrl, { signal: AbortSignal.timeout(25000) });
+              if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
+              if (cancelled) return;
+              const blob = await imgRes.blob();
+              const cacheRes = await fetch(`/api/admin/seed-system-avatars?avatarId=${id}`, {
+                method: "POST", body: blob, headers: { "Content-Type": blob.type },
+              });
+              if (cacheRes.ok) {
+                const { url: cachedUrl } = await cacheRes.json() as { url: string };
+                if (cachedUrl && !cancelled) {
+                  setPortraitUrls((p) => ({ ...p, [id]: cachedUrl }));
+                  setPainting((n) => n + 1);
+                  break;
+                }
+              }
+            } catch { /* retry or skip */ }
+            if (!cancelled) await new Promise((r) => setTimeout(r, 2000));
+          }
+          if (!cancelled) await new Promise((r) => setTimeout(r, 2000));
+        }
+      } catch { /* ignore */ }
+    }
+
+    seedPortraits();
+    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -135,7 +180,14 @@ function AvatarPicker({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
             <p className="text-white font-bold text-sm">Choose Avatar</p>
-            <p className="text-white/30 text-[11px] mt-0.5">{SYSTEM_AVATARS.length} characters</p>
+            {paintingTotal > 0 && painting < paintingTotal ? (
+              <p className="text-[11px] mt-0.5 flex items-center gap-1.5" style={{ color: "rgba(79,195,247,0.7)" }}>
+                <span className="w-1.5 h-1.5 rounded-full inline-block animate-pulse" style={{ background: "#4fc3f7" }} />
+                Painting portraits… {painting}/{paintingTotal}
+              </p>
+            ) : (
+              <p className="text-white/30 text-[11px] mt-0.5">{SYSTEM_AVATARS.length} characters</p>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -194,7 +246,7 @@ function AddChildModal({
 }: {
   onAdd: (child: Omit<ChildProfile, "id" | "favoriteCategories" | "ageGroup">) => void;
   onClose: () => void;
-  t: (key: string) => string;
+  t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
 }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");

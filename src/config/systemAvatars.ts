@@ -3,41 +3,36 @@ export interface SystemAvatar {
   label: string;
   category: "child" | "adult" | "animal" | "fantasy" | "magical";
   emoji: string;
-  url: string;    // DiceBear fallback — loads instantly
-  prompt?: string; // Portrait prompt for AI seeding (human/fantasy only)
+  url: string;    // DiceBear fallback — loads instantly while portrait is being painted
+  prompt: string; // Pollinations AI portrait prompt
 }
 
 const DB = "https://api.dicebear.com/9.x";
 
-// Flat bust-portrait style — matches the vector people icon look
 function mini(seed: string, bg: string) {
   return `${DB}/miniavs/svg?seed=${encodeURIComponent(seed)}&backgroundColor=${bg}&radius=50`;
 }
-// Pixel-art for animals
 function pixel(seed: string, bg: string) {
   return `${DB}/pixel-art/svg?seed=${encodeURIComponent(seed)}&backgroundColor=${bg}&radius=50`;
 }
-// Fun-emoji for magical/celestial
-function emoji(seed: string, bg: string) {
-  return `${DB}/fun-emoji/svg?seed=${encodeURIComponent(seed)}&backgroundColor=${bg}&radius=50`;
-}
 
-const P = "illustrated portrait, soft cinematic lighting, painterly digital art, dreamy children's book quality, gentle expression";
+const P = "illustrated portrait, soft cinematic lighting, painterly digital art, dreamy children's book quality, gentle expression, circular bust portrait";
+const PA = "illustrated animal portrait, soft cinematic lighting, painterly digital art, dreamy children's book quality, friendly face, circular bust portrait";
 
 export const SYSTEM_AVATARS: SystemAvatar[] = [
   // ── Children ─────────────────────────────────────────────────────────────────
-  { id: "child-girl-stars",    label: "Luna",   category: "child", emoji: "⭐", url: mini("Luna-star-child",      "b6e3f4"), prompt: `young girl with dark eyes and a glowing star crown, soft blue starry background, ${P}` },
-  { id: "child-boy-adventure", label: "Finn",   category: "child", emoji: "🧭", url: mini("Finn-explorer",        "ffd5dc"), prompt: `adventurous young boy explorer with curious bright eyes, warm pink background, ${P}` },
-  { id: "child-girl-artist",   label: "Mia",    category: "child", emoji: "🎨", url: mini("Mia-artist-paint",     "c0aede"), prompt: `creative young girl with paint-stained hands and bright smile, lavender background, ${P}` },
-  { id: "child-boy-reader",    label: "Leo",    category: "child", emoji: "📚", url: mini("Leo-bookworm",         "b6e3f4"), prompt: `bookworm boy with round glasses and kind eyes, soft blue background, warm reading light, ${P}` },
-  { id: "child-girl-dancer",   label: "Bella",  category: "child", emoji: "🩰", url: mini("Bella-dancer-tutu",    "ffd5dc"), prompt: `graceful young ballerina girl with hair bun and soft smile, rosy pink background, ${P}` },
-  { id: "child-boy-science",   label: "Max",    category: "child", emoji: "🔬", url: mini("Max-science-goggles",  "c0aede"), prompt: `enthusiastic young scientist boy with safety goggles, lavender background, ${P}` },
-  { id: "child-girl-nature",   label: "Lily",   category: "child", emoji: "🌸", url: mini("Lily-flowers-nature",  "d4edda"), prompt: `gentle nature-loving girl with flowers woven in her hair, soft green background, ${P}` },
-  { id: "child-boy-pilot",     label: "Jay",    category: "child", emoji: "✈️", url: mini("Jay-pilot-aviator",   "b6d4f4"), prompt: `cheerful young boy pilot with aviator goggles and scarf, light blue sky background, ${P}` },
-  { id: "child-girl-chef",     label: "Rosa",   category: "child", emoji: "👩‍🍳", url: mini("Rosa-chef-baker",   "ffe4c4"), prompt: `cheerful young chef girl with tiny white apron and flour on her nose, warm peach background, ${P}` },
-  { id: "child-boy-music",     label: "Sam",    category: "child", emoji: "🎸", url: mini("Sam-guitar-music",    "ffd5dc"), prompt: `musical boy with colorful headphones and joyful bright eyes, rosy background, ${P}` },
-  { id: "child-girl-magic",    label: "Zoe",    category: "child", emoji: "✨", url: mini("Zoe-magic-wand",      "e8d4f5"), prompt: `magical girl with sparkling wand and glowing violet eyes, soft purple background, ${P}` },
-  { id: "child-toddler-bear",  label: "Teddy",  category: "child", emoji: "🧸", url: mini("Teddy-bear-pajamas", "ffe4c4"), prompt: `adorable toddler in bear-eared pajamas with rosy chubby cheeks, warm peach background, ${P}` },
+  { id: "child-girl-stars",    label: "Luna",    category: "child", emoji: "⭐", url: mini("Luna-star-child",      "b6e3f4"), prompt: `young girl with dark eyes and a glowing star crown, soft blue starry background, ${P}` },
+  { id: "child-boy-adventure", label: "Finn",    category: "child", emoji: "🧭", url: mini("Finn-explorer",        "ffd5dc"), prompt: `adventurous young boy explorer with curious bright eyes, warm pink background, ${P}` },
+  { id: "child-girl-artist",   label: "Mia",     category: "child", emoji: "🎨", url: mini("Mia-artist-paint",     "c0aede"), prompt: `creative young girl with paint-stained cheek and bright smile, lavender background, ${P}` },
+  { id: "child-boy-reader",    label: "Leo",     category: "child", emoji: "📚", url: mini("Leo-bookworm",         "b6e3f4"), prompt: `bookworm boy with round glasses and kind eyes, soft blue background, warm reading light, ${P}` },
+  { id: "child-girl-dancer",   label: "Bella",   category: "child", emoji: "🩰", url: mini("Bella-dancer-tutu",    "ffd5dc"), prompt: `graceful young ballerina girl with hair bun and soft smile, rosy pink background, ${P}` },
+  { id: "child-boy-science",   label: "Max",     category: "child", emoji: "🔬", url: mini("Max-science-goggles",  "c0aede"), prompt: `enthusiastic young scientist boy with safety goggles on forehead, lavender background, ${P}` },
+  { id: "child-girl-nature",   label: "Lily",    category: "child", emoji: "🌸", url: mini("Lily-flowers-nature",  "d4edda"), prompt: `gentle nature-loving girl with tiny flowers woven in her hair, soft green background, ${P}` },
+  { id: "child-boy-pilot",     label: "Jay",     category: "child", emoji: "✈️", url: mini("Jay-pilot-aviator",   "b6d4f4"), prompt: `cheerful young boy with aviator goggles and colourful scarf, light blue sky background, ${P}` },
+  { id: "child-girl-chef",     label: "Rosa",    category: "child", emoji: "👩‍🍳", url: mini("Rosa-chef-baker",   "ffe4c4"), prompt: `cheerful young chef girl with tiny white apron and flour on her nose, warm peach background, ${P}` },
+  { id: "child-boy-music",     label: "Sam",     category: "child", emoji: "🎸", url: mini("Sam-guitar-music",    "ffd5dc"), prompt: `musical boy with colourful headphones and joyful bright eyes, rosy background, ${P}` },
+  { id: "child-girl-magic",    label: "Zoe",     category: "child", emoji: "✨", url: mini("Zoe-magic-wand",      "e8d4f5"), prompt: `magical girl with sparkling wand and glowing violet eyes, soft purple background, ${P}` },
+  { id: "child-toddler-bear",  label: "Teddy",   category: "child", emoji: "🧸", url: mini("Teddy-bear-pajamas",  "ffe4c4"), prompt: `adorable toddler in bear-eared pajamas with rosy chubby cheeks, warm peach background, ${P}` },
 
   // ── Adults ────────────────────────────────────────────────────────────────────
   { id: "adult-mom-warm",          label: "Mom",     category: "adult", emoji: "💝", url: mini("Mom-warm-caring",        "ffdfbf"), prompt: `warm loving mother with gentle smile and kind eyes, soft golden background, ${P}` },
@@ -49,39 +44,29 @@ export const SYSTEM_AVATARS: SystemAvatar[] = [
   { id: "adult-scientist-curious", label: "Dr. Ray", category: "adult", emoji: "🔭", url: mini("DrRay-lab-coat-curly",   "d4f5f5"), prompt: `curious scientist in lab coat with thoughtful intelligent eyes, teal blue background, ${P}` },
   { id: "adult-musician-cool",     label: "Jazz",    category: "adult", emoji: "🎵", url: mini("Jazz-headphones-cool",   "e8e4f5"), prompt: `cool musician with over-ear headphones and relaxed confident look, purple background, ${P}` },
 
-  // ── Animals — pixel-art ───────────────────────────────────────────────────────
-  { id: "animal-fox-clever",      label: "Foxy",   category: "animal", emoji: "🦊", url: pixel("CleverFox-orange-amber",  "fff3e0") },
-  { id: "animal-owl-wise",        label: "Ollie",  category: "animal", emoji: "🦉", url: pixel("WiseOwl-graduation-cap",  "fff9e0") },
-  { id: "animal-rabbit-fluffy",   label: "Bun",    category: "animal", emoji: "🐰", url: pixel("FluffyRabbit-pink-nose",  "fce4ec") },
-  { id: "animal-bear-honey",      label: "Baloo",  category: "animal", emoji: "🐻", url: pixel("HoneyBear-golden-brown",  "fff3cd") },
-  { id: "animal-cat-magic",       label: "Mystic", category: "animal", emoji: "🐱", url: pixel("MysticCat-purple-eyes",   "ede7f6") },
-  { id: "animal-dog-loyal",       label: "Buddy",  category: "animal", emoji: "🐶", url: pixel("LoyalDog-golden-floppy",  "fff9c4") },
-  { id: "animal-dragon-tiny",     label: "Sparky", category: "animal", emoji: "🐉", url: pixel("TinyDragon-green-spark",  "e8f5e9") },
-  { id: "animal-penguin-dapper",  label: "Pip",    category: "animal", emoji: "🐧", url: pixel("DapperPenguin-bowtie",    "e3f2fd") },
-  { id: "animal-panda-chill",     label: "Bamboo", category: "animal", emoji: "🐼", url: pixel("ChillPanda-bamboo",       "f1f8e9") },
-  { id: "animal-deer-gentle",     label: "Dew",    category: "animal", emoji: "🦌", url: pixel("GentleDeer-velvet",       "fbe9e7") },
-  { id: "animal-parrot-colorful", label: "Rio",    category: "animal", emoji: "🦜", url: pixel("ColorfulParrot-tropical", "e0f7fa") },
-  { id: "animal-hedgehog-cute",   label: "Quill",  category: "animal", emoji: "🦔", url: pixel("CuteHedgehog-backpack",   "fff3e0") },
+  // ── Animals ───────────────────────────────────────────────────────────────────
+  { id: "animal-fox-clever",      label: "Foxy",   category: "animal", emoji: "🦊", url: pixel("CleverFox-orange",       "fff3e0"), prompt: `clever fox with bright amber eyes and lush orange fur, warm forest background, ${PA}` },
+  { id: "animal-owl-wise",        label: "Ollie",  category: "animal", emoji: "🦉", url: pixel("WiseOwl-cap",            "fff9e0"), prompt: `wise brown owl with large golden eyes and soft feathers, warm moonlit background, ${PA}` },
+  { id: "animal-rabbit-fluffy",   label: "Bun",    category: "animal", emoji: "🐰", url: pixel("FluffyRabbit-pink",      "fce4ec"), prompt: `fluffy white rabbit with a pink nose and curious bright eyes, soft rosy background, ${PA}` },
+  { id: "animal-bear-honey",      label: "Baloo",  category: "animal", emoji: "🐻", url: pixel("HoneyBear-golden",       "fff3cd"), prompt: `friendly golden brown bear with a warm gentle smile, honey-golden background, ${PA}` },
+  { id: "animal-cat-magic",       label: "Mystic", category: "animal", emoji: "🐱", url: pixel("MysticCat-purple",       "ede7f6"), prompt: `mysterious silver cat with glowing violet eyes and sleek fur, soft purple background, ${PA}` },
+  { id: "animal-dog-loyal",       label: "Buddy",  category: "animal", emoji: "🐶", url: pixel("LoyalDog-golden",        "fff9c4"), prompt: `loyal golden retriever puppy with floppy ears and happy expression, warm sunny background, ${PA}` },
+  { id: "animal-dragon-tiny",     label: "Sparky", category: "animal", emoji: "🐉", url: pixel("TinyDragon-green",       "e8f5e9"), prompt: `tiny friendly green dragon with sparkling eyes and small glowing horns, soft emerald background, ${PA}` },
+  { id: "animal-penguin-dapper",  label: "Pip",    category: "animal", emoji: "🐧", url: pixel("DapperPenguin-bowtie",   "e3f2fd"), prompt: `dapper little penguin wearing a tiny bow tie, icy blue background, ${PA}` },
+  { id: "animal-panda-chill",     label: "Bamboo", category: "animal", emoji: "🐼", url: pixel("ChillPanda-bamboo",      "f1f8e9"), prompt: `chilled-out panda munching bamboo with sleepy happy eyes, soft green background, ${PA}` },
+  { id: "animal-deer-gentle",     label: "Dew",    category: "animal", emoji: "🦌", url: pixel("GentleDeer-velvet",      "fbe9e7"), prompt: `gentle young deer with soft velvet antlers and big doe eyes, dawn pink forest background, ${PA}` },
+  { id: "animal-parrot-colorful", label: "Rio",    category: "animal", emoji: "🦜", url: pixel("ColorfulParrot-tropical","e0f7fa"), prompt: `vibrant tropical parrot with rainbow feathers and bright clever eyes, turquoise background, ${PA}` },
+  { id: "animal-hedgehog-cute",   label: "Quill",  category: "animal", emoji: "🦔", url: pixel("CuteHedgehog-backpack",  "fff3e0"), prompt: `adorable hedgehog with tiny spines and a sweet curious expression, warm peach background, ${PA}` },
 
   // ── Fantasy ───────────────────────────────────────────────────────────────────
-  { id: "fantasy-fairy-wings",    label: "Fae",      category: "fantasy", emoji: "🧚",    url: mini("FairyFae-iridescent-wings",  "f3e5f5"), prompt: `beautiful fairy with iridescent wings and softly glowing skin, purple magical background, ethereal fantasy ${P}` },
-  { id: "fantasy-wizard-stars",   label: "Merlin",   category: "fantasy", emoji: "🧙",    url: mini("StarWizard-white-beard",     "1a237e"), prompt: `wise old wizard with long white beard and star-covered robes, deep blue magical background, epic fantasy ${P}` },
-  { id: "fantasy-elf-forest",     label: "Elara",    category: "fantasy", emoji: "🧝",    url: mini("ForestElf-pointed-ears",     "e8f5e9"), prompt: `graceful forest elf with pointed ears and bright green eyes, soft forest green background, detailed fantasy ${P}` },
-  { id: "fantasy-mermaid-waves",  label: "Marina",   category: "fantasy", emoji: "🧜",    url: mini("OceanMermaid-teal-scales",   "e0f7fa"), prompt: `beautiful mermaid with iridescent teal scales and flowing hair, ocean blue background, dreamy fantasy ${P}` },
-  { id: "fantasy-gnome-garden",   label: "Gnomeo",   category: "fantasy", emoji: "🍄",    url: mini("GardenGnome-red-hat",        "fff9c4"), prompt: `cheerful garden gnome with bright red hat and rosy cheeks, warm sunny yellow background, whimsical fantasy ${P}` },
-  { id: "fantasy-witch-friendly", label: "Willa",    category: "fantasy", emoji: "🧙‍♀️", url: mini("FriendlyWitch-purple-hat",   "ede7f6"), prompt: `friendly young witch with purple pointed hat and warm smile, violet magical background, charming fantasy ${P}` },
-  { id: "fantasy-knight-brave",   label: "Sterling", category: "fantasy", emoji: "⚔️",   url: mini("BraveKnight-silver-armor",   "e3f2fd"), prompt: `brave young knight in shining silver armor with determined eyes, blue background, heroic fantasy ${P}` },
-  { id: "fantasy-unicorn-magic",  label: "Celeste",  category: "fantasy", emoji: "🦄",    url: mini("MagicUnicorn-rainbow-mane",  "fce4ec"), prompt: `magical unicorn girl with rainbow flowing mane and sparkling golden horn, pink magical background, enchanted fantasy ${P}` },
-
-  // ── Magical / Celestial ───────────────────────────────────────────────────────
-  { id: "magic-star-glow",         label: "Starlet", category: "magical", emoji: "⭐", url: emoji("GlowingStar-happy-face",   "fff9c4") },
-  { id: "magic-moon-sleepy",       label: "Nox",     category: "magical", emoji: "🌙", url: emoji("SleepyMoon-silver-glow",  "1a237e") },
-  { id: "magic-cloud-fluffy",      label: "Nimbus",  category: "magical", emoji: "☁️", url: emoji("FluffyCloud-rosy-breeze", "e3f2fd") },
-  { id: "magic-firefly-golden",    label: "Glimmer", category: "magical", emoji: "✨", url: emoji("GoldenFirefly-glow",      "fff9c4") },
-  { id: "magic-comet-zoom",        label: "Comet",   category: "magical", emoji: "☄️", url: emoji("ZoomingComet-sparkle",   "1a237e") },
-  { id: "magic-rainbow-bright",    label: "Arc",     category: "magical", emoji: "🌈", url: emoji("HappyRainbow-bright-arc", "e8f5e9") },
-  { id: "magic-snowflake-crystal", label: "Flake",   category: "magical", emoji: "❄️", url: emoji("CrystalSnowflake-icy",   "e3f2fd") },
-  { id: "magic-robot-friendly",    label: "Beep",    category: "magical", emoji: "🤖", url: emoji("FriendlyRobot-heart",     "e8eaf6") },
+  { id: "fantasy-fairy-wings",    label: "Fae",      category: "fantasy", emoji: "🧚",    url: mini("FairyFae-wings",       "f3e5f5"), prompt: `beautiful fairy with iridescent wings and softly glowing skin, purple magical background, ethereal fantasy, ${P}` },
+  { id: "fantasy-wizard-stars",   label: "Merlin",   category: "fantasy", emoji: "🧙",    url: mini("StarWizard-beard",     "1a237e"), prompt: `wise old wizard with long white beard and star-covered midnight robes, deep blue magical background, epic fantasy, ${P}` },
+  { id: "fantasy-elf-forest",     label: "Elara",    category: "fantasy", emoji: "🧝",    url: mini("ForestElf-ears",       "e8f5e9"), prompt: `graceful forest elf with pointed ears and bright green eyes, soft forest background, detailed fantasy, ${P}` },
+  { id: "fantasy-mermaid-waves",  label: "Marina",   category: "fantasy", emoji: "🧜",    url: mini("OceanMermaid-scales",  "e0f7fa"), prompt: `beautiful mermaid with iridescent teal scales and flowing sea-green hair, ocean blue background, dreamy fantasy, ${P}` },
+  { id: "fantasy-witch-friendly", label: "Willa",    category: "fantasy", emoji: "🧙‍♀️", url: mini("FriendlyWitch-hat",    "ede7f6"), prompt: `friendly young witch with purple pointed hat and warm smile, violet magical background, charming fantasy, ${P}` },
+  { id: "fantasy-knight-brave",   label: "Sterling", category: "fantasy", emoji: "⚔️",   url: mini("BraveKnight-armor",    "e3f2fd"), prompt: `brave young knight in shining silver armour with determined kind eyes, blue background, heroic fantasy, ${P}` },
+  { id: "fantasy-unicorn-magic",  label: "Celeste",  category: "fantasy", emoji: "🦄",    url: mini("MagicUnicorn-mane",    "fce4ec"), prompt: `magical unicorn with rainbow flowing mane and sparkling golden horn, pink magical background, enchanted fantasy, ${PA}` },
+  { id: "fantasy-gnome-garden",   label: "Gnomeo",   category: "fantasy", emoji: "🍄",    url: mini("GardenGnome-hat",      "fff9c4"), prompt: `cheerful garden gnome with bright red hat and rosy cheeks, warm sunny background, whimsical fantasy, ${P}` },
 ];
 
 export const SYSTEM_AVATAR_MAP: Record<string, SystemAvatar> = Object.fromEntries(
@@ -89,7 +74,7 @@ export const SYSTEM_AVATAR_MAP: Record<string, SystemAvatar> = Object.fromEntrie
 );
 
 export const SYSTEM_AVATAR_CATEGORIES = [
-  "child", "adult", "animal", "fantasy", "magical",
+  "child", "adult", "animal", "fantasy",
 ] as const;
 
 export type SystemAvatarCategory = (typeof SYSTEM_AVATAR_CATEGORIES)[number];
@@ -99,5 +84,4 @@ export const CATEGORY_LABELS: Record<SystemAvatarCategory, string> = {
   adult:   "Adults",
   animal:  "Animals",
   fantasy: "Fantasy",
-  magical: "Magical",
 };
