@@ -91,27 +91,37 @@ export default function LunaChatPanel({
   const [createError, setCreateError]   = useState<string | null>(null);
   const [greeted, setGreeted]           = useState(false);
   const [muted, setMuted]               = useState(false);
-  const bottomRef   = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const audioRef    = useRef<HTMLAudioElement | null>(null);
+  const [ttsLoading, setTtsLoading]     = useState(false);
+  const bottomRef    = useRef<HTMLDivElement>(null);
+  const textareaRef  = useRef<HTMLTextAreaElement>(null);
+  const audioRef     = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef  = useRef<AbortController | null>(null);
 
   const speakLuna = useCallback(async (text: string) => {
     if (muted) return;
+    // Cancel any in-flight TTS request and stop current playback
+    ttsAbortRef.current?.abort();
     audioRef.current?.pause();
     audioRef.current = null;
+
+    const ctrl = new AbortController();
+    ttsAbortRef.current = ctrl;
+    setTtsLoading(true);
     try {
       const res = await fetch("/api/synthesize-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId() }),
+        signal: ctrl.signal,
       });
       if (!res.ok) return;
       const { audioData, mimeType } = await res.json() as { audioData: string; mimeType: string };
-      if (!audioData) return;
+      if (!audioData || ctrl.signal.aborted) return;
       const audio = new Audio(`data:${mimeType};base64,${audioData}`);
       audioRef.current = audio;
       audio.play().catch(() => {});
-    } catch { /* silent fail — TTS is best-effort */ }
+    } catch { /* AbortError or network error — silent fail */ }
+    finally { if (!ctrl.signal.aborted) setTtsLoading(false); }
   }, [muted]);
 
   const scrollToBottom = useCallback(() => {
@@ -132,11 +142,13 @@ export default function LunaChatPanel({
     if (greeted) return;
     setGreeted(true);
     setLoading(true);
+    const ctrl = new AbortController();
 
     fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: [], childProfile: activeChild }),
+      signal: ctrl.signal,
     })
       .then(async (r) => {
         const data: ChatResponse = await r.json();
@@ -144,12 +156,15 @@ export default function LunaChatPanel({
         setMessages([{ role: "model", content: data.reply }]);
         speakLuna(data.reply);
       })
-      .catch(() => {
+      .catch((err) => {
+        if ((err as Error).name === "AbortError") return;
         const fallback = "Hello! 🌙 I'm Luna, your story guide. Tonight we're going to dream up something magical together.\n\nSo — who's going to be the hero of our story?";
         setMessages([{ role: "model", content: fallback }]);
         speakLuna(fallback);
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!ctrl.signal.aborted) setLoading(false); });
+
+    return () => ctrl.abort();
   }, [greeted, activeChild]);
 
   async function sendMessage() {
@@ -254,8 +269,16 @@ export default function LunaChatPanel({
         </div>
         <span className="text-white/70 text-xs font-semibold">Luna · Story guide</span>
         <span className="w-1.5 h-1.5 rounded-full animate-pulse ml-1" style={{ background: "#10D9A0" }} />
+        {ttsLoading && !muted && (
+          <span className="flex items-center gap-0.5 ml-1" title="Loading voice…">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="w-0.5 rounded-full animate-bounce"
+                style={{ height: 8 + i * 3, background: "#4fc3f7", animationDelay: `${i * 0.12}s`, animationDuration: "0.7s", opacity: 0.7 }} />
+            ))}
+          </span>
+        )}
         <button
-          onClick={() => { setMuted((m) => { if (!m) { audioRef.current?.pause(); audioRef.current = null; } return !m; }); }}
+          onClick={() => { setMuted((m) => { if (!m) { ttsAbortRef.current?.abort(); audioRef.current?.pause(); audioRef.current = null; setTtsLoading(false); } return !m; }); }}
           className="ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
           style={{ background: muted ? "rgba(255,255,255,0.04)" : "rgba(79,195,247,0.1)", border: muted ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(79,195,247,0.3)" }}
           title={muted ? "Unmute Luna" : "Mute Luna"}
