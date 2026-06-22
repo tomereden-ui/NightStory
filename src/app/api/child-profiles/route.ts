@@ -24,11 +24,14 @@ export async function GET() {
       .select("*")
       .order("created_at", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      // Table not created yet — return empty array so UI uses mock fallback
+      console.warn("[child-profiles] DB error:", error.message);
+      return NextResponse.json([]);
+    }
     return NextResponse.json(data ?? []);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json([]);
   }
 }
 

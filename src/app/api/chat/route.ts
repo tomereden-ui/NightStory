@@ -67,11 +67,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ reply: result.response.text().trim(), storyReady: false });
     }
 
-    // Build history from all messages except the last user message
-    const history = messages.slice(0, -1).map((m) => ({
-      role: m.role,
+    // Build history from all messages except the last user message.
+    // Gemini requires history to start with a user turn — if the first stored
+    // message is the model greeting, prepend the synthetic trigger it responded to.
+    const rawHistory = messages.slice(0, -1).map((m) => ({
+      role: m.role as "user" | "model",
       parts: [{ text: m.content }],
     }));
+    const history = rawHistory.length > 0 && rawHistory[0].role === "model"
+      ? [{ role: "user" as const, parts: [{ text: "BEGIN_CONVERSATION" }] }, ...rawHistory]
+      : rawHistory;
 
     const chat = model.startChat({ history });
     const lastMessage = messages[messages.length - 1].content;
