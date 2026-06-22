@@ -113,43 +113,91 @@ function AvatarPicker({
   onSelect: (emoji: string) => void;
   onClose: () => void;
 }) {
+  const [portraitUrls, setPortraitUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("/api/admin/seed-system-avatars")
+      .then((r) => r.json())
+      .then((data: { existingUrls?: Record<string, string> }) => {
+        if (data.existingUrls) setPortraitUrls(data.existingUrls);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: "rgba(0,0,0,0.6)" }}
+      style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-3xl p-5 pb-8 max-h-[70vh] flex flex-col"
-        style={{ background: "#111526", border: "1px solid rgba(255,255,255,0.08)" }}
+        className="w-full max-w-md rounded-t-3xl flex flex-col overflow-hidden"
+        style={{
+          background: "rgba(8,12,24,0.97)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          maxHeight: "72vh",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <p className="text-white/70 text-xs uppercase tracking-widest font-bold">Choose Avatar</p>
-          <button onClick={onClose} className="text-white/30 text-lg leading-none">✕</button>
+        {/* top accent bar */}
+        <div className="h-0.5 w-full flex-shrink-0" style={{ background: "linear-gradient(90deg,#4fc3f7,#8B5CF6)" }} />
+
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
+          <div>
+            <p className="text-white font-bold text-sm">Choose Avatar</p>
+            <p className="text-white/30 text-[11px] mt-0.5">{SYSTEM_AVATARS.length} characters</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+          >
+            ×
+          </button>
         </div>
-        <div className="grid grid-cols-4 gap-2.5 overflow-y-auto">
+
+        <div className="grid grid-cols-4 gap-2.5 overflow-y-auto px-4 pb-6">
           {SYSTEM_AVATARS.map((avatar, i) => {
-            const grad = AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
+            const portraitUrl = portraitUrls[avatar.id];
             const isSelected = avatar.emoji === current;
+            const grad = AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
             return (
               <button
                 key={avatar.id}
                 onClick={() => { onSelect(avatar.emoji); onClose(); }}
-                className="flex flex-col items-center gap-1.5 rounded-2xl py-3 px-1 transition-all hover:scale-105 active:scale-95"
+                className="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-2xl transition-all active:scale-95"
                 style={{
                   background: isSelected ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.03)",
-                  border: isSelected ? "1.5px solid rgba(79,195,247,0.55)" : "1px solid rgba(255,255,255,0.07)",
-                  boxShadow: isSelected ? "0 0 16px rgba(79,195,247,0.2)" : "none",
+                  border: isSelected ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.06)",
+                  boxShadow: isSelected ? "0 0 18px rgba(79,195,247,0.18)" : "none",
                 }}
               >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ background: grad }}
-                >
-                  {avatar.emoji}
-                </div>
-                <span className="text-[9px] font-semibold text-white/40 truncate w-full text-center px-0.5">
+                {portraitUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={portraitUrl}
+                    alt={avatar.label}
+                    className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+                    style={{
+                      border: isSelected
+                        ? "2px solid rgba(79,195,247,0.65)"
+                        : "1.5px solid rgba(255,255,255,0.13)",
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="w-14 h-14 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
+                    style={{
+                      background: grad,
+                      border: isSelected
+                        ? "2px solid rgba(79,195,247,0.65)"
+                        : "1.5px solid rgba(255,255,255,0.13)",
+                    }}
+                  >
+                    {avatar.emoji}
+                  </div>
+                )}
+                <span className="text-[9px] font-semibold text-white/40 truncate w-full text-center leading-tight">
                   {avatar.label}
                 </span>
               </button>
