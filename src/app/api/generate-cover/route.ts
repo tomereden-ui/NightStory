@@ -4,6 +4,19 @@ import { geminiPost, geminiText } from "@/lib/geminiClient";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const IMAGE_MODEL = "gemini-2.5-flash-image";
 
+const SAFETY_SETTINGS = [
+  { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
+  { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
+  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
+];
+
+const STYLE_SUFFIX =
+  "3D animated movie still, Pixar style, high-fidelity render, cute character design, soft global illumination, vibrant colors, cinematic depth, magical starry background, no text or letters.";
+
+const FALLBACK_PROMPT =
+  `Whimsical fantasy creatures in an enchanted night forest, surrounded by floating glowing stars and warm lantern light, with a cozy magical atmosphere. ${STYLE_SUFFIX}`;
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
@@ -16,29 +29,32 @@ export async function POST(req: NextRequest) {
   }
   if (!prompt) return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
-  // Step 1: Gemini deeply analyzes the story and writes a precise image generation prompt
+  // Step 1: Rewrite the story hint into a safe, fantastical image prompt
   let imagePrompt = prompt;
   try {
     const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
       contents: [{
         role: "user",
         parts: [{
-          text: `You are a professional children's book cover illustrator. Analyze this story and write a precise image generation prompt for the book cover.
-
-STORY TITLE HINT: ${prompt}
-${summary ? `\nSTORY SUMMARY:\n${summary}` : ""}
-
-Your task: Write a SINGLE image generation prompt (3-4 sentences) that will produce a stunning children's book cover. The prompt must be:
-
-1. STORY-SPECIFIC — mention the actual characters by physical description (not name), their exact species/appearance, what they're wearing, and their emotional state in the story's key moment
-2. ACTION-FOCUSED — describe the single most magical or emotionally resonant scene from the story
-3. NIGHT-THEMED — the scene takes place at night or in a dreamlike setting with glowing light sources (moon, fireflies, lanterns, stars, bioluminescent glow)
-4. STYLE-PRECISE — end with: "3D animated movie still, Pixar style, high-fidelity render, cute character design, soft global illumination, vibrant colors, cinematic depth, magical starry background, dynamic composition, no text or letters."
-
-IMPORTANT: Only describe what is visually in the scene. No abstract concepts. Start with the characters.`,
+          text: [
+            "You are a professional children's book cover illustrator. Write a safe, fantastical image prompt for this story's cover.",
+            "",
+            `STORY HINT: ${prompt}`,
+            summary ? `STORY SUMMARY:\n${summary}` : "",
+            "",
+            "Write ONE image generation prompt (3-4 sentences). Follow these rules strictly:",
+            "",
+            "1. FANTASTICAL CHARACTERS — describe characters as clearly magical/cartoon beings (e.g. 'a glowing fairy with butterfly wings', 'a tiny round creature with huge expressive eyes', 'a fluffy dragon cub'). Never describe realistic human anatomy.",
+            "2. MAGICAL SCENE — the single most enchanting moment from the story. Focus on light, atmosphere, and setting.",
+            "3. NIGHT-THEMED — dreamlike night setting: moon, fireflies, lanterns, bioluminescent glow, or starfields.",
+            "4. CHILD-SAFE — all content must be clearly appropriate for ages 3-8. No dark, scary, or ambiguous elements. Pure joy and wonder only.",
+            `5. END WITH THIS EXACT SUFFIX — "${STYLE_SUFFIX}"`,
+            "",
+            "Output ONLY the prompt. No explanation, no preamble.",
+          ].filter(Boolean).join("\n"),
         }],
       }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 250, thinkingConfig: { thinkingBudget: 0 } },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 220, thinkingConfig: { thinkingBudget: 0 } },
     });
     const enhanced = geminiText(data);
     if (enhanced && enhanced.length > 30) {
@@ -49,22 +65,31 @@ IMPORTANT: Only describe what is visually in the scene. No abstract concepts. St
     console.warn("[CoverGen] Prompt analysis failed, using raw prompt");
   }
 
-  // Step 2: Generate the cover image
-  console.log("[CoverGen] Calling image model:", IMAGE_MODEL);
-  try {
+  // Step 2: Generate the cover image — retry with generic fallback on PROHIBITED_CONTENT
+  async function callImageModel(promptText: string) {
     const res = await fetch(
       `${GEMINI_BASE}/${IMAGE_MODEL}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: imagePrompt }] }],
+          contents: [{ role: "user", parts: [{ text: promptText }] }],
           generationConfig: { responseModalities: ["IMAGE"] },
+          safetySettings: SAFETY_SETTINGS,
         }),
       }
     );
+    return { res, raw: await res.json() };
+  }
 
-    const raw = await res.json();
+  console.log("[CoverGen] Calling image model:", IMAGE_MODEL);
+  try {
+    let { res, raw } = await callImageModel(imagePrompt);
+
+    if (raw?.candidates?.[0]?.finishReason === "PROHIBITED_CONTENT") {
+      console.warn("[CoverGen] PROHIBITED_CONTENT — retrying with generic fallback prompt");
+      ({ res, raw } = await callImageModel(FALLBACK_PROMPT));
+    }
 
     if (!res.ok) {
       console.error("[CoverGen] API error:", JSON.stringify(raw).slice(0, 400));
@@ -73,11 +98,10 @@ IMPORTANT: Only describe what is visually in the scene. No abstract concepts. St
 
     type Part = { text?: string; inlineData?: { mimeType?: string; data?: string } };
     const parts: Part[] = raw?.candidates?.[0]?.content?.parts ?? [];
-    const imagePart = parts.find((p) => p.inlineData?.data);
+    const imagePart = parts.find((p: Part) => p.inlineData?.data);
 
     if (!imagePart?.inlineData?.data) {
       console.error("[CoverGen] No image in response. Finish reason:", raw?.candidates?.[0]?.finishReason);
-      console.error("[CoverGen] Full response keys:", JSON.stringify(Object.keys(raw)));
       return NextResponse.json({ error: "No image returned", finishReason: raw?.candidates?.[0]?.finishReason }, { status: 502 });
     }
 
