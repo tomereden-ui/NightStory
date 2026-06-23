@@ -1012,11 +1012,48 @@ export default function Studio2Page() {
     setIsSaving(true);
     setSaveLabel("saving");
     try {
-      await fetch("/api/script-saves", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks: scriptBlocks, summary, coverUrl, coverPrompt, isAutosave: false }),
-      });
+      const saves: Promise<unknown>[] = [];
+
+      // Always save a script-saves version snapshot
+      saves.push(
+        fetch("/api/script-saves", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blocks: scriptBlocks, summary, coverUrl, coverPrompt, isAutosave: false }),
+        })
+      );
+
+      // If this story exists in the library, also update it directly
+      if (editingStoryId) {
+        // Update script blocks (and title/summary) on the library entry
+        saves.push(
+          fetch(`/api/library/${editingStoryId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ blocks: scriptBlocks, title: storyTitle || undefined, summary: summary || undefined }),
+          })
+        );
+
+        // Upload new cover if one was generated but not yet persisted as a CDN URL
+        const coverPayload = coverBase64Ref.current;
+        const coverIsBase64 = coverUrl.startsWith("data:");
+        if (coverPayload && coverIsBase64) {
+          saves.push(
+            fetch(`/api/library/${editingStoryId}/cover`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mimeType: coverPayload.mimeType, data: coverPayload.data }),
+            }).then(async (r) => {
+              if (r.ok) {
+                const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
+                setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
+              }
+            })
+          );
+        }
+      }
+
+      await Promise.all(saves);
       setSavesRefreshKey((k) => k + 1);
       setSaveLabel("saved");
       setTimeout(() => setSaveLabel("idle"), 2500);
@@ -1025,7 +1062,7 @@ export default function Studio2Page() {
     } finally {
       setIsSaving(false);
     }
-  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving]);
+  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving, editingStoryId, storyTitle]);
 
   // ─── Load a save into the studio ────────────────────────────────────────────
 
