@@ -1501,23 +1501,34 @@ export default function Studio2Page() {
                 <button
                   onClick={handleUpdateScript}
                   disabled={!hasPending || isRevising}
-                  className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-2.5"
-                  style={hasPending && !isRevising
-                    ? { background: "rgba(79,195,247,0.15)", border: "1.5px solid rgba(79,195,247,0.55)", color: "#4fc3f7", boxShadow: "0 0 22px rgba(79,195,247,0.2)" }
-                    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.18)", cursor: "not-allowed" }
-                  }
+                  className="w-full py-3.5 rounded-full font-semibold text-sm transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-2 mb-3"
+                  style={hasPending && !isRevising ? {
+                    background: "linear-gradient(135deg, rgba(6,182,212,0.22) 0%, rgba(56,189,248,0.18) 100%)",
+                    border: "1.5px solid rgba(103,232,249,0.5)",
+                    color: "#a5f3fc",
+                    boxShadow: "0 0 28px rgba(6,182,212,0.22), 0 4px 16px rgba(0,0,0,0.25)",
+                  } : {
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    color: "rgba(255,255,255,0.18)",
+                    cursor: "not-allowed",
+                  }}
                 >
                   {isRevising ? (
                     <>
-                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.6)" }} />
-                      Updating…
+                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(165,243,252,0.2)", borderTopColor: "#a5f3fc" }} />
+                      Updating script…
                     </>
                   ) : hasPending && dirCount > 0 ? (
-                    <>✏️ Update Script · {dirCount} change{dirCount > 1 ? "s" : ""}</>
-                  ) : hasPending ? (
-                    <>✏️ Update Script</>
+                    <span className="flex items-center gap-2">
+                      <span className="text-base leading-none">✨</span>
+                      Update Script
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "rgba(103,232,249,0.2)", color: "#67e8f9" }}>
+                        {dirCount}
+                      </span>
+                    </span>
                   ) : (
-                    <>✏️ Update Script</>
+                    <span className="flex items-center gap-2"><span className="text-base leading-none">✨</span>Update Script</span>
                   )}
                 </button>
               );
@@ -1531,21 +1542,34 @@ export default function Studio2Page() {
                 <button
                   onClick={() => !blocked && handleProduce(scriptBlocks, durationMinutes)}
                   disabled={blocked}
-                  className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all ${
-                    !blocked ? "btn-vivid" : "cursor-not-allowed"
-                  }`}
-                  style={blocked && !isProducing ? {
-                    background: "rgba(255,255,255,0.04)",
+                  className="w-full py-4 rounded-full font-bold text-sm transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-2.5"
+                  style={!blocked ? {
+                    background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 55%, #0284c7 100%)",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    color: "#fff",
+                    boxShadow: "0 6px 36px rgba(109,40,217,0.45), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+                    letterSpacing: "0.02em",
+                  } : isProducing ? {
+                    background: "linear-gradient(135deg, rgba(124,58,237,0.5) 0%, rgba(79,70,229,0.5) 55%, rgba(2,132,199,0.5) 100%)",
                     border: "1px solid rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.7)",
+                  } : {
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.07)",
                     color: "rgba(255,255,255,0.2)",
-                  } : undefined}
+                    cursor: "not-allowed",
+                  }}
                 >
                   {isProducing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="animate-pulse-slow">🎙️</span>Mixing audio tracks…
-                    </span>
+                    <>
+                      <span className="animate-pulse-slow text-lg leading-none">🎙️</span>
+                      <span>Mixing audio tracks…</span>
+                    </>
                   ) : (
-                    <span className="flex items-center justify-center gap-2">🎙️ Produce Audio</span>
+                    <>
+                      <span className="text-lg leading-none">🎙️</span>
+                      <span>Produce Audio</span>
+                    </>
                   )}
                 </button>
               );
@@ -1559,24 +1583,38 @@ export default function Studio2Page() {
                 <button
                   onClick={handleManualSave}
                   disabled={!canSave || isSaving || saveLabel === "saved"}
-                  className="w-full mt-2.5 py-3 rounded-2xl text-sm font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                  style={saveLabel === "saved"
-                    ? { background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#34d399" }
-                    : canSave
-                    ? { background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.35)", color: "#c4b5fd", boxShadow: "0 0 14px rgba(139,92,246,0.12)" }
-                    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)", cursor: "not-allowed" }
-                  }
+                  className="w-full mt-2.5 py-3.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-2"
+                  style={saveLabel === "saved" ? {
+                    background: "rgba(16,185,129,0.12)",
+                    border: "1.5px solid rgba(52,211,153,0.4)",
+                    color: "#6ee7b7",
+                    boxShadow: "0 0 20px rgba(16,185,129,0.15)",
+                  } : canSave ? {
+                    background: "linear-gradient(135deg, rgba(139,92,246,0.18) 0%, rgba(99,102,241,0.14) 100%)",
+                    border: "1.5px solid rgba(167,139,250,0.45)",
+                    color: "#d8b4fe",
+                    boxShadow: "0 0 22px rgba(139,92,246,0.18), 0 4px 12px rgba(0,0,0,0.2)",
+                  } : {
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    color: "rgba(255,255,255,0.18)",
+                    cursor: "not-allowed",
+                  }}
                 >
                   {saveLabel === "saving" ? (
-                    <><span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.5)" }} />Saving…</>
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(216,180,254,0.2)", borderTopColor: "#d8b4fe" }} />
+                      Saving…
+                    </>
                   ) : saveLabel === "saved" ? (
-                    <>✓ Script saved</>
+                    <><span className="text-base leading-none">✓</span> Saved!</>
                   ) : (
-                    <>💾 Save script version</>
+                    <><span className="text-base leading-none">💾</span> Save version</>
                   )}
                 </button>
               );
             })()}
+
 
             {/* Toast */}
             <div
