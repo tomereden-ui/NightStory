@@ -885,6 +885,15 @@ export default function Studio2Page() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scriptBlocks, loaded]);
 
+  // ─── Auto-switch to script tab whenever generation/validation is active ───────
+
+  useEffect(() => {
+    if (generating || isValidating) {
+      setActiveTab("script");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generating, isValidating]);
+
   // ─── Generate story ─────────────────────────────────────────────────────────
 
   const handleGenerate = useCallback(async (selectedLessons: string[]) => {
@@ -1485,16 +1494,55 @@ export default function Studio2Page() {
         {activeTab === "step-by-step" && (
           <div className="-mx-5">
             <FiveQuestionFlow
-              onComplete={({ blocks, summary: sm, coverPrompt: cp }) => {
-                setScriptBlocks(blocks);
+              onGenerating={() => {
+                setScriptBlocks([]);
+                setGenerating(true);
+              }}
+              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp }) => {
+                setGenerating(false);
                 setSummary(sm);
                 setCoverPrompt(cp);
                 setCoverUrl("");
+                setStoryTitle("");
                 setLessons([]);
                 setLessonImplementations([]);
-                writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [] }, DRAFT_KEY);
+                setCharacterAvatars({});
+                setCharacterTypes({});
+                setTotalExpectedBlocks(rawBlocks.length);
+                setIsValidating(true);
                 if (cp) fetchCover(cp, sm);
-                setActiveTab("script");
+                const childAge = activeChild?.age ?? 6;
+                fetch("/api/validate-blocks", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: [], summary: sm }),
+                })
+                  .then((r) => r.json())
+                  .then((valData) => {
+                    const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
+                    blocks.forEach((block, i) => {
+                      setTimeout(() => {
+                        setScriptBlocks((prev) => [...prev, block]);
+                        if (i === blocks.length - 1) {
+                          setIsValidating(false);
+                          setTotalExpectedBlocks(undefined);
+                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [] }, DRAFT_KEY);
+                        }
+                      }, i * 65);
+                    });
+                  })
+                  .catch(() => {
+                    rawBlocks.forEach((block, i) => {
+                      setTimeout(() => {
+                        setScriptBlocks((prev) => [...prev, block]);
+                        if (i === rawBlocks.length - 1) {
+                          setIsValidating(false);
+                          setTotalExpectedBlocks(undefined);
+                          writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [] }, DRAFT_KEY);
+                        }
+                      }, i * 65);
+                    });
+                  });
               }}
             />
           </div>
@@ -1518,45 +1566,49 @@ export default function Studio2Page() {
             {/* ── In-tab generating placeholder ────────────────────────────── */}
             {generating && (
               <div className="flex flex-col gap-3">
-                {/* Cover placeholder */}
-                <div
-                  className="w-full rounded-2xl mb-2 flex flex-col items-center justify-center gap-4"
-                  style={{
-                    aspectRatio: "16/9",
-                    background: "radial-gradient(ellipse at 50% 40%, rgba(28,58,110,0.7) 0%, rgba(10,12,20,1) 70%)",
-                    border: "1px solid rgba(79,195,247,0.1)",
-                  }}
-                >
-                  <span className="text-4xl animate-pulse">✨</span>
-                  <div className="flex flex-col items-center gap-1.5">
-                    <p className="text-[13px] font-semibold text-white/60">Crafting your story…</p>
-                    {lessons.length > 0 && (
-                      <p className="text-[11px]" style={{ color: "rgba(79,195,247,0.5)" }}>
-                        Weaving in {lessons.join(" · ")}
-                      </p>
-                    )}
+                {/* Hero card */}
+                <div className="relative w-full rounded-3xl overflow-hidden flex flex-col items-center justify-center"
+                  style={{ minHeight: 200, background: "radial-gradient(ellipse at 50% 60%, rgba(45,27,105,0.9) 0%, rgba(10,20,60,0.95) 55%, rgba(6,9,20,1) 100%)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                  {/* Glow halos */}
+                  <div className="absolute w-48 h-48 rounded-full animate-pulse pointer-events-none"
+                    style={{ background: "radial-gradient(circle, rgba(79,195,247,0.12) 0%, transparent 70%)", animationDuration: "2.4s" }} />
+                  <div className="absolute w-32 h-32 rounded-full animate-pulse pointer-events-none"
+                    style={{ background: "radial-gradient(circle, rgba(139,92,246,0.16) 0%, transparent 70%)", animationDuration: "1.8s", animationDelay: "0.6s" }} />
+                  {/* Orbital ring */}
+                  <div className="relative flex items-center justify-center mb-5">
+                    <div className="absolute w-16 h-16 rounded-full animate-spin"
+                      style={{ border: "2px solid transparent", borderTopColor: "rgba(79,195,247,0.7)", borderRightColor: "rgba(139,92,246,0.4)", animationDuration: "1.8s" }} />
+                    <div className="absolute w-11 h-11 rounded-full animate-spin"
+                      style={{ border: "1.5px solid transparent", borderBottomColor: "rgba(167,139,250,0.5)", animationDuration: "2.6s", animationDirection: "reverse" }} />
+                    <span className="text-2xl relative z-10">✨</span>
                   </div>
-                  <div className="flex gap-1.5">
-                    {[0,1,2,3].map((i) => (
-                      <span key={i} className="w-2 h-2 rounded-full"
-                        style={{ background: "#4fc3f7", opacity: 0.6, animation: `bounce 1s ease-in-out ${i * 0.15}s infinite` }} />
+                  {/* Text */}
+                  <p className="text-sm font-bold text-white/80 tracking-wide">Crafting your story…</p>
+                  {lessons.length > 0 && (
+                    <p className="text-[11px] mt-1.5" style={{ color: "rgba(139,92,246,0.75)" }}>
+                      Weaving in {lessons.join(" · ")}
+                    </p>
+                  )}
+                  {/* Progress dots */}
+                  <div className="flex gap-2 mt-4">
+                    {[0,1,2,3,4].map((i) => (
+                      <span key={i} className="rounded-full animate-pulse"
+                        style={{ width: i === 2 ? 10 : 6, height: i === 2 ? 10 : 6, background: i === 2 ? "#4fc3f7" : "rgba(79,195,247,0.35)", animationDelay: `${i * 0.18}s`, animationDuration: "1.2s" }} />
                     ))}
                   </div>
                 </div>
-                {/* Title skeleton */}
-                <div className="h-6 rounded-xl w-2/5 animate-pulse mb-1" style={{ background: "rgba(255,255,255,0.07)" }} />
                 {/* Block skeletons */}
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="rounded-2xl animate-pulse"
-                    style={{
-                      height: i % 3 === 2 ? 52 : 72,
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      animationDelay: `${i * 80}ms`,
-                    }}
-                  />
+                  <div key={i} className="rounded-2xl overflow-hidden animate-pulse"
+                    style={{ height: i % 3 === 2 ? 52 : 72, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)", animationDelay: `${i * 90}ms` }}>
+                    <div className="flex items-center gap-3 px-4 h-full">
+                      <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: "rgba(255,255,255,0.05)" }} />
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="h-2 rounded-full" style={{ width: `${30 + (i * 11) % 25}%`, background: "rgba(255,255,255,0.06)" }} />
+                        <div className="h-2 rounded-full" style={{ width: `${55 + (i * 7) % 30}%`, background: "rgba(255,255,255,0.04)" }} />
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

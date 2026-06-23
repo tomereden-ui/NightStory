@@ -807,7 +807,7 @@ const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", 
 
 export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string };
 
-export function FiveQuestionFlow({ onComplete }: { onComplete?: (data: FiveQuestionCompleteData) => void } = {}) {
+export function FiveQuestionFlow({ onComplete, onGenerating }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void } = {}) {
   const router = useRouter();
   const { language } = useLanguage();
 
@@ -965,7 +965,7 @@ export function FiveQuestionFlow({ onComplete }: { onComplete?: (data: FiveQuest
     else handleReset();
   };
 
-  const handleLaunch = useCallback(() => { setStep("generating"); setError(null); }, []);
+  const handleLaunch = useCallback(() => { onGenerating?.(); setStep("generating"); setError(null); }, [onGenerating]);
 
   const handleDone = useCallback((blocks: ScriptBlock[], incomingSummary: string, incomingCoverPrompt: string) => {
     setScriptBlocks(blocks);
