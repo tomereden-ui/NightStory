@@ -21,13 +21,21 @@ function buildAvatarUrl(characterName: string, type: CharacterType): string {
   }
 }
 
+const ANIMAL_WORDS = /bear|dog|cat|wolf|fox|rabbit|bunny|bird|fish|lion|tiger|elephant|monkey|frog|owl|pig|duck|horse|mouse|rat|snake|dragon|dino|snake|turtle/i;
+
+function inferCharacterType(name: string): CharacterType {
+  if (name === "Narrator" || name === "קריין") return "narrator";
+  if (ANIMAL_WORDS.test(name)) return "animal";
+  return "child";
+}
+
 function ReadOnlyCastPanel({ blocks }: { blocks: ScriptBlock[] }) {
   const cast = Array.from(
     blocks
       .filter((b) => b.characterName !== "SFX")
       .reduce<Map<string, string>>((map, b) => {
         if (!map.has(b.characterName)) {
-          const type: CharacterType = b.characterName === "Narrator" ? "narrator" : "adult";
+          const type = inferCharacterType(b.characterName);
           map.set(b.characterName, buildAvatarUrl(b.characterName, type));
         }
         return map;

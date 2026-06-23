@@ -706,7 +706,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               boxShadow: "0 4px 20px rgba(79,195,247,0.06)",
             }}>
             {/* Cover image */}
-            <div className="relative w-full" style={{ aspectRatio: "16/9", background: "rgba(10,12,20,1)" }}>
+            <div className="relative w-full overflow-hidden" style={{ aspectRatio: "16/9", background: "rgba(10,12,20,1)" }}>
               {coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={coverUrl} alt="Story cover" className="w-full h-full object-cover ken-burns" />
