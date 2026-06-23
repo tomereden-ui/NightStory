@@ -894,6 +894,11 @@ export default function Studio2Page() {
     setGenerateError(null);
     setEditingStoryId(null);
     setStoryTitle("");
+    setScriptBlocks([]);
+    setSummary("");
+    setCoverUrl("");
+    // Navigate to Script tab immediately so the user sees progress in context
+    setActiveTab("script");
 
     const body: GenerateStoryRequest = {
       mode: "prompt",
@@ -917,19 +922,17 @@ export default function Studio2Page() {
       const title = (data.title as string | undefined) ?? "";
       const impls = (data.lessonImplementations ?? []) as { lesson: string; implemented: boolean; how: string }[];
 
-      // Show script tab immediately with empty blocks + skeleton placeholders
-      setScriptBlocks([]);
+      // Story is ready — transition from "generating" to "validating"
       setSummary(sm);
       setCoverPrompt(cp);
-      setCoverUrl("");
       setStoryTitle(title);
       setLessonImplementations(impls);
       setHasScriptChanges(false);
       cleanLessonsRef.current = selectedLessons;
       setCharacterAvatars({});
       setCharacterTypes({});
-      setActiveTab("script");
       setTotalExpectedBlocks(rawBlocks.length);
+      setGenerating(false);   // ← flip now so validating phase starts cleanly
       setIsValidating(true);
       if (cp) fetchCover(cp, sm);
 
@@ -1273,36 +1276,6 @@ export default function Studio2Page() {
 
   if (!loaded) return null;
 
-  if (generating) {
-    return (
-      <div className="min-h-full flex flex-col items-center justify-center px-8 text-center">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative w-24 h-24 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full animate-ping opacity-20"
-              style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
-            <div className="absolute inset-2 rounded-full opacity-40 animate-pulse"
-              style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
-            <span className="relative text-5xl animate-pulse">✨</span>
-          </div>
-          <div>
-            <h2 className="text-white text-xl font-bold mb-2">Crafting your story…</h2>
-            {lessons.length > 0 && (
-              <p className="text-white/50 text-sm mb-1">
-                Weaving in <span className="text-teal-300 font-medium">{lessons.join(" · ")}</span>
-              </p>
-            )}
-            <p className="text-white/35 text-sm">Weaving magic into every word</p>
-          </div>
-          <div className="flex gap-2">
-            {[0, 1, 2, 3].map((i) => (
-              <span key={i} className="w-2 h-2 rounded-full"
-                style={{ background: "linear-gradient(135deg,#4fc3f7,#0088AA)", animation: `bounce 1s ease-in-out ${i * 0.15}s infinite` }} />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (activeTab === "producing" && productionJobId) {
     return (
@@ -1337,9 +1310,7 @@ export default function Studio2Page() {
 
   // ─── Main tab shell ─────────────────────────────────────────────────────────
 
-  // During validation, totalExpectedBlocks is set and scriptBlocks fills in progressively.
-  // Treat as "has script" as soon as validation starts so the tab is visible immediately.
-  const hasScript = scriptBlocks.length > 0 || isValidating;
+  const hasScript = scriptBlocks.length > 0 || isValidating || generating;
   const showTabBar = activeTab !== "lesson";
   const isOnCreateTab = activeTab === "chat" || activeTab === "step-by-step";
 
@@ -1526,17 +1497,66 @@ export default function Studio2Page() {
         {/* Script tab */}
         {activeTab === "script" && hasScript && (
           <>
-            {/* Back to Create */}
-            <button
-              onClick={() => setActiveTab(createMode)}
-              className="flex items-center gap-1.5 mb-4 text-[11px] font-semibold transition-all active:scale-95"
-              style={{ color: "rgba(79,195,247,0.65)" }}
-            >
-              <Icon name="back" size={13} />
-              <span>Revise story</span>
-            </button>
+            {/* Back to Create — hidden while generating */}
+            {!generating && (
+              <button
+                onClick={() => setActiveTab(createMode)}
+                className="flex items-center gap-1.5 mb-4 text-[11px] font-semibold transition-all active:scale-95"
+                style={{ color: "rgba(79,195,247,0.65)" }}
+              >
+                <Icon name="back" size={13} />
+                <span>Revise story</span>
+              </button>
+            )}
 
-            <ScriptTab
+            {/* ── In-tab generating placeholder ────────────────────────────── */}
+            {generating && (
+              <div className="flex flex-col gap-3">
+                {/* Cover placeholder */}
+                <div
+                  className="w-full rounded-2xl mb-2 flex flex-col items-center justify-center gap-4"
+                  style={{
+                    aspectRatio: "16/9",
+                    background: "radial-gradient(ellipse at 50% 40%, rgba(28,58,110,0.7) 0%, rgba(10,12,20,1) 70%)",
+                    border: "1px solid rgba(79,195,247,0.1)",
+                  }}
+                >
+                  <span className="text-4xl animate-pulse">✨</span>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <p className="text-[13px] font-semibold text-white/60">Crafting your story…</p>
+                    {lessons.length > 0 && (
+                      <p className="text-[11px]" style={{ color: "rgba(79,195,247,0.5)" }}>
+                        Weaving in {lessons.join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[0,1,2,3].map((i) => (
+                      <span key={i} className="w-2 h-2 rounded-full"
+                        style={{ background: "#4fc3f7", opacity: 0.6, animation: `bounce 1s ease-in-out ${i * 0.15}s infinite` }} />
+                    ))}
+                  </div>
+                </div>
+                {/* Title skeleton */}
+                <div className="h-6 rounded-xl w-2/5 animate-pulse mb-1" style={{ background: "rgba(255,255,255,0.07)" }} />
+                {/* Block skeletons */}
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-2xl animate-pulse"
+                    style={{
+                      height: i % 3 === 2 ? 52 : 72,
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      animationDelay: `${i * 80}ms`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* ── Actual script once generation is done ────────────────────── */}
+            {!generating && (<><ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
               onBlocksChange={handleBlocksChange}
@@ -1712,7 +1732,7 @@ export default function Studio2Page() {
             {/* Produce Audio */}
             {(() => {
               const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
-              const blocked = isProducing || hasPending || isValidating;
+              const blocked = isProducing || hasPending || isValidating || generating;
               return (
                 <button
                   onClick={() => !blocked && handleProduce(scriptBlocks, durationMinutes)}
@@ -1812,6 +1832,7 @@ export default function Studio2Page() {
                 ✏️ Tap &quot;Update Script&quot; to apply your direction
               </div>
             </div>
+          </>) /* end !generating */}
           </>
         )}
       </div>
