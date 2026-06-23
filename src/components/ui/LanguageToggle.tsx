@@ -27,7 +27,7 @@ export default function LanguageToggle() {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-bg-border bg-bg-card hover:border-purple/30 hover:bg-purple/5 transition-all duration-150"
         aria-label="Change language"
       >
-        <span className="text-base leading-none">{current.flag}</span>
+        <span className="text-base leading-none w-6 text-center inline-block" style={{ fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif" }}>{current.flag}</span>
         <span className="text-white/70 text-xs font-semibold">{current.nativeName}</span>
         <span className="text-white/25 text-[9px] ml-0.5">{open ? "▲" : "▼"}</span>
       </button>
@@ -56,7 +56,7 @@ export default function LanguageToggle() {
                       isSelected ? "bg-purple/10" : "hover:bg-white/5"
                     }`}
                   >
-                    <span className="text-base leading-none flex-shrink-0">{meta.flag}</span>
+                    <span className="text-base leading-none flex-shrink-0 w-6 text-center inline-block" style={{ fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif" }}>{meta.flag}</span>
                     <div className="flex-1 min-w-0">
                       <p className={`text-xs font-semibold ${isSelected ? "text-purple-bright" : "text-white/80"}`}>
                         {meta.nativeName}
