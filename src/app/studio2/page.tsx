@@ -1109,13 +1109,29 @@ export default function Studio2Page() {
       const data = await res.json();
       if (res.ok && data.coverUrl) {
         setCoverUrl(data.coverUrl);
+        // Auto-persist to Supabase when story already exists in library
+        if (editingStoryId) {
+          const match = (data.coverUrl as string).match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            fetch(`/api/library/${editingStoryId}/cover`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mimeType: match[1], data: match[2] }),
+            }).then(async (r) => {
+              if (r.ok) {
+                const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
+                setCoverUrl(persistedUrl); // swap base64 for the permanent Storage URL
+              }
+            }).catch(() => {}); // non-fatal — draft already holds the base64
+          }
+        }
       } else {
         console.error("[fetchCover] API error:", data);
       }
     } finally {
       setIsFetchingCover(false);
     }
-  }, []);
+  }, [editingStoryId]);
 
   // Auto-fetch cover when a draft is loaded that has a coverPrompt but no coverUrl
   useEffect(() => {
