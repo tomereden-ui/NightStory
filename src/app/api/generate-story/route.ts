@@ -6,7 +6,10 @@ import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
 import type { ScriptBlock } from "@/types";
 
-export interface GenerateStoryRequest {
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+
   mode: "wizard" | "prompt";
   // wizard fields
   hero?: string;
@@ -160,17 +163,22 @@ export async function POST(req: NextRequest) {
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons, body.language),
+      generationConfig: {
+        temperature: 0.85,
+        maxOutputTokens: 8192,
+        // Disable thinking — story generation is creative, not reasoning; thinking
+        // adds 40-80s latency which trips the platform's serverless timeout.
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     });
 
-    // Gemini occasionally stalls or errors transiently — retry once before
-    // giving up. Timeout is generous (120 s) because 2.5-flash with thinking
-    // can take 60–90 s for a longer story on the first cold request.
     let result;
     try {
-      result = await model.generateContent(prompt, { timeout: 120_000 });
+      result = await model.generateContent(prompt);
     } catch (err) {
       console.warn("[generate-story] First Gemini attempt failed, retrying once:", err);
-      result = await model.generateContent(prompt, { timeout: 120_000 });
+      result = await model.generateContent(prompt);
     }
     const _t = result.response.usageMetadata?.totalTokenCount;
     if (_t) trackGemini(_t).catch(() => {});
