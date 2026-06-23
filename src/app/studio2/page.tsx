@@ -749,12 +749,6 @@ function PromptTabContent({
 
 type StudioTab = "chat" | "step-by-step" | "lesson" | "script" | "producing" | "drama";
 
-const TABS: { id: "chat" | "step-by-step" | "script"; labelKey: "tabChat" | "tabStepByStep" | "tabScript"; emoji: string }[] = [
-  { id: "chat",         labelKey: "tabChat",        emoji: "💬" },
-  { id: "step-by-step", labelKey: "tabStepByStep",  emoji: "🧚" },
-  { id: "script",       labelKey: "tabScript",      emoji: "📄" },
-];
-
 export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
   const router = useRouter();
@@ -784,6 +778,7 @@ export default function Studio2Page() {
 
   // ─── Tab / view state ───────────────────────────────────────────────────────
   const [activeTab, setActiveTab]           = useState<StudioTab>("chat");
+  const [createMode, setCreateMode]         = useState<"chat" | "step-by-step">("chat");
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob]     = useState<Job | null>(null);
   const [isProducing, setIsProducing]       = useState(false);
@@ -1270,6 +1265,7 @@ export default function Studio2Page() {
 
   const hasScript = scriptBlocks.length > 0;
   const showTabBar = activeTab !== "lesson";
+  const isOnCreateTab = activeTab === "chat" || activeTab === "step-by-step";
 
   return (
     <div className="min-h-full" dir={isRTL ? "rtl" : "ltr"}>
@@ -1304,39 +1300,59 @@ export default function Studio2Page() {
 
         {/* Tab bar — hidden during lesson step */}
         {showTabBar && (
-          <div className="flex mb-7" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            {TABS.map(({ id, labelKey, emoji }) => {
-              const isStepByStep = id === "step-by-step";
-              const isScript     = id === "script";
-              const isDisabled   = isScript && !hasScript;
-              const isActive     = activeTab === id;
+          <div className="flex mb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            {/* CREATE tab */}
+            <button
+              onClick={() => setActiveTab(createMode)}
+              className={`relative flex-1 pb-3 text-[11px] font-bold tracking-wider uppercase transition-colors ${isOnCreateTab ? "text-white" : "text-white/30"}`}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <span>✨</span>
+                <span>Create</span>
+              </span>
+              {isOnCreateTab && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />}
+            </button>
+            {/* SCRIPT tab */}
+            <button
+              onClick={() => { if (hasScript) setActiveTab("script"); }}
+              disabled={!hasScript}
+              className={`relative flex-1 pb-3 text-[11px] font-bold tracking-wider uppercase transition-colors ${activeTab === "script" ? "text-white" : !hasScript ? "text-white/15 cursor-not-allowed" : "text-white/30"}`}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <span>📜</span>
+                <span>Script</span>
+                {hasScript && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#4fc3f7" }} />}
+              </span>
+              {activeTab === "script" && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />}
+            </button>
+          </div>
+        )}
 
-              return (
-                <button
-                  key={id}
-                  onClick={() => {
-                    if (isDisabled) return;
-                    if (isStepByStep) { setActiveTab("step-by-step"); return; }
-                    setActiveTab(id);
-                  }}
-                  disabled={isDisabled}
-                  className={`relative flex-1 pb-3 text-[11px] font-bold tracking-wider uppercase transition-colors ${
-                    isActive ? "text-white" : isDisabled ? "text-white/15 cursor-not-allowed" : "text-white/30"
-                  }`}
-                >
-                  <span className="flex items-center justify-center gap-1.5">
-                    <span>{emoji}</span>
-                    <span>{i18nT(language, labelKey)}</span>
-                    {isScript && hasScript && (
-                      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#4fc3f7" }} />
-                    )}
-                  </span>
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />
-                  )}
-                </button>
-              );
-            })}
+        {/* Segmented toggle — chat vs step-by-step, visible only on CREATE tab */}
+        {showTabBar && isOnCreateTab && (
+          <div className="flex gap-1.5 mb-6 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <button
+              onClick={() => { setCreateMode("chat"); setActiveTab("chat"); }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold transition-all active:scale-[0.97]"
+              style={createMode === "chat"
+                ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+                : { color: "rgba(255,255,255,0.35)" }
+              }
+            >
+              <span>💬</span>
+              <span>Chat with Luna</span>
+            </button>
+            <button
+              onClick={() => { setCreateMode("step-by-step"); setActiveTab("step-by-step"); }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold transition-all active:scale-[0.97]"
+              style={createMode === "step-by-step"
+                ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+                : { color: "rgba(255,255,255,0.35)" }
+              }
+            >
+              <span>🧚</span>
+              <span>Step-by-step</span>
+            </button>
           </div>
         )}
 
@@ -1399,6 +1415,16 @@ export default function Studio2Page() {
         {/* Script tab */}
         {activeTab === "script" && hasScript && (
           <>
+            {/* Back to Create */}
+            <button
+              onClick={() => setActiveTab(createMode)}
+              className="flex items-center gap-1.5 mb-4 text-[11px] font-semibold transition-all active:scale-95"
+              style={{ color: "rgba(79,195,247,0.65)" }}
+            >
+              <Icon name="back" size={13} />
+              <span>Revise story</span>
+            </button>
+
             <ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
