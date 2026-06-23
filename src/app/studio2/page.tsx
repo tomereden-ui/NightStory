@@ -1132,7 +1132,13 @@ export default function Studio2Page() {
     setActiveTab("producing");
     try {
       const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId() };
-      if (editingStoryId) body.editingStoryId = editingStoryId;
+      if (editingStoryId) {
+        body.editingStoryId = editingStoryId;
+        // Always force re-production when editing an existing story — the server-side
+        // guard would otherwise return the old cached audio without reading the new blocks.
+        // Per-element audio cache still avoids re-synthesizing unchanged lines.
+        body.force = true;
+      }
       if (force) body.force = true;
       if (summary) body.summary = summary;
       if (coverPrompt) body.coverPrompt = coverPrompt;
@@ -1155,6 +1161,10 @@ export default function Studio2Page() {
     setCompletedJob(job);
     setIsProducing(false);
     setActiveTab("drama");
+    // After a brand-new story is produced, its storyId equals jobId (job.id).
+    // Record it so any subsequent re-produce updates the same story entry
+    // instead of creating a duplicate.
+    setEditingStoryId((prev) => prev ?? job.id);
   }, []);
 
   const handleProductionError = useCallback((msg: string) => {
