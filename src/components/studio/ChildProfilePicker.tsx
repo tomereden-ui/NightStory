@@ -196,6 +196,14 @@ function AddProfileModal({
   );
 }
 
+// ─── Child avatar URL ─────────────────────────────────────────────────────────
+
+function buildChildAvatarUrl(name: string, gender?: string): string {
+  const seed = encodeURIComponent(`${name}-${gender ?? "other"}`);
+  const bg   = gender === "girl" ? "1a0a2e" : gender === "boy" ? "0a1828" : "0d1020";
+  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}&backgroundColor=${bg}`;
+}
+
 // ─── Picker strip ─────────────────────────────────────────────────────────────
 
 export default function ChildProfilePicker({
@@ -217,10 +225,8 @@ export default function ChildProfilePicker({
       .then((data: DBChildProfile[]) => {
         if (Array.isArray(data) && data.length > 0) {
           setProfiles(data);
-          // Auto-select first profile
           if (!selected) onChange(data[0]);
         } else {
-          // Fall back to mock profiles so the UI is never empty
           const fallback: DBChildProfile[] = MOCK_USER.childProfiles.map((c) => ({
             id: c.id,
             name: c.name,
@@ -253,46 +259,58 @@ export default function ChildProfilePicker({
   return (
     <>
       <div className="mb-5">
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
           Creating for
         </p>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
           {profiles.map((p) => {
             const isActive = selected?.id === p.id;
+            const avatarUrl = buildChildAvatarUrl(p.name, p.gender ?? "other");
             return (
               <button
                 key={p.id}
                 onClick={() => { if (!disabled) onChange(isActive ? null : p); }}
-                className="flex items-center gap-2 px-3 py-2 rounded-2xl flex-shrink-0 transition-all active:scale-95"
-                style={{
-                  background: isActive ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.04)",
-                  border: isActive ? "1.5px solid rgba(79,195,247,0.45)" : "1px solid rgba(255,255,255,0.08)",
-                  boxShadow: isActive ? "0 0 14px rgba(79,195,247,0.15)" : "none",
-                  opacity: disabled && !isActive ? 0.35 : 1,
-                  cursor: disabled ? "default" : "pointer",
-                }}
+                className="flex flex-col items-center gap-1.5 flex-shrink-0 transition-all active:scale-95"
+                style={{ width: 64, opacity: disabled && !isActive ? 0.35 : 1, cursor: disabled ? "default" : "pointer" }}
               >
-                <span className="text-base leading-none">{p.avatar_emoji}</span>
-                <span className="text-sm font-semibold" style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.7)" }}>
+                <div
+                  className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 transition-all"
+                  style={isActive
+                    ? { border: "2px solid rgba(79,195,247,0.75)", boxShadow: "0 0 18px rgba(79,195,247,0.3), 0 4px 12px rgba(0,0,0,0.4)" }
+                    : { border: "1.5px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+                </div>
+                <span
+                  className="text-[11px] font-bold text-center truncate w-full leading-tight"
+                  style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.6)" }}
+                >
                   {p.name}
                 </span>
               </button>
             );
           })}
 
-          {/* Add profile button */}
-          {!disabled && <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl flex-shrink-0 transition-all active:scale-95"
-            style={{
-              background: "rgba(255,255,255,0.02)",
-              border: "1.5px dashed rgba(255,255,255,0.12)",
-              color: "rgba(255,255,255,0.3)",
-            }}
-          >
-            <span className="text-base leading-none font-light">＋</span>
-            <span className="text-xs font-medium">Add</span>
-          </button>}
+          {/* Add profile */}
+          {!disabled && (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex flex-col items-center gap-1.5 flex-shrink-0 transition-all active:scale-95"
+              style={{ width: 64 }}
+            >
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all"
+                style={{ border: "1.5px dashed rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.02)" }}
+              >
+                <span className="text-2xl font-light leading-none" style={{ color: "rgba(255,255,255,0.28)" }}>+</span>
+              </div>
+              <span className="text-[11px] font-medium text-center" style={{ color: "rgba(255,255,255,0.28)" }}>
+                Add
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
