@@ -5,6 +5,7 @@ import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import type { DraftState } from "@/lib/draftStore";
 import type { ScriptBlock } from "@/types";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface Message {
   role: "user" | "model";
@@ -126,6 +127,7 @@ export default function LunaChatPanel({
   onFirstMessage?: () => void;
   onDiscard?: () => void;
 }) {
+  const { language } = useLanguage();
   const [messages, setMessages]             = useState<Message[]>([]);
   const [input, setInput]                   = useState("");
   const [loading, setLoading]               = useState(false);
@@ -318,7 +320,7 @@ export default function LunaChatPanel({
         const res = await fetch("/api/generate-story", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes: 3, childAgeGroup: getChildAgeGroup(), language: "en" }),
+          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes: 3, childAgeGroup: getChildAgeGroup(), language }),
         });
         if (!res.ok) throw new Error("Generation failed");
         const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string };
@@ -397,7 +399,7 @@ export default function LunaChatPanel({
           primaryVoiceId: storyParams.primaryVoiceId ?? "v1",
           durationMinutes: 3,
           childAgeGroup: getChildAgeGroup(),
-          language: "en",
+          language,
         }),
       });
       if (!res.ok) throw new Error("Generation failed");

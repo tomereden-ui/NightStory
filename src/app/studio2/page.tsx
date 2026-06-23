@@ -17,7 +17,7 @@ import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
 import { FiveQuestionFlow } from "@/app/create/five-question/FiveQuestionFlow";
 import { SCENE_CHARS } from "@/config/sceneCharacters";
-import { LANGUAGE_META } from "@/lib/i18n";
+import { LANGUAGE_META, t } from "@/lib/i18n";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
 import LunaChatPanel from "@/components/studio/LunaChatPanel";
 import VoicePicker from "@/components/studio/VoicePicker";
@@ -209,6 +209,7 @@ function CharacterCards({
   onAvatarTypeChange: (characterName: string, type: CharacterType) => void;
   onVoiceChange: (characterName: string, voiceId: string) => void;
 }) {
+  const { language } = useLanguage();
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
 
   const cast = Array.from(
@@ -233,7 +234,7 @@ function CharacterCards({
   return (
     <div className="mb-5">
       <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
-        Cast — tap to direct a character
+        {t(language, "castSection")}
       </p>
       <div className="flex gap-3 pb-2 -mx-5 px-5" style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
         {cast.map(({ characterName, voice }) => (
@@ -1244,7 +1245,7 @@ export default function Studio2Page() {
           ) : (
             <div className="w-8" />
           )}
-          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🌟 Studio</h1>
+          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🌟 {t(language, "studioTitle")}</h1>
           <button
             onClick={() => setVersionsOpen(true)}
             className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
@@ -1522,13 +1523,13 @@ export default function Studio2Page() {
                   ) : hasPending && dirCount > 0 ? (
                     <span className="flex items-center gap-2">
                       <span className="text-base leading-none">✨</span>
-                      Update Script
+                      {t(language, "updateScript")}
                       <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "rgba(103,232,249,0.2)", color: "#67e8f9" }}>
                         {dirCount}
                       </span>
                     </span>
                   ) : (
-                    <span className="flex items-center gap-2"><span className="text-base leading-none">✨</span>Update Script</span>
+                    <span className="flex items-center gap-2"><span className="text-base leading-none">✨</span>{t(language, "updateScript")}</span>
                   )}
                 </button>
               );
@@ -1568,7 +1569,7 @@ export default function Studio2Page() {
                   ) : (
                     <>
                       <span className="text-lg leading-none">🎙️</span>
-                      <span>Produce Audio</span>
+                      <span>{t(language, "produceAudio")}</span>
                     </>
                   )}
                 </button>
@@ -1609,7 +1610,7 @@ export default function Studio2Page() {
                   ) : saveLabel === "saved" ? (
                     <><span className="text-base leading-none">✓</span> Saved!</>
                   ) : (
-                    <><span className="text-base leading-none">💾</span> Save version</>
+                    <><span className="text-base leading-none">💾</span> {t(language, "saveVersion")}</>
                   )}
                 </button>
               );
