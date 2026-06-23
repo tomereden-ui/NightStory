@@ -701,6 +701,7 @@ export default function Studio2Page() {
   // ─── Character avatars ──────────────────────────────────────────────────────
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
   const avatarSeedingRef = useRef(false);
+  const [avatarGenKey, setAvatarGenKey] = useState(0);
 
   // ─── Pending character directions ──────────────────────────────────────────
   const [pendingDirections, setPendingDirections] = useState<string[]>([]);
@@ -752,6 +753,7 @@ export default function Studio2Page() {
       // Migrate: support both old string `lesson` and new array `lessons`
       setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
       setLessonImplementations(draft.lessonImplementations ?? []);
+      setAvatarGenKey((k) => k + 1);
       setActiveTab("script");
     } else {
       setActiveTab("chat");
@@ -836,7 +838,7 @@ export default function Studio2Page() {
 
     return () => { cancelled = true; avatarSeedingRef.current = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, scriptBlocks.length > 0]);
+  }, [loaded, avatarGenKey]);
 
   // ─── Generate story ─────────────────────────────────────────────────────────
 
@@ -875,6 +877,9 @@ export default function Studio2Page() {
       setCoverUrl("");
       setStoryTitle(title);
       setLessonImplementations(impls);
+      setCharacterAvatars({});
+      avatarSeedingRef.current = false;
+      setAvatarGenKey((k) => k + 1);
       writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
       if (cp) fetchCover(cp, sm);
       setActiveTab("script");
@@ -957,6 +962,8 @@ export default function Studio2Page() {
     if (save.coverUrl)    setCoverUrl(save.coverUrl);
     if (save.coverPrompt) setCoverPrompt(save.coverPrompt);
     setCharacterAvatars({});
+    avatarSeedingRef.current = false;
+    setAvatarGenKey((k) => k + 1);
     setPendingDirections([]);
   }, []);
 
