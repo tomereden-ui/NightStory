@@ -1417,8 +1417,14 @@ export default function Studio2Page() {
             activeChild={activeChild}
             onFirstMessage={() => setChatLocked(true)}
             onDiscard={() => setChatLocked(false)}
+            onGenerating={() => {
+              setScriptBlocks([]);
+              setGenerating(true);
+              setActiveTab("script");
+            }}
             onScriptReady={(draft) => {
               const rawBlocks = draft.scriptBlocks;
+              setGenerating(false);
               setScriptBlocks([]);
               setSummary(draft.summary);
               setCoverPrompt(draft.coverPrompt);

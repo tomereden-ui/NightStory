@@ -121,11 +121,13 @@ export default function LunaChatPanel({
   onScriptReady,
   onFirstMessage,
   onDiscard,
+  onGenerating,
 }: {
   activeChild: DBChildProfile | null;
   onScriptReady: (draft: Omit<DraftState, "coverUrl">) => void;
   onFirstMessage?: () => void;
   onDiscard?: () => void;
+  onGenerating?: () => void;
 }) {
   const { language } = useLanguage();
   const [messages, setMessages]             = useState<Message[]>([]);
@@ -315,6 +317,7 @@ export default function LunaChatPanel({
       setMessages((prev) => [...prev, { role: "user", content: text }]);
       setInput("");
       setLoading(true);
+      onGenerating?.();
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       try {
         const res = await fetch("/api/generate-story", {
@@ -387,6 +390,7 @@ export default function LunaChatPanel({
     if (!storyParams || creating) return;
     setCreating(true);
     setCreateError(null);
+    onGenerating?.();
     try {
       const res = await fetch("/api/generate-story", {
         method: "POST",
