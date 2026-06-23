@@ -33,7 +33,7 @@ Your task: Write a SINGLE image generation prompt (3-4 sentences) that will prod
 1. STORY-SPECIFIC — mention the actual characters by physical description (not name), their exact species/appearance, what they're wearing, and their emotional state in the story's key moment
 2. ACTION-FOCUSED — describe the single most magical or emotionally resonant scene from the story
 3. NIGHT-THEMED — the scene takes place at night or in a dreamlike setting with glowing light sources (moon, fireflies, lanterns, stars, bioluminescent glow)
-4. STYLE-PRECISE — end with: "Painted children's book illustration, glowing deep-blue and teal cosmic night palette, bioluminescent rim lighting, dreamy and magical, soft flat gradients, centered square composition, no text or letters."
+4. STYLE-PRECISE — end with: "3D animated movie still, Pixar style, high-fidelity render, cute character design, soft global illumination, vibrant colors, cinematic depth, magical starry background, dynamic composition, no text or letters."
 
 IMPORTANT: Only describe what is visually in the scene. No abstract concepts. Start with the characters.`,
         }],
