@@ -813,6 +813,9 @@ export default function Studio2Page() {
   const [hasScriptChanges, setHasScriptChanges] = useState(false);
   const cleanLessonsRef = useRef<string[]>([]);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keeps the raw base64 payload from the last cover generation so production
+  // can reuse it even after coverUrl has been swapped to a CDN URL
+  const coverBase64Ref = useRef<{ data: string; mimeType: string } | null>(null);
 
   // ─── Story title / versions sheet ───────────────────────────────────────────
   const [storyTitle, setStoryTitle] = useState("");
@@ -1109,23 +1112,23 @@ export default function Studio2Page() {
       const data = await res.json();
       if (res.ok && data.coverUrl) {
         setCoverUrl(data.coverUrl);
+        // Cache base64 so production can reuse it even after coverUrl is swapped to a CDN URL
+        const match = (data.coverUrl as string).match(/^data:([^;]+);base64,(.+)$/);
+        if (match) coverBase64Ref.current = { mimeType: match[1], data: match[2] };
         // Auto-persist to Supabase when story already exists in library
-        if (editingStoryId) {
-          const match = (data.coverUrl as string).match(/^data:([^;]+);base64,(.+)$/);
-          if (match) {
-            fetch(`/api/library/${editingStoryId}/cover`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ mimeType: match[1], data: match[2] }),
-            }).then(async (r) => {
-              if (r.ok) {
-                const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
-                // Append cache-buster so the browser doesn't serve the CDN's stale cached copy
-                setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
-              }
-              // If PATCH fails, the base64 in state is fine — production will re-upload
-            }).catch(() => {});
-          }
+        if (editingStoryId && match) {
+          fetch(`/api/library/${editingStoryId}/cover`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mimeType: match[1], data: match[2] }),
+          }).then(async (r) => {
+            if (r.ok) {
+              const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
+              // Append cache-buster so the browser doesn't serve the CDN's stale cached copy
+              setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
+            }
+            // If PATCH fails, the base64 in state is fine — production will re-upload
+          }).catch(() => {});
         }
       } else {
         console.error("[fetchCover] API error:", data);
@@ -1161,8 +1164,12 @@ export default function Studio2Page() {
       if (force) body.force = true;
       if (summary) body.summary = summary;
       if (coverPrompt) body.coverPrompt = coverPrompt;
-      const coverMatch = coverUrl.match(/^data:([^;]+);base64,(.+)$/);
-      if (coverMatch) { body.coverImageMimeType = coverMatch[1]; body.coverImageData = coverMatch[2]; }
+      // Prefer the ref (survives CDN URL swap); fall back to parsing coverUrl for backward compat
+      const coverPayload = coverBase64Ref.current ?? (() => {
+        const m = coverUrl.match(/^data:([^;]+);base64,(.+)$/);
+        return m ? { mimeType: m[1], data: m[2] } : null;
+      })();
+      if (coverPayload) { body.coverImageMimeType = coverPayload.mimeType; body.coverImageData = coverPayload.data; }
       const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};
@@ -1402,7 +1409,7 @@ export default function Studio2Page() {
               title={storyTitle}
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
-              onRegenerateCover={scriptBlocks.length > 0 ? () => { setCoverUrl(""); fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
+              onRegenerateCover={scriptBlocks.length > 0 ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
               durationMinutes={durationMinutes}
               onDurationChange={setDurationMinutes}
               hideDirectorsNote
