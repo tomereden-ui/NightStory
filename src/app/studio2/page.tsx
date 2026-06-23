@@ -379,7 +379,7 @@ function CharacterCard({
   useEffect(() => { setImgError(false); }, [avatarUrl]);
 
   const accentColor = isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)";
-  const dicebearUrl = `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(characterName)}&backgroundColor=0d1b4a&scale=85`;
+  const dicebearUrl = `https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(characterName)}&backgroundColor=0d1b4a&scale=85`;
   const displayUrl = avatarUrl || dicebearUrl;
 
   return (
