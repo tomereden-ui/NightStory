@@ -9,7 +9,7 @@ import type { ScriptBlock } from "@/types";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-
+export interface GenerateStoryRequest {
   mode: "wizard" | "prompt";
   // wizard fields
   hero?: string;
