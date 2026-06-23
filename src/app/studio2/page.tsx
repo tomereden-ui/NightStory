@@ -1216,7 +1216,7 @@ export default function Studio2Page() {
           <div className="flex items-center mb-7">
             <button onClick={() => { setActiveTab("script"); setIsProducing(false); setProductionJobId(null); }}
               className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
-            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Producing…</h1>
+            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{i18nT(language, "producingDrama")}…</h1>
             <div className="w-8" />
           </div>
           <ProductionProgress jobId={productionJobId} onDone={handleProductionDone} onError={handleProductionError} coverUrl={coverUrl || undefined} />

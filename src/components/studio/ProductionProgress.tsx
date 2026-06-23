@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Job } from "@/lib/jobs";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface Props {
   jobId: string;
@@ -21,6 +22,7 @@ const STEP_ICONS: Record<string, string> = {
 };
 
 export default function ProductionProgress({ jobId, onDone, onError, coverUrl }: Props) {
+  const { t } = useLanguage();
   const [job, setJob] = useState<Job | null>(null);
 
   useEffect(() => {
@@ -59,11 +61,11 @@ export default function ProductionProgress({ jobId, onDone, onError, coverUrl }:
   const progress = job?.progress ?? 0;
 
   const STEPS = [
-    { key: "planning",  label: "Planning timeline",      icon: "🗺️" },
-    { key: "recording", label: "Recording voices",       icon: "🎙️" },
-    { key: "sfx",       label: "Generating SFX",         icon: "🔊" },
-    { key: "mixing",    label: "Mixing audio",            icon: "🎚️" },
-    { key: "done",      label: "Drama ready",             icon: "✅" },
+    { key: "planning",  label: t("stepPlanning"),  icon: "🗺️" },
+    { key: "recording", label: t("stepRecording"), icon: "🎙️" },
+    { key: "sfx",       label: t("stepSfx"),       icon: "🔊" },
+    { key: "mixing",    label: t("stepMixing"),    icon: "🎚️" },
+    { key: "done",      label: t("dramaReady"),    icon: "✅" },
   ];
 
   const currentIdx = STEPS.findIndex((s) => s.key === status);
@@ -104,7 +106,7 @@ export default function ProductionProgress({ jobId, onDone, onError, coverUrl }:
       {/* Current step */}
       <div>
         <p className="text-white font-semibold text-base mb-1">{step}</p>
-        <p className="text-white/35 text-xs">Your audio drama is being produced…</p>
+        <p className="text-white/35 text-xs">{t("producingSubtitle")}</p>
       </div>
 
       {/* Progress bar */}

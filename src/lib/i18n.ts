@@ -151,6 +151,11 @@ export const translations = {
     tabStepByStep: "Step-by-step",
     viewFullScript: "View full script",
     hideScript: "Hide script",
+    producingSubtitle: "Your audio drama is being produced…",
+    stepPlanning: "Planning timeline",
+    stepRecording: "Recording voices",
+    stepSfx: "Generating SFX",
+    stepMixing: "Mixing audio",
   },
 
   he: {
@@ -258,6 +263,11 @@ export const translations = {
     tabStepByStep: "שלב-אחר-שלב",
     viewFullScript: "הצג תסריט מלא",
     hideScript: "הסתר תסריט",
+    producingSubtitle: "הדרמה הקולית שלך מופקת…",
+    stepPlanning: "תכנון ציר הזמן",
+    stepRecording: "מקליט קולות",
+    stepSfx: "יוצר אפקטים קוליים",
+    stepMixing: "מערבב שמע",
   },
 
   es: {
@@ -365,6 +375,11 @@ export const translations = {
     tabStepByStep: "Paso a paso",
     viewFullScript: "Ver guión completo",
     hideScript: "Ocultar guión",
+    producingSubtitle: "Tu drama de audio está siendo producido…",
+    stepPlanning: "Planificando cronología",
+    stepRecording: "Grabando voces",
+    stepSfx: "Generando efectos de sonido",
+    stepMixing: "Mezclando audio",
   },
 
   fr: {
@@ -472,6 +487,11 @@ export const translations = {
     tabStepByStep: "Étape par étape",
     viewFullScript: "Voir le script complet",
     hideScript: "Masquer le script",
+    producingSubtitle: "Votre drame audio est en cours de production…",
+    stepPlanning: "Planification du calendrier",
+    stepRecording: "Enregistrement des voix",
+    stepSfx: "Génération des effets sonores",
+    stepMixing: "Mixage audio",
   },
 
   de: {
@@ -579,6 +599,11 @@ export const translations = {
     tabStepByStep: "Schritt für Schritt",
     viewFullScript: "Vollständiges Skript anzeigen",
     hideScript: "Skript verbergen",
+    producingSubtitle: "Ihr Audiodrama wird produziert…",
+    stepPlanning: "Zeitlinie planen",
+    stepRecording: "Stimmen aufnehmen",
+    stepSfx: "Soundeffekte erstellen",
+    stepMixing: "Audio mischen",
   },
 
   pt: {
@@ -686,6 +711,11 @@ export const translations = {
     tabStepByStep: "Passo a passo",
     viewFullScript: "Ver roteiro completo",
     hideScript: "Ocultar roteiro",
+    producingSubtitle: "Seu drama de áudio está sendo produzido…",
+    stepPlanning: "Planejando cronograma",
+    stepRecording: "Gravando vozes",
+    stepSfx: "Gerando efeitos sonoros",
+    stepMixing: "Mixando áudio",
   },
 
   ar: {
@@ -793,6 +823,11 @@ export const translations = {
     tabStepByStep: "خطوة بخطوة",
     viewFullScript: "عرض النص الكامل",
     hideScript: "إخفاء النص",
+    producingSubtitle: "يتم إنتاج مسرحيتك الصوتية…",
+    stepPlanning: "تخطيط الجدول الزمني",
+    stepRecording: "تسجيل الأصوات",
+    stepSfx: "توليد المؤثرات الصوتية",
+    stepMixing: "مزج الصوت",
   },
 
   zh: {
@@ -900,6 +935,11 @@ export const translations = {
     tabStepByStep: "分步骤",
     viewFullScript: "查看完整剧本",
     hideScript: "隐藏剧本",
+    producingSubtitle: "您的音频故事正在制作中…",
+    stepPlanning: "规划时间线",
+    stepRecording: "录制声音",
+    stepSfx: "生成音效",
+    stepMixing: "混音",
   },
 
   ja: {
@@ -1007,6 +1047,11 @@ export const translations = {
     tabStepByStep: "ステップごと",
     viewFullScript: "全スクリプト表示",
     hideScript: "スクリプトを隠す",
+    producingSubtitle: "あなたのオーディオドラマを制作中…",
+    stepPlanning: "タイムライン計画",
+    stepRecording: "音声録音中",
+    stepSfx: "効果音生成",
+    stepMixing: "音声ミキシング",
   },
 
   it: {
@@ -1114,6 +1159,11 @@ export const translations = {
     tabStepByStep: "Passo dopo passo",
     viewFullScript: "Vedi copione completo",
     hideScript: "Nascondi copione",
+    producingSubtitle: "Il tuo dramma audio è in produzione…",
+    stepPlanning: "Pianificazione timeline",
+    stepRecording: "Registrazione voci",
+    stepSfx: "Generazione effetti sonori",
+    stepMixing: "Mixaggio audio",
   },
 
   nl: {
@@ -1221,6 +1271,11 @@ export const translations = {
     tabStepByStep: "Stap voor stap",
     viewFullScript: "Volledig script bekijken",
     hideScript: "Script verbergen",
+    producingSubtitle: "Uw audiodrama wordt geproduceerd…",
+    stepPlanning: "Planning tijdlijn",
+    stepRecording: "Stemmen opnemen",
+    stepSfx: "Geluidseffecten genereren",
+    stepMixing: "Audio mixen",
   },
 
   pl: {
@@ -1328,6 +1383,11 @@ export const translations = {
     tabStepByStep: "Krok po kroku",
     viewFullScript: "Pokaż pełny scenariusz",
     hideScript: "Ukryj scenariusz",
+    producingSubtitle: "Twój dramat audio jest produkowany…",
+    stepPlanning: "Planowanie osi czasu",
+    stepRecording: "Nagrywanie głosów",
+    stepSfx: "Generowanie efektów dźwiękowych",
+    stepMixing: "Miksowanie audio",
   },
 
   ru: {
@@ -1435,6 +1495,11 @@ export const translations = {
     tabStepByStep: "Шаг за шагом",
     viewFullScript: "Просмотр полного сценария",
     hideScript: "Скрыть сценарий",
+    producingSubtitle: "Ваша аудиодрама создаётся…",
+    stepPlanning: "Планирование хронологии",
+    stepRecording: "Запись голосов",
+    stepSfx: "Создание звуковых эффектов",
+    stepMixing: "Сведение аудио",
   },
 
   ko: {
@@ -1542,6 +1607,11 @@ export const translations = {
     tabStepByStep: "단계별",
     viewFullScript: "전체 대본 보기",
     hideScript: "대본 숨기기",
+    producingSubtitle: "오디오 드라마가 제작 중입니다…",
+    stepPlanning: "타임라인 계획",
+    stepRecording: "목소리 녹음",
+    stepSfx: "효과음 생성",
+    stepMixing: "오디오 믹싱",
   },
 
   tr: {
@@ -1649,6 +1719,11 @@ export const translations = {
     tabStepByStep: "Adım adım",
     viewFullScript: "Tam senaryoyu görüntüle",
     hideScript: "Senaryoyu gizle",
+    producingSubtitle: "Ses dramanız üretiliyor…",
+    stepPlanning: "Zaman çizelgesi planlanıyor",
+    stepRecording: "Sesler kaydediliyor",
+    stepSfx: "Ses efektleri oluşturuluyor",
+    stepMixing: "Ses miksajı",
   },
 
   hi: {
@@ -1756,6 +1831,11 @@ export const translations = {
     tabStepByStep: "चरण-दर-चरण",
     viewFullScript: "पूरी स्क्रिप्ट देखें",
     hideScript: "स्क्रिप्ट छुपाएं",
+    producingSubtitle: "आपका ऑडियो नाटक बनाया जा रहा है…",
+    stepPlanning: "समयरेखा योजना",
+    stepRecording: "आवाजें रिकॉर्ड हो रही हैं",
+    stepSfx: "ध्वनि प्रभाव बन रहे हैं",
+    stepMixing: "ऑडियो मिक्स हो रहा है",
   },
 
   sv: {
@@ -1863,6 +1943,11 @@ export const translations = {
     tabStepByStep: "Steg för steg",
     viewFullScript: "Visa fullt manus",
     hideScript: "Dölj manus",
+    producingSubtitle: "Ditt ljuddrama produceras…",
+    stepPlanning: "Planerar tidslinje",
+    stepRecording: "Spelar in röster",
+    stepSfx: "Genererar ljudeffekter",
+    stepMixing: "Mixar ljud",
   },
 } as const;
 
