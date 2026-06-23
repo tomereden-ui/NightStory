@@ -14,21 +14,23 @@ export async function POST(req: NextRequest) {
   if (!characterName) return NextResponse.json({ error: "characterName required" }, { status: 400 });
 
   // Step 1: Gemini writes a vivid portrait description of the character
-  let portraitDesc = `${characterName}, children's book character portrait`;
+  let portraitDesc = `a young children's book character, expressive face, wide eyes, dreamy look`;
   try {
     const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
       contents: [{
         role: "user",
         parts: [{
-          text: `You are a children's book illustrator writing a character portrait prompt for "${characterName}".
+          text: `You are a children's book illustrator writing an image generation prompt for a character named "${characterName}".
 
 Story context: ${summary ?? "a magical bedtime adventure"}
 
+Write a portrait description in ENGLISH ONLY (even if the character name is in another language).
 Describe ONLY the character's face and upper body in 2 sentences:
 - Their age, species (human/animal/etc.), hair or fur color, eye color, and one unique feature
 - Their emotional expression in this story (e.g. wide-eyed wonder, gentle sleepiness, brave curiosity)
 - What they are wearing (one detail only)
 
+IMPORTANT: Use ONLY English words. Do NOT include the character's name. Do NOT use any non-Latin characters.
 Do NOT describe backgrounds, other characters, or scenery. Write ONLY the portrait description.`,
         }],
       }],
