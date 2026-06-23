@@ -730,28 +730,32 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               {onRegenerateCover && !isFetchingCover && (
                 <button
                   onClick={onRegenerateCover}
-                  className="absolute top-2 right-2 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95"
+                  className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all active:scale-95 hover:brightness-110"
                   style={{
-                    background: "rgba(10,12,20,0.72)",
-                    border: "1px solid rgba(79,195,247,0.3)",
-                    color: "rgba(79,195,247,0.8)",
-                    backdropFilter: "blur(8px)",
+                    background: "rgba(5,8,20,0.75)",
+                    border: "1px solid rgba(79,195,247,0.35)",
+                    color: "rgba(79,195,247,0.9)",
+                    backdropFilter: "blur(10px)",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
                   }}
                 >
-                  ↺ Cover
+                  <Icon name="restore" size={13} />
+                  <span>New cover</span>
                 </button>
               )}
               {isFetchingCover && (
                 <div
-                  className="absolute top-2 right-2 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                  className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold"
                   style={{
-                    background: "rgba(10,12,20,0.72)",
+                    background: "rgba(5,8,20,0.75)",
                     border: "1px solid rgba(79,195,247,0.2)",
                     color: "rgba(79,195,247,0.45)",
-                    backdropFilter: "blur(8px)",
+                    backdropFilter: "blur(10px)",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
                   }}
                 >
-                  <span className="animate-pulse">✦</span> Generating…
+                  <span className="animate-spin inline-block" style={{ animationDuration: "1s" }}>↺</span>
+                  <span>Generating…</span>
                 </div>
               )}
             </div>
