@@ -7,6 +7,7 @@ import SpeechPlayerModal from "./SpeechPlayerModal";
 import { useLanguage } from "@/context/LanguageContext";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
+import Icon from "@/components/ui/Icon";
 
 interface ScriptTabProps {
   blocks: ScriptBlock[];
@@ -126,8 +127,8 @@ function BlockSeparator({ onAddSfx, onAddText }: { onAddSfx: () => void; onAddTe
           </button>
           <button
             onClick={() => setExpanded(false)}
-            className="text-[10px] text-white/20 hover:text-white/40"
-          >✕</button>
+            className="text-white/20 hover:text-white/40"
+          ><Icon name="close" size={10} /></button>
         </>
       ) : (
         <button
@@ -194,9 +195,9 @@ function AIBlockSeparator({
               : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
             }
           >
-            {isInserting ? <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(139,92,246,0.3)", borderTopColor: "#A78BFA" }} /> : "↵"}
+            {isInserting ? <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(139,92,246,0.3)", borderTopColor: "#A78BFA" }} /> : <Icon name="submit" size={12} />}
           </button>
-          <button onClick={() => { setExpanded(false); setText(""); }} className="text-[10px] text-white/20 hover:text-white/40 flex-shrink-0">✕</button>
+          <button onClick={() => { setExpanded(false); setText(""); }} className="text-white/20 hover:text-white/40 flex-shrink-0"><Icon name="close" size={10} /></button>
         </>
       ) : (
         <>
@@ -278,8 +279,8 @@ function TextInsertModal({
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-white">Add Dialogue</h3>
-          <button onClick={onCancel} className="w-7 h-7 rounded-full flex items-center justify-center text-white/30 hover:text-white/60 transition-colors text-xs"
-            style={{ background: "rgba(255,255,255,0.06)" }}>✕</button>
+          <button onClick={onCancel} className="w-7 h-7 rounded-full flex items-center justify-center text-white/30 hover:text-white/60 transition-colors"
+            style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="close" size={12} /></button>
         </div>
 
         {/* Character name */}
@@ -786,7 +787,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                   >
                     {summaryLoading
                       ? <span className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
-                      : <span>{summaryPlaying ? "⏸" : "▶"}</span>
+                      : (summaryPlaying ? <Icon name="pause" size={10} /> : <Icon name="play" size={10} />)
                     }
                     <span>{summaryLoading ? "Loading…" : summaryPlaying ? "Stop" : "Play"}</span>
                   </button>
@@ -840,10 +841,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           }}
         >
           <span>{scriptExpanded ? t("hideScript") : t("viewFullScript")}</span>
-          <span
-            className="transition-transform duration-200"
-            style={{ display: "inline-block", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
-          >▾</span>
+          <Icon name={scriptExpanded ? "collapse" : "expand"} size={14} />
         </button>
 
         {/* Block list — collapsed by default */}
@@ -1060,7 +1058,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
               }
             >
-              ↵
+              <Icon name="submit" size={14} />
             </button>
           </div>
 

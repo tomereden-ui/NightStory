@@ -22,6 +22,7 @@ import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/Chi
 import LunaChatPanel from "@/components/studio/LunaChatPanel";
 import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
+import Icon from "@/components/ui/Icon";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
@@ -107,7 +108,7 @@ function ScriptBrowser({
           className="w-full flex items-center justify-between px-4 py-3 text-left"
         >
           <div className="flex items-center gap-2.5">
-            <span className="text-sm">📂</span>
+            <Icon name="folder" size={14} />
             <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>
               Saved versions
             </span>
@@ -141,7 +142,7 @@ function ScriptBrowser({
                     opacity: isDeleting ? 0.4 : 1,
                   }}
                 >
-                  <span className="text-base">{s.isAutosave ? "⚡" : "💾"}</span>
+                  {s.isAutosave ? <span className="text-base">⚡</span> : <Icon name="save" size={14} />}
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] font-semibold text-white/80 truncate">{s.label}</p>
                     <p className="text-[10px] text-white/30">{s.blockCount} blocks · {timeAgo(s.savedAt)}</p>
@@ -158,7 +159,7 @@ function ScriptBrowser({
                       className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-all"
                       style={{ background: "rgba(0,0,0,0.55)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.12)" }}
                     >
-                      {isDeleting ? "…" : "×"}
+                      {isDeleting ? "…" : <Icon name="close" size={10} />}
                     </button>
                   )}
                 </div>
@@ -356,7 +357,7 @@ function DirectionSheet({
             <p className="text-xs font-bold text-white/80 truncate">{characterName}</p>
             {voice && <p className="text-[10px] text-white/30 truncate">{voice.name}</p>}
           </div>
-          <button onClick={onClose} className="text-white/25 text-lg leading-none flex-shrink-0">×</button>
+          <button onClick={onClose} className="text-white/25 flex-shrink-0"><Icon name="close" size={16} /></button>
         </div>
 
         {/* Avatar style picker */}
@@ -408,7 +409,7 @@ function DirectionSheet({
             <span className="text-sm font-medium text-white/70 flex-1 text-left truncate">
               {voice?.name ?? "Select voice"}
             </span>
-            <span className="text-white/30 text-xs">{showVoicePicker ? "▴" : "▾"}</span>
+            <Icon name={showVoicePicker ? "collapse" : "expand"} size={12} className="text-white/30" />
           </button>
           {showVoicePicker && (
             <VoicePicker
@@ -456,7 +457,7 @@ function DirectionSheet({
               ? { background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.55)", color: "#A78BFA" }
               : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
             }
-          >↵</button>
+          ><Icon name="submit" size={14} /></button>
         </div>
       </div>
     </>
@@ -736,7 +737,7 @@ function PromptTabContent({
           <>
             <span>✨</span>
             <span>Next: Add a Lesson</span>
-            <span style={{ opacity: 0.6 }}>→</span>
+            <Icon name="forward" size={14} style={{ opacity: 0.6 }} />
           </>
         )}
       </button>
@@ -1215,7 +1216,7 @@ export default function Studio2Page() {
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
             <button onClick={() => { setActiveTab("script"); setIsProducing(false); setProductionJobId(null); }}
-              className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+              className="w-8 h-8 flex items-center justify-center text-white/50"><Icon name="back" size={18} /></button>
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{i18nT(language, "producingDrama")}…</h1>
             <div className="w-8" />
           </div>
@@ -1230,7 +1231,7 @@ export default function Studio2Page() {
       <div className="min-h-full" dir={isRTL ? "rtl" : "ltr"}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
-            <button onClick={() => setActiveTab("script")} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+            <button onClick={() => setActiveTab("script")} className="w-8 h-8 flex items-center justify-center text-white/50"><Icon name="back" size={18} /></button>
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Drama Ready</h1>
             <div className="w-8" />
           </div>
@@ -1264,7 +1265,7 @@ export default function Studio2Page() {
               : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }
             }
           >
-            <span className="text-base leading-none">📂</span>
+            <Icon name="folder" size={15} />
             {savesCount > 0 && (
               <span className="text-xs font-bold leading-none">{savesCount}</span>
             )}
@@ -1437,7 +1438,7 @@ export default function Studio2Page() {
                       className="ml-auto text-[10px] font-medium transition-colors"
                       style={{ color: "rgba(255,255,255,0.25)" }}
                     >
-                      ↩ Discard
+                      <Icon name="restore" size={14} className="inline-block align-middle" /> Discard
                     </button>
                   )}
                 </div>
@@ -1494,7 +1495,7 @@ export default function Studio2Page() {
                       ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
                       : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.15)" }
                     }
-                  >↵</button>
+                  ><Icon name="submit" size={14} /></button>
                 </div>
 
                 {reviseError && (
@@ -1620,7 +1621,7 @@ export default function Studio2Page() {
                   ) : saveLabel === "saved" ? (
                     <><span className="text-base leading-none">✓</span> Saved!</>
                   ) : (
-                    <><span className="text-base leading-none">💾</span> Save version</>
+                    <><Icon name="save" size={14} /> Save version</>
                   )}
                 </button>
               );
@@ -1666,7 +1667,7 @@ export default function Studio2Page() {
             <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: "rgba(255,255,255,0.15)" }} />
             <div className="flex items-center justify-between mb-4 px-1">
               <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved Versions</span>
-              <button onClick={() => setVersionsOpen(false)} className="text-white/30 text-lg leading-none">×</button>
+              <button onClick={() => setVersionsOpen(false)} className="text-white/30"><Icon name="close" size={14} /></button>
             </div>
             <ScriptBrowser
               onLoad={(save) => { handleLoadSave(save); setVersionsOpen(false); }}

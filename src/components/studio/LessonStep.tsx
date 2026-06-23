@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Icon from "@/components/ui/Icon";
 
 export const LESSONS = [
   { icon: "🦁", label: "Bravery",               desc: "Facing fears, trying scary things" },
@@ -65,7 +66,7 @@ export default function LessonStep({
             className="flex items-center gap-1.5 mb-4 text-xs font-medium transition-opacity active:opacity-60"
             style={{ color: "rgba(255,255,255,0.3)" }}
           >
-            <span>←</span>
+            <Icon name="back" size={14} />
             <span>Back to idea</span>
           </button>
         )}

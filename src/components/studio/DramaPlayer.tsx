@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { Job } from "@/lib/jobs";
 import type { DramaScript, DramaTrack } from "@/lib/services/dramaPlanner";
+import Icon from "@/components/ui/Icon";
 
 interface Props {
   job: Job;
@@ -163,16 +164,16 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
         <div className="flex items-center justify-center gap-6">
           <button
             onClick={() => { if (audioRef.current) { audioRef.current.currentTime = 0; setCurrentTime(0); } }}
-            className="text-white/25 text-xl w-10 h-10 flex items-center justify-center"
+            className="text-white/25 w-10 h-10 flex items-center justify-center"
           >
-            ⏮
+            <Icon name="rewind" size={20} />
           </button>
           <button
             onClick={handlePlayPause}
-            className="w-16 h-16 rounded-full flex items-center justify-center text-2xl active:scale-95 transition-transform"
+            className="w-16 h-16 rounded-full flex items-center justify-center active:scale-95 transition-transform"
             style={{ background: "linear-gradient(135deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 20px rgba(79,195,247,0.4)" }}
           >
-            {playing ? "⏸" : "▶"}
+            {playing ? <Icon name="pause" size={24} /> : <Icon name="play" size={24} />}
           </button>
           <a
             href={job.audioUrl}

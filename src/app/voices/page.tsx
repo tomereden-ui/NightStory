@@ -8,6 +8,7 @@ import { t as i18nT } from "@/lib/i18n";
 import VoiceAvatar, { AVATAR_STYLES } from "@/components/ui/VoiceAvatar";
 import { PRESET_VOICES, type PresetVoiceConfig } from "@/config/presetVoices";
 import { SYSTEM_AVATARS } from "@/config/systemAvatars";
+import Icon from "@/components/ui/Icon";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ function AvatarGallerySheet({
             className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
             style={{ background: "rgba(255,255,255,0.06)" }}
           >
-            ×
+            <Icon name="close" size={16} />
           </button>
         </div>
 
@@ -257,7 +258,7 @@ function VoiceCard({
           }}
           title={voice.sample_url ? (isPlaying ? "Stop" : "Play sample") : "No sample available"}
         >
-          {isPlaying ? "⏹" : "▶"}
+          {isPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
         </button>
 
         {/* Delete */}
@@ -271,7 +272,7 @@ function VoiceCard({
           }}
           title="Delete voice"
         >
-          ×
+          <Icon name="close" size={16} />
         </button>
       </div>
 
@@ -346,7 +347,7 @@ function PresetCard({
         }}
         title={isPlaying ? "Stop" : isCached ? "Play cached sample" : "Generate & play sample"}
       >
-        {isPlaying ? "⏹" : "▶"}
+        {isPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
       </button>
     </div>
   );
@@ -565,7 +566,7 @@ function AddVoiceSheet({
               className="w-8 h-8 rounded-full flex items-center justify-center text-white/40"
               style={{ background: "rgba(255,255,255,0.06)" }}
             >
-              ×
+              <Icon name="close" size={16} />
             </button>
           </div>
 
@@ -681,7 +682,7 @@ function AddVoiceSheet({
                   boxShadow: recordState === "recording" ? "0 4px 24px rgba(236,72,153,0.4)" : "0 4px 24px rgba(79,195,247,0.3)",
                 }}
               >
-                {recordState === "recording" ? "⏹" : "🎤"}
+                {recordState === "recording" ? <Icon name="stop" size={14} /> : "🎤"}
               </button>
               {recordState === "done" && (
                 <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setRecordingSeconds(0); setPreviewState("idle"); setPreviewAudioUrl(null); stopPreviewAudio(); }} className="text-white/30 text-xs">
@@ -717,7 +718,7 @@ function AddVoiceSheet({
                 className="w-9 h-9 rounded-full flex items-center justify-center text-sm flex-shrink-0"
                 style={{ background: previewPlaying ? "rgba(79,195,247,0.25)" : "rgba(79,195,247,0.15)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.35)" }}
               >
-                {previewPlaying ? "⏹" : "▶"}
+                {previewPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
               </button>
               <div className="flex-1 min-w-0">
                 <p className="text-[#4fc3f7] text-xs font-medium">Preview ready</p>

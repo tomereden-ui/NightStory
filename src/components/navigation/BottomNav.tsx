@@ -1,75 +1,17 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useViewMode } from "@/context/ViewModeContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { t, type TranslationKey } from "@/lib/i18n";
-
-// ── Icons ──────────────────────────────────────────────────────────────────────
-
-function IconStories() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      {/* Open book */}
-      <path d="M12 6C10 3.5 6 3 3 4v15c3-1 7-.5 9 2 2-2.5 6-3 9-2V4c-3-1-7-.5-9 2z" />
-      <path d="M12 6v15" />
-      {/* Star on right page */}
-      <path d="M16.5 9l.55 1.65L18.7 11l-1.65.55L16.5 13.2l-.55-1.65L14.3 11l1.65-.55z" />
-    </svg>
-  );
-}
-
-function IconCreate() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      {/* Wand */}
-      <path d="M5 19L15 9" />
-      <path d="M13.5 7.5l3 3" />
-      <path d="M15 6l1 1" />
-      {/* Sparkles */}
-      <path d="M9 3l.6 1.8L11.4 5l-1.8.6L9 7.4 8.4 5.6 6.6 5l1.8-.6z" />
-      <path d="M19 9l.4 1.2 1.2.4-1.2.4L19 12.2l-.4-1.2-1.2-.4 1.2-.4z" />
-      <path d="M4 13l.35 1.05.7.2.35 1.05.35-1.05 1.05-.2-.7-.2z" />
-    </svg>
-  );
-}
-
-function IconVoices() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      {/* Microphone */}
-      <rect x="9" y="2" width="6" height="11" rx="3" />
-      <path d="M5 10v1a7 7 0 0014 0v-1" />
-      <path d="M12 19v3" />
-      <path d="M9 22h6" />
-      {/* Music notes floating */}
-      <path d="M19 6l1-1v3" />
-      <circle cx="20" cy="8.5" r="0.8" fill="currentColor" stroke="none" />
-      <path d="M21 4l1-1v2.5" />
-      <circle cx="22" cy="5.5" r="0.7" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function IconMe() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      {/* Moon */}
-      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-      {/* Stars */}
-      <path d="M17 4l.4 1.2 1.2.4-1.2.4L17 7.2l-.4-1.2-1.2-.4 1.2-.4z" />
-      <circle cx="19.5" cy="9" r="0.7" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
+import Icon from "@/components/ui/Icon";
 
 // ── Nav config — each item has its own accent colour ──────────────────────────
 
 const NAV: Array<{
   labelKey: TranslationKey;
-  Icon: () => React.ReactElement;
+  iconName: "navStories" | "navCreate" | "navVoices" | "navMySpace";
   href: string;
   color: string;
   glow: string;
@@ -77,7 +19,7 @@ const NAV: Array<{
 }> = [
   {
     labelKey: "navStoryTime",
-    Icon: IconStories,
+    iconName: "navStories",
     href: "/library",
     color: "#fbbf24",
     glow: "rgba(251,191,36,0.4)",
@@ -85,7 +27,7 @@ const NAV: Array<{
   },
   {
     labelKey: "navCreate",
-    Icon: IconCreate,
+    iconName: "navCreate",
     href: "/studio2",
     color: "#c084fc",
     glow: "rgba(192,132,252,0.4)",
@@ -93,7 +35,7 @@ const NAV: Array<{
   },
   {
     labelKey: "navVoices",
-    Icon: IconVoices,
+    iconName: "navVoices",
     href: "/voices",
     color: "#f472b6",
     glow: "rgba(244,114,182,0.4)",
@@ -101,7 +43,7 @@ const NAV: Array<{
   },
   {
     labelKey: "navMySpace",
-    Icon: IconMe,
+    iconName: "navMySpace",
     href: "/profile",
     color: "#67e8f9",
     glow: "rgba(103,232,249,0.4)",
@@ -153,7 +95,7 @@ export default function BottomNav() {
                         filter: isActive ? `drop-shadow(0 0 6px ${item.glow})` : undefined,
                       }}
                     >
-                      <item.Icon />
+                      <Icon name={item.iconName} size={24} />
                     </span>
                   </span>
                   <span
@@ -210,7 +152,7 @@ export default function BottomNav() {
                       filter: isActive ? `drop-shadow(0 0 8px ${item.glow})` : undefined,
                     }}
                   >
-                    <item.Icon />
+                    <Icon name={item.iconName} size={24} />
                   </span>
                 </span>
                 <span

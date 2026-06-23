@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
+import Icon from "@/components/ui/Icon";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -223,7 +224,7 @@ export default function StoryDetailPage() {
             className="absolute top-12 left-4 w-8 h-8 flex items-center justify-center rounded-full"
             style={{ background: "rgba(5,8,20,0.6)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)" }}
           >
-            <span className="text-white/60 text-sm">←</span>
+            <Icon name="back" size={18} className="text-white/60" />
           </button>
         </div>
 
@@ -262,7 +263,7 @@ export default function StoryDetailPage() {
                     : { background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.25)", color: "rgba(79,195,247,0.8)" }
                 }
               >
-                <span style={{ fontSize: 11 }}>{summaryPlaying ? "⏸" : summaryLoading ? "…" : "▶"}</span>
+                {summaryPlaying ? <Icon name="pause" size={11} /> : summaryLoading ? "…" : <Icon name="play" size={11} />}
                 <span>{summaryPlaying ? "Stop" : summaryLoading ? "Loading…" : "Play summary"}</span>
               </button>
             </div>
@@ -299,10 +300,7 @@ export default function StoryDetailPage() {
             }}
           >
             <span>{scriptExpanded ? "Hide script" : "View full script"}</span>
-            <span
-              className="transition-transform duration-200"
-              style={{ display: "inline-block", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
-            >▾</span>
+            <Icon name={scriptExpanded ? "collapse" : "expand"} size={14} />
           </button>
         </div>
 
@@ -388,7 +386,7 @@ export default function StoryDetailPage() {
                   boxShadow: "0 0 14px rgba(79,195,247,0.3)",
                 }}
               >
-                {playing ? "⏸" : "▶"}
+                {playing ? <Icon name="pause" size={20} /> : <Icon name="play" size={20} />}
               </button>
               <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-medium truncate leading-snug">{entry.title}</p>

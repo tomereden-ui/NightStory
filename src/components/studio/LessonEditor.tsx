@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { LESSONS, type LessonLabel } from "./LessonStep";
+import Icon from "@/components/ui/Icon";
 
 const PRESET_LABELS = LESSONS.map((l) => l.label) as LessonLabel[];
 
@@ -119,11 +120,11 @@ export default function LessonEditor({
                     </span>
                     <button
                       onClick={() => removeLesson(lesson)}
-                      className="text-[10px] opacity-30 hover:opacity-70 transition-opacity leading-none"
+                      className="opacity-30 hover:opacity-70 transition-opacity"
                       style={{ color: "#C4B5FD" }}
                       aria-label={`Remove ${lesson}`}
                     >
-                      ×
+                      <Icon name="close" size={10} />
                     </button>
                   </div>
                   {impl && (
@@ -183,10 +184,9 @@ export default function LessonEditor({
         </div>
         <button
           onClick={cancelEditor}
-          className="text-lg leading-none"
-          style={{ color: "rgba(255,255,255,0.25)" }}
+          className="text-white/25"
         >
-          ×
+          <Icon name="close" size={16} />
         </button>
       </div>
 

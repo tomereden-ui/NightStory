@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ScriptBlock, Voice } from "@/types";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
+import Icon from "@/components/ui/Icon";
 
 interface SpeechPlayerModalProps {
   block: ScriptBlock;
@@ -104,14 +105,14 @@ export default function SpeechPlayerModal({
                 color: "#05080F", boxShadow: "0 4px 16px rgba(79,195,247,0.3)",
               }}
             >
-              {isLoading ? "Generating…" : isPaused ? "▶ Resume" : isPlaying ? "⏸ Pause" : "▶ Play"}
+              {isLoading ? "Generating…" : isPaused ? <><Icon name="play" size={14} className="inline-block align-middle mr-1" />Resume</> : isPlaying ? <><Icon name="pause" size={14} className="inline-block align-middle mr-1" />Pause</> : <><Icon name="play" size={14} className="inline-block align-middle mr-1" />Play</>}
             </button>
             <button
               onClick={onStop}
-              className="w-12 h-12 rounded-2xl flex items-center justify-center text-white/40 hover:text-white transition-all text-lg"
+              className="w-12 h-12 rounded-2xl flex items-center justify-center text-white/40 hover:text-white transition-all"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
             >
-              ✕
+              <Icon name="close" size={16} />
             </button>
           </div>
         </div>

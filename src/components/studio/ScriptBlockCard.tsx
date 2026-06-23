@@ -5,6 +5,7 @@ import type { ScriptBlock, Voice } from "@/types";
 import VoicePicker from "./VoicePicker";
 import { useLanguage } from "@/context/LanguageContext";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
+import Icon from "@/components/ui/Icon";
 
 // ─── SFX payload helpers ──────────────────────────────────────────────────────
 
@@ -235,9 +236,9 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
           {isLoadingAudio ? (
             <span className="w-2.5 h-2.5 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#F59E0B", borderTopColor: "transparent" }} />
           ) : isPlayingAudio ? (
-            <span className="text-[8px]" style={{ color: "#F59E0B" }}>■</span>
+            <Icon name="stop" size={8} style={{ color: "#F59E0B" }} />
           ) : (
-            <span className="text-[9px] ml-px" style={{ color: "rgba(245,158,11,0.6)" }}>▶</span>
+            <Icon name="play" size={9} style={{ color: "rgba(245,158,11,0.6)" }} />
           )}
         </button>
 
@@ -248,7 +249,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
           title="Remove SFX"
         >
-          <span className="text-[10px]">✕</span>
+          <Icon name="close" size={10} />
         </button>
       </div>
     </div>
@@ -402,7 +403,7 @@ function SpeechCard({
               <span className="w-0.5 h-2 bg-teal rounded-full animate-[bounce_0.6s_ease-in-out_0.3s_infinite]" />
             </span>
           ) : (
-            <span className="text-white/30 text-[10px] ml-px">▶</span>
+            <Icon name="play" size={10} className="text-white/30 ml-px" />
           )}
         </button>
 
@@ -428,7 +429,7 @@ function SpeechCard({
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
           title="Delete block"
         >
-          <span className="text-[10px]">✕</span>
+          <Icon name="close" size={10} />
         </button>
       </div>
 
@@ -477,7 +478,7 @@ function SpeechCard({
                 : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
               }
             >
-              ↵
+              <Icon name="submit" size={12} />
             </button>
           </div>
         </div>

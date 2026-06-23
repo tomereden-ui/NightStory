@@ -10,6 +10,8 @@ import { PRESET_VOICES } from "@/config/presetVoices";
 import { getNarratorVoiceId, setNarratorVoiceId } from "@/lib/narratorPreference";
 import type { UsageTotals } from "@/lib/usageTracker";
 import type { ChildProfile } from "@/types";
+import Icon from "@/components/ui/Icon";
+import { type IconName } from "@/lib/icons";
 
 // ─── SVG icon helper ──────────────────────────────────────────────────────────
 
@@ -196,7 +198,7 @@ function AvatarPicker({
             className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
             style={{ background: "rgba(255,255,255,0.06)" }}
           >
-            ×
+            <Icon name="close" size={20} />
           </button>
         </div>
 
@@ -286,7 +288,7 @@ function AddChildModal({
       >
         <div className="flex items-center justify-between mb-5">
           <p className="text-white/70 text-xs uppercase tracking-widest font-bold">{t("addChild")}</p>
-          <button onClick={onClose} className="text-white/30 text-lg leading-none">✕</button>
+          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors"><Icon name="close" size={18} /></button>
         </div>
 
         {/* Avatar picker trigger */}
@@ -405,13 +407,9 @@ function ViewModeBtn({
 
 // ─── Setting row ──────────────────────────────────────────────────────────────
 
-const D_BELL   = "M8 1v1M8 2a5 5 0 015 5v3l1.5 2h-13L3 10V7A5 5 0 018 2zM6 14a2 2 0 004 0";
-const D_MOON   = "M12.5 9A5.5 5.5 0 116 3.5a4 4 0 006.5 5.5z";
-const D_VOLUME = "M5 6H2v4h3l4 4V2L5 6zM10 5.5a4 4 0 010 5M12.5 3a7.5 7.5 0 010 10";
-
 function SettingRow({
-  label, iconD, accent, value,
-}: { label: string; iconD: string; accent: string; value?: string }) {
+  label, iconName, accent, value,
+}: { label: string; iconName: IconName; accent: string; value?: string }) {
   return (
     <div
       className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all"
@@ -421,26 +419,21 @@ function SettingRow({
         className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
         style={{ background: `${accent}18`, border: `1px solid ${accent}28`, color: accent }}
       >
-        <Ico d={iconD} size={15} />
+        <Icon name={iconName} size={18} />
       </div>
       <span className="flex-1 text-white/80 text-sm font-medium">{label}</span>
       {value && <span className="text-white/30 text-xs">{value}</span>}
-      <span className="text-white/15 text-base ml-1">›</span>
+      <Icon name="chevronRight" size={14} />
     </div>
   );
 }
 
 // ─── API usage row ────────────────────────────────────────────────────────────
 
-const D_SPARKLE  = "M8 1.5l1.2 3.7 3.9.6-2.8 2.7.7 3.9L8 10.6l-3 1.8.7-3.9L3 5.8l3.9-.6z";
-const D_WAVEFORM = "M1 8h1.5M3.5 5v6M6 3v10M8.5 5.5v5M11 4v8M13.5 6v4M15 8h0.5";
-const D_MUSIC    = "M9 13V4l5-1.5v9.5M4 14a2 2 0 100-4 2 2 0 000 4zM14 12.5a2 2 0 100-4 2 2 0 000 4z";
-const D_MIC      = "M8 1a3 3 0 013 3v4a3 3 0 01-6 0V4a3 3 0 013-3zM3 7a5 5 0 0010 0M8 14v1M5 15h6";
-
 function UsageRow({
-  iconD, accent, label, sub, value, unit, cost,
+  iconName, accent, label, sub, value, unit, cost,
 }: {
-  iconD: string; accent: string; label: string; sub: string;
+  iconName: IconName; accent: string; label: string; sub: string;
   value: string; unit: string; cost?: string;
 }) {
   return (
@@ -452,7 +445,7 @@ function UsageRow({
         className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
         style={{ background: `${accent}15`, border: `1px solid ${accent}28`, color: accent }}
       >
-        <Ico d={iconD} size={15} />
+        <Icon name={iconName} size={18} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-white/80 text-xs font-semibold">{label}</p>
@@ -596,9 +589,9 @@ export default function ProfilePage() {
   const editingChild = children.find((c) => c.id === editAvatarFor);
 
   const SETTINGS_ROWS = [
-    { id: "notifications", label: t("notifications"), iconD: D_BELL,   accent: "#4fc3f7", value: t("on")     },
-    { id: "nightmode",     label: t("nightMode"),     iconD: D_MOON,   accent: "#8B5CF6", value: t("always") },
-    { id: "volume",        label: t("volume"),         iconD: D_VOLUME, accent: "#10D9A0", value: "80%"       },
+    { id: "notifications", label: t("notifications"), iconName: "bell"   as IconName, accent: "#4fc3f7", value: t("on")     },
+    { id: "nightmode",     label: t("nightMode"),     iconName: "moon"   as IconName, accent: "#8B5CF6", value: t("always") },
+    { id: "volume",        label: t("volume"),         iconName: "volume" as IconName, accent: "#10D9A0", value: "80%"       },
   ];
 
   return (
@@ -677,7 +670,7 @@ export default function ProfilePage() {
                 <SettingRow
                   key={s.id}
                   label={s.label}
-                  iconD={s.iconD}
+                  iconName={s.iconName}
                   accent={s.accent}
                   value={s.value}
                 />
@@ -706,19 +699,19 @@ export default function ProfilePage() {
             })()}
 
             <div className="flex flex-col gap-2">
-              <UsageRow iconD={D_SPARKLE} accent="#4fc3f7" label="Gemini · Text"
+              <UsageRow iconName="sparkles" accent="#4fc3f7" label="Gemini · Text"
                 sub={usage ? `${fmt(usage.gemini_calls)} request${usage.gemini_calls !== 1 ? "s" : ""}` : "—"}
                 value={usage ? fmt(usage.gemini_tokens) : "—"} unit="tokens"
                 cost={usage ? estimateCosts(usage).geminiText : undefined} />
-              <UsageRow iconD={D_MIC} accent="#38bdf8" label="Gemini · TTS"
+              <UsageRow iconName="mic" accent="#38bdf8" label="Gemini · TTS"
                 sub={usage ? `${fmt(usage.gemini_tts_calls)} synthesis call${usage.gemini_tts_calls !== 1 ? "s" : ""}` : "—"}
                 value={usage ? fmt(usage.gemini_tts_chars) : "—"} unit="chars"
                 cost={usage ? estimateCosts(usage).geminiTts : undefined} />
-              <UsageRow iconD={D_WAVEFORM} accent="#F59E0B" label="ElevenLabs · TTS"
+              <UsageRow iconName="waveform" accent="#F59E0B" label="ElevenLabs · TTS"
                 sub={usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
                 value={usage ? fmt(usage.el_tts_chars) : "—"} unit="chars"
                 cost={usage ? estimateCosts(usage).elTts : undefined} />
-              <UsageRow iconD={D_MUSIC} accent="#A78BFA" label="ElevenLabs · SFX"
+              <UsageRow iconName="music" accent="#A78BFA" label="ElevenLabs · SFX"
                 sub={usage ? `${fmt(usage.el_sfx_calls)} generation${usage.el_sfx_calls !== 1 ? "s" : ""}` : "—"}
                 value={usage ? fmt(usage.el_sfx_chars) : "—"} unit="prompt chars"
                 cost={usage ? estimateCosts(usage).elSfx : undefined} />

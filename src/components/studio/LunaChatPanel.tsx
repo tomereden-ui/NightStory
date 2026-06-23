@@ -6,6 +6,7 @@ import type { DraftState } from "@/lib/draftStore";
 import type { ScriptBlock } from "@/types";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { useLanguage } from "@/context/LanguageContext";
+import Icon from "@/components/ui/Icon";
 
 interface Message {
   role: "user" | "model";
@@ -504,12 +505,7 @@ export default function LunaChatPanel({
                   ))}
                 </span>
               ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="2" width="6" height="11" rx="3" />
-                  <path d="M5 10a7 7 0 0 0 14 0" />
-                  <line x1="12" y1="19" x2="12" y2="22" />
-                  <line x1="8" y1="22" x2="16" y2="22" />
-                </svg>
+                <Icon name="mic" size={14} className="text-white/50" />
               )}
             </button>
           )}
@@ -536,9 +532,7 @@ export default function LunaChatPanel({
                 : "rgba(255,255,255,0.07)",
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 2L11 13" /><path d="M22 2L15 22l-4-9-9-4 20-7z" />
-            </svg>
+            <Icon name="send" size={14} className="text-white" />
           </button>
         </div>
 
@@ -576,7 +570,7 @@ export default function LunaChatPanel({
               className="text-[11px] transition-all active:scale-95"
               style={{ color: "rgba(255,255,255,0.18)" }}
             >
-              ↩ Start over
+              <Icon name="submit" size={12} className="inline-block align-middle mr-1" /> Start over
             </button>
           )}
         </div>

@@ -6,6 +6,7 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { ClassicMeta } from "@/lib/classicStories";
 import type { ScriptBlock } from "@/types";
+import Icon from "@/components/ui/Icon";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -337,7 +338,7 @@ export default function ClassicDetailPage() {
               border: "1px solid rgba(255,255,255,0.1)",
             }}
           >
-            <span className="text-white/60 text-sm">←</span>
+            <Icon name="back" size={18} className="text-white/60" />
           </button>
 
           {/* Cover action buttons */}
@@ -479,7 +480,7 @@ export default function ClassicDetailPage() {
                     : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
                   }
                 >
-                  <span>{summaryPlaying ? "⏸" : summaryLoading ? "…" : "▶"}</span>
+                  {summaryPlaying ? <Icon name="pause" size={11} /> : summaryLoading ? "…" : <Icon name="play" size={11} />}
                   <span>{summaryPlaying ? "Stop" : summaryLoading ? "Loading" : "Play"}</span>
                 </button>
               </div>
@@ -512,10 +513,7 @@ export default function ClassicDetailPage() {
               }}
             >
               <span>{scriptExpanded ? "Hide script" : "View full script"}</span>
-              <span
-                className="transition-transform duration-200"
-                style={{ display: "inline-block", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
-              >▾</span>
+              <Icon name={scriptExpanded ? "collapse" : "expand"} size={14} />
             </button>
           </div>
         )}
@@ -616,7 +614,7 @@ export default function ClassicDetailPage() {
                   className="w-11 h-11 rounded-full flex items-center justify-center text-lg flex-shrink-0 active:scale-95 transition-transform"
                   style={{ background: "rgba(79,195,247,0.14)", border: "1.5px solid rgba(79,195,247,0.45)", boxShadow: "0 0 14px rgba(79,195,247,0.3)" }}
                 >
-                  {playing ? "⏸" : "▶"}
+                  {playing ? <Icon name="pause" size={20} /> : <Icon name="play" size={20} />}
                 </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-sm font-medium truncate leading-snug">{meta.title}</p>

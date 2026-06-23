@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { getFeaturedStories } from "@/lib/mockData";
+import Icon from "@/components/ui/Icon";
 
 function durationLabel(seconds: number) {
   return `${Math.floor(seconds / 60)} min`;
@@ -16,7 +17,7 @@ export default function FeaturedSection() {
     <section className="mb-4">
       <div className="flex items-center justify-between px-5 mb-3">
         <h2 className="text-white/80 font-semibold text-sm tracking-wide">{t("featuredStories")}</h2>
-        <Link href="/library" className="text-white/25 text-xs">See all →</Link>
+        <Link href="/library" className="text-white/25 text-xs">See all <Icon name="chevronRight" size={14} className="inline-block align-middle" /></Link>
       </div>
 
       <div className="flex gap-3 overflow-x-auto hide-scrollbar px-5 pb-2">

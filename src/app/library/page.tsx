@@ -7,6 +7,7 @@ import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import { LANGUAGE_META } from "@/lib/i18n";
+import Icon from "@/components/ui/Icon";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -302,7 +303,7 @@ export default function LibraryPage() {
               className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
               style={{ color: "rgba(255,255,255,0.3)" }}
             >
-              <span className="text-base">🗑</span>
+              <Icon name="delete" size={18} />
               {trashCount > 0 && (
                 <span
                   className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
@@ -367,7 +368,7 @@ export default function LibraryPage() {
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
                 style={{ color: "rgba(255,255,255,0.25)" }}
               >
-                🔍
+                <Icon name="search" size={14} />
               </span>
               <input
                 type="text"
@@ -383,9 +384,9 @@ export default function LibraryPage() {
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors text-base leading-none"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                 >
-                  ×
+                  <Icon name="close" size={14} />
                 </button>
               )}
             </div>
@@ -566,7 +567,7 @@ export default function LibraryPage() {
                           style={{ color: "rgba(255,255,255,0.15)" }}
                           aria-label="Delete story"
                         >
-                          <span className="text-sm">🗑</span>
+                          <Icon name="delete" size={16} />
                         </button>
                       </div>
                     )}

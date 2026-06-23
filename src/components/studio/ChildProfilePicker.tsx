@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { MOCK_USER } from "@/lib/mockData";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
+import Icon from "@/components/ui/Icon";
 
 export type { DBChildProfile };
 
@@ -84,7 +85,7 @@ function AddProfileModal({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <p className="text-white font-bold text-sm">Add child profile</p>
           <button onClick={onClose} className="w-7 h-7 rounded-full flex items-center justify-center text-white/40 hover:text-white/70"
-            style={{ background: "rgba(255,255,255,0.06)" }}>×</button>
+            style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="close" size={12} /></button>
         </div>
 
         <div className="overflow-y-auto px-5 pb-6 flex flex-col gap-4">

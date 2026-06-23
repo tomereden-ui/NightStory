@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { TrashEntry } from "@/lib/libraryStore";
 import { useLanguage } from "@/context/LanguageContext";
+import Icon from "@/components/ui/Icon";
 
 const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -72,8 +73,8 @@ export default function TrashPage() {
     <div className="min-h-full" style={{ background: "transparent" }}>
       {/* Header */}
       <div className="flex items-center px-5 pt-12 pb-6">
-        <Link href="/library" className="w-8 h-8 flex items-center justify-center text-white/40 text-base">
-          ←
+        <Link href="/library" className="w-8 h-8 flex items-center justify-center text-white/40">
+          <Icon name="back" size={18} />
         </Link>
         <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{t("trash")}</h1>
         <div className="w-8" />
@@ -218,7 +219,7 @@ export default function TrashPage() {
                       className="flex-1 py-2.5 text-xs font-medium transition-all active:opacity-60"
                       style={{ color: "rgba(79,195,247,0.7)" }}
                     >
-                      ↩ {t("restore")}
+                      <Icon name="restore" size={14} className="inline-block align-middle mr-1" /> {t("restore")}
                     </button>
                     <div style={{ width: "1px", background: "rgba(255,255,255,0.06)" }} />
                     <button
