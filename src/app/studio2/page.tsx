@@ -181,11 +181,13 @@ function CharacterCards({
   blocks,
   voicePool,
   avatars,
+  isSeeding,
   onDirectCharacter,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
   avatars: Record<string, string>;
+  isSeeding: boolean;
   onDirectCharacter: (characterName: string, instruction: string) => void;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
@@ -221,6 +223,7 @@ function CharacterCards({
             characterName={characterName}
             voice={voice}
             avatarUrl={avatars[characterName]}
+            isLoadingAvatar={isSeeding && !avatars[characterName]}
             isOpen={openCharacter === characterName}
             onOpen={() => setOpenCharacter(characterName)}
           />
@@ -364,12 +367,14 @@ function CharacterCard({
   characterName,
   voice,
   avatarUrl,
+  isLoadingAvatar,
   isOpen,
   onOpen,
 }: {
   characterName: string;
   voice: Voice | undefined;
   avatarUrl?: string;
+  isLoadingAvatar?: boolean;
   isOpen: boolean;
   onOpen: () => void;
 }) {
@@ -401,9 +406,12 @@ function CharacterCard({
             <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" onError={() => setImgStage("initial")} />
           )}
           {imgStage === "initial" && (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-0.5"
-              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>
+            <div className={`w-full h-full flex flex-col items-center justify-center gap-0.5 ${isLoadingAvatar ? "animate-pulse" : ""}`}
+              style={{ background: isLoadingAvatar
+                ? "linear-gradient(135deg, rgba(79,195,247,0.12), rgba(139,92,246,0.08))"
+                : "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>
               <span className="text-lg font-bold" style={{ color: accentColor }}>{initial}</span>
+              {isLoadingAvatar && <span className="text-[7px] opacity-50" style={{ color: accentColor }}>...</span>}
             </div>
           )}
         </div>
@@ -702,6 +710,7 @@ export default function Studio2Page() {
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
   const avatarSeedingRef = useRef(false);
   const [avatarGenKey, setAvatarGenKey] = useState(0);
+  const [isAvatarSeeding, setIsAvatarSeeding] = useState(false);
 
   // ─── Pending character directions ──────────────────────────────────────────
   const [pendingDirections, setPendingDirections] = useState<string[]>([]);
@@ -788,13 +797,19 @@ export default function Studio2Page() {
   useEffect(() => {
     if (!loaded || scriptBlocks.length === 0 || avatarSeedingRef.current) return;
     const characters = Array.from(
-      new Set(scriptBlocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName))
+      new Set(
+        scriptBlocks
+          .filter((b) => b.characterName !== "SFX" && b.characterName !== "Narrator")
+          .map((b) => b.characterName)
+      )
     );
     const missing = characters.filter((name) => !characterAvatars[name]);
     if (missing.length === 0) return;
 
+    console.log("[Avatars] Seeding", missing.length, "characters:", missing);
     let cancelled = false;
     avatarSeedingRef.current = true;
+    setIsAvatarSeeding(true);
 
     (async () => {
       for (let i = 0; i < missing.length; i++) {
@@ -803,40 +818,45 @@ export default function Studio2Page() {
         if (cancelled) break;
         const name = missing[i];
         try {
+          console.log("[Avatars] Generating avatar for:", name);
           const res = await fetch("/api/generate-avatar", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ characterName: name, summary }),
           });
-          if (res.ok) {
-            const { prompt: avatarPrompt } = await res.json() as { prompt: string };
-            if (avatarPrompt && !cancelled) {
-              const encodedPrompt = encodeURIComponent(avatarPrompt);
-              const avatarUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true`;
-              let imgRes = await fetch(avatarUrl).catch(() => null);
-              if (!imgRes?.ok && !cancelled) {
-                await new Promise((r) => setTimeout(r, 3000));
-                imgRes = await fetch(avatarUrl).catch(() => null);
-              }
-              if (imgRes?.ok && !cancelled) {
-                const blob = await imgRes.blob();
-                const dataUrl = await new Promise<string>((resolve) => {
-                  const reader = new FileReader();
-                  reader.onload = () => resolve(reader.result as string);
-                  reader.readAsDataURL(blob);
-                });
-                setCharacterAvatars((prev) => ({ ...prev, [name]: dataUrl }));
-              }
-            }
+          if (!res.ok) { console.warn("[Avatars] generate-avatar failed for", name, res.status); continue; }
+          const { prompt: avatarPrompt } = await res.json() as { prompt: string };
+          if (!avatarPrompt || cancelled) continue;
+          console.log("[Avatars] Fetching Pollinations for:", name);
+          const encodedPrompt = encodeURIComponent(avatarPrompt);
+          const avatarUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true&seed=${Date.now()}`;
+          let imgRes = await fetch(avatarUrl).catch((e) => { console.warn("[Avatars] Pollinations fetch error:", e); return null; });
+          if (!imgRes?.ok && !cancelled) {
+            console.log("[Avatars] Retrying Pollinations for:", name);
+            await new Promise((r) => setTimeout(r, 4000));
+            imgRes = await fetch(avatarUrl).catch(() => null);
           }
-        } catch {
-          // ignore individual failures
+          if (imgRes?.ok && !cancelled) {
+            const blob = await imgRes.blob();
+            const dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+            console.log("[Avatars] Got avatar for:", name);
+            setCharacterAvatars((prev) => ({ ...prev, [name]: dataUrl }));
+          } else if (!cancelled) {
+            console.warn("[Avatars] Pollinations failed for:", name, imgRes?.status);
+          }
+        } catch (e) {
+          console.warn("[Avatars] Error for", name, e);
         }
       }
       avatarSeedingRef.current = false;
+      setIsAvatarSeeding(false);
     })();
 
-    return () => { cancelled = true; avatarSeedingRef.current = false; };
+    return () => { cancelled = true; avatarSeedingRef.current = false; setIsAvatarSeeding(false); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, avatarGenKey]);
 
@@ -1290,6 +1310,7 @@ export default function Studio2Page() {
                     blocks={scriptBlocks}
                     voicePool={voicePool}
                     avatars={characterAvatars}
+                    isSeeding={isAvatarSeeding}
                     onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
                   />
                   <LessonEditor
