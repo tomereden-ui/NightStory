@@ -839,7 +839,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             color: scriptExpanded ? "rgba(79,195,247,0.7)" : "rgba(255,255,255,0.3)",
           }}
         >
-          <span>{scriptExpanded ? "Hide script" : "View full script"}</span>
+          <span>{scriptExpanded ? t("hideScript") : t("viewFullScript")}</span>
           <span
             className="transition-transform duration-200"
             style={{ display: "inline-block", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}

@@ -662,7 +662,7 @@ export default function ProfilePage() {
 
           {/* ── Narrator voice ───────────────────────────────────────── */}
           <div className="mb-7">
-            <SectionHeader label="Default Narrator Voice" />
+            <SectionHeader label={t("defaultNarratorVoice")} />
             <NarratorVoicePicker />
             <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
               Used for Luna&apos;s chat voice and as the narrator in new stories.
@@ -687,7 +687,7 @@ export default function ProfilePage() {
 
           {/* ── API Usage ─────────────────────────────────────────────── */}
           <div>
-            <SectionHeader label="API Usage" />
+            <SectionHeader label={t("apiUsage")} />
 
             {usage && (() => {
               const costs = estimateCosts(usage);

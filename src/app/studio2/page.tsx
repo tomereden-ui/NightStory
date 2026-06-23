@@ -210,6 +210,7 @@ function CharacterCards({
   onVoiceChange: (characterName: string, voiceId: string) => void;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
+  const { language } = useLanguage();
 
   const cast = Array.from(
     blocks
@@ -233,7 +234,7 @@ function CharacterCards({
   return (
     <div className="mb-5">
       <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
-        Cast — tap to direct a character
+        {i18nT(language, "castSection")}
       </p>
       <div className="flex gap-3 pb-2 -mx-5 px-5" style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
         {cast.map(({ characterName, voice }) => (
@@ -747,10 +748,10 @@ function PromptTabContent({
 
 type StudioTab = "chat" | "step-by-step" | "lesson" | "script" | "producing" | "drama";
 
-const TABS: { id: "chat" | "step-by-step" | "script"; label: string; emoji: string }[] = [
-  { id: "chat",         label: "Chat",         emoji: "💬" },
-  { id: "step-by-step", label: "Step-by-step", emoji: "🧚" },
-  { id: "script",       label: "Script",       emoji: "📄" },
+const TABS: { id: "chat" | "step-by-step" | "script"; labelKey: "tabChat" | "tabStepByStep" | "tabScript"; emoji: string }[] = [
+  { id: "chat",         labelKey: "tabChat",        emoji: "💬" },
+  { id: "step-by-step", labelKey: "tabStepByStep",  emoji: "🧚" },
+  { id: "script",       labelKey: "tabScript",      emoji: "📄" },
 ];
 
 export default function Studio2Page() {
@@ -1268,7 +1269,7 @@ export default function Studio2Page() {
         {/* Tab bar — hidden during lesson step */}
         {showTabBar && (
           <div className="flex mb-7" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            {TABS.map(({ id, label, emoji }) => {
+            {TABS.map(({ id, labelKey, emoji }) => {
               const isStepByStep = id === "step-by-step";
               const isScript     = id === "script";
               const isDisabled   = isScript && !hasScript;
@@ -1289,7 +1290,7 @@ export default function Studio2Page() {
                 >
                   <span className="flex items-center justify-center gap-1.5">
                     <span>{emoji}</span>
-                    <span>{label}</span>
+                    <span>{i18nT(language, labelKey)}</span>
                     {isScript && hasScript && (
                       <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#4fc3f7" }} />
                     )}
@@ -1522,13 +1523,13 @@ export default function Studio2Page() {
                   ) : hasPending && dirCount > 0 ? (
                     <span className="flex items-center gap-2">
                       <span className="text-base leading-none">✨</span>
-                      Update Script
+                      {i18nT(language, "updateScript")}
                       <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "rgba(103,232,249,0.2)", color: "#67e8f9" }}>
                         {dirCount}
                       </span>
                     </span>
                   ) : (
-                    <span className="flex items-center gap-2"><span className="text-base leading-none">✨</span>Update Script</span>
+                    <span className="flex items-center gap-2"><span className="text-base leading-none">✨</span>{i18nT(language, "updateScript")}</span>
                   )}
                 </button>
               );
@@ -1568,7 +1569,7 @@ export default function Studio2Page() {
                   ) : (
                     <>
                       <span className="text-lg leading-none">🎙️</span>
-                      <span>Produce Audio</span>
+                      <span>{i18nT(language, "produceAudio")}</span>
                     </>
                   )}
                 </button>

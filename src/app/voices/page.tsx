@@ -1026,7 +1026,7 @@ export default function VoicesPage() {
                 border: tab === t ? "1px solid rgba(79,195,247,0.25)" : "1px solid transparent",
               }}
             >
-              {t === "family" ? "Family & Friends" : "General"}
+              {t === "family" ? i18nT(language, "tabFamily") : i18nT(language, "tabGeneral")}
             </button>
           ))}
         </div>
