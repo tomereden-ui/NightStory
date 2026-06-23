@@ -34,6 +34,31 @@ interface ScriptBlockCardProps {
   characterAvatarUrl?: string;
 }
 
+// ─── Validated badge ──────────────────────────────────────────────────────────
+
+function ValidatedBadge() {
+  return (
+    <span
+      title="Verified safe for children by AI"
+      className="inline-flex items-center justify-center flex-shrink-0"
+      style={{
+        width: 14,
+        height: 14,
+        borderRadius: "50%",
+        background: "rgba(34,197,94,0.14)",
+        border: "1px solid rgba(34,197,94,0.38)",
+        color: "rgba(34,197,94,0.9)",
+        fontSize: 8,
+        fontWeight: 800,
+        lineHeight: 1,
+        letterSpacing: "-0.5px",
+      }}
+    >
+      ✓
+    </span>
+  );
+}
+
 // ─── SFX card ─────────────────────────────────────────────────────────────────
 
 function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "block" | "onTextChange" | "onDelete">) {
@@ -145,10 +170,11 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
       {/* Center col */}
       <div className="flex-1 flex flex-col gap-1 min-w-0">
         {/* Top row: SFX label + duration pill/stepper */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(245,158,11,0.7)" }}>
             SFX
           </span>
+          {block.validated && <ValidatedBadge />}
 
           {editingDur ? (
             <div className="flex items-center gap-1 ml-auto">
@@ -362,6 +388,7 @@ function SpeechCard({
           <span className={`text-fs-caption font-semibold uppercase tracking-widest ${isNarrator ? "text-purple-bright/60" : "text-teal/70"}`}>
             {block.characterName}
           </span>
+          {block.validated && <ValidatedBadge />}
           {assignedVoice && (
             <span className="text-white/25 text-fs-caption">· {assignedVoice.name}</span>
           )}

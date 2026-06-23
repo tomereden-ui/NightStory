@@ -965,7 +965,7 @@ export default function Studio2Page() {
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
         setTimeout(() => {
-          setScriptBlocks((prev) => [...prev, block]);
+          setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
           if (i === blocks.length - 1) {
             setIsValidating(false);
             setTotalExpectedBlocks(undefined);
@@ -1456,7 +1456,7 @@ export default function Studio2Page() {
                   const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
                   blocks.forEach((block, i) => {
                     setTimeout(() => {
-                      setScriptBlocks((prev) => [...prev, block]);
+                      setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
                       if (i === blocks.length - 1) {
                         setIsValidating(false);
                         setTotalExpectedBlocks(undefined);
@@ -1522,7 +1522,7 @@ export default function Studio2Page() {
                     const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
                     blocks.forEach((block, i) => {
                       setTimeout(() => {
-                        setScriptBlocks((prev) => [...prev, block]);
+                        setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
                         if (i === blocks.length - 1) {
                           setIsValidating(false);
                           setTotalExpectedBlocks(undefined);

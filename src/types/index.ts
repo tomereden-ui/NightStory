@@ -108,6 +108,7 @@ export interface ScriptBlock {
   assignedVoiceId: string;
   textPayload: string;
   lessonHighlight?: { lesson: string; how: string };
+  validated?: boolean;
 }
 
 export interface GeneratedScriptState {
