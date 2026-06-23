@@ -326,7 +326,7 @@ export default function LibraryPage() {
               filter: "drop-shadow(0 0 12px rgba(79,195,247,0.3))",
             }}
           >
-            Magic Tales
+            {t("library")}
           </h1>
           <div className="w-9" />
         </div>
@@ -353,7 +353,7 @@ export default function LibraryPage() {
                     }
                 }
               >
-                {tab === "my-stories" ? "My Stories" : "✨ Classics"}
+                {tab === "my-stories" ? t("myLibrary") : "✨ Classics"}
               </button>
             );
           })}
@@ -373,7 +373,7 @@ export default function LibraryPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search stories…"
+                placeholder={t("search")}
                 className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm text-white placeholder-white/20 outline-none"
                 style={{
                   background: "rgba(255,255,255,0.05)",

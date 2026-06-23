@@ -17,7 +17,7 @@ import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
 import { FiveQuestionFlow } from "@/app/create/five-question/FiveQuestionFlow";
 import { SCENE_CHARS } from "@/config/sceneCharacters";
-import { LANGUAGE_META } from "@/lib/i18n";
+import { LANGUAGE_META, t as i18nT } from "@/lib/i18n";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
 import LunaChatPanel from "@/components/studio/LunaChatPanel";
 import VoicePicker from "@/components/studio/VoicePicker";
@@ -1244,7 +1244,7 @@ export default function Studio2Page() {
           ) : (
             <div className="w-8" />
           )}
-          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🌟 Studio</h1>
+          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🌟 {i18nT(language, "studioTitle")}</h1>
           <button
             onClick={() => setVersionsOpen(true)}
             className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { TrashEntry } from "@/lib/libraryStore";
+import { useLanguage } from "@/context/LanguageContext";
 
 const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -15,6 +16,7 @@ function durationLabel(seconds: number): string {
 }
 
 export default function TrashPage() {
+  const { t } = useLanguage();
   const [entries, setEntries] = useState<TrashEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
@@ -73,7 +75,7 @@ export default function TrashPage() {
         <Link href="/library" className="w-8 h-8 flex items-center justify-center text-white/40 text-base">
           ←
         </Link>
-        <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Trash</h1>
+        <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{t("trash")}</h1>
         <div className="w-8" />
       </div>
 
@@ -99,7 +101,7 @@ export default function TrashPage() {
                       color: "rgba(255,255,255,0.5)",
                     }}
                   >
-                    Cancel
+                    {t("cancel")}
                   </button>
                   <button
                     onClick={handleEmptyTrash}
@@ -111,7 +113,7 @@ export default function TrashPage() {
                       color: "#EC4899",
                     }}
                   >
-                    {busyEmpty ? "Deleting…" : "Delete all forever"}
+                    {busyEmpty ? "…" : t("emptyTrash")}
                   </button>
                 </div>
               </div>
@@ -125,7 +127,7 @@ export default function TrashPage() {
                   color: "rgba(236,72,153,0.7)",
                 }}
               >
-                Empty trash
+                {t("emptyTrash")}
               </button>
             )}
           </div>
@@ -134,7 +136,7 @@ export default function TrashPage() {
         {/* Info blurb */}
         {entries.length > 0 && (
           <p className="text-xs text-center mb-5" style={{ color: "rgba(255,255,255,0.25)" }}>
-            Stories are permanently deleted after 30 days.
+            {t("keptFor30Days")}
           </p>
         )}
 
@@ -146,7 +148,7 @@ export default function TrashPage() {
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
             <span className="text-5xl opacity-30">🗑</span>
-            <p className="text-white/30 text-sm font-light">Trash is empty</p>
+            <p className="text-white/30 text-sm font-light">{t("trashEmpty")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -216,7 +218,7 @@ export default function TrashPage() {
                       className="flex-1 py-2.5 text-xs font-medium transition-all active:opacity-60"
                       style={{ color: "rgba(79,195,247,0.7)" }}
                     >
-                      ↩ Restore
+                      ↩ {t("restore")}
                     </button>
                     <div style={{ width: "1px", background: "rgba(255,255,255,0.06)" }} />
                     <button
@@ -225,7 +227,7 @@ export default function TrashPage() {
                       className="flex-1 py-2.5 text-xs font-medium transition-all active:opacity-60"
                       style={{ color: "rgba(236,72,153,0.6)" }}
                     >
-                      Delete forever
+                      {t("deleteForever")}
                     </button>
                   </div>
                 </div>

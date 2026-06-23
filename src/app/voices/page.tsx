@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
+import { t as i18nT } from "@/lib/i18n";
 import VoiceAvatar, { AVATAR_STYLES } from "@/components/ui/VoiceAvatar";
 import { PRESET_VOICES, type PresetVoiceConfig } from "@/config/presetVoices";
 import { SYSTEM_AVATARS } from "@/config/systemAvatars";
@@ -999,7 +1000,7 @@ export default function VoicesPage() {
       {/* Header */}
       <div className="px-5 pt-12 pb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-base font-semibold text-white tracking-wide mb-0.5">Voices</h1>
+          <h1 className="text-base font-semibold text-white tracking-wide mb-0.5">{i18nT(language, "navVoices")}</h1>
           <p className="text-white/30 text-xs">Manage narrators for your stories</p>
         </div>
         <button
