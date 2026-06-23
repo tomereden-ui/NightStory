@@ -10,6 +10,7 @@ export interface DraftState {
   coverUrl: string;
   editingStoryId?: string;
   characterAvatars?: Record<string, string>;
+  characterTypes?: Record<string, string>;
   storyTitle?: string;
   lesson?: string | null;
   lessons?: string[];

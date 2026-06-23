@@ -170,6 +170,20 @@ function ScriptBrowser({
   );
 }
 
+// ─── Avatar types ─────────────────────────────────────────────────────────────
+
+type CharacterType = "child" | "adult" | "animal" | "narrator";
+
+function buildAvatarUrl(characterName: string, type: CharacterType): string {
+  const seed = encodeURIComponent(characterName);
+  const bg = "0d1b4a";
+  switch (type) {
+    case "child":    return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}&backgroundColor=${bg}`;
+    case "animal":   return `https://api.dicebear.com/9.x/croodles/svg?seed=${seed}&backgroundColor=${bg}&scale=90`;
+    default:         return `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=${bg}&scale=85`;
+  }
+}
+
 // ─── Character Cards ──────────────────────────────────────────────────────────
 
 interface CastMember {
@@ -181,12 +195,16 @@ function CharacterCards({
   blocks,
   voicePool,
   avatars,
+  characterTypes,
   onDirectCharacter,
+  onAvatarTypeChange,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
   avatars: Record<string, string>;
+  characterTypes: Record<string, CharacterType>;
   onDirectCharacter: (characterName: string, instruction: string) => void;
+  onAvatarTypeChange: (characterName: string, type: CharacterType) => void;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
 
@@ -232,7 +250,9 @@ function CharacterCards({
           characterName={openCharacter}
           voice={openMember.voice}
           avatarUrl={avatars[openCharacter]}
+          characterType={characterTypes[openCharacter] ?? "adult"}
           onDirect={(instruction) => onDirectCharacter(openCharacter, instruction)}
+          onAvatarTypeChange={(type) => onAvatarTypeChange(openCharacter, type)}
           onClose={() => setOpenCharacter(null)}
         />
       )}
@@ -248,17 +268,28 @@ const CHAR_CHIPS = [
   "More expressive",
 ];
 
+const AVATAR_TYPES: { type: CharacterType; label: string; emoji: string }[] = [
+  { type: "child",    label: "Child",    emoji: "🧒" },
+  { type: "adult",    label: "Adult",    emoji: "🧑" },
+  { type: "animal",   label: "Animal",   emoji: "🐾" },
+  { type: "narrator", label: "Narrator", emoji: "📖" },
+];
+
 function DirectionSheet({
   characterName,
   voice,
   avatarUrl,
+  characterType,
   onDirect,
+  onAvatarTypeChange,
   onClose,
 }: {
   characterName: string;
   voice: Voice | undefined;
   avatarUrl?: string;
+  characterType: CharacterType;
   onDirect: (instruction: string) => void;
+  onAvatarTypeChange: (type: CharacterType) => void;
   onClose: () => void;
 }) {
   const [note, setNote] = useState("");
@@ -315,6 +346,29 @@ function DirectionSheet({
             {voice && <p className="text-[10px] text-white/30 truncate">{voice.name}</p>}
           </div>
           <button onClick={onClose} className="text-white/25 text-lg leading-none flex-shrink-0">×</button>
+        </div>
+
+        {/* Avatar style picker */}
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+            Avatar style
+          </p>
+          <div className="flex gap-1.5">
+            {AVATAR_TYPES.map(({ type, label, emoji }) => (
+              <button
+                key={type}
+                onClick={() => onAvatarTypeChange(type)}
+                className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl transition-all active:scale-95"
+                style={type === characterType
+                  ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.5)", color: "#C4B5FD" }
+                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }
+                }
+              >
+                <span className="text-base leading-none">{emoji}</span>
+                <span className="text-[9px] font-semibold mt-0.5">{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Quick direction chips */}
@@ -379,8 +433,7 @@ function CharacterCard({
   useEffect(() => { setImgError(false); }, [avatarUrl]);
 
   const accentColor = isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)";
-  const dicebearUrl = `https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(characterName)}&backgroundColor=0d1b4a&scale=85`;
-  const displayUrl = avatarUrl || dicebearUrl;
+  const displayUrl = avatarUrl || buildAvatarUrl(characterName, isNarrator ? "narrator" : "adult");
 
   return (
     <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
@@ -695,6 +748,7 @@ export default function Studio2Page() {
 
   // ─── Character avatars (AI-generated, optional) ─────────────────────────────
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
+  const [characterTypes, setCharacterTypes]     = useState<Record<string, CharacterType>>({});
 
   // ─── Pending character directions ──────────────────────────────────────────
   const [pendingDirections, setPendingDirections] = useState<string[]>([]);
@@ -742,6 +796,7 @@ export default function Studio2Page() {
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
       setCharacterAvatars(draft.characterAvatars ?? {});
+      setCharacterTypes((draft.characterTypes ?? {}) as Record<string, CharacterType>);
       setStoryTitle(draft.storyTitle ?? "");
       // Migrate: support both old string `lesson` and new array `lessons`
       setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
@@ -756,8 +811,8 @@ export default function Studio2Page() {
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars, storyTitle, lessons, lessonImplementations }, DRAFT_KEY);
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, storyTitle, lessons, lessonImplementations, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations }, DRAFT_KEY);
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -814,9 +869,39 @@ export default function Studio2Page() {
       setStoryTitle(title);
       setLessonImplementations(impls);
       setCharacterAvatars({});
-      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
+      setCharacterTypes({});
+      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
       if (cp) fetchCover(cp, sm);
       setActiveTab("script");
+      // Classify characters and pick avatar styles in background
+      const uniqueChars = Array.from(new Set(blocks.filter((b: ScriptBlock) => b.characterName !== "SFX").map((b: ScriptBlock) => b.characterName)));
+      if (uniqueChars.length) {
+        // Set defaults immediately so avatars appear right away
+        const defaultTypes: Record<string, CharacterType> = {};
+        const defaultAvatars: Record<string, string> = {};
+        for (const name of uniqueChars) {
+          const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
+          defaultTypes[name] = t;
+          defaultAvatars[name] = buildAvatarUrl(name, t);
+        }
+        setCharacterTypes(defaultTypes);
+        setCharacterAvatars(defaultAvatars);
+        // Refine with AI classification
+        fetch("/api/classify-characters", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ characters: uniqueChars, summary: sm }),
+        }).then((r) => r.json()).then((types: Record<string, string>) => {
+          const refined: Record<string, CharacterType> = {};
+          const refinedAvatars: Record<string, string> = {};
+          for (const [name, type] of Object.entries(types)) {
+            refined[name] = type as CharacterType;
+            refinedAvatars[name] = buildAvatarUrl(name, type as CharacterType);
+          }
+          setCharacterTypes(refined);
+          setCharacterAvatars(refinedAvatars);
+        }).catch(() => console.warn("[Avatars] AI classification failed, keeping defaults"));
+      }
     } catch (err: unknown) {
       setGenerateError(err instanceof Error ? err.message : "Something went wrong");
       setActiveTab("step-by-step");
@@ -895,8 +980,25 @@ export default function Studio2Page() {
     if (save.summary)     setSummary(save.summary);
     if (save.coverUrl)    setCoverUrl(save.coverUrl);
     if (save.coverPrompt) setCoverPrompt(save.coverPrompt);
-    setCharacterAvatars({});
     setPendingDirections([]);
+    // Build default avatars for the loaded cast
+    const uniqueChars = Array.from(new Set(save.blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
+    const defaultTypes: Record<string, CharacterType> = {};
+    const defaultAvatars: Record<string, string> = {};
+    for (const name of uniqueChars) {
+      const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
+      defaultTypes[name] = t;
+      defaultAvatars[name] = buildAvatarUrl(name, t);
+    }
+    setCharacterTypes(defaultTypes);
+    setCharacterAvatars(defaultAvatars);
+  }, []);
+
+  // ─── Avatar type manual override ────────────────────────────────────────────
+
+  const handleAvatarTypeChange = useCallback((characterName: string, type: CharacterType) => {
+    setCharacterTypes((prev) => ({ ...prev, [characterName]: type }));
+    setCharacterAvatars((prev) => ({ ...prev, [characterName]: buildAvatarUrl(characterName, type) }));
   }, []);
 
   // ─── Queue a character direction ─────────────────────────────────────────────
@@ -1209,7 +1311,9 @@ export default function Studio2Page() {
                     blocks={scriptBlocks}
                     voicePool={voicePool}
                     avatars={characterAvatars}
+                    characterTypes={characterTypes}
                     onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
+                    onAvatarTypeChange={handleAvatarTypeChange}
                   />
                   <LessonEditor
                     lessons={lessons}
