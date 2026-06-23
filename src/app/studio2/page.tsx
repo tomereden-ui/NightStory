@@ -785,6 +785,10 @@ export default function Studio2Page() {
   const [produceError, setProduceError]     = useState<string | null>(null);
   const [isFetchingCover, setIsFetchingCover] = useState(false);
 
+  // ─── Content validation state ───────────────────────────────────────────────
+  const [isValidating, setIsValidating]     = useState(false);
+  const [totalExpectedBlocks, setTotalExpectedBlocks] = useState<number | undefined>(undefined);
+
   // ─── Director's Note state ──────────────────────────────────────────────────
   const [directorNote, setDirectorNote]     = useState("");
   const [isRevising, setIsRevising]         = useState(false);
@@ -907,12 +911,14 @@ export default function Studio2Page() {
       const res  = await fetch("/api/generate-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
-      const blocks = data.blocks as ScriptBlock[];
+      const rawBlocks = data.blocks as ScriptBlock[];
       const sm = data.summary ?? "";
       const cp = data.coverPrompt ?? "";
       const title = (data.title as string | undefined) ?? "";
       const impls = (data.lessonImplementations ?? []) as { lesson: string; implemented: boolean; how: string }[];
-      setScriptBlocks(blocks);
+
+      // Show script tab immediately with empty blocks + skeleton placeholders
+      setScriptBlocks([]);
       setSummary(sm);
       setCoverPrompt(cp);
       setCoverUrl("");
@@ -922,10 +928,41 @@ export default function Studio2Page() {
       cleanLessonsRef.current = selectedLessons;
       setCharacterAvatars({});
       setCharacterTypes({});
-      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
-      if (cp) fetchCover(cp, sm);
       setActiveTab("script");
-      // Classify characters and pick avatar styles in background
+      setTotalExpectedBlocks(rawBlocks.length);
+      setIsValidating(true);
+      if (cp) fetchCover(cp, sm);
+
+      // Validate all blocks — runs concurrently with cover fetch
+      const childAge = activeChild?.age ?? 6;
+      let blocks: ScriptBlock[];
+      try {
+        const valRes = await fetch("/api/validate-blocks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: selectedLessons, summary: sm }),
+        });
+        const valData = await valRes.json();
+        blocks = (valRes.ok && valData.blocks?.length) ? valData.blocks as ScriptBlock[] : rawBlocks;
+        if (valData.changes > 0) console.log(`[Validation] Fixed ${valData.changes} block(s)`);
+      } catch {
+        blocks = rawBlocks; // fall back to unvalidated on network error
+      }
+
+      // Stagger-reveal validated blocks one by one for progressive feel
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        setTimeout(() => {
+          setScriptBlocks((prev) => [...prev, block]);
+          if (i === blocks.length - 1) {
+            setIsValidating(false);
+            setTotalExpectedBlocks(undefined);
+            writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
+          }
+        }, i * 65);
+      }
+
+      // Classify characters in background (avatars) — unchanged
       const uniqueChars = Array.from(new Set(blocks.filter((b: ScriptBlock) => b.characterName !== "SFX").map((b: ScriptBlock) => b.characterName)));
       if (uniqueChars.length) {
         // Set defaults immediately so avatars appear right away
@@ -1300,7 +1337,9 @@ export default function Studio2Page() {
 
   // ─── Main tab shell ─────────────────────────────────────────────────────────
 
-  const hasScript = scriptBlocks.length > 0;
+  // During validation, totalExpectedBlocks is set and scriptBlocks fills in progressively.
+  // Treat as "has script" as soon as validation starts so the tab is visible immediately.
+  const hasScript = scriptBlocks.length > 0 || isValidating;
   const showTabBar = activeTab !== "lesson";
   const isOnCreateTab = activeTab === "chat" || activeTab === "step-by-step";
 
@@ -1408,8 +1447,8 @@ export default function Studio2Page() {
             onFirstMessage={() => setChatLocked(true)}
             onDiscard={() => setChatLocked(false)}
             onScriptReady={(draft) => {
-              writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
-              setScriptBlocks(draft.scriptBlocks);
+              const rawBlocks = draft.scriptBlocks;
+              setScriptBlocks([]);
               setSummary(draft.summary);
               setCoverPrompt(draft.coverPrompt);
               setCoverUrl("");
@@ -1417,7 +1456,42 @@ export default function Studio2Page() {
               setLessons([]);
               setLessonImplementations([]);
               setActiveTab("script");
+              setTotalExpectedBlocks(rawBlocks.length);
+              setIsValidating(true);
               if (draft.coverPrompt) fetchCover(draft.coverPrompt, draft.summary);
+              const childAge = activeChild?.age ?? 6;
+              fetch("/api/validate-blocks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: [], summary: draft.summary }),
+              })
+                .then((r) => r.json())
+                .then((valData) => {
+                  const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
+                  blocks.forEach((block, i) => {
+                    setTimeout(() => {
+                      setScriptBlocks((prev) => [...prev, block]);
+                      if (i === blocks.length - 1) {
+                        setIsValidating(false);
+                        setTotalExpectedBlocks(undefined);
+                        writeDraft({ ...draft, scriptBlocks: blocks, coverUrl: "" }, DRAFT_KEY);
+                      }
+                    }, i * 65);
+                  });
+                })
+                .catch(() => {
+                  // Fallback: show unvalidated blocks
+                  rawBlocks.forEach((block, i) => {
+                    setTimeout(() => {
+                      setScriptBlocks((prev) => [...prev, block]);
+                      if (i === rawBlocks.length - 1) {
+                        setIsValidating(false);
+                        setTotalExpectedBlocks(undefined);
+                        writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
+                      }
+                    }, i * 65);
+                  });
+                });
             }}
           />
         )}
@@ -1480,6 +1554,7 @@ export default function Studio2Page() {
               hideProduceButton
               studioMode
               characterAvatars={characterAvatars}
+              totalExpectedBlocks={totalExpectedBlocks}
               belowCover={
                 <>
                   <CharacterCards
@@ -1637,7 +1712,7 @@ export default function Studio2Page() {
             {/* Produce Audio */}
             {(() => {
               const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
-              const blocked = isProducing || hasPending;
+              const blocked = isProducing || hasPending || isValidating;
               return (
                 <button
                   onClick={() => !blocked && handleProduce(scriptBlocks, durationMinutes)}
@@ -1664,6 +1739,12 @@ export default function Studio2Page() {
                     <>
                       <span className="animate-pulse-slow text-lg leading-none">🎙️</span>
                       <span>Mixing audio tracks…</span>
+                    </>
+                  ) : isValidating ? (
+                    <>
+                      <span className="w-4 h-4 rounded-full border-2 animate-spin flex-shrink-0"
+                        style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.4)" }} />
+                      <span>Checking content…</span>
                     </>
                   ) : (
                     <>

@@ -28,6 +28,8 @@ interface ScriptTabProps {
   studioMode?: boolean;
   belowCover?: React.ReactNode;
   characterAvatars?: Record<string, string>;
+  /** Total block count including blocks still being validated (not yet in `blocks`) */
+  totalExpectedBlocks?: number;
 }
 
 function makeId() {
@@ -390,7 +392,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -824,15 +826,33 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {belowCover}
 
         {/* Stats row */}
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-white/30 text-xs">
-            {speechBlocks.length} lines · {sfxBlocks.length} sfx · ~{estMin}:{String(estSec).padStart(2, "0")} min
-          </p>
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-            <span className="text-teal text-[10px] font-semibold tracking-widest">{t("ready")}</span>
-          </div>
-        </div>
+        {(() => {
+          const pendingCount = totalExpectedBlocks ? Math.max(0, totalExpectedBlocks - blocks.length) : 0;
+          const isChecking = pendingCount > 0;
+          return (
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-white/30 text-xs">
+                {speechBlocks.length} lines · {sfxBlocks.length} sfx · ~{estMin}:{String(estSec).padStart(2, "0")} min
+              </p>
+              <div className="flex items-center gap-1.5">
+                {isChecking ? (
+                  <>
+                    <span className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0"
+                      style={{ borderColor: "rgba(79,195,247,0.2)", borderTopColor: "#4fc3f7" }} />
+                    <span className="text-[10px] font-semibold" style={{ color: "rgba(79,195,247,0.7)" }}>
+                      Checking {blocks.length} / {totalExpectedBlocks}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
+                    <span className="text-teal text-[10px] font-semibold tracking-widest">{t("ready")}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Script expand toggle */}
         <button
@@ -897,6 +917,28 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             </div>
           </div>
         ))}
+
+        {/* Skeleton placeholders for blocks still being validated */}
+        {scriptExpanded && totalExpectedBlocks && totalExpectedBlocks > blocks.length && (
+          Array.from({ length: totalExpectedBlocks - blocks.length }).map((_, i) => (
+            <div key={`skeleton-${i}`} className="mb-2 rounded-2xl overflow-hidden animate-pulse"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", height: 72 }}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="w-8 h-8 rounded-full flex-shrink-0"
+                  style={{ background: "rgba(255,255,255,0.06)" }} />
+                <div className="flex-1 flex flex-col gap-2">
+                  <div className="h-2.5 rounded-full w-1/4" style={{ background: "rgba(255,255,255,0.07)" }} />
+                  <div className="h-2 rounded-full w-3/4" style={{ background: "rgba(255,255,255,0.05)" }} />
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full border border-current animate-spin"
+                    style={{ borderColor: "rgba(79,195,247,0.25)", borderTopColor: "rgba(79,195,247,0.6)" }} />
+                  <span className="text-[9px] font-medium" style={{ color: "rgba(79,195,247,0.45)" }}>checking…</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
 
         {scriptExpanded && (
           <>
