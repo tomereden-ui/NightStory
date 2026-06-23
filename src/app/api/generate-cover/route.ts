@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
 
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest) {
     summary ? `Full story: ${summary}` : "",
   ].filter(Boolean).join("\n");
 
-  // Gemini text → vivid character-first scene description
+  // Step 1: Gemini text → vivid character-first scene description
   let scenePrompt = prompt;
   try {
     const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
@@ -46,14 +48,51 @@ Write ONLY the image prompt. No labels, no quotes.`,
     const enhanced = geminiText(data);
     if (enhanced && enhanced.length > 20) scenePrompt = enhanced;
   } catch {
-    console.warn("[CoverGen] Gemini enhancement failed, using raw prompt");
+    console.warn("[CoverGen] Gemini text enhancement failed, using raw prompt");
   }
 
-  // Build the full Pollinations prompt (including style suffix) and return it.
-  // The browser fetches Pollinations directly to avoid server-IP rate limiting.
   const fullPrompt = `${scenePrompt}
 
 Illustrated as a glowing monochromatic blue-and-teal cosmic night scene for a children's bedtime book cover. The characters/subject described above are large and centered, rendered as a soft silhouette or gently lit shape glowing from within against a deep navy-black night sky. Scattered stars and a faint nebula-like glow surround the subject. Square composition, dreamy bioluminescent lighting, smooth gradients, minimal flat illustration style — no warm or amber tones, only cool blues, teals, and indigo. No text, no letters, no numbers anywhere in the image.`;
 
-  return NextResponse.json({ fullPrompt });
+  console.log("[CoverGen] Generating image with Gemini for prompt:", scenePrompt.slice(0, 80));
+
+  // Step 2: Gemini image generation
+  try {
+    const res = await fetch(
+      `${GEMINI_BASE}/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+          generationConfig: { responseModalities: ["IMAGE"], temperature: 1.0 },
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json();
+      console.error("[CoverGen] Gemini image generation failed:", JSON.stringify(err).slice(0, 300));
+      return NextResponse.json({ error: "Image generation failed" }, { status: 502 });
+    }
+
+    const data = await res.json();
+    type Part = { text?: string; inlineData?: { mimeType?: string; data?: string } };
+    const parts: Part[] = data?.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = parts.find((p) => p.inlineData?.data);
+
+    if (!imagePart?.inlineData?.data) {
+      console.error("[CoverGen] No image in Gemini response:", JSON.stringify(data).slice(0, 400));
+      return NextResponse.json({ error: "No image returned" }, { status: 502 });
+    }
+
+    const { mimeType = "image/png", data: b64 } = imagePart.inlineData;
+    const coverUrl = `data:${mimeType};base64,${b64}`;
+    console.log("[CoverGen] Image generated successfully");
+    return NextResponse.json({ coverUrl });
+  } catch (err) {
+    console.error("[CoverGen] Image generation error:", err);
+    return NextResponse.json({ error: "Image generation failed" }, { status: 500 });
+  }
 }

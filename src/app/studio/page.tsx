@@ -1043,18 +1043,10 @@ export default function StudioPage() {
     try {
       const res = await fetch("/api/generate-cover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, summary: storySummary }) });
       const data = await res.json();
-      if (res.ok && data.fullPrompt) {
-        const encodedPrompt = encodeURIComponent(data.fullPrompt);
-        const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true`);
-        if (imgRes.ok) {
-          const blob = await imgRes.blob();
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-          setCoverUrl(dataUrl);
-        }
+      if (res.ok && data.coverUrl) {
+        setCoverUrl(data.coverUrl);
+      } else {
+        console.error("[fetchCover] API error:", data);
       }
     } finally {
       setIsFetchingCover(false);
