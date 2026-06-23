@@ -4,131 +4,150 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useViewMode } from "@/context/ViewModeContext";
 
-const BUILD_LABEL = "Jun 12 · v4";
+// ── Icons ──────────────────────────────────────────────────────────────────────
 
-// ── Magical SVG icons ──────────────────────────────────────────────────────────
-
-function IconMagicTales() {
+function IconStories() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
-      <path d="M12 9l.7 2.1 2.2.3-1.6 1.5.4 2.2L12 14l-1.7 1.1.4-2.2-1.6-1.5 2.2-.3z" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      {/* Open book */}
+      <path d="M12 6C10 3.5 6 3 3 4v15c3-1 7-.5 9 2 2-2.5 6-3 9-2V4c-3-1-7-.5-9 2z" />
+      <path d="M12 6v15" />
+      {/* Star on right page */}
+      <path d="M16.5 9l.55 1.65L18.7 11l-1.65.55L16.5 13.2l-.55-1.65L14.3 11l1.65-.55z" />
     </svg>
   );
 }
 
-function IconStudio() {
+function IconCreate() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 21l9-9" />
-      <path d="M10.5 13.5l7.5-7.5a2.121 2.121 0 00-3-3L7.5 10.5" />
-      <path d="M16 3l.5 1.5L18 5l-1.5.5L16 7l-.5-1.5L14 5l1.5-.5z" />
-      <path d="M20 10l.4 1.2 1.2.4-1.2.4L20 13.2l-.4-1.2-1.2-.4 1.2-.4z" />
-      <path d="M4 6l.4 1.2 1.2.4-1.2.4L4 9.2l-.4-1.2-1.2-.4 1.2-.4z" />
-    </svg>
-  );
-}
-
-function IconChat() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-      <path d="M8 10h.01" />
-      <path d="M12 10h.01" />
-      <path d="M16 10h.01" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      {/* Wand */}
+      <path d="M5 19L15 9" />
+      <path d="M13.5 7.5l3 3" />
+      <path d="M15 6l1 1" />
+      {/* Sparkles */}
+      <path d="M9 3l.6 1.8L11.4 5l-1.8.6L9 7.4 8.4 5.6 6.6 5l1.8-.6z" />
+      <path d="M19 9l.4 1.2 1.2.4-1.2.4L19 12.2l-.4-1.2-1.2-.4 1.2-.4z" />
+      <path d="M4 13l.35 1.05.7.2.35 1.05.35-1.05 1.05-.2-.7-.2z" />
     </svg>
   );
 }
 
 function IconVoices() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a3 3 0 013 3v7a3 3 0 01-6 0V5a3 3 0 013-3z" />
-      <path d="M19 10v2a7 7 0 01-14 0v-2" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      {/* Microphone */}
+      <rect x="9" y="2" width="6" height="11" rx="3" />
+      <path d="M5 10v1a7 7 0 0014 0v-1" />
       <path d="M12 19v3" />
-      <path d="M8 22h8" />
-      <path d="M18 5l1.5-1.5" />
-      <path d="M19 8.5h1.5" />
-      <path d="M18 12l1.5 1.5" />
+      <path d="M9 22h6" />
+      {/* Music notes floating */}
+      <path d="M19 6l1-1v3" />
+      <circle cx="20" cy="8.5" r="0.8" fill="currentColor" stroke="none" />
+      <path d="M21 4l1-1v2.5" />
+      <circle cx="22" cy="5.5" r="0.7" fill="currentColor" stroke="none" />
     </svg>
   );
 }
 
-function IconProfile() {
+function IconMe() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      {/* Moon */}
       <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-      <path d="M17.5 3.5l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z" />
+      {/* Stars */}
+      <path d="M17 4l.4 1.2 1.2.4-1.2.4L17 7.2l-.4-1.2-1.2-.4 1.2-.4z" />
+      <circle cx="19.5" cy="9" r="0.7" fill="currentColor" stroke="none" />
     </svg>
   );
 }
+
+// ── Nav config — each item has its own accent colour ──────────────────────────
 
 const NAV = [
-  { label: "Magic Tales", Icon: IconMagicTales, href: "/library" },
-  { label: "Studio",      Icon: IconStudio,     href: "/studio2" },
-  { label: "Voices",      Icon: IconVoices,     href: "/voices"  },
-  { label: "Profile",     Icon: IconProfile,    href: "/profile" },
-];
+  {
+    label: "Story Time",
+    Icon: IconStories,
+    href: "/library",
+    color: "#fbbf24",
+    glow: "rgba(251,191,36,0.4)",
+    bg: "rgba(251,191,36,0.12)",
+  },
+  {
+    label: "Create",
+    Icon: IconCreate,
+    href: "/studio2",
+    color: "#c084fc",
+    glow: "rgba(192,132,252,0.4)",
+    bg: "rgba(192,132,252,0.12)",
+  },
+  {
+    label: "Voices",
+    Icon: IconVoices,
+    href: "/voices",
+    color: "#f472b6",
+    glow: "rgba(244,114,182,0.4)",
+    bg: "rgba(244,114,182,0.12)",
+  },
+  {
+    label: "My Space",
+    Icon: IconMe,
+    href: "/profile",
+    color: "#67e8f9",
+    glow: "rgba(103,232,249,0.4)",
+    bg: "rgba(103,232,249,0.12)",
+  },
+] as const;
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { effective } = useViewMode();
   const isMobile = effective === "mobile";
 
-  const buildBadge = process.env.NEXT_PUBLIC_BUILD_TIME
-    ? (() => {
-        const d = new Date(process.env.NEXT_PUBLIC_BUILD_TIME!);
-        return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
-          + " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-      })()
-    : BUILD_LABEL;
-
   if (!isMobile) {
     return (
       <nav
         className="flex flex-col items-center w-20 lg:w-24 shrink-0 sticky top-0 h-screen z-50 py-6 gap-1"
         style={{
-          background: "rgba(5,8,20,0.9)",
-          backdropFilter: "blur(20px)",
+          background: "rgba(5,8,20,0.92)",
+          backdropFilter: "blur(24px)",
           borderRight: "1px solid rgba(255,255,255,0.07)",
         }}
       >
-        <span className="text-2xl mb-4" aria-hidden>🌙</span>
+        <span className="text-2xl mb-5" aria-hidden>🌙</span>
 
-        <ul className="flex flex-col items-center gap-2 flex-1">
+        <ul className="flex flex-col items-center gap-1.5 flex-1">
           {NAV.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
-
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <li key={item.href}>
                 <Link href={item.href} className="flex flex-col items-center gap-1 group" aria-label={item.label}>
                   <span
-                    className="relative flex items-center justify-center w-12 h-10 rounded-2xl transition-all"
+                    className="relative flex items-center justify-center w-12 h-10 rounded-2xl transition-all duration-200"
                     style={isActive ? {
-                      background: "rgba(79,195,247,0.1)",
-                      boxShadow: "0 0 12px rgba(79,195,247,0.15)",
+                      background: item.bg,
+                      boxShadow: `0 0 18px ${item.glow}`,
                     } : {}}
                   >
                     {isActive && (
                       <span
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full"
-                        style={{ background: "#4fc3f7", boxShadow: "0 0 6px rgba(79,195,247,0.7)" }}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-7 rounded-full"
+                        style={{ background: item.color, boxShadow: `0 0 8px ${item.glow}` }}
                       />
                     )}
                     <span
-                      className={`transition-transform ${isActive ? "scale-110" : "group-hover:scale-105"}`}
+                      className={`transition-all duration-200 ${isActive ? "scale-110" : "group-hover:scale-105"}`}
                       style={{
-                        color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.35)",
-                        filter: isActive ? "drop-shadow(0 0 6px rgba(79,195,247,0.7))" : undefined,
+                        color: isActive ? item.color : "rgba(255,255,255,0.3)",
+                        filter: isActive ? `drop-shadow(0 0 6px ${item.glow})` : undefined,
                       }}
                     >
                       <item.Icon />
                     </span>
                   </span>
                   <span
-                    className="text-[10px] font-medium tracking-wide"
-                    style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.28)" }}
+                    className="text-[9px] font-semibold tracking-wide text-center"
+                    style={{ color: isActive ? item.color : "rgba(255,255,255,0.25)" }}
                   >
                     {item.label}
                   </span>
@@ -137,79 +156,55 @@ export default function BottomNav() {
             );
           })}
         </ul>
-
-        <span
-          className="text-[9px] font-mono px-2 py-0.5 rounded-full text-center"
-          style={{
-            background: "rgba(79,195,247,0.08)",
-            color: "rgba(79,195,247,0.55)",
-            border: "1px solid rgba(79,195,247,0.15)",
-          }}
-        >
-          {buildBadge}
-        </span>
       </nav>
     );
   }
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50">
+      {/* Background */}
       <div
         className="absolute inset-0"
         style={{
-          background: "rgba(5,8,20,0.9)",
-          backdropFilter: "blur(20px)",
+          background: "linear-gradient(to top, rgba(4,6,18,0.98) 60%, rgba(5,8,20,0.88) 100%)",
+          backdropFilter: "blur(24px)",
           borderTop: "1px solid rgba(255,255,255,0.07)",
         }}
       />
 
-      {/* Version badge */}
-      <div className="relative flex justify-center pt-1.5">
-        <span
-          className="text-[9px] font-mono px-2.5 py-0.5 rounded-full"
-          style={{
-            background: "rgba(79,195,247,0.08)",
-            color: "rgba(79,195,247,0.55)",
-            border: "1px solid rgba(79,195,247,0.15)",
-          }}
-        >
-          {buildBadge}
-        </span>
-      </div>
-
-      <ul className="relative flex items-center justify-around px-2 pt-0 pb-2">
+      <ul className="relative flex items-end justify-around px-1 pt-2 pb-3">
         {NAV.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <li key={item.href}>
-              <Link href={item.href} className="flex flex-col items-center gap-0.5 group" aria-label={item.label}>
+              <Link href={item.href} className="flex flex-col items-center gap-1 group" aria-label={item.label}>
                 <span
-                  className="relative flex items-center justify-center w-12 h-9 rounded-2xl transition-all"
+                  className="relative flex items-center justify-center w-14 h-11 rounded-2xl transition-all duration-200"
                   style={isActive ? {
-                    background: "rgba(79,195,247,0.1)",
-                    boxShadow: "0 0 12px rgba(79,195,247,0.15)",
+                    background: item.bg,
+                    boxShadow: `0 0 20px ${item.glow}, 0 0 8px ${item.glow}`,
                   } : {}}
                 >
+                  {/* Active glow dot indicator */}
                   {isActive && (
                     <span
-                      className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full"
-                      style={{ background: "#4fc3f7", boxShadow: "0 0 6px rgba(79,195,247,0.7)" }}
+                      className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+                      style={{ background: item.color, boxShadow: `0 0 8px ${item.glow}` }}
                     />
                   )}
                   <span
-                    className={`transition-transform ${isActive ? "scale-110" : "group-hover:scale-105"}`}
+                    className={`transition-all duration-200 ${isActive ? "scale-110" : "scale-95 group-hover:scale-100"}`}
                     style={{
-                      color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.35)",
-                      filter: isActive ? "drop-shadow(0 0 6px rgba(79,195,247,0.7))" : undefined,
+                      color: isActive ? item.color : "rgba(255,255,255,0.28)",
+                      filter: isActive ? `drop-shadow(0 0 8px ${item.glow})` : undefined,
                     }}
                   >
                     <item.Icon />
                   </span>
                 </span>
                 <span
-                  className="text-[10px] font-medium tracking-wide"
-                  style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.28)" }}
+                  className="text-[9px] font-bold tracking-wide transition-colors duration-200"
+                  style={{ color: isActive ? item.color : "rgba(255,255,255,0.22)" }}
                 >
                   {item.label}
                 </span>

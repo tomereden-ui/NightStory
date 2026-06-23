@@ -728,6 +728,32 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* App version / build info */}
+      {(() => {
+        const BUILD_LABEL = "Jun 12 · v4";
+        const badge = process.env.NEXT_PUBLIC_BUILD_TIME
+          ? (() => {
+              const d = new Date(process.env.NEXT_PUBLIC_BUILD_TIME!);
+              return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+                + " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+            })()
+          : BUILD_LABEL;
+        return (
+          <div className="flex justify-center pb-6 pt-2">
+            <span
+              className="text-[9px] font-mono px-2.5 py-1 rounded-full"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                color: "rgba(255,255,255,0.18)",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}
+            >
+              {badge}
+            </span>
+          </div>
+        );
+      })()}
+
       {/* Add child modal */}
       {showAddChild && (
         <AddChildModal
