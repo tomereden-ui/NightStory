@@ -670,7 +670,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
   // ─── Empty state ────────────────────────────────────────────────────────────
 
-  if (blocks.length === 0) {
+  if (blocks.length === 0 && !totalExpectedBlocks) {
     return (
       <div className="flex flex-col items-center py-20 text-center">
         <span className="text-5xl mb-3 opacity-40">📜</span>
