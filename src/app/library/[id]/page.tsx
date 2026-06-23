@@ -6,6 +6,81 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import Icon from "@/components/ui/Icon";
+import type { ScriptBlock } from "@/types";
+
+type CharacterType = "child" | "adult" | "animal" | "narrator";
+
+function buildAvatarUrl(characterName: string, type: CharacterType): string {
+  const seed = encodeURIComponent(characterName);
+  const bg = "0d1b4a";
+  switch (type) {
+    case "child":    return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}&backgroundColor=${bg}`;
+    case "animal":   return `https://api.dicebear.com/9.x/croodles/svg?seed=${seed}&backgroundColor=${bg}&scale=90`;
+    case "narrator": return `https://api.dicebear.com/9.x/lorelei/svg?seed=${seed}&backgroundColor=${bg}`;
+    default:         return `https://api.dicebear.com/9.x/notionists/svg?seed=${seed}&backgroundColor=${bg}&scale=90`;
+  }
+}
+
+function ReadOnlyCastPanel({ blocks }: { blocks: ScriptBlock[] }) {
+  const cast = Array.from(
+    blocks
+      .filter((b) => b.characterName !== "SFX")
+      .reduce<Map<string, string>>((map, b) => {
+        if (!map.has(b.characterName)) {
+          const type: CharacterType = b.characterName === "Narrator" ? "narrator" : "adult";
+          map.set(b.characterName, buildAvatarUrl(b.characterName, type));
+        }
+        return map;
+      }, new Map())
+      .entries(),
+  );
+
+  if (cast.length === 0) return null;
+
+  return (
+    <div className="mb-1">
+      <p className="text-[10px] font-bold uppercase tracking-widest mb-3 px-5" style={{ color: "rgba(79,195,247,0.45)" }}>
+        Cast
+      </p>
+      <div
+        className="flex gap-3 pb-2 -mx-0 px-5"
+        style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+      >
+        {cast.map(([characterName, avatarUrl]) => (
+          <ReadOnlyCharacterCard key={characterName} characterName={characterName} avatarUrl={avatarUrl} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReadOnlyCharacterCard({ characterName, avatarUrl }: { characterName: string; avatarUrl: string }) {
+  const [imgError, setImgError] = useState(false);
+  const isNarrator = characterName === "Narrator";
+  const accentColor = isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)";
+
+  return (
+    <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
+      <div
+        className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center"
+        style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+      >
+        {!imgError ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>
+            <span className="text-lg font-bold" style={{ color: accentColor }}>{characterName.charAt(0).toUpperCase()}</span>
+          </div>
+        )}
+      </div>
+      <p className="text-center text-[10px] font-medium leading-tight" style={{ color: "rgba(255,255,255,0.5)", maxWidth: 68 }}>
+        {characterName}
+      </p>
+    </div>
+  );
+}
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -282,6 +357,13 @@ export default function StoryDetailPage() {
                 </p>
               );
             })()}
+          </div>
+        )}
+
+        {/* Cast panel — read-only */}
+        {entry.blocks.length > 0 && (
+          <div className="mt-4 mb-1">
+            <ReadOnlyCastPanel blocks={entry.blocks} />
           </div>
         )}
 
