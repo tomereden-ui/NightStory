@@ -1120,9 +1120,11 @@ export default function Studio2Page() {
             }).then(async (r) => {
               if (r.ok) {
                 const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
-                setCoverUrl(persistedUrl); // swap base64 for the permanent Storage URL
+                // Append cache-buster so the browser doesn't serve the CDN's stale cached copy
+                setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
               }
-            }).catch(() => {}); // non-fatal — draft already holds the base64
+              // If PATCH fails, the base64 in state is fine — production will re-upload
+            }).catch(() => {});
           }
         }
       } else {
