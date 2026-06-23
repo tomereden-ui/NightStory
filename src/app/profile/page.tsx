@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
+import { useFontSize, type FontScale } from "@/context/FontSizeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
 import { SYSTEM_AVATARS } from "@/config/systemAvatars";
@@ -551,6 +552,61 @@ function NarratorVoicePicker() {
   );
 }
 
+// ─── Text size picker ─────────────────────────────────────────────────────────
+
+const FONT_SCALE_OPTIONS: { scale: FontScale; label: string; sampleSize: number }[] = [
+  { scale: "small",  label: "Small",  sampleSize: 18 },
+  { scale: "medium", label: "Medium", sampleSize: 24 },
+  { scale: "large",  label: "Large",  sampleSize: 29 },
+];
+
+function TextSizePicker() {
+  const { scale, setScale, fs } = useFontSize();
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-2.5">
+        {FONT_SCALE_OPTIONS.map((opt) => {
+          const isSelected = scale === opt.scale;
+          return (
+            <button
+              key={opt.scale}
+              onClick={() => setScale(opt.scale)}
+              className="flex flex-col items-center gap-2 py-4 rounded-2xl transition-all active:scale-[0.97]"
+              style={{
+                background: isSelected ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.03)",
+                border: isSelected ? "1px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                boxShadow: isSelected ? "0 0 20px rgba(79,195,247,0.1)" : "none",
+              }}
+            >
+              <span
+                className="font-bold leading-none"
+                style={{
+                  fontSize: opt.sampleSize,
+                  color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.4)",
+                }}
+              >
+                A
+              </span>
+              <span
+                className="text-[11px] font-semibold"
+                style={{ color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.35)" }}
+              >
+                {opt.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p
+        className="mt-3 leading-relaxed"
+        style={{ fontSize: fs.body, color: "rgba(255,255,255,0.5)" }}
+      >
+        Once upon a time…
+      </p>
+    </div>
+  );
+}
+
 // ─── Profile page ─────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -660,6 +716,12 @@ export default function ProfilePage() {
             <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
               Used for Luna&apos;s chat voice and as the narrator in new stories.
             </p>
+          </div>
+
+          {/* ── Text Size ───────────────────────────────────────────── */}
+          <div className="mb-7">
+            <SectionHeader label="Text Size" />
+            <TextSizePicker />
           </div>
 
           {/* ── Settings ─────────────────────────────────────────────── */}
