@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      { protocol: "https", hostname: "flagcdn.com" },
+    ],
   },
   env: {
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),

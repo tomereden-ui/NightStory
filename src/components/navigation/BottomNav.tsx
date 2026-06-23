@@ -1,8 +1,11 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useViewMode } from "@/context/ViewModeContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { t, type TranslationKey } from "@/lib/i18n";
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -64,9 +67,16 @@ function IconMe() {
 
 // ── Nav config — each item has its own accent colour ──────────────────────────
 
-const NAV = [
+const NAV: Array<{
+  labelKey: TranslationKey;
+  Icon: () => React.ReactElement;
+  href: string;
+  color: string;
+  glow: string;
+  bg: string;
+}> = [
   {
-    label: "Story Time",
+    labelKey: "navStoryTime",
     Icon: IconStories,
     href: "/library",
     color: "#fbbf24",
@@ -74,7 +84,7 @@ const NAV = [
     bg: "rgba(251,191,36,0.12)",
   },
   {
-    label: "Create",
+    labelKey: "navCreate",
     Icon: IconCreate,
     href: "/studio2",
     color: "#c084fc",
@@ -82,7 +92,7 @@ const NAV = [
     bg: "rgba(192,132,252,0.12)",
   },
   {
-    label: "Voices",
+    labelKey: "navVoices",
     Icon: IconVoices,
     href: "/voices",
     color: "#f472b6",
@@ -90,18 +100,19 @@ const NAV = [
     bg: "rgba(244,114,182,0.12)",
   },
   {
-    label: "My Space",
+    labelKey: "navMySpace",
     Icon: IconMe,
     href: "/profile",
     color: "#67e8f9",
     glow: "rgba(103,232,249,0.4)",
     bg: "rgba(103,232,249,0.12)",
   },
-] as const;
+];
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { effective } = useViewMode();
+  const { language } = useLanguage();
   const isMobile = effective === "mobile";
 
   if (!isMobile) {
@@ -121,7 +132,7 @@ export default function BottomNav() {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <li key={item.href}>
-                <Link href={item.href} className="flex flex-col items-center gap-1 group" aria-label={item.label}>
+                <Link href={item.href} className="flex flex-col items-center gap-1 group" aria-label={t(language, item.labelKey)}>
                   <span
                     className="relative flex items-center justify-center w-12 h-10 rounded-2xl transition-all duration-200"
                     style={isActive ? {
@@ -149,7 +160,7 @@ export default function BottomNav() {
                     className="text-[9px] font-semibold tracking-wide text-center"
                     style={{ color: isActive ? item.color : "rgba(255,255,255,0.25)" }}
                   >
-                    {item.label}
+                    {t(language, item.labelKey)}
                   </span>
                 </Link>
               </li>
@@ -177,7 +188,7 @@ export default function BottomNav() {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <li key={item.href}>
-              <Link href={item.href} className="flex flex-col items-center gap-1 group" aria-label={item.label}>
+              <Link href={item.href} className="flex flex-col items-center gap-1 group" aria-label={t(language, item.labelKey)}>
                 <span
                   className="relative flex items-center justify-center w-14 h-11 rounded-2xl transition-all duration-200"
                   style={isActive ? {
@@ -206,7 +217,7 @@ export default function BottomNav() {
                   className="text-[9px] font-bold tracking-wide transition-colors duration-200"
                   style={{ color: isActive ? item.color : "rgba(255,255,255,0.22)" }}
                 >
-                  {item.label}
+                  {t(language, item.labelKey)}
                 </span>
               </Link>
             </li>

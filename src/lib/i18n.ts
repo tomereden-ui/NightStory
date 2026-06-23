@@ -12,24 +12,24 @@ export function getDir(language: Language): "rtl" | "ltr" {
 
 // ─── Language metadata ────────────────────────────────────────────────────────
 
-export const LANGUAGE_META: Record<Language, { label: string; flag: string; nativeName: string }> = {
-  en: { label: "English",    flag: "🇺🇸", nativeName: "English"    },
-  he: { label: "Hebrew",     flag: "🇮🇱", nativeName: "עברית"      },
-  es: { label: "Spanish",    flag: "🇪🇸", nativeName: "Español"    },
-  fr: { label: "French",     flag: "🇫🇷", nativeName: "Français"   },
-  de: { label: "German",     flag: "🇩🇪", nativeName: "Deutsch"    },
-  pt: { label: "Portuguese", flag: "🇧🇷", nativeName: "Português"  },
-  ar: { label: "Arabic",     flag: "🇸🇦", nativeName: "العربية"    },
-  zh: { label: "Chinese",    flag: "🇨🇳", nativeName: "中文"        },
-  ja: { label: "Japanese",   flag: "🇯🇵", nativeName: "日本語"      },
-  it: { label: "Italian",    flag: "🇮🇹", nativeName: "Italiano"   },
-  nl: { label: "Dutch",      flag: "🇳🇱", nativeName: "Nederlands" },
-  pl: { label: "Polish",     flag: "🇵🇱", nativeName: "Polski"     },
-  ru: { label: "Russian",    flag: "🇷🇺", nativeName: "Русский"    },
-  ko: { label: "Korean",     flag: "🇰🇷", nativeName: "한국어"      },
-  tr: { label: "Turkish",    flag: "🇹🇷", nativeName: "Türkçe"     },
-  hi: { label: "Hindi",      flag: "🇮🇳", nativeName: "हिन्दी"     },
-  sv: { label: "Swedish",    flag: "🇸🇪", nativeName: "Svenska"    },
+export const LANGUAGE_META: Record<Language, { label: string; flag: string; nativeName: string; countryCode: string }> = {
+  en: { label: "English",    flag: "🇺🇸", nativeName: "English",    countryCode: "us" },
+  he: { label: "Hebrew",     flag: "🇮🇱", nativeName: "עברית",      countryCode: "il" },
+  es: { label: "Spanish",    flag: "🇪🇸", nativeName: "Español",    countryCode: "es" },
+  fr: { label: "French",     flag: "🇫🇷", nativeName: "Français",   countryCode: "fr" },
+  de: { label: "German",     flag: "🇩🇪", nativeName: "Deutsch",    countryCode: "de" },
+  pt: { label: "Portuguese", flag: "🇧🇷", nativeName: "Português",  countryCode: "br" },
+  ar: { label: "Arabic",     flag: "🇸🇦", nativeName: "العربية",    countryCode: "sa" },
+  zh: { label: "Chinese",    flag: "🇨🇳", nativeName: "中文",        countryCode: "cn" },
+  ja: { label: "Japanese",   flag: "🇯🇵", nativeName: "日本語",      countryCode: "jp" },
+  it: { label: "Italian",    flag: "🇮🇹", nativeName: "Italiano",   countryCode: "it" },
+  nl: { label: "Dutch",      flag: "🇳🇱", nativeName: "Nederlands", countryCode: "nl" },
+  pl: { label: "Polish",     flag: "🇵🇱", nativeName: "Polski",     countryCode: "pl" },
+  ru: { label: "Russian",    flag: "🇷🇺", nativeName: "Русский",    countryCode: "ru" },
+  ko: { label: "Korean",     flag: "🇰🇷", nativeName: "한국어",      countryCode: "kr" },
+  tr: { label: "Turkish",    flag: "🇹🇷", nativeName: "Türkçe",     countryCode: "tr" },
+  hi: { label: "Hindi",      flag: "🇮🇳", nativeName: "हिन्दी",     countryCode: "in" },
+  sv: { label: "Swedish",    flag: "🇸🇪", nativeName: "Svenska",    countryCode: "se" },
 };
 
 export const SUPPORTED_LANGUAGES = Object.keys(LANGUAGE_META) as Language[];

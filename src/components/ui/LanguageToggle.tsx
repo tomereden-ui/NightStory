@@ -1,9 +1,24 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import { LANGUAGE_META, SUPPORTED_LANGUAGES } from "@/lib/i18n";
 import type { Language } from "@/types";
+
+function FlagImg({ countryCode, label }: { countryCode: string; label: string }) {
+  return (
+    <Image
+      src={`https://flagcdn.com/32x24/${countryCode}.png`}
+      width={20}
+      height={15}
+      alt={label}
+      className="rounded-[2px] flex-shrink-0 object-cover"
+      style={{ width: 20, height: 15 }}
+      unoptimized
+    />
+  );
+}
 
 export default function LanguageToggle() {
   const { language, setLanguage } = useLanguage();
@@ -24,17 +39,17 @@ export default function LanguageToggle() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-bg-border bg-bg-card hover:border-purple/30 hover:bg-purple/5 transition-all duration-150"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-bg-border bg-bg-card hover:border-purple/30 hover:bg-purple/5 transition-all duration-150"
         aria-label="Change language"
       >
-        <span className="text-base leading-none w-6 text-center inline-block" style={{ fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif" }}>{current.flag}</span>
+        <FlagImg countryCode={current.countryCode} label={current.label} />
         <span className="text-white/70 text-xs font-semibold">{current.nativeName}</span>
-        <span className="text-white/25 text-[9px] ml-0.5">{open ? "▲" : "▼"}</span>
+        <span className="text-white/25 text-[9px]">{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
         <div
-          className="absolute right-0 top-10 z-50 w-44 rounded-2xl overflow-hidden shadow-card"
+          className="absolute right-0 top-10 z-50 w-52 rounded-2xl overflow-hidden shadow-card"
           style={{
             background: "#111526",
             border: "1px solid rgba(139,92,246,0.2)",
@@ -44,7 +59,7 @@ export default function LanguageToggle() {
           <div className="px-3 py-2 border-b border-white/5">
             <p className="text-white/30 text-[10px] uppercase tracking-widest">Language</p>
           </div>
-          <ul className="py-1 max-h-72 overflow-y-auto">
+          <ul className="py-1 max-h-80 overflow-y-auto">
             {SUPPORTED_LANGUAGES.map((lang: Language) => {
               const meta = LANGUAGE_META[lang];
               const isSelected = lang === language;
@@ -52,11 +67,11 @@ export default function LanguageToggle() {
                 <li key={lang}>
                   <button
                     onClick={() => { setLanguage(lang); setOpen(false); }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 transition-colors text-left ${
+                    className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left ${
                       isSelected ? "bg-purple/10" : "hover:bg-white/5"
                     }`}
                   >
-                    <span className="text-base leading-none flex-shrink-0 w-6 text-center inline-block" style={{ fontFamily: "Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif" }}>{meta.flag}</span>
+                    <FlagImg countryCode={meta.countryCode} label={meta.label} />
                     <div className="flex-1 min-w-0">
                       <p className={`text-xs font-semibold ${isSelected ? "text-purple-bright" : "text-white/80"}`}>
                         {meta.nativeName}
