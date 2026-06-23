@@ -275,15 +275,6 @@ export default function ChildProfilePicker({
                 <span className="text-sm font-semibold" style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.7)" }}>
                   {p.name}
                 </span>
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-                  style={{
-                    background: isActive ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.06)",
-                    color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.3)",
-                  }}
-                >
-                  {p.age}
-                </span>
               </button>
             );
           })}

@@ -20,6 +20,7 @@ import { SCENE_CHARS } from "@/config/sceneCharacters";
 import { LANGUAGE_META } from "@/lib/i18n";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
 import LunaChatPanel from "@/components/studio/LunaChatPanel";
+import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
@@ -198,6 +199,7 @@ function CharacterCards({
   characterTypes,
   onDirectCharacter,
   onAvatarTypeChange,
+  onVoiceChange,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
@@ -205,6 +207,7 @@ function CharacterCards({
   characterTypes: Record<string, CharacterType>;
   onDirectCharacter: (characterName: string, instruction: string) => void;
   onAvatarTypeChange: (characterName: string, type: CharacterType) => void;
+  onVoiceChange: (characterName: string, voiceId: string) => void;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
 
@@ -249,10 +252,12 @@ function CharacterCards({
         <DirectionSheet
           characterName={openCharacter}
           voice={openMember.voice}
+          voicePool={voicePool}
           avatarUrl={avatars[openCharacter]}
           characterType={characterTypes[openCharacter] ?? "adult"}
           onDirect={(instruction) => onDirectCharacter(openCharacter, instruction)}
           onAvatarTypeChange={(type) => onAvatarTypeChange(openCharacter, type)}
+          onVoiceChange={(voiceId) => onVoiceChange(openCharacter, voiceId)}
           onClose={() => setOpenCharacter(null)}
         />
       )}
@@ -278,21 +283,26 @@ const AVATAR_TYPES: { type: CharacterType; label: string; emoji: string }[] = [
 function DirectionSheet({
   characterName,
   voice,
+  voicePool,
   avatarUrl,
   characterType,
   onDirect,
   onAvatarTypeChange,
+  onVoiceChange,
   onClose,
 }: {
   characterName: string;
   voice: Voice | undefined;
+  voicePool: Voice[];
   avatarUrl?: string;
   characterType: CharacterType;
   onDirect: (instruction: string) => void;
   onAvatarTypeChange: (type: CharacterType) => void;
+  onVoiceChange: (voiceId: string) => void;
   onClose: () => void;
 }) {
   const [note, setNote] = useState("");
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isNarrator = characterName === "Narrator";
 
@@ -369,6 +379,44 @@ function DirectionSheet({
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Voice selector */}
+        <div className="relative">
+          <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+            Voice
+          </p>
+          <button
+            onClick={() => setShowVoicePicker((p) => !p)}
+            className="flex items-center gap-2.5 w-full rounded-xl px-3 py-2.5 transition-all active:scale-[0.98]"
+            style={showVoicePicker
+              ? { background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.4)" }
+              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
+            }
+          >
+            {voice?.avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={voice.avatarUrl} alt={voice.name} className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                style={{ border: "1px solid rgba(255,255,255,0.12)" }} />
+            ) : (
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0"
+                style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.2)" }}>
+                🎙️
+              </div>
+            )}
+            <span className="text-sm font-medium text-white/70 flex-1 text-left truncate">
+              {voice?.name ?? "Select voice"}
+            </span>
+            <span className="text-white/30 text-xs">{showVoicePicker ? "▴" : "▾"}</span>
+          </button>
+          {showVoicePicker && (
+            <VoicePicker
+              voices={voicePool}
+              selectedVoiceId={voice?.id ?? ""}
+              onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
+              onClose={() => setShowVoicePicker(false)}
+            />
+          )}
         </div>
 
         {/* Quick direction chips */}
@@ -460,7 +508,7 @@ function CharacterCard({
           {characterName}
         </span>
         {voice && (
-          <span className="text-[9px] text-white/25 text-center truncate w-full">{voice.name.split(" ")[0]}</span>
+          <span className="text-[10px] font-medium text-center truncate w-full" style={{ color: "rgba(255,255,255,0.45)" }}>{voice.name.split(" ")[0]}</span>
         )}
       </button>
     </div>
@@ -1001,6 +1049,12 @@ export default function Studio2Page() {
     setCharacterAvatars((prev) => ({ ...prev, [characterName]: buildAvatarUrl(characterName, type) }));
   }, []);
 
+  const handleCharacterVoiceChange = useCallback((characterName: string, voiceId: string) => {
+    setScriptBlocks((prev) =>
+      prev.map((b) => b.characterName === characterName ? { ...b, assignedVoiceId: voiceId } : b)
+    );
+  }, []);
+
   // ─── Queue a character direction ─────────────────────────────────────────────
 
   const handleQueueDirection = useCallback((instruction: string) => {
@@ -1167,20 +1221,18 @@ export default function Studio2Page() {
           ) : (
             <div className="w-8" />
           )}
-          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🌟 Studio 2</h1>
+          <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">🌟 Studio</h1>
           <button
             onClick={() => setVersionsOpen(true)}
-            className="relative w-8 h-8 flex items-center justify-center rounded-xl transition-all"
-            style={{ color: savesCount > 0 ? "rgba(79,195,247,0.7)" : "rgba(255,255,255,0.2)" }}
+            className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
+            style={savesCount > 0
+              ? { background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
+              : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }
+            }
           >
-            <span className="text-sm">📂</span>
+            <span className="text-base leading-none">📂</span>
             {savesCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 rounded-full text-[8px] font-bold flex items-center justify-center"
-                style={{ background: "rgba(79,195,247,0.85)", color: "#05080F" }}
-              >
-                {savesCount}
-              </span>
+              <span className="text-xs font-bold leading-none">{savesCount}</span>
             )}
           </button>
         </div>
@@ -1314,6 +1366,7 @@ export default function Studio2Page() {
                     characterTypes={characterTypes}
                     onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
                     onAvatarTypeChange={handleAvatarTypeChange}
+                    onVoiceChange={handleCharacterVoiceChange}
                   />
                   <LessonEditor
                     lessons={lessons}
