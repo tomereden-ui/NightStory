@@ -181,13 +181,11 @@ function CharacterCards({
   blocks,
   voicePool,
   avatars,
-  isSeeding,
   onDirectCharacter,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
   avatars: Record<string, string>;
-  isSeeding: boolean;
   onDirectCharacter: (characterName: string, instruction: string) => void;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
@@ -223,7 +221,6 @@ function CharacterCards({
             characterName={characterName}
             voice={voice}
             avatarUrl={avatars[characterName]}
-            isLoadingAvatar={isSeeding && !avatars[characterName]}
             isOpen={openCharacter === characterName}
             onOpen={() => setOpenCharacter(characterName)}
           />
@@ -367,29 +364,23 @@ function CharacterCard({
   characterName,
   voice,
   avatarUrl,
-  isLoadingAvatar,
   isOpen,
   onOpen,
 }: {
   characterName: string;
   voice: Voice | undefined;
   avatarUrl?: string;
-  isLoadingAvatar?: boolean;
   isOpen: boolean;
   onOpen: () => void;
 }) {
   const isNarrator = characterName === "Narrator";
-  const initial = characterName.charAt(0).toUpperCase();
+  const [imgError, setImgError] = useState(false);
 
-  type ImgStage = "generated" | "initial";
-  const firstStage: ImgStage = avatarUrl ? "generated" : "initial";
-  const [imgStage, setImgStage] = useState<ImgStage>(firstStage);
-
-  useEffect(() => {
-    if (avatarUrl) setImgStage("generated");
-  }, [avatarUrl]);
+  useEffect(() => { setImgError(false); }, [avatarUrl]);
 
   const accentColor = isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)";
+  const dicebearUrl = `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(characterName)}&backgroundColor=0d1b4a&scale=85`;
+  const displayUrl = avatarUrl || dicebearUrl;
 
   return (
     <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
@@ -401,17 +392,13 @@ function CharacterCard({
             : { border: "1px solid rgba(255,255,255,0.1)" }
           }
         >
-          {imgStage === "generated" && avatarUrl && (
+          {!imgError ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" onError={() => setImgStage("initial")} />
-          )}
-          {imgStage === "initial" && (
-            <div className={`w-full h-full flex flex-col items-center justify-center gap-0.5 ${isLoadingAvatar ? "animate-pulse" : ""}`}
-              style={{ background: isLoadingAvatar
-                ? "linear-gradient(135deg, rgba(79,195,247,0.12), rgba(139,92,246,0.08))"
-                : "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>
-              <span className="text-lg font-bold" style={{ color: accentColor }}>{initial}</span>
-              {isLoadingAvatar && <span className="text-[7px] opacity-50" style={{ color: accentColor }}>...</span>}
+            <img src={displayUrl} alt={characterName} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>
+              <span className="text-lg font-bold" style={{ color: accentColor }}>{characterName.charAt(0).toUpperCase()}</span>
             </div>
           )}
         </div>
@@ -706,11 +693,8 @@ export default function Studio2Page() {
   const [reviseError, setReviseError]       = useState<string | null>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
-  // ─── Character avatars ──────────────────────────────────────────────────────
+  // ─── Character avatars (AI-generated, optional) ─────────────────────────────
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
-  const avatarSeedingRef = useRef(false);
-  const [avatarGenKey, setAvatarGenKey] = useState(0);
-  const [isAvatarSeeding, setIsAvatarSeeding] = useState(false);
 
   // ─── Pending character directions ──────────────────────────────────────────
   const [pendingDirections, setPendingDirections] = useState<string[]>([]);
@@ -762,7 +746,6 @@ export default function Studio2Page() {
       // Migrate: support both old string `lesson` and new array `lessons`
       setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
       setLessonImplementations(draft.lessonImplementations ?? []);
-      setAvatarGenKey((k) => k + 1);
       setActiveTab("script");
     } else {
       setActiveTab("chat");
@@ -792,73 +775,6 @@ export default function Studio2Page() {
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scriptBlocks, loaded]);
-
-  // Background-seed missing character avatars one by one
-  useEffect(() => {
-    if (!loaded || scriptBlocks.length === 0 || avatarSeedingRef.current) return;
-    const characters = Array.from(
-      new Set(
-        scriptBlocks
-          .filter((b) => b.characterName !== "SFX" && b.characterName !== "Narrator")
-          .map((b) => b.characterName)
-      )
-    );
-    const missing = characters.filter((name) => !characterAvatars[name]);
-    if (missing.length === 0) return;
-
-    console.log("[Avatars] Seeding", missing.length, "characters:", missing);
-    let cancelled = false;
-    avatarSeedingRef.current = true;
-    setIsAvatarSeeding(true);
-
-    (async () => {
-      for (let i = 0; i < missing.length; i++) {
-        if (cancelled) break;
-        if (i > 0) await new Promise((r) => setTimeout(r, 4000));
-        if (cancelled) break;
-        const name = missing[i];
-        try {
-          console.log("[Avatars] Generating avatar for:", name);
-          const res = await fetch("/api/generate-avatar", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ characterName: name, summary }),
-          });
-          if (!res.ok) { console.warn("[Avatars] generate-avatar failed for", name, res.status); continue; }
-          const { prompt: avatarPrompt } = await res.json() as { prompt: string };
-          if (!avatarPrompt || cancelled) continue;
-          console.log("[Avatars] Fetching Pollinations for:", name);
-          const encodedPrompt = encodeURIComponent(avatarPrompt);
-          const avatarUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true`;
-          let imgRes = await fetch(avatarUrl).catch((e) => { console.warn("[Avatars] Pollinations fetch error:", e); return null; });
-          if (!imgRes?.ok && !cancelled) {
-            console.log("[Avatars] Retrying Pollinations for:", name);
-            await new Promise((r) => setTimeout(r, 4000));
-            imgRes = await fetch(avatarUrl).catch(() => null);
-          }
-          if (imgRes?.ok && !cancelled) {
-            const blob = await imgRes.blob();
-            const dataUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-            console.log("[Avatars] Got avatar for:", name);
-            setCharacterAvatars((prev) => ({ ...prev, [name]: dataUrl }));
-          } else if (!cancelled) {
-            console.warn("[Avatars] Pollinations failed for:", name, imgRes?.status);
-          }
-        } catch (e) {
-          console.warn("[Avatars] Error for", name, e);
-        }
-      }
-      avatarSeedingRef.current = false;
-      setIsAvatarSeeding(false);
-    })();
-
-    return () => { cancelled = true; avatarSeedingRef.current = false; setIsAvatarSeeding(false); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, avatarGenKey]);
 
   // ─── Generate story ─────────────────────────────────────────────────────────
 
@@ -898,8 +814,6 @@ export default function Studio2Page() {
       setStoryTitle(title);
       setLessonImplementations(impls);
       setCharacterAvatars({});
-      avatarSeedingRef.current = false;
-      setAvatarGenKey((k) => k + 1);
       writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
       if (cp) fetchCover(cp, sm);
       setActiveTab("script");
@@ -982,8 +896,6 @@ export default function Studio2Page() {
     if (save.coverUrl)    setCoverUrl(save.coverUrl);
     if (save.coverPrompt) setCoverPrompt(save.coverPrompt);
     setCharacterAvatars({});
-    avatarSeedingRef.current = false;
-    setAvatarGenKey((k) => k + 1);
     setPendingDirections([]);
   }, []);
 
@@ -1310,7 +1222,6 @@ export default function Studio2Page() {
                     blocks={scriptBlocks}
                     voicePool={voicePool}
                     avatars={characterAvatars}
-                    isSeeding={isAvatarSeeding}
                     onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
                   />
                   <LessonEditor
