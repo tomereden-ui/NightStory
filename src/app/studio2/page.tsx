@@ -829,7 +829,7 @@ export default function Studio2Page() {
           if (!avatarPrompt || cancelled) continue;
           console.log("[Avatars] Fetching Pollinations for:", name);
           const encodedPrompt = encodeURIComponent(avatarPrompt);
-          const avatarUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true&seed=${Date.now()}`;
+          const avatarUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true`;
           let imgRes = await fetch(avatarUrl).catch((e) => { console.warn("[Avatars] Pollinations fetch error:", e); return null; });
           if (!imgRes?.ok && !cancelled) {
             console.log("[Avatars] Retrying Pollinations for:", name);
