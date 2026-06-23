@@ -807,8 +807,9 @@ export default function Studio2Page() {
   const [savesRefreshKey, setSavesRefreshKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveLabel, setSaveLabel] = useState<"idle" | "saving" | "saved">("idle");
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const blocksChangeCountRef = useRef(0);
+  // Dirty flag: true when user has changes that haven't been applied/produced yet
+  const [hasScriptChanges, setHasScriptChanges] = useState(false);
+  const cleanLessonsRef = useRef<string[]>([]);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── Story title / versions sheet ───────────────────────────────────────────
@@ -825,13 +826,14 @@ export default function Studio2Page() {
 
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
 
-  // Track unsaved changes — skip the first two sets (initial mount + draft load)
+  // Mark dirty when lessons change after the clean snapshot
   useEffect(() => {
-    if (scriptBlocks.length === 0) return;
-    blocksChangeCountRef.current += 1;
-    if (blocksChangeCountRef.current <= 1) return; // skip initial load
-    setHasUnsavedChanges(true);
-  }, [scriptBlocks]);
+    if (!loaded || scriptBlocks.length === 0) return;
+    const clean = cleanLessonsRef.current;
+    const changed = lessons.length !== clean.length || lessons.some((l, i) => l !== clean[i]);
+    if (changed) setHasScriptChanges(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessons]);
 
   // Load draft on mount (Studio2 uses its own localStorage key)
   useEffect(() => {
@@ -916,6 +918,8 @@ export default function Studio2Page() {
       setCoverUrl("");
       setStoryTitle(title);
       setLessonImplementations(impls);
+      setHasScriptChanges(false);
+      cleanLessonsRef.current = selectedLessons;
       setCharacterAvatars({});
       setCharacterTypes({});
       writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
@@ -971,6 +975,7 @@ export default function Studio2Page() {
       if (!res.ok) throw new Error(data.error ?? "Revision failed");
       setScriptBlocks(data.blocks);
       setDirectorNote("");
+      setHasScriptChanges(false);
     } catch (err: unknown) {
       setReviseError(err instanceof Error ? err.message : "Revision failed");
     } finally {
@@ -991,6 +996,8 @@ export default function Studio2Page() {
       setScriptBlocks(data.blocks);
       if (data.lessonImplementations) setLessonImplementations(data.lessonImplementations);
       setDirectorNote("");
+      setHasScriptChanges(false);
+      cleanLessonsRef.current = lessons;
     } catch (err: unknown) {
       setReviseError(err instanceof Error ? err.message : "Revision failed");
     } finally {
@@ -1012,7 +1019,6 @@ export default function Studio2Page() {
       });
       setSavesRefreshKey((k) => k + 1);
       setSaveLabel("saved");
-      setHasUnsavedChanges(false);
       setTimeout(() => setSaveLabel("idle"), 2500);
     } catch {
       setSaveLabel("idle");
@@ -1029,6 +1035,8 @@ export default function Studio2Page() {
     if (save.coverUrl)    setCoverUrl(save.coverUrl);
     if (save.coverPrompt) setCoverPrompt(save.coverPrompt);
     setPendingDirections([]);
+    setHasScriptChanges(false);
+    cleanLessonsRef.current = [];
     // Build default avatars for the loaded cast
     const uniqueChars = Array.from(new Set(save.blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
     const defaultTypes: Record<string, CharacterType> = {};
@@ -1049,10 +1057,17 @@ export default function Studio2Page() {
     setCharacterAvatars((prev) => ({ ...prev, [characterName]: buildAvatarUrl(characterName, type) }));
   }, []);
 
+  // User-initiated block edits (text, SFX) — marks script dirty
+  const handleBlocksChange = useCallback((blocks: ScriptBlock[]) => {
+    setScriptBlocks(blocks);
+    setHasScriptChanges(true);
+  }, []);
+
   const handleCharacterVoiceChange = useCallback((characterName: string, voiceId: string) => {
     setScriptBlocks((prev) =>
       prev.map((b) => b.characterName === characterName ? { ...b, assignedVoiceId: voiceId } : b)
     );
+    setHasScriptChanges(true);
   }, []);
 
   // ─── Queue a character direction ─────────────────────────────────────────────
@@ -1067,12 +1082,20 @@ export default function Studio2Page() {
   // ─── Apply all queued directions ─────────────────────────────────────────────
 
   const handleUpdateScript = useCallback(async () => {
-    if (pendingDirections.length === 0 || isRevising) return;
-    const combined = pendingDirections.join(". Also: ");
-    setPendingDirections([]);
-    setShowToast(false);
-    await handleRevise(combined);
-  }, [pendingDirections, isRevising, handleRevise]);
+    if (isRevising) return;
+    const parts = [
+      ...pendingDirections,
+      directorNote.trim() ? directorNote.trim() : "",
+    ].filter(Boolean);
+    if (parts.length > 0) {
+      setPendingDirections([]);
+      setShowToast(false);
+      await handleRevise(parts.join(". Also: "));
+    } else {
+      // Only manual edits — mark clean without regenerating
+      setHasScriptChanges(false);
+    }
+  }, [pendingDirections, directorNote, isRevising, handleRevise]);
 
   // ─── Fetch cover ─────────────────────────────────────────────────────────────
 
@@ -1342,7 +1365,7 @@ export default function Studio2Page() {
             <ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
-              onBlocksChange={setScriptBlocks}
+              onBlocksChange={handleBlocksChange}
               onProduce={handleProduce}
               isProducing={isProducing}
               summary={summary}
@@ -1472,37 +1495,39 @@ export default function Studio2Page() {
 
             {/* Update Script */}
             {(() => {
-              const hasPending = pendingDirections.length > 0;
+              const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
+              const dirCount = pendingDirections.length + (directorNote.trim() ? 1 : 0);
               return (
-              <button
-                onClick={handleUpdateScript}
-                disabled={!hasPending || isRevising}
-                className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-2.5"
-                style={hasPending && !isRevising
-                  ? { background: "rgba(79,195,247,0.15)", border: "1.5px solid rgba(79,195,247,0.55)", color: "#4fc3f7", boxShadow: "0 0 22px rgba(79,195,247,0.2)" }
-                  : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.18)", cursor: "not-allowed" }
-                }
-              >
-                {isRevising ? (
-                  <>
-                    <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.6)" }} />
-                    Updating…
-                  </>
-                ) : hasPending ? (
-                  <>✏️ Update Script · {pendingDirections.length} direction{pendingDirections.length > 1 ? "s" : ""}</>
-                ) : (
-                  <>✏️ Update Script</>
-                )}
-              </button>
+                <button
+                  onClick={handleUpdateScript}
+                  disabled={!hasPending || isRevising}
+                  className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-2.5"
+                  style={hasPending && !isRevising
+                    ? { background: "rgba(79,195,247,0.15)", border: "1.5px solid rgba(79,195,247,0.55)", color: "#4fc3f7", boxShadow: "0 0 22px rgba(79,195,247,0.2)" }
+                    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.18)", cursor: "not-allowed" }
+                  }
+                >
+                  {isRevising ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.6)" }} />
+                      Updating…
+                    </>
+                  ) : hasPending && dirCount > 0 ? (
+                    <>✏️ Update Script · {dirCount} change{dirCount > 1 ? "s" : ""}</>
+                  ) : hasPending ? (
+                    <>✏️ Update Script</>
+                  ) : (
+                    <>✏️ Update Script</>
+                  )}
+                </button>
               );
             })()}
 
             {/* Produce Audio */}
             {(() => {
-              const hasUnapplied = directorNote.trim().length > 0 || pendingDirections.length > 0;
-              const blocked = isProducing || hasUnapplied;
+              const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
+              const blocked = isProducing || hasPending;
               return (
-              <div>
                 <button
                   onClick={() => !blocked && handleProduce(scriptBlocks, durationMinutes)}
                   disabled={blocked}
@@ -1523,35 +1548,35 @@ export default function Studio2Page() {
                     <span className="flex items-center justify-center gap-2">🎙️ Produce Audio</span>
                   )}
                 </button>
-                {hasUnapplied && !isProducing && (
-                  <p className="text-center text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
-                    Apply or discard your director&apos;s note first
-                  </p>
-                )}
-              </div>
               );
             })()}
 
             {/* Save script version */}
-            <button
-              onClick={handleManualSave}
-              disabled={isSaving || saveLabel === "saved" || !hasUnsavedChanges}
-              className="w-full mt-2.5 py-3 rounded-2xl text-sm font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              style={saveLabel === "saved"
-                ? { background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#34d399" }
-                : hasUnsavedChanges
-                ? { background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.35)", color: "#c4b5fd", boxShadow: "0 0 14px rgba(139,92,246,0.12)" }
-                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
-              }
-            >
-              {saveLabel === "saving" ? (
-                <><span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.5)" }} />Saving…</>
-              ) : saveLabel === "saved" ? (
-                <>✓ Script saved</>
-              ) : (
-                <>💾 Save script version</>
-              )}
-            </button>
+            {(() => {
+              const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
+              const canSave = !hasPending && !isProducing && scriptBlocks.length > 0;
+              return (
+                <button
+                  onClick={handleManualSave}
+                  disabled={!canSave || isSaving || saveLabel === "saved"}
+                  className="w-full mt-2.5 py-3 rounded-2xl text-sm font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  style={saveLabel === "saved"
+                    ? { background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", color: "#34d399" }
+                    : canSave
+                    ? { background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.35)", color: "#c4b5fd", boxShadow: "0 0 14px rgba(139,92,246,0.12)" }
+                    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)", cursor: "not-allowed" }
+                  }
+                >
+                  {saveLabel === "saving" ? (
+                    <><span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.5)" }} />Saving…</>
+                  ) : saveLabel === "saved" ? (
+                    <>✓ Script saved</>
+                  ) : (
+                    <>💾 Save script version</>
+                  )}
+                </button>
+              );
+            })()}
 
             {/* Toast */}
             <div
