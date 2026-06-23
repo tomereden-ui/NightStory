@@ -3,6 +3,7 @@ import { Inter, Outfit, Rubik } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ViewModeProvider } from "@/context/ViewModeContext";
+import { FontSizeProvider } from "@/context/FontSizeContext";
 import AppShell from "@/components/layout/AppShell";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -28,7 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased" style={{ background: "#0A0C14" }}>
         <LanguageProvider>
           <ViewModeProvider>
-            <AppShell>{children}</AppShell>
+            <FontSizeProvider>
+              <AppShell>{children}</AppShell>
+            </FontSizeProvider>
           </ViewModeProvider>
         </LanguageProvider>
       </body>

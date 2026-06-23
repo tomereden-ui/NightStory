@@ -65,9 +65,8 @@ function MessageBubble({
       )}
       <div className={`flex flex-col gap-1.5 ${isLuna ? "items-start" : "items-end"}`} style={{ maxWidth: "80%" }}>
         <div
-          className="px-4 py-3.5 rounded-2xl leading-relaxed whitespace-pre-wrap"
+          className="px-4 py-3.5 rounded-2xl leading-relaxed whitespace-pre-wrap text-fs-body"
           style={{
-            fontSize: 15,
             ...(isLuna ? {
               background: "linear-gradient(135deg,rgba(88,28,220,0.18) 0%,rgba(30,58,120,0.22) 100%)",
               border: "1.5px solid rgba(167,139,250,0.28)",
@@ -437,7 +436,7 @@ export default function LunaChatPanel({
         </div>
         <div>
           <p className="text-sm font-bold text-white">Luna</p>
-          <p className="text-[11px]" style={{ color: "rgba(167,139,250,0.8)" }}>Your magical story guide ✨</p>
+          <p className="text-fs-caption" style={{ color: "rgba(167,139,250,0.8)" }}>Your magical story guide ✨</p>
         </div>
       </div>
 

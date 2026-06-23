@@ -192,7 +192,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
           onBlur={() => validateSfx(desc)}
           rows={1}
           placeholder={t("sfxPlaceholder")}
-          className="w-full bg-transparent text-sm leading-relaxed resize-none outline-none text-white/75 overflow-hidden"
+          className="w-full bg-transparent text-fs-body leading-relaxed resize-none outline-none text-white/75 overflow-hidden"
           style={{ minHeight: "22px" }}
         />
 
@@ -206,7 +206,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
 
         {sfxWarning && !isValidating && (
           <div
-            className="flex items-start gap-1.5 px-2.5 py-2 rounded-xl text-[11px] leading-snug"
+            className="flex items-start gap-1.5 px-2.5 py-2 rounded-xl text-fs-caption leading-snug"
             style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "rgba(245,158,11,0.85)" }}
           >
             <span className="flex-shrink-0 mt-px">⚠</span>
@@ -359,11 +359,11 @@ function SpeechCard({
       {/* Editable text area */}
       <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div className="flex items-center gap-1.5">
-          <span className={`text-[11px] font-semibold uppercase tracking-widest ${isNarrator ? "text-purple-bright/60" : "text-teal/70"}`}>
+          <span className={`text-fs-caption font-semibold uppercase tracking-widest ${isNarrator ? "text-purple-bright/60" : "text-teal/70"}`}>
             {block.characterName}
           </span>
           {assignedVoice && (
-            <span className="text-white/25 text-[11px]">· {assignedVoice.name}</span>
+            <span className="text-white/25 text-fs-caption">· {assignedVoice.name}</span>
           )}
           <span className="ml-auto text-[10px] text-white/25 italic">{t("tapToEdit")}</span>
         </div>
@@ -375,7 +375,7 @@ function SpeechCard({
           onBlur={() => setIsFocused(false)}
           rows={1}
           placeholder="Enter dialogue or narration…"
-          className="w-full text-white/85 text-sm leading-relaxed resize-none outline-none placeholder-white/15 overflow-hidden rounded-lg px-2 py-1 transition-all"
+          className="w-full text-white/85 text-fs-body leading-relaxed resize-none outline-none placeholder-white/15 overflow-hidden rounded-lg px-2 py-1 transition-all"
           style={{
             minHeight: "22px",
             background: isFocused ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",

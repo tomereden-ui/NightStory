@@ -314,7 +314,7 @@ export default function StoryDetailPage() {
         {/* Title — big, prominent */}
         <div className="px-5 mt-4 mb-1">
           <h1
-            className="text-2xl font-bold tracking-tight leading-tight mb-1"
+            className="text-2xl text-fs-title font-bold tracking-tight leading-tight mb-1"
             style={{
               background: "linear-gradient(135deg, #ffffff 0%, #4fc3f7 55%, #a78bfa 100%)",
               WebkitBackgroundClip: "text",
@@ -325,7 +325,7 @@ export default function StoryDetailPage() {
           >
             {entry.title}
           </h1>
-          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="text-fs-caption" style={{ color: "rgba(255,255,255,0.3)" }}>
             {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
           </p>
         </div>
@@ -355,7 +355,7 @@ export default function StoryDetailPage() {
               const long = entry.summary.length > LIMIT;
               const shown = !summaryExpanded && long ? entry.summary.slice(0, LIMIT).trimEnd() : entry.summary;
               return (
-                <p style={{ fontSize: "13.5px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
+                <p className="text-fs-body" style={{ lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
                   {shown}
                   {long && !summaryExpanded && (
                     <button onClick={() => setSummaryExpanded(true)} className="ml-1 font-semibold" style={{ color: "#4fc3f7", fontSize: "12px" }}>
@@ -405,25 +405,23 @@ export default function StoryDetailPage() {
                 <div key={block.id}>
                   {!isNarrator && (
                     <p
-                      className="text-[9px] font-semibold uppercase tracking-widest mb-1 ml-3"
+                      className="text-fs-caption font-semibold uppercase tracking-widest mb-1 ml-3"
                       style={{ color: "rgba(79,195,247,0.72)" }}
                     >
                       {block.characterName}
                     </p>
                   )}
                   <div
-                    className="px-4 py-3 rounded-xl"
+                    className="px-4 py-3 rounded-xl text-fs-body"
                     style={isNarrator ? {
                       color: "rgba(255,255,255,0.45)",
                       fontStyle: "italic",
-                      fontSize: "11px",
                       lineHeight: "1.6",
                     } : {
                       background: "rgba(255,255,255,0.04)",
                       border: "1px solid rgba(255,255,255,0.08)",
                       borderLeft: "2px solid rgba(79,195,247,0.3)",
                       color: "rgba(255,255,255,0.82)",
-                      fontSize: "11.5px",
                       lineHeight: "1.6",
                     }}
                   >

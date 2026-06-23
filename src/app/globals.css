@@ -183,3 +183,19 @@ body::before {
   will-change: transform;
   transform-origin: center center;
 }
+
+/* ── Typography scale ─────────────────────────────────────────────────────── */
+:root {
+  --fs-title:    24px;
+  --fs-heading:  18px;
+  --fs-body:     14px;
+  --fs-caption:  11px;
+  --fs-label:    10px;
+  --fs-micro:     9px;
+}
+.text-fs-title   { font-size: var(--fs-title); }
+.text-fs-heading { font-size: var(--fs-heading); }
+.text-fs-body    { font-size: var(--fs-body); }
+.text-fs-caption { font-size: var(--fs-caption); }
+.text-fs-label   { font-size: var(--fs-label); }
+.text-fs-micro   { font-size: var(--fs-micro); }
