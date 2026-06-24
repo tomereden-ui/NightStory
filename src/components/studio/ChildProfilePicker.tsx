@@ -326,7 +326,7 @@ export default function ChildProfilePicker({
                 >
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+                    <img src={avatarUrl} alt={p.name} className="w-full h-full object-cover rounded-full" />
                   ) : (
                     <span className="text-2xl">{p.avatar_emoji || "⭐"}</span>
                   )}

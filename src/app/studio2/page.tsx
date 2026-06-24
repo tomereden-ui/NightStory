@@ -573,7 +573,7 @@ function DirectionSheet({
                 style={{ background: "#07091a", boxShadow: "0 0 0 2.5px rgba(167,139,250,0.6), 0 0 20px rgba(139,92,246,0.4), 0 4px 16px rgba(0,0,0,0.5)" }}>
                 {avatarUrl
                   ? /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
+                    <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover rounded-full" />
                   : <div className="w-full h-full flex items-center justify-center text-xl font-black"
                       style={{ background: "linear-gradient(135deg,rgba(88,28,220,0.5),rgba(30,58,120,0.5))", color: "#C4B5FD" }}>
                       {characterName.charAt(0)}
@@ -636,7 +636,7 @@ function DirectionSheet({
                   <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0"
                     style={{ border: `1.5px solid rgba(167,139,250,0.4)` }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
                   </div>
                 )}
                 <Icon name={showAvatarPicker ? "collapse" : "expand"} size={12}
@@ -791,7 +791,7 @@ function CharacterCard({
         >
           {!imgError ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={displayUrl} alt={characterName} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+            <img src={displayUrl} alt={characterName} className="w-full h-full object-cover rounded-full" onError={() => setImgError(true)} />
           ) : (
             <div className="w-full h-full flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>
@@ -1144,7 +1144,9 @@ export default function Studio2Page() {
       setCoverUrl(draft.coverUrl ?? "");
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
-      setCharacterAvatars(draft.characterAvatars ?? {});
+      const savedAvatars = draft.characterAvatars ?? {};
+      const hasStale = Object.values(savedAvatars).some((u) => (u as string).includes("dicebear.com"));
+      setCharacterAvatars(hasStale ? {} : savedAvatars);
       setCharacterTypes((draft.characterTypes ?? {}) as Record<string, CharacterType>);
       setStoryTitle(draft.storyTitle ?? "");
       // Migrate: support both old string `lesson` and new array `lessons`
@@ -1221,6 +1223,18 @@ export default function Studio2Page() {
       setCharacterAvatars(refinedAvatars);
     }).catch(() => console.warn("[Avatars] AI classification failed, keeping defaults"));
   }, [voicePool]);
+
+  // Re-resolve avatars on draft restore when characterAvatars is empty (stale DiceBear cleared or never saved)
+  const avatarRefreshFiredRef = useRef(false);
+  useEffect(() => {
+    if (!loaded || scriptBlocks.length === 0) return;
+    if (avatarRefreshFiredRef.current) return;
+    if (Object.keys(characterAvatars).length === 0) {
+      avatarRefreshFiredRef.current = true;
+      void resolveAndSetCharacterAvatars(scriptBlocks, summary);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, scriptBlocks, resolveAndSetCharacterAvatars]);
 
   // ─── Generate story ─────────────────────────────────────────────────────────
 
@@ -1937,7 +1951,7 @@ export default function Studio2Page() {
               title={storyTitle}
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
-              onRegenerateCover={scriptBlocks.length > 0 && !!coverPrompt ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
+              onRegenerateCover={scriptBlocks.length > 0 ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
               durationMinutes={durationMinutes}
               onDurationChange={setDurationMinutes}
               hideDirectorsNote
