@@ -1,7 +1,4 @@
-// Image generation via Gemini 2.0 Flash — works with the standard Gemini Developer API key.
-// Uses generateContent with responseModalities:["IMAGE"] to return base64 image data.
-
-export const IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation";
+export const IMAGE_MODEL = "imagen-4.0-fast-generate-001";
 
 interface ImagenResult {
   buf: Buffer;
@@ -12,7 +9,7 @@ export async function generateWithImagen(
   prompt: string,
   apiKey: string,
 ): Promise<ImagenResult | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:predict?key=${apiKey}`;
 
   let res: Response;
   try {
@@ -20,8 +17,8 @@ export async function generateWithImagen(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+        instances: [{ prompt }],
+        parameters: { sampleCount: 1, aspectRatio: "1:1" },
       }),
     });
   } catch (err) {
@@ -35,27 +32,14 @@ export async function generateWithImagen(
     return null;
   }
 
-  let data: {
-    candidates?: Array<{
-      content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> };
-    }>;
-  };
-  try {
-    data = await res.json();
-  } catch {
-    console.error("[ImageGen] Non-JSON response");
-    return null;
-  }
+  let data: { predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }> };
+  try { data = await res.json(); } catch { return null; }
 
-  const parts = data?.candidates?.[0]?.content?.parts ?? [];
-  const imagePart = parts.find((p) => p.inlineData?.data);
-  if (!imagePart?.inlineData?.data) {
-    console.error("[ImageGen] No image in response:", JSON.stringify(data).slice(0, 200));
-    return null;
-  }
+  const prediction = data?.predictions?.[0];
+  if (!prediction?.bytesBase64Encoded) return null;
 
   return {
-    buf: Buffer.from(imagePart.inlineData.data, "base64"),
-    mimeType: imagePart.inlineData.mimeType ?? "image/png",
+    buf: Buffer.from(prediction.bytesBase64Encoded, "base64"),
+    mimeType: prediction.mimeType ?? "image/png",
   };
 }
