@@ -51,20 +51,25 @@ export async function generateCoverImage(
             contents: [{
               role: "user",
               parts: [{
-                text: `You are a children's book illustrator writing an image prompt. Describe ONLY what a camera would see in the foreground of this book cover — the characters, their expressions, what they are doing, and where they are standing.
+                text: `You are a children's book illustrator writing an image generation prompt for a book cover.
 
-RULES:
-- START with the main character(s): their species/appearance, clothing or fur color, size, emotion
-- Then describe the action they are doing right now
-- Then the setting behind them with 2 specific visual details
-- End with one lighting detail
-- DO NOT mention sky or moon as the main subject
-- Describe characters by appearance only (clothing, color, size, emotion) — NEVER use their names
-- 3 sentences maximum
+Your job: describe the SINGLE most important visual subject of this story so that an AI image generator renders it correctly.
+
+RULES — follow in order:
+1. FIRST WORD must be the main character's species or type (e.g. "Elephant", "Young girl", "Dragon", "Fox"). Never start with a setting word.
+2. Then describe appearance in detail: size, color, texture, clothing or fur, expression, one unique feature.
+3. Then describe what the character is DOING right now in this scene (one action).
+4. Then describe the setting with exactly 2 vivid visual details behind the character.
+5. End with one lighting detail.
+
+IMPORTANT:
+- If the main character is an animal, lead with that animal — never bury it in the description.
+- DO NOT use character names. Describe by appearance only.
+- 2–3 sentences total. No extra commentary.
 
 ${storyContext}
 
-Write ONLY the image prompt. No labels, no quotes.`,
+Write ONLY the image prompt text. No labels, no quotes, no intro.`,
               }],
             }],
             generationConfig: { temperature: 0.7, maxOutputTokens: 200, thinkingConfig: { thinkingBudget: 0 } },
@@ -84,7 +89,7 @@ Write ONLY the image prompt. No labels, no quotes.`,
   // ── Step 2: generate image with Imagen ───────────────────────────────────────
   const fullPrompt = `${scenePrompt}
 
-Illustrated as a glowing 3D rendered children's book cover in Pixar style. Deep cosmic night scene with rich navy-blue and teal tones. The characters described above are large and centered, rendered with soft volumetric lighting and gentle bioluminescent rim glow. Scattered stars and a faint nebula surround the scene. Square composition, dreamy magical atmosphere, smooth gradients, no text, no letters, no numbers.`;
+The subject described above is the MAIN FOCUS — large, centered, and unmistakable. Illustrated as a glowing 3D rendered children's book cover in Pixar style. Deep cosmic night scene with rich navy-blue and teal tones. Soft volumetric lighting and gentle bioluminescent rim glow on the main subject. Scattered stars and a faint nebula in the background. Square composition, dreamy magical atmosphere, smooth gradients. No text, no letters, no numbers anywhere.`;
 
   const result = await generateWithImagen(fullPrompt, apiKey);
   if (result) console.log("[CoverImage] Generated with Imagen");
