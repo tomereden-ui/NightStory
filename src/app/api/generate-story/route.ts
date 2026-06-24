@@ -42,10 +42,16 @@ interface RawLessonImpl {
   blockIndices: number[];
 }
 
+export interface RawCharacter {
+  type: "child" | "adult" | "animal" | "narrator";
+  visualDescription: string;
+}
+
 interface RawResponse {
   title?: string;
   summary: string;
   coverPrompt: string;
+  characters?: Record<string, RawCharacter>;
   blocks: RawBlock[];
   lessonImplementations?: RawLessonImpl[];
 }
@@ -218,7 +224,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ blocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations });
+    return NextResponse.json({ blocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {} });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -257,6 +257,26 @@ Return a JSON object with the following top-level fields:
                   Focus on setting, mood, and main characters. No text or words in the image.
                   Example: "A small child and a glowing firefly standing at the entrance of a crystal cave under a starry sky"
 
+  "characters"  — A map of every named speaking character (exclude "SFX") to their visual profile.
+                  Include ALL characters who appear in blocks, including "Narrator".
+                  Each key is the EXACT character name as used in the blocks array.
+                  Each value has:
+                    "type"              — exactly one of: "child", "adult", "animal", "narrator"
+                                          Use "child" for children and young creatures.
+                                          Use "adult" for grown-up humans, elders, wizards, etc.
+                                          Use "animal" for any animal, creature, fairy, monster, or non-human.
+                                          Use "narrator" only for the Narrator role.
+                    "visualDescription" — 10–20 words describing exactly what this character looks like.
+                                          Be specific: include species (for animals), approximate age, one
+                                          distinctive physical feature, and overall feeling/mood.
+                  Examples:
+                    "Luna"     : { "type": "child",    "visualDescription": "curious 7-year-old girl with curly red hair and wide bright eyes" }
+                    "Grandma"  : { "type": "adult",    "visualDescription": "kind elderly grandmother with silver bun, round glasses and a warm smile" }
+                    "Pip"      : { "type": "animal",   "visualDescription": "tiny playful fox cub with bright orange fur and a white-tipped fluffy tail" }
+                    "Squawk"   : { "type": "animal",   "visualDescription": "small colourful parrot with green and yellow feathers and a mischievous expression" }
+                    "Captain"  : { "type": "adult",    "visualDescription": "weathered sea captain with a grey beard, navy coat and a kind gaze" }
+                    "Narrator" : { "type": "narrator", "visualDescription": "warm wise storyteller" }
+
   "blocks"      — The ordered array of script blocks, each with:
                     "characterName" — one of: "Narrator" (in story language), a character name, or "SFX"
                     "textPayload"   — for speech: the line starting with a performance tag
@@ -278,11 +298,16 @@ Return a JSON object with the following top-level fields:
 SFX block format (exact):
   [SFX: {natural-language description} | {duration}s]
 
-Example response (no STORY VALUES — four fields only):
+Example response (no STORY VALUES — five fields):
 {
   "title": "Pip and the Fallen Star",
   "summary": "Milo and his dragon Pip discover a lost star that has fallen into the Whispering Woods. Together they must carry it back to the sky before sunrise.",
   "coverPrompt": "A small brave child and a tiny glowing dragon carrying a fallen star through a dark magical forest, warm golden light, ethereal atmosphere",
+  "characters": {
+    "Narrator": { "type": "narrator", "visualDescription": "warm wise storyteller" },
+    "Milo":     { "type": "child",    "visualDescription": "brave 8-year-old boy with dark messy hair, a red scarf and curious eyes" },
+    "Pip":      { "type": "animal",   "visualDescription": "tiny glowing dragon with pearlescent scales, little wings and a friendly snout" }
+  },
   "blocks": [
     { "characterName": "SFX",      "textPayload": "[SFX: deep forest night sounds — crickets singing, a gentle breeze stirring the treetops, distant owl hooting softly | 6s]" },
     { "characterName": "SFX",      "textPayload": "[SFX: small dragon footsteps on dry leaves, a soft snuffling sound close by, tiny wings rustling | 3s]" },
@@ -292,11 +317,16 @@ Example response (no STORY VALUES — four fields only):
   ]
 }
 
-Example response (with STORY VALUES — five fields, lessonImplementations required):
+Example response (with STORY VALUES — six fields, lessonImplementations required):
 {
   "title": "Pip and the Fallen Star",
   "summary": "Milo and his dragon Pip discover a lost star that has fallen into the Whispering Woods. Together they must carry it back to the sky before sunrise.",
   "coverPrompt": "A small brave child and a tiny glowing dragon carrying a fallen star through a dark magical forest, warm golden light, ethereal atmosphere",
+  "characters": {
+    "Narrator": { "type": "narrator", "visualDescription": "warm wise storyteller" },
+    "Milo":     { "type": "child",    "visualDescription": "brave 8-year-old boy with dark messy hair, a red scarf and curious eyes" },
+    "Pip":      { "type": "animal",   "visualDescription": "tiny glowing dragon with pearlescent scales, little wings and a friendly snout" }
+  },
   "blocks": [
     { "characterName": "SFX",      "textPayload": "[SFX: deep forest night — crickets, a gentle wind through tall pines, distant stream trickling | 6s]" },
     { "characterName": "SFX",      "textPayload": "[SFX: small careful footsteps crunching through fallen leaves, getting closer | 3s]" },

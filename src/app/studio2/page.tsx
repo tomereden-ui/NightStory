@@ -1193,35 +1193,67 @@ export default function Studio2Page() {
 
   // ─── Shared: classify cast + assign bank avatars ────────────────────────────
 
-  const resolveAndSetCharacterAvatars = useCallback(async (blocks: ScriptBlock[], summary: string) => {
+  const resolveAndSetCharacterAvatars = useCallback(async (
+    blocks: ScriptBlock[],
+    summary: string,
+    storyCharacters?: Record<string, { type: string; visualDescription: string }>,
+  ) => {
     const uniqueChars = Array.from(new Set(
       blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)
     ));
     if (!uniqueChars.length) return;
     const bank = await fetchBankAvatars();
+
+    // Set fast bank-lookup defaults immediately (visible before async avatar matching)
     const defaultTypes: Record<string, CharacterType> = {};
     const defaultAvatars: Record<string, string> = {};
     for (const name of uniqueChars) {
-      const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
+      const t: CharacterType = (storyCharacters?.[name]?.type as CharacterType) ?? (name === "Narrator" ? "narrator" : "adult");
       defaultTypes[name] = t;
       defaultAvatars[name] = resolveCharacterAvatar(name, t, bank, voicePool);
     }
     setCharacterTypes(defaultTypes);
     setCharacterAvatars(defaultAvatars);
-    fetch("/api/classify-characters", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ characters: uniqueChars, summary }),
-    }).then((r) => r.json()).then((types: Record<string, string>) => {
-      const refined: Record<string, CharacterType> = {};
-      const refinedAvatars: Record<string, string> = {};
-      for (const [name, type] of Object.entries(types)) {
-        refined[name] = type as CharacterType;
-        refinedAvatars[name] = resolveCharacterAvatar(name, type as CharacterType, bank, voicePool);
-      }
-      setCharacterTypes(refined);
-      setCharacterAvatars(refinedAvatars);
-    }).catch(() => console.warn("[Avatars] AI classification failed, keeping defaults"));
+
+    if (storyCharacters && Object.keys(storyCharacters).length > 0) {
+      // Rich descriptions from story generation — use semantic avatar matching via /api/avatar
+      await Promise.allSettled(
+        uniqueChars
+          .filter((name) => storyCharacters[name]?.visualDescription && name !== "Narrator")
+          .map(async (name) => {
+            const { type, visualDescription } = storyCharacters[name];
+            try {
+              const res = await fetch("/api/avatar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ description: visualDescription }),
+              });
+              if (!res.ok) return;
+              const { avatarUrl } = await res.json() as { avatarUrl: string | null };
+              if (avatarUrl) {
+                setCharacterAvatars((prev) => ({ ...prev, [name]: avatarUrl }));
+                setCharacterTypes((prev) => ({ ...prev, [name]: type as CharacterType }));
+              }
+            } catch { /* keep bank fallback */ }
+          })
+      );
+    } else {
+      // Fallback: classify by character names + story summary (draft restore / chat paths)
+      fetch("/api/classify-characters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ characters: uniqueChars, summary }),
+      }).then((r) => r.json()).then((types: Record<string, string>) => {
+        const refined: Record<string, CharacterType> = {};
+        const refinedAvatars: Record<string, string> = {};
+        for (const [name, type] of Object.entries(types)) {
+          refined[name] = type as CharacterType;
+          refinedAvatars[name] = resolveCharacterAvatar(name, type as CharacterType, bank, voicePool);
+        }
+        setCharacterTypes(refined);
+        setCharacterAvatars(refinedAvatars);
+      }).catch(() => console.warn("[Avatars] classification failed, keeping defaults"));
+    }
   }, [voicePool]);
 
   // Re-resolve avatars on draft restore when characterAvatars is empty (stale DiceBear cleared or never saved)
@@ -1272,6 +1304,7 @@ export default function Studio2Page() {
       const cp = data.coverPrompt ?? "";
       const title = (data.title as string | undefined) ?? "";
       const impls = (data.lessonImplementations ?? []) as { lesson: string; implemented: boolean; how: string }[];
+      const storyChars = (data.characters ?? {}) as Record<string, { type: string; visualDescription: string }>;
 
       // Story is ready — transition from "generating" to "validating"
       setSummary(sm);
@@ -1316,7 +1349,7 @@ export default function Studio2Page() {
         }, i * 65);
       }
 
-      void resolveAndSetCharacterAvatars(blocks, sm);
+      void resolveAndSetCharacterAvatars(blocks, sm, storyChars);
     } catch (err: unknown) {
       setGenerateError(err instanceof Error ? err.message : "Something went wrong");
       setActiveTab("step-by-step");
@@ -1823,7 +1856,7 @@ export default function Studio2Page() {
                 setScriptBlocks([]);
                 setGenerating(true);
               }}
-              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp }) => {
+              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars }) => {
                 setGenerating(false);
                 setSummary(sm);
                 setCoverPrompt(cp);
@@ -1845,7 +1878,7 @@ export default function Studio2Page() {
                   .then((r) => r.json())
                   .then((valData) => {
                     const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
-                    void resolveAndSetCharacterAvatars(blocks, sm);
+                    void resolveAndSetCharacterAvatars(blocks, sm, fqChars);
                     blocks.forEach((block, i) => {
                       setTimeout(() => {
                         setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
@@ -1858,7 +1891,7 @@ export default function Studio2Page() {
                     });
                   })
                   .catch(() => {
-                    void resolveAndSetCharacterAvatars(rawBlocks, sm);
+                    void resolveAndSetCharacterAvatars(rawBlocks, sm, fqChars);
                     rawBlocks.forEach((block, i) => {
                       setTimeout(() => {
                         setScriptBlocks((prev) => [...prev, block]);

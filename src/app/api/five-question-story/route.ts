@@ -20,9 +20,15 @@ interface RawBlock {
   textPayload: string;
 }
 
+interface RawCharacter {
+  type: "child" | "adult" | "animal" | "narrator";
+  visualDescription: string;
+}
+
 interface RawResponse {
   summary: string;
   coverPrompt: string;
+  characters?: Record<string, RawCharacter>;
   blocks: RawBlock[];
 }
 
@@ -126,7 +132,7 @@ export async function POST(req: NextRequest) {
       textPayload: block.textPayload,
     }));
 
-    return NextResponse.json({ blocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "" });
+    return NextResponse.json({ blocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {} });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
