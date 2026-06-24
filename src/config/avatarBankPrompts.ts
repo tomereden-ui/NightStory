@@ -120,11 +120,11 @@ export const AVATAR_BANK: AvatarDef[] = [
     type: "adult", gender: "female", traits: ["scholarly", "kind", "professor", "wise"],
   },
   {
-    description: "illustrated adult wizard woman, slender build, long silver braid, star-covered wizard cape, mischievously wise expression",
+    description: "illustrated fantasy wizard character, long silver braid, star-patterned robe, twinkling eyes, warm knowing smile",
     type: "adult", gender: "female", traits: ["wise", "mischievous", "wizard", "silver hair"],
   },
   {
-    description: "illustrated adult princess character, olive complexion, dark curly hair, golden crown, regal but warm expression",
+    description: "illustrated storybook princess character, dark curly hair, golden tiara, elegant gown, gracious warm expression",
     type: "adult", gender: "female", traits: ["regal", "princess", "warm", "dark hair"],
   },
 
