@@ -16,77 +16,77 @@ export interface AvatarDef {
 export const AVATAR_BANK: AvatarDef[] = [
   // ── Children – Girls ──────────────────────────────────────────────────────────
   {
-    description: "toddler girl, 3 years old, wispy blonde hair, round blue eyes, pink bunny pajamas, sleepy smile",
+    description: "animated storybook girl character, wispy blonde hair, round blue eyes, pink bunny pajamas, sleepy sweet smile",
     type: "child", gender: "girl", traits: ["toddler", "blonde", "sleepy", "cute"],
   },
   {
-    description: "girl, 5 years old, afro puffs with pink ribbons, dark brown eyes, sparkly pink tutu, joyful laughing expression",
+    description: "young animated girl character, afro puffs with pink ribbons, dark brown eyes, sparkly pink tutu, joyful laughing expression",
     type: "child", gender: "girl", traits: ["young", "joyful", "afro", "playful"],
   },
   {
-    description: "girl, 6 years old, short black bob, almond-shaped dark eyes, floral dress, gentle curious smile",
+    description: "young animated girl character, short black bob, almond-shaped dark eyes, floral dress, gentle curious smile",
     type: "child", gender: "girl", traits: ["curious", "gentle", "East Asian", "sweet"],
   },
   {
-    description: "girl, 7 years old, curly red hair, freckled nose, bright green eyes, yellow raincoat, adventurous grin",
+    description: "young animated girl character, curly red hair, freckled nose, bright green eyes, yellow raincoat, adventurous grin",
     type: "child", gender: "girl", traits: ["adventurous", "red hair", "freckles", "energetic"],
   },
   {
-    description: "girl, 8 years old, medium brown skin, braids with colorful beads, teal hoodie, confident warm smile",
+    description: "animated girl character, medium brown skin, braids with colorful beads, teal hoodie, confident warm smile",
     type: "child", gender: "girl", traits: ["confident", "braids", "warm", "brown skin"],
   },
   {
-    description: "girl, 9 years old, long wavy dark hair, brown eyes, purple galaxy sweater, dreamy thoughtful gaze",
+    description: "animated girl character, long wavy dark hair, brown eyes, purple galaxy sweater, dreamy thoughtful gaze",
     type: "child", gender: "girl", traits: ["dreamy", "thoughtful", "dark hair", "imaginative"],
   },
   {
-    description: "girl, 10 years old, straight black hair with blunt bangs, wearing red and gold traditional top, graceful serene expression",
+    description: "animated girl character, straight black hair with blunt bangs, wearing red and gold traditional top, graceful serene expression",
     type: "child", gender: "girl", traits: ["graceful", "traditional", "serene", "East Asian"],
   },
   {
-    description: "girl, 11 years old, long blonde hair, bright blue eyes, wearing purple cloak and star earrings, wise and curious expression",
+    description: "animated girl character, long blonde hair, bright blue eyes, wearing purple cloak and star earrings, wise and curious expression",
     type: "child", gender: "girl", traits: ["wise", "magical", "blonde", "curious"],
   },
   {
-    description: "girl, 12 years old, curly mixed-heritage hair, wearing science lab coat over colorful shirt, brilliant excited smile",
+    description: "animated girl character, curly mixed-heritage hair, wearing science lab coat over colorful shirt, brilliant excited smile",
     type: "child", gender: "girl", traits: ["brilliant", "scientist", "excited", "mixed heritage"],
   },
 
   // ── Children – Boys ───────────────────────────────────────────────────────────
   {
-    description: "toddler boy, 3 years old, chubby cheeks, black hair, rocket ship pajamas, happy sleepy face",
+    description: "animated storybook boy character, chubby cheeks, black hair, rocket ship pajamas, happy sleepy face",
     type: "child", gender: "boy", traits: ["toddler", "sleepy", "happy", "black hair"],
   },
   {
-    description: "boy, 5 years old, pale skin, red freckles, spiky orange hair, denim overalls, mischievous grin",
+    description: "young animated boy character, pale skin, red freckles, spiky orange hair, denim overalls, mischievous grin",
     type: "child", gender: "boy", traits: ["mischievous", "freckles", "red hair", "playful"],
   },
   {
-    description: "boy, 6 years old, dark skin, big warm brown eyes, superhero cape, brave excited expression",
+    description: "young animated boy character, dark skin, big warm brown eyes, superhero cape, brave excited expression",
     type: "child", gender: "boy", traits: ["brave", "superhero", "dark skin", "excited"],
   },
   {
-    description: "boy, 7 years old, floppy brown hair, hazel eyes, yellow backpack, curious adventurous grin",
+    description: "young animated boy character, floppy brown hair, hazel eyes, yellow backpack, curious adventurous grin",
     type: "child", gender: "boy", traits: ["curious", "adventurous", "brown hair", "energetic"],
   },
   {
-    description: "boy, 8 years old, curly blond hair, sky blue eyes, striped sailor shirt, joyful energetic expression",
+    description: "animated boy character, curly blond hair, sky blue eyes, striped sailor shirt, joyful energetic expression",
     type: "child", gender: "boy", traits: ["joyful", "blonde", "energetic", "nautical"],
   },
   {
-    description: "boy, 9 years old, round glasses, light brown hair, inventor's goggles on forehead, intelligent focused look",
+    description: "animated boy character, round glasses, light brown hair, inventor's goggles on forehead, intelligent focused look",
     type: "child", gender: "boy", traits: ["intelligent", "inventor", "glasses", "focused"],
   },
   {
-    description: "boy, 10 years old, straight dark hair, almond eyes, green explorer vest with pockets, determined confident look",
+    description: "animated boy character, straight dark hair, almond eyes, green explorer vest with pockets, determined confident look",
     type: "child", gender: "boy", traits: ["determined", "explorer", "confident", "East Asian"],
   },
   {
-    description: "boy, 11 years old, tall, dark curly hair, navy blue hoodie, thoughtful kind expression",
+    description: "animated boy character, dark curly hair, navy blue hoodie, thoughtful kind expression",
     type: "child", gender: "boy", traits: ["thoughtful", "kind", "dark hair", "tall"],
   },
   {
-    description: "boy, 12 years old, athletic build, medium brown skin, wearing track jacket, proud cheerful grin",
+    description: "animated boy character, athletic build, medium brown skin, wearing track jacket, proud cheerful grin",
     type: "child", gender: "boy", traits: ["athletic", "proud", "cheerful", "sporty"],
   },
 

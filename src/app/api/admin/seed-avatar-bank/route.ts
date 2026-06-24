@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
       const imageUrl = supabase.storage.from(BUCKET).getPublicUrl(fileName).data.publicUrl;
 
-      // 3. Insert into avatar_bank (matching uses Gemini Flash, no embedding needed)
+      // 3. Insert into avatar_bank (no embedding — matching uses Gemini Flash)
       const { error: insertErr } = await supabase.from("avatar_bank").insert({
         description: def.description,
         image_url: imageUrl,
@@ -86,7 +86,6 @@ export async function POST(req: NextRequest) {
         gender: def.gender,
         traits: def.traits,
       });
-
       if (insertErr) throw new Error(`Insert failed: ${insertErr.message}`);
 
       results.push({ index: globalIndex, description: def.description.slice(0, 50), status: "seeded" });
