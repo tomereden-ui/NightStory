@@ -1,9 +1,7 @@
-// Gemini Imagen — raw HTTP client (the @google/generative-ai SDK doesn't expose Imagen yet)
+// Image generation via Gemini 2.0 Flash — works with the standard Gemini Developer API key.
+// Uses generateContent with responseModalities:["IMAGE"] to return base64 image data.
 
-// Switch between Imagen 3 Fast (GA, stable) and Imagen 4 Fast (preview) here.
-// imagen-3.0-fast-generate-001  — GA, well-tested
-// imagen-4.0-fast-generate-preview-05-20 — preview, better quality, same cost tier
-export const IMAGEN_MODEL = "imagen-3.0-fast-generate-001";
+export const IMAGE_MODEL = "gemini-2.0-flash-preview-image-generation";
 
 interface ImagenResult {
   buf: Buffer;
@@ -14,7 +12,7 @@ export async function generateWithImagen(
   prompt: string,
   apiKey: string,
 ): Promise<ImagenResult | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:predict?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`;
 
   let res: Response;
   try {
@@ -22,41 +20,42 @@ export async function generateWithImagen(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        instances: [{ prompt }],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: "1:1",
-          outputOptions: { mimeType: "image/jpeg" },
-        },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     });
   } catch (err) {
-    console.error("[Imagen] fetch error:", err);
+    console.error("[ImageGen] fetch error:", err);
     return null;
   }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.error(`[Imagen] HTTP ${res.status}:`, body.slice(0, 300));
+    console.error(`[ImageGen] HTTP ${res.status}:`, body.slice(0, 300));
     return null;
   }
 
-  let data: { predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }> };
+  let data: {
+    candidates?: Array<{
+      content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> };
+    }>;
+  };
   try {
     data = await res.json();
   } catch {
-    console.error("[Imagen] Non-JSON response");
+    console.error("[ImageGen] Non-JSON response");
     return null;
   }
 
-  const prediction = data?.predictions?.[0];
-  if (!prediction?.bytesBase64Encoded) {
-    console.error("[Imagen] No image in response:", JSON.stringify(data).slice(0, 200));
+  const parts = data?.candidates?.[0]?.content?.parts ?? [];
+  const imagePart = parts.find((p) => p.inlineData?.data);
+  if (!imagePart?.inlineData?.data) {
+    console.error("[ImageGen] No image in response:", JSON.stringify(data).slice(0, 200));
     return null;
   }
 
   return {
-    buf: Buffer.from(prediction.bytesBase64Encoded, "base64"),
-    mimeType: prediction.mimeType ?? "image/jpeg",
+    buf: Buffer.from(imagePart.inlineData.data, "base64"),
+    mimeType: imagePart.inlineData.mimeType ?? "image/png",
   };
 }
