@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MOCK_USER } from "@/lib/mockData";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import Icon from "@/components/ui/Icon";
@@ -196,12 +196,38 @@ function AddProfileModal({
   );
 }
 
-// ─── Child avatar URL ─────────────────────────────────────────────────────────
+// ─── Child avatar — bank lookup (cached in module-level map for the session) ──
 
-function buildChildAvatarUrl(name: string, gender?: string): string {
-  const seed = encodeURIComponent(`${name}-${gender ?? "other"}`);
-  const bg   = gender === "girl" ? "1a0a2e" : gender === "boy" ? "0a1828" : "0d1020";
-  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}&backgroundColor=${bg}`;
+const avatarCache = new Map<string, string>();
+
+async function fetchChildAvatar(profile: DBChildProfile): Promise<string | null> {
+  const cacheKey = `${profile.id}-${profile.gender}`;
+  if (avatarCache.has(cacheKey)) return avatarCache.get(cacheKey)!;
+
+  // Use stored avatar_url if already resolved (from DB or a previous session)
+  if ((profile as DBChildProfile & { avatar_url?: string }).avatar_url) {
+    const url = (profile as DBChildProfile & { avatar_url?: string }).avatar_url!;
+    avatarCache.set(cacheKey, url);
+    return url;
+  }
+
+  const age = profile.age ?? 6;
+  const genderWord = profile.gender === "other" ? "child" : profile.gender ?? "child";
+  const description = `${age} year old ${genderWord} named ${profile.name}`;
+
+  try {
+    const res = await fetch("/api/avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description }),
+    });
+    if (!res.ok) return null;
+    const { avatarUrl } = await res.json() as { avatarUrl: string | null };
+    if (avatarUrl) avatarCache.set(cacheKey, avatarUrl);
+    return avatarUrl ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Picker strip ─────────────────────────────────────────────────────────────
@@ -218,6 +244,8 @@ export default function ChildProfilePicker({
   const [profiles, setProfiles] = useState<DBChildProfile[]>([]);
   const [showAdd, setShowAdd]   = useState(false);
   const [loaded, setLoaded]     = useState(false);
+  const [bankAvatars, setBankAvatars] = useState<Record<string, string>>({});
+  const fetchedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/child-profiles", { cache: "no-store" })
@@ -249,9 +277,25 @@ export default function ChildProfilePicker({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Load bank avatars for all profiles (fires after profiles are set)
+  useEffect(() => {
+    if (profiles.length === 0) return;
+    for (const p of profiles) {
+      if (fetchedRef.current.has(p.id)) continue;
+      fetchedRef.current.add(p.id);
+      fetchChildAvatar(p).then((url) => {
+        if (url) setBankAvatars((prev) => ({ ...prev, [p.id]: url }));
+      });
+    }
+  }, [profiles]);
+
   function handleAdd(profile: DBChildProfile) {
     setProfiles((prev) => [...prev, profile]);
     onChange(profile);
+    // Trigger avatar fetch for the new profile
+    fetchChildAvatar(profile).then((url) => {
+      if (url) setBankAvatars((prev) => ({ ...prev, [profile.id]: url }));
+    });
   }
 
   if (!loaded) return null;
@@ -265,7 +309,7 @@ export default function ChildProfilePicker({
         <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
           {profiles.map((p) => {
             const isActive = selected?.id === p.id;
-            const avatarUrl = buildChildAvatarUrl(p.name, p.gender ?? "other");
+            const avatarUrl = bankAvatars[p.id];
             return (
               <button
                 key={p.id}
@@ -274,14 +318,18 @@ export default function ChildProfilePicker({
                 style={{ width: 64, opacity: disabled && !isActive ? 0.35 : 1, cursor: disabled ? "default" : "pointer" }}
               >
                 <div
-                  className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 transition-all"
+                  className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 transition-all flex items-center justify-center"
                   style={isActive
-                    ? { border: "2px solid rgba(79,195,247,0.75)", boxShadow: "0 0 18px rgba(79,195,247,0.3), 0 4px 12px rgba(0,0,0,0.4)" }
-                    : { border: "1.5px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }
+                    ? { border: "2px solid rgba(79,195,247,0.75)", boxShadow: "0 0 18px rgba(79,195,247,0.3), 0 4px 12px rgba(0,0,0,0.4)", background: "rgba(255,255,255,0.06)" }
+                    : { border: "1.5px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", background: "rgba(255,255,255,0.04)" }
                   }
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl">{p.avatar_emoji || "⭐"}</span>
+                  )}
                 </div>
                 <span
                   className="text-[11px] font-bold text-center truncate w-full leading-tight"

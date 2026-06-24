@@ -885,9 +885,6 @@ export default function StudioPage() {
     (async () => {
       for (let i = 0; i < missing.length; i++) {
         if (cancelled) break;
-        // Space requests 4s apart so Pollinations doesn't rate-limit back-to-back calls
-        if (i > 0) await new Promise((r) => setTimeout(r, 4000));
-        if (cancelled) break;
         const name = missing[i];
         try {
           const res = await fetch("/api/generate-avatar", {
@@ -896,19 +893,9 @@ export default function StudioPage() {
             body: JSON.stringify({ characterName: name, summary }),
           });
           if (res.ok) {
-            const { prompt: avatarPrompt } = await res.json() as { prompt: string };
-            if (avatarPrompt && !cancelled) {
-              const encodedPrompt = encodeURIComponent(avatarPrompt);
-              const imgRes = await fetch(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true`);
-              if (imgRes.ok && !cancelled) {
-                const blob = await imgRes.blob();
-                const dataUrl = await new Promise<string>((resolve) => {
-                  const reader = new FileReader();
-                  reader.onload = () => resolve(reader.result as string);
-                  reader.readAsDataURL(blob);
-                });
-                setCharacterAvatars((prev) => ({ ...prev, [name]: dataUrl }));
-              }
+            const { avatarUrl } = await res.json() as { avatarUrl: string | null };
+            if (avatarUrl && !cancelled) {
+              setCharacterAvatars((prev) => ({ ...prev, [name]: avatarUrl }));
             }
           }
         } catch {

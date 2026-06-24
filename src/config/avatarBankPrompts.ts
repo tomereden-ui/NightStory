@@ -1,0 +1,226 @@
+// 50 diverse avatar descriptions — used for embedding (matching) and image generation.
+// The description is the match target; AVATAR_STYLE_SUFFIX is appended only for image generation.
+
+export const AVATAR_STYLE_SUFFIX =
+  ", 3D animated character portrait, Pixar and Disney style, soft volumetric studio lighting, " +
+  "friendly expressive face centered in frame, circular avatar crop, clean gradient background " +
+  "with soft blue-purple cosmic glow, vibrant rich colors, highly detailed, no text, no letters, no background figures";
+
+export interface AvatarDef {
+  description: string;
+  type: "child" | "adult" | "animal";
+  gender: "boy" | "girl" | "male" | "female" | "neutral";
+  traits: string[];
+}
+
+export const AVATAR_BANK: AvatarDef[] = [
+  // ── Children – Girls ──────────────────────────────────────────────────────────
+  {
+    description: "toddler girl, 3 years old, wispy blonde hair, round blue eyes, pink bunny pajamas, sleepy smile",
+    type: "child", gender: "girl", traits: ["toddler", "blonde", "sleepy", "cute"],
+  },
+  {
+    description: "girl, 5 years old, afro puffs with pink ribbons, dark brown eyes, sparkly pink tutu, joyful laughing expression",
+    type: "child", gender: "girl", traits: ["young", "joyful", "afro", "playful"],
+  },
+  {
+    description: "girl, 6 years old, short black bob, almond-shaped dark eyes, floral dress, gentle curious smile",
+    type: "child", gender: "girl", traits: ["curious", "gentle", "East Asian", "sweet"],
+  },
+  {
+    description: "girl, 7 years old, curly red hair, freckled nose, bright green eyes, yellow raincoat, adventurous grin",
+    type: "child", gender: "girl", traits: ["adventurous", "red hair", "freckles", "energetic"],
+  },
+  {
+    description: "girl, 8 years old, medium brown skin, braids with colorful beads, teal hoodie, confident warm smile",
+    type: "child", gender: "girl", traits: ["confident", "braids", "warm", "brown skin"],
+  },
+  {
+    description: "girl, 9 years old, long wavy dark hair, brown eyes, purple galaxy sweater, dreamy thoughtful gaze",
+    type: "child", gender: "girl", traits: ["dreamy", "thoughtful", "dark hair", "imaginative"],
+  },
+  {
+    description: "girl, 10 years old, straight black hair with blunt bangs, wearing red and gold traditional top, graceful serene expression",
+    type: "child", gender: "girl", traits: ["graceful", "traditional", "serene", "East Asian"],
+  },
+  {
+    description: "girl, 11 years old, long blonde hair, bright blue eyes, wearing purple cloak and star earrings, wise and curious expression",
+    type: "child", gender: "girl", traits: ["wise", "magical", "blonde", "curious"],
+  },
+  {
+    description: "girl, 12 years old, curly mixed-heritage hair, wearing science lab coat over colorful shirt, brilliant excited smile",
+    type: "child", gender: "girl", traits: ["brilliant", "scientist", "excited", "mixed heritage"],
+  },
+
+  // ── Children – Boys ───────────────────────────────────────────────────────────
+  {
+    description: "toddler boy, 3 years old, chubby cheeks, black hair, rocket ship pajamas, happy sleepy face",
+    type: "child", gender: "boy", traits: ["toddler", "sleepy", "happy", "black hair"],
+  },
+  {
+    description: "boy, 5 years old, pale skin, red freckles, spiky orange hair, denim overalls, mischievous grin",
+    type: "child", gender: "boy", traits: ["mischievous", "freckles", "red hair", "playful"],
+  },
+  {
+    description: "boy, 6 years old, dark skin, big warm brown eyes, superhero cape, brave excited expression",
+    type: "child", gender: "boy", traits: ["brave", "superhero", "dark skin", "excited"],
+  },
+  {
+    description: "boy, 7 years old, floppy brown hair, hazel eyes, yellow backpack, curious adventurous grin",
+    type: "child", gender: "boy", traits: ["curious", "adventurous", "brown hair", "energetic"],
+  },
+  {
+    description: "boy, 8 years old, curly blond hair, sky blue eyes, striped sailor shirt, joyful energetic expression",
+    type: "child", gender: "boy", traits: ["joyful", "blonde", "energetic", "nautical"],
+  },
+  {
+    description: "boy, 9 years old, round glasses, light brown hair, inventor's goggles on forehead, intelligent focused look",
+    type: "child", gender: "boy", traits: ["intelligent", "inventor", "glasses", "focused"],
+  },
+  {
+    description: "boy, 10 years old, straight dark hair, almond eyes, green explorer vest with pockets, determined confident look",
+    type: "child", gender: "boy", traits: ["determined", "explorer", "confident", "East Asian"],
+  },
+  {
+    description: "boy, 11 years old, tall, dark curly hair, navy blue hoodie, thoughtful kind expression",
+    type: "child", gender: "boy", traits: ["thoughtful", "kind", "dark hair", "tall"],
+  },
+  {
+    description: "boy, 12 years old, athletic build, medium brown skin, wearing track jacket, proud cheerful grin",
+    type: "child", gender: "boy", traits: ["athletic", "proud", "cheerful", "sporty"],
+  },
+
+  // ── Adults – Female ───────────────────────────────────────────────────────────
+  {
+    description: "elderly grandmother, 70s, white curly hair, warm wrinkled smile, floral cardigan, kind twinkling eyes",
+    type: "adult", gender: "female", traits: ["elderly", "warm", "grandmother", "kind"],
+  },
+  {
+    description: "young woman, 22, long dark brown hair, bright green eyes, forest ranger uniform, adventurous spirit",
+    type: "adult", gender: "female", traits: ["adventurous", "young", "ranger", "nature"],
+  },
+  {
+    description: "woman, 30, short natural afro, dark skin, scientist lab coat, brilliant warm expression",
+    type: "adult", gender: "female", traits: ["brilliant", "scientist", "natural hair", "warm"],
+  },
+  {
+    description: "young woman, 24, fiery red hair, pale freckled skin, leather adventurer jacket, fierce brave look",
+    type: "adult", gender: "female", traits: ["fierce", "brave", "red hair", "adventurer"],
+  },
+  {
+    description: "woman, 35, East Asian features, long straight black hair, elegant purple sorceress robes, mysterious and graceful",
+    type: "adult", gender: "female", traits: ["mysterious", "elegant", "magical", "graceful"],
+  },
+  {
+    description: "young woman, 20, streaks of violet in dark hair, fairy court outfit with wings, playful and magical expression",
+    type: "adult", gender: "female", traits: ["magical", "fairy", "playful", "whimsical"],
+  },
+  {
+    description: "woman, 45, silver-streaked dark hair, warm brown skin, professor's coat and wire-rim glasses, scholarly and kind",
+    type: "adult", gender: "female", traits: ["scholarly", "kind", "professor", "wise"],
+  },
+  {
+    description: "woman, 55, small and nimble, long silver braid, star-covered wizard cape, mischievously wise expression",
+    type: "adult", gender: "female", traits: ["wise", "mischievous", "wizard", "silver hair"],
+  },
+  {
+    description: "young woman, 28, olive skin, dark curly hair, golden crown, regal but warm princess expression",
+    type: "adult", gender: "female", traits: ["regal", "princess", "warm", "dark hair"],
+  },
+
+  // ── Adults – Male ─────────────────────────────────────────────────────────────
+  {
+    description: "elderly grandfather, 70s, silver hair, bushy white eyebrows, wearing suspenders and bowler hat, storyteller warmth in eyes",
+    type: "adult", gender: "male", traits: ["elderly", "grandfather", "wise", "warm"],
+  },
+  {
+    description: "young man, 22, curly blond hair, blue eyes, wizard apprentice robes with stars, eager and earnest expression",
+    type: "adult", gender: "male", traits: ["young", "eager", "wizard", "blonde"],
+  },
+  {
+    description: "man, 35, strong build, dark beard and olive skin, shining knight armor, noble protective expression",
+    type: "adult", gender: "male", traits: ["noble", "knight", "protective", "strong"],
+  },
+  {
+    description: "man, 28, South Asian features, dark wavy hair, colorful musician's vest, joyful creative energy",
+    type: "adult", gender: "male", traits: ["creative", "joyful", "musician", "South Asian"],
+  },
+  {
+    description: "man, 40, blonde beard, tall and broad, wearing flannel shirt, gentle giant with kind deep-set eyes",
+    type: "adult", gender: "male", traits: ["gentle", "kind", "giant", "blonde beard"],
+  },
+  {
+    description: "man, 50, round belly, full white beard, captain's coat with gold buttons, hearty laughing expression",
+    type: "adult", gender: "male", traits: ["jolly", "captain", "white beard", "hearty"],
+  },
+  {
+    description: "man, 30, East Asian features, scholar's robes, bamboo staff, wise and centered calm expression",
+    type: "adult", gender: "male", traits: ["wise", "calm", "scholar", "East Asian"],
+  },
+  {
+    description: "young man, 19, dark skin, athletic build, wearing archer's green tunic and quiver, focused and intense",
+    type: "adult", gender: "male", traits: ["focused", "archer", "athletic", "intense"],
+  },
+  {
+    description: "man, 45, weathered kind face, grey temples, wearing sea captain's coat, experienced storyteller expression",
+    type: "adult", gender: "male", traits: ["experienced", "captain", "weathered", "kind"],
+  },
+
+  // ── Animals ───────────────────────────────────────────────────────────────────
+  {
+    description: "wise old owl with round golden spectacles, fluffy grey-brown feathers, knowing gentle gaze",
+    type: "animal", gender: "neutral", traits: ["owl", "wise", "spectacles", "gentle"],
+  },
+  {
+    description: "young playful fox, bright orange fur, white chest patch, big curious amber eyes, perky triangular ears",
+    type: "animal", gender: "neutral", traits: ["fox", "playful", "curious", "orange"],
+  },
+  {
+    description: "gentle white rabbit, long floppy ears, soft pink nose, holding a tiny clover, shy sweet smile",
+    type: "animal", gender: "neutral", traits: ["rabbit", "gentle", "white", "shy"],
+  },
+  {
+    description: "friendly young dragon, shimmery purple-blue scales, small folded wings, big innocent round eyes, warm smile",
+    type: "animal", gender: "neutral", traits: ["dragon", "friendly", "purple", "innocent"],
+  },
+  {
+    description: "loyal golden retriever dog, floppy ears, warm chocolate eyes, tongue happily out, radiating pure joy",
+    type: "animal", gender: "neutral", traits: ["dog", "loyal", "joyful", "golden"],
+  },
+  {
+    description: "mischievous striped tabby cat, bright green eyes, one raised paw, whiskers twitching, clever grin",
+    type: "animal", gender: "neutral", traits: ["cat", "mischievous", "tabby", "clever"],
+  },
+  {
+    description: "wise elephant, huge kind dark eyes, gentle wrinkled grey face, long lashes, serene and patient expression",
+    type: "animal", gender: "neutral", traits: ["elephant", "wise", "serene", "gentle"],
+  },
+  {
+    description: "brave little mouse, round ears, tiny whiskers, wearing a tiny acorn cap, determined and fearless grin",
+    type: "animal", gender: "neutral", traits: ["mouse", "brave", "tiny", "determined"],
+  },
+  {
+    description: "fluffy polar bear cub, shiny black button nose, round chubby cheeks, snow-white fur, innocent delight",
+    type: "animal", gender: "neutral", traits: ["bear", "fluffy", "innocent", "white"],
+  },
+  {
+    description: "majestic unicorn foal, white body, rainbow pastel mane, single golden spiral horn, wide sparkling innocent eyes",
+    type: "animal", gender: "neutral", traits: ["unicorn", "magical", "rainbow", "foal"],
+  },
+  {
+    description: "grumpy but secretly kind toad, jewel-bright emerald eyes, sitting cross-armed on a mushroom, hiding a smile",
+    type: "animal", gender: "neutral", traits: ["toad", "grumpy", "secretly kind", "funny"],
+  },
+  {
+    description: "sleek black panther, piercing golden eyes, regal calm expression, crouched gracefully, mysterious presence",
+    type: "animal", gender: "neutral", traits: ["panther", "regal", "mysterious", "sleek"],
+  },
+  {
+    description: "cheerful sun bear cub, cream chest patch, round ears, cradling a honey jar, irresistible playful smile",
+    type: "animal", gender: "neutral", traits: ["bear", "cheerful", "playful", "honey"],
+  },
+  {
+    description: "magnificent peacock, iridescent blue-green tail feathers fanned wide, regal proud expression, dazzling colors",
+    type: "animal", gender: "neutral", traits: ["peacock", "magnificent", "colorful", "proud"],
+  },
+];

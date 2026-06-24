@@ -1,5 +1,5 @@
 import type { ScriptBlock } from "@/types";
-import { fetchPollinationsImage } from "./pollinationsClient";
+import { generateWithImagen } from "./imagenClient";
 
 export async function generateCoverImage(
   title: string,
@@ -7,11 +7,7 @@ export async function generateCoverImage(
   apiKey: string,
   coverPrompt?: string,
 ): Promise<{ buf: Buffer; mimeType: string } | null> {
-  // ── Step 1: build scene description ──────────────────────────────────────
-  // Prefer the AI-generated coverPrompt from the story generator — it was
-  // written specifically to describe the key visual moment of this story.
-  // Fall back to deriving context from the script blocks.
-
+  // ── Step 1: build scene description ──────────────────────────────────────────
   const characters = Array.from(
     new Set(
       blocks
@@ -23,11 +19,9 @@ export async function generateCoverImage(
   let scenePrompt: string;
 
   if (coverPrompt?.trim()) {
-    // Use the story-generator's coverPrompt directly as the starting point
     scenePrompt = coverPrompt.trim();
     console.log("[CoverImage] Using story coverPrompt:", scenePrompt.slice(0, 120));
   } else {
-    // Reconstruct context from blocks and ask Gemini to build a scene description
     const narratorBlocks = blocks.filter((b) => b.characterName.toLowerCase().includes("narrat"));
     const allSpeechBlocks = blocks.filter((b) => b.characterName !== "SFX");
     const pickIndices = [0, Math.floor(narratorBlocks.length / 2), narratorBlocks.length - 1];
@@ -38,7 +32,6 @@ export async function generateCoverImage(
       .join(" ")
       .slice(0, 300);
 
-    // Include a broader sample of the script for better context
     const scriptSample = allSpeechBlocks
       .slice(0, 20)
       .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
@@ -88,13 +81,12 @@ Write ONLY the image prompt. No labels, no quotes.`,
     }
   }
 
-  // ── Step 2: generate image ────────────────────────────────────────────────
+  // ── Step 2: generate image with Imagen ───────────────────────────────────────
   const fullPrompt = `${scenePrompt}
 
-Illustrated as a glowing monochromatic blue-and-teal cosmic night scene for a children's bedtime book cover. The characters/subject described above are large and centered, rendered as a soft silhouette or gently lit shape glowing from within against a deep navy-black night sky. Scattered stars and a faint nebula-like glow surround the subject. Square composition, dreamy bioluminescent lighting, smooth gradients, minimal flat illustration style — no warm or amber tones, only cool blues, teals, and indigo. No text, no letters, no numbers anywhere in the image.`;
+Illustrated as a glowing 3D rendered children's book cover in Pixar style. Deep cosmic night scene with rich navy-blue and teal tones. The characters described above are large and centered, rendered with soft volumetric lighting and gentle bioluminescent rim glow. Scattered stars and a faint nebula surround the scene. Square composition, dreamy magical atmosphere, smooth gradients, no text, no letters, no numbers.`;
 
-  // ── Pollinations.ai — free, no key, retried with backoff (flaky under load) ──
-  const result = await fetchPollinationsImage(fullPrompt, "CoverImage", { width: 768, height: 768 });
-  if (result) console.log("[CoverImage] Generated with Pollinations.ai");
+  const result = await generateWithImagen(fullPrompt, apiKey);
+  if (result) console.log("[CoverImage] Generated with Imagen");
   return result;
 }
