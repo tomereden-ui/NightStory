@@ -320,8 +320,8 @@ export default function ChildProfilePicker({
                 <div
                   className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 transition-all flex items-center justify-center"
                   style={isActive
-                    ? { border: "2px solid rgba(79,195,247,0.75)", boxShadow: "0 0 18px rgba(79,195,247,0.3), 0 4px 12px rgba(0,0,0,0.4)", background: "rgba(255,255,255,0.06)" }
-                    : { border: "1.5px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", background: "rgba(255,255,255,0.04)" }
+                    ? { border: "2px solid rgba(79,195,247,0.75)", boxShadow: "0 0 18px rgba(79,195,247,0.3), 0 4px 12px rgba(0,0,0,0.4)", background: "#07091a" }
+                    : { border: "1.5px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", background: "#07091a" }
                   }
                 >
                   {avatarUrl ? (
@@ -341,24 +341,6 @@ export default function ChildProfilePicker({
             );
           })}
 
-          {/* Add profile */}
-          {!disabled && (
-            <button
-              onClick={() => setShowAdd(true)}
-              className="flex flex-col items-center gap-1.5 flex-shrink-0 transition-all active:scale-95"
-              style={{ width: 64 }}
-            >
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all"
-                style={{ border: "1.5px dashed rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.02)" }}
-              >
-                <span className="text-2xl font-light leading-none" style={{ color: "rgba(255,255,255,0.28)" }}>+</span>
-              </div>
-              <span className="text-[11px] font-medium text-center" style={{ color: "rgba(255,255,255,0.28)" }}>
-                Add
-              </span>
-            </button>
-          )}
         </div>
       </div>
 

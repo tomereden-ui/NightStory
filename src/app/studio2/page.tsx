@@ -871,6 +871,7 @@ function SceneHeader() {
           <div className="rounded-full overflow-hidden flex-shrink-0"
             style={{
               width: c.size, height: c.size,
+              background: "#07091a",
               boxShadow: `0 0 0 2.5px ${c.glow}55, 0 0 16px ${c.glow}44, 0 4px 12px rgba(0,0,0,0.5)`,
               border: `1.5px solid ${c.glow}66`,
             }}
