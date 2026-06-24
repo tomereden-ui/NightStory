@@ -2009,7 +2009,7 @@ export default function Studio2Page() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="text-base">📂</span>
+                <Icon name="folder" size={16} />
                 <span className="text-sm font-semibold tracking-wide" style={{ color: "rgba(255,255,255,0.75)" }}>Saved Versions</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                   style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.25)", color: "rgba(79,195,247,0.8)" }}>
