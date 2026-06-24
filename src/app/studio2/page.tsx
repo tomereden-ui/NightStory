@@ -292,6 +292,21 @@ function pickBankAvatar(characterName: string, type: CharacterType, bank: BankAv
   return pool[nameHash(characterName) % pool.length].image_url;
 }
 
+// For narrator characters, always use the selected narrator voice's avatar
+function resolveCharacterAvatar(
+  name: string,
+  type: CharacterType,
+  bank: BankAvatar[],
+  voicePool: Voice[],
+): string {
+  if (type === "narrator") {
+    const voiceId = getNarratorVoiceId();
+    const avatar = voicePool.find((v) => v.id === voiceId)?.avatarUrl;
+    if (avatar) return avatar;
+  }
+  return pickBankAvatar(name, type, bank);
+}
+
 function buildDiceBearUrl(characterName: string, type: CharacterType): string {
   const seed = encodeURIComponent(characterName);
   const bg = "0d1b4a";
@@ -452,8 +467,8 @@ function AvatarGallery({
                   onClick={() => onSelect(avatar.image_url, activeTab as CharacterType)}
                   className="aspect-square rounded-xl overflow-hidden transition-all active:scale-90 relative"
                   style={selected
-                    ? { boxShadow: "0 0 0 3px #A78BFA, 0 0 18px rgba(167,139,250,0.45)", transform: "scale(1.04)" }
-                    : { boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }
+                    ? { background: "#07091a", boxShadow: "0 0 0 3px #A78BFA, 0 0 18px rgba(167,139,250,0.45)", transform: "scale(1.04)" }
+                    : { background: "#07091a", boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }
                   }
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -553,7 +568,7 @@ function DirectionSheet({
             {/* Large avatar */}
             <div className="flex-shrink-0 relative">
               <div className="w-16 h-16 rounded-2xl overflow-hidden"
-                style={{ boxShadow: "0 0 0 2.5px rgba(167,139,250,0.6), 0 0 20px rgba(139,92,246,0.4), 0 4px 16px rgba(0,0,0,0.5)" }}>
+                style={{ background: "#07091a", boxShadow: "0 0 0 2.5px rgba(167,139,250,0.6), 0 0 20px rgba(139,92,246,0.4), 0 4px 16px rgba(0,0,0,0.5)" }}>
                 {avatarUrl
                   ? /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
@@ -768,8 +783,8 @@ function CharacterCard({
         <div
           className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-xl font-bold transition-all"
           style={isOpen
-            ? { border: "2px solid rgba(139,92,246,0.65)", boxShadow: "0 0 16px rgba(139,92,246,0.3)" }
-            : { border: "1px solid rgba(255,255,255,0.1)" }
+            ? { background: "#07091a", border: "2px solid rgba(139,92,246,0.65)", boxShadow: "0 0 16px rgba(139,92,246,0.3)" }
+            : { background: "#07091a", border: "1px solid rgba(255,255,255,0.1)" }
           }
         >
           {!imgError ? (
@@ -1265,11 +1280,11 @@ export default function Studio2Page() {
         for (const name of uniqueChars) {
           const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
           defaultTypes[name] = t;
-          defaultAvatars[name] = pickBankAvatar(name, t, bank);
+          defaultAvatars[name] = resolveCharacterAvatar(name, t, bank, voicePool);
         }
         setCharacterTypes(defaultTypes);
         setCharacterAvatars(defaultAvatars);
-        // Refine with AI classification then re-pick from bank with corrected types
+        // Refine with AI classification then re-pick with corrected types
         fetch("/api/classify-characters", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1279,7 +1294,7 @@ export default function Studio2Page() {
           const refinedAvatars: Record<string, string> = {};
           for (const [name, type] of Object.entries(types)) {
             refined[name] = type as CharacterType;
-            refinedAvatars[name] = pickBankAvatar(name, type as CharacterType, bank);
+            refinedAvatars[name] = resolveCharacterAvatar(name, type as CharacterType, bank, voicePool);
           }
           setCharacterTypes(refined);
           setCharacterAvatars(refinedAvatars);
@@ -1405,30 +1420,21 @@ export default function Studio2Page() {
     setPendingDirections([]);
     setHasScriptChanges(false);
     cleanLessonsRef.current = [];
-    // Build default avatars for the loaded cast using bank avatars
     const uniqueChars = Array.from(new Set(save.blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
     const defaultTypes: Record<string, CharacterType> = {};
-    const defaultAvatars: Record<string, string> = {};
     for (const name of uniqueChars) {
-      const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
-      defaultTypes[name] = t;
-      defaultAvatars[name] = buildDiceBearUrl(name, t); // immediate placeholder
+      defaultTypes[name] = name === "Narrator" ? "narrator" : "adult";
     }
     setCharacterTypes(defaultTypes);
-    setCharacterAvatars(defaultAvatars);
-    // Swap to bank avatars once fetched
+    // Resolve avatars from bank (narrator gets narrator voice avatar)
     fetchBankAvatars().then((bank) => {
-      if (bank.length === 0) return;
-      setCharacterAvatars((prev) => {
-        const next = { ...prev };
-        for (const name of uniqueChars) {
-          const t = defaultTypes[name];
-          next[name] = pickBankAvatar(name, t, bank);
-        }
-        return next;
-      });
+      const avatars: Record<string, string> = {};
+      for (const name of uniqueChars) {
+        avatars[name] = resolveCharacterAvatar(name, defaultTypes[name], bank, voicePool);
+      }
+      setCharacterAvatars(avatars);
     });
-  }, []);
+  }, [voicePool]);
 
   // ─── Avatar change (direct URL pick from bank) ───────────────────────────────
 
