@@ -62,6 +62,8 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    if (i > 0) await new Promise((r) => setTimeout(r, 7000));
+
     try {
       // 1. Generate image
       const imagePrompt = def.description + AVATAR_STYLE_SUFFIX;

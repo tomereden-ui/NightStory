@@ -1,6 +1,6 @@
 // Gemini text-embedding-004 — 768-dimensional embeddings used for avatar bank similarity search
 
-const EMBEDDING_MODEL = "text-embedding-004";
+const EMBEDDING_MODEL = "text-embedding-005";
 export const EMBEDDING_DIM = 768;
 
 export async function getEmbedding(text: string, apiKey: string): Promise<number[] | null> {
