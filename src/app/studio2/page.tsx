@@ -71,13 +71,10 @@ function ScriptBrowser({
     setLoadingId(id);
     try {
       const res = await fetch(`/api/script-saves/${id}`, { cache: "no-store" });
-      if (res.status === 404) {
-        // Phantom entry — server already removed it from index, drop from local list too
-        setSaves((prev) => { const next = prev.filter((s) => s.id !== id); onCount?.(next.length); return next; });
-        return;
-      }
       if (!res.ok) {
         console.error("[ScriptBrowser] load failed:", res.status, id);
+        // Server cleaned up the index entry; on next open it won't appear.
+        // For now just silently do nothing — don't remove from local list (would look like a delete).
         return;
       }
       const save = await res.json() as ScriptSaveFull;
