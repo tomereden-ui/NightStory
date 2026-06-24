@@ -1256,7 +1256,7 @@ export default function StudioPage() {
               title={storyTitle}
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
-              onRegenerateCover={coverPrompt ? () => { setCoverUrl(""); fetchCover(coverPrompt, summary); } : undefined}
+              onRegenerateCover={coverUrl ? () => { setCoverUrl(""); fetchCover(coverPrompt || summary, summary); } : undefined}
               durationMinutes={durationMinutes}
               onDurationChange={setDurationMinutes}
               hideDirectorsNote
