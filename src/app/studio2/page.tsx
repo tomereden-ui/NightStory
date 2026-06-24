@@ -315,7 +315,7 @@ function CharacterCards({
   avatars,
   characterTypes,
   onDirectCharacter,
-  onAvatarTypeChange,
+  onAvatarChange,
   onVoiceChange,
 }: {
   blocks: ScriptBlock[];
@@ -323,7 +323,7 @@ function CharacterCards({
   avatars: Record<string, string>;
   characterTypes: Record<string, CharacterType>;
   onDirectCharacter: (characterName: string, instruction: string) => void;
-  onAvatarTypeChange: (characterName: string, type: CharacterType) => void;
+  onAvatarChange: (characterName: string, url: string, type: CharacterType) => void;
   onVoiceChange: (characterName: string, voiceId: string) => void;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
@@ -374,7 +374,7 @@ function CharacterCards({
           avatarUrl={avatars[openCharacter]}
           characterType={characterTypes[openCharacter] ?? "adult"}
           onDirect={(instruction) => onDirectCharacter(openCharacter, instruction)}
-          onAvatarTypeChange={(type) => onAvatarTypeChange(openCharacter, type)}
+          onAvatarChange={(url, type) => onAvatarChange(openCharacter, url, type)}
           onVoiceChange={(voiceId) => onVoiceChange(openCharacter, voiceId)}
           onClose={() => setOpenCharacter(null)}
         />
@@ -384,19 +384,103 @@ function CharacterCards({
 }
 
 const CHAR_CHIPS = [
-  "More gentle",
-  "More dramatic",
-  "More playful",
-  "Shorter lines",
-  "More expressive",
+  "More gentle", "More dramatic", "More playful", "Shorter lines", "More expressive",
 ];
 
-const AVATAR_TYPES: { type: CharacterType; label: string; emoji: string }[] = [
-  { type: "child",    label: "Child",    emoji: "🧒" },
-  { type: "adult",    label: "Adult",    emoji: "🧑" },
-  { type: "animal",   label: "Animal",   emoji: "🐾" },
-  { type: "narrator", label: "Narrator", emoji: "📖" },
+// ─── Avatar picker dropdown (mirrors the VoicePicker pattern) ────────────────
+
+const AVATAR_TABS = [
+  { key: "child",  label: "Kids",    emoji: "🧒" },
+  { key: "adult",  label: "Adults",  emoji: "🧑" },
+  { key: "animal", label: "Animals", emoji: "🐾" },
 ];
+
+function AvatarPickerDropdown({
+  currentUrl,
+  characterType,
+  onSelect,
+}: {
+  currentUrl?: string;
+  characterType: CharacterType;
+  onSelect: (url: string, type: CharacterType) => void;
+}) {
+  const [bank, setBank] = useState<BankAvatar[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>(
+    characterType === "narrator" ? "adult" : characterType
+  );
+
+  useEffect(() => {
+    fetchBankAvatars().then((b) => { setBank(b); setLoading(false); });
+  }, []);
+
+  const filtered = bank.filter((a) => a.type === activeTab);
+
+  return (
+    <div className="rounded-2xl overflow-hidden mt-2"
+      style={{ background: "rgba(6,9,22,0.98)", border: "1px solid rgba(139,92,246,0.22)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+
+      {/* Type tabs */}
+      <div className="flex gap-1 p-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        {AVATAR_TABS.map(({ key, label, emoji }) => (
+          <button key={key} onClick={() => setActiveTab(key)}
+            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+            style={activeTab === key
+              ? { background: "rgba(139,92,246,0.22)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.4)" }
+              : { background: "transparent", color: "rgba(255,255,255,0.28)", border: "1px solid transparent" }
+            }
+          >
+            <span>{emoji}</span><span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Grid */}
+      <div className="p-2 overflow-y-auto" style={{ maxHeight: 196 }}>
+        {loading ? (
+          <div className="flex justify-center py-6">
+            <span className="w-5 h-5 border-2 rounded-full animate-spin"
+              style={{ borderColor: "rgba(167,139,250,0.2)", borderTopColor: "#A78BFA" }} />
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className="text-center py-4 text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>No avatars seeded yet</p>
+        ) : (
+          <div className="grid grid-cols-5 gap-1.5">
+            {filtered.map((avatar) => {
+              const selected = currentUrl === avatar.image_url;
+              return (
+                <button key={avatar.id}
+                  onClick={() => onSelect(avatar.image_url, activeTab as CharacterType)}
+                  className="aspect-square rounded-xl overflow-hidden transition-all active:scale-90 flex-shrink-0"
+                  style={selected
+                    ? { boxShadow: "0 0 0 2.5px #A78BFA, 0 0 12px rgba(167,139,250,0.4)" }
+                    : { boxShadow: "0 0 0 1.5px rgba(255,255,255,0.07)" }
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={avatar.image_url} alt="" className="w-full h-full object-cover" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Direction sheet — 3 clear sections ──────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[9px] font-bold uppercase tracking-[0.14em] mb-2"
+      style={{ color: "rgba(255,255,255,0.22)" }}>{children}</p>
+  );
+}
+
+function SheetDivider() {
+  return <div style={{ height: 1, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />;
+}
 
 function DirectionSheet({
   characterName,
@@ -405,7 +489,7 @@ function DirectionSheet({
   avatarUrl,
   characterType,
   onDirect,
-  onAvatarTypeChange,
+  onAvatarChange,
   onVoiceChange,
   onClose,
 }: {
@@ -415,19 +499,15 @@ function DirectionSheet({
   avatarUrl?: string;
   characterType: CharacterType;
   onDirect: (instruction: string) => void;
-  onAvatarTypeChange: (type: CharacterType) => void;
+  onAvatarChange: (url: string, type: CharacterType) => void;
   onVoiceChange: (voiceId: string) => void;
   onClose: () => void;
 }) {
   const [note, setNote] = useState("");
-  const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showVoicePicker, setShowVoicePicker]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isNarrator = characterName === "Narrator";
-
-  useEffect(() => {
-    const timer = setTimeout(() => inputRef.current?.focus(), 50);
-    return () => clearTimeout(timer);
-  }, []);
+  const isNarrator = characterName === "Narrator" || characterName === "קריין";
 
   const submit = (instruction: string) => {
     const trimmed = instruction.trim();
@@ -442,138 +522,161 @@ function DirectionSheet({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
+      {/* inset-x-3 constrains width to screen − 24 px — no overflow possible */}
       <div
-        className="fixed bottom-20 left-4 right-4 z-50 rounded-2xl p-4 flex flex-col gap-3 mx-auto"
+        className="fixed inset-x-3 bottom-20 z-50 rounded-2xl flex flex-col overflow-hidden"
         style={{
-          maxWidth: 480,
-          left: "50%",
-          transform: "translateX(-50%)",
           background: "linear-gradient(160deg, rgba(14,20,45,0.99) 0%, rgba(8,12,28,1) 100%)",
           border: "1px solid rgba(139,92,246,0.3)",
-          boxShadow: "0 8px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1) inset",
+          boxShadow: "0 8px 48px rgba(0,0,0,0.65)",
+          maxHeight: "calc(100dvh - 180px)",
         }}
       >
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          {avatarUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={avatarUrl} alt={characterName} className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-              style={{ border: "1.5px solid rgba(139,92,246,0.4)" }} />
-          ) : voice?.avatarUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={voice.avatarUrl} alt={voice.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-              style={{ border: "1.5px solid rgba(139,92,246,0.4)" }} />
-          ) : (
-            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold"
-              style={{ background: "rgba(139,92,246,0.15)", border: "1.5px solid rgba(139,92,246,0.4)", color: "#C4B5FD" }}>
-              {characterName.charAt(0)}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-white/80 truncate">{characterName}</p>
-            {voice && <p className="text-[10px] text-white/30 truncate">{voice.name}</p>}
-          </div>
-          <button onClick={onClose} className="text-white/25 flex-shrink-0"><Icon name="close" size={16} /></button>
-        </div>
-
-        {/* Avatar style picker */}
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
-            Avatar style
-          </p>
-          <div className="flex gap-1.5">
-            {AVATAR_TYPES.map(({ type, label, emoji }) => (
-              <button
-                key={type}
-                onClick={() => onAvatarTypeChange(type)}
-                className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl transition-all active:scale-95"
-                style={type === characterType
-                  ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.5)", color: "#C4B5FD" }
-                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }
-                }
-              >
-                <span className="text-base leading-none">{emoji}</span>
-                <span className="text-[9px] font-semibold mt-0.5">{label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Voice selector */}
-        <div className="relative">
-          <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
-            Voice
-          </p>
-          <button
-            onClick={() => setShowVoicePicker((p) => !p)}
-            className="flex items-center gap-2.5 w-full rounded-xl px-3 py-2.5 transition-all active:scale-[0.98]"
-            style={showVoicePicker
-              ? { background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.4)" }
-              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
-            }
-          >
-            {voice?.avatarUrl ? (
+        {/* ── Header ── */}
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-shrink-0"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0"
+            style={{ border: "2px solid rgba(139,92,246,0.45)" }}>
+            {avatarUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={voice.avatarUrl} alt={voice.name} className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-                style={{ border: "1px solid rgba(255,255,255,0.12)" }} />
+              <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0"
-                style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.2)" }}>
-                🎙️
+              <div className="w-full h-full flex items-center justify-center text-sm font-bold"
+                style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD" }}>
+                {characterName.charAt(0)}
               </div>
             )}
-            <span className="text-sm font-medium text-white/70 flex-1 text-left truncate">
-              {voice?.name ?? "Select voice"}
-            </span>
-            <Icon name={showVoicePicker ? "collapse" : "expand"} size={12} className="text-white/30" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white leading-tight truncate">{characterName}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+              {voice?.name ?? "No voice assigned"}
+            </p>
+          </div>
+          <button onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-full flex-shrink-0 transition-all active:scale-90"
+            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.45)" }}>
+            <Icon name="close" size={14} />
           </button>
-          {showVoicePicker && (
-            <VoicePicker
-              voices={voicePool}
-              selectedVoiceId={voice?.id ?? ""}
-              onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
-              onClose={() => setShowVoicePicker(false)}
-            />
-          )}
         </div>
 
-        {/* Quick direction chips */}
-        <div className="flex flex-wrap gap-2">
-          {CHAR_CHIPS.map((chip) => (
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* SECTION 1 — AVATAR */}
+          <div className="px-4 pt-3 pb-3">
+            <SectionLabel>Avatar</SectionLabel>
             <button
-              key={chip}
-              onClick={() => submit(chip)}
-              className="text-[11px] px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
-              style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
+              onClick={() => { setShowAvatarPicker((p) => !p); setShowVoicePicker(false); }}
+              className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 transition-all active:scale-[0.98]"
+              style={showAvatarPicker
+                ? { background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.5)" }
+                : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
+              }
             >
-              {chip}
+              <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0"
+                style={{ border: "1px solid rgba(255,255,255,0.12)" }}>
+                {avatarUrl
+                  ? /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-xs font-bold"
+                      style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD" }}>
+                      {characterName.charAt(0)}
+                    </div>
+                }
+              </div>
+              <span className="text-sm font-medium flex-1 text-left" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Choose avatar
+              </span>
+              <Icon name={showAvatarPicker ? "collapse" : "expand"} size={12} className="text-white/25" />
             </button>
-          ))}
-        </div>
+            {showAvatarPicker && (
+              <AvatarPickerDropdown
+                currentUrl={avatarUrl}
+                characterType={characterType}
+                onSelect={(url, type) => { onAvatarChange(url, type); setShowAvatarPicker(false); }}
+              />
+            )}
+          </div>
 
-        {/* Freetext */}
-        <div className="flex gap-2 items-center">
-          <input
-            ref={inputRef}
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") onClose(); }}
-            placeholder={`Custom direction, e.g. "speak slower"`}
-            className="flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none text-white/80 placeholder-white/20"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.22)" }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.55)")}
-            onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.22)")}
-          />
-          <button
-            onClick={() => submit(note)}
-            disabled={!note.trim()}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all active:scale-95 flex-shrink-0"
-            style={note.trim()
-              ? { background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.55)", color: "#A78BFA" }
-              : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
-            }
-          ><Icon name="submit" size={14} /></button>
+          <SheetDivider />
+
+          {/* SECTION 2 — VOICE */}
+          <div className="px-4 pt-3 pb-3">
+            <SectionLabel>Voice</SectionLabel>
+            <div className="relative">
+              <button
+                onClick={() => { setShowVoicePicker((p) => !p); setShowAvatarPicker(false); }}
+                className="flex items-center gap-2.5 w-full rounded-xl px-3 py-2.5 transition-all active:scale-[0.98]"
+                style={showVoicePicker
+                  ? { background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.4)" }
+                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
+                }
+              >
+                {voice?.avatarUrl
+                  ? /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={voice.avatarUrl} alt={voice.name}
+                      className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                      style={{ border: "1px solid rgba(255,255,255,0.12)" }} />
+                  : <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0"
+                      style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.2)" }}>
+                      🎙️
+                    </div>
+                }
+                <span className="text-sm font-medium text-white/70 flex-1 text-left truncate">
+                  {voice?.name ?? "Select voice"}
+                </span>
+                <Icon name={showVoicePicker ? "collapse" : "expand"} size={12} className="text-white/30" />
+              </button>
+              {showVoicePicker && (
+                <VoicePicker
+                  voices={voicePool}
+                  selectedVoiceId={voice?.id ?? ""}
+                  onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
+                  onClose={() => setShowVoicePicker(false)}
+                />
+              )}
+            </div>
+          </div>
+
+          <SheetDivider />
+
+          {/* SECTION 3 — DIRECTION */}
+          <div className="px-4 pt-3 pb-5">
+            <SectionLabel>Direct this character</SectionLabel>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {CHAR_CHIPS.map((chip) => (
+                <button key={chip} onClick={() => submit(chip)}
+                  className="text-[11px] px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+                  style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}>
+                  {chip}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 items-center">
+              <input
+                ref={inputRef}
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") onClose(); }}
+                placeholder={`Custom direction, e.g. "speak slower"`}
+                className="flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none text-white/80 placeholder-white/20"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.22)" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.55)")}
+                onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.22)")}
+              />
+              <button onClick={() => submit(note)} disabled={!note.trim()}
+                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 flex-shrink-0"
+                style={note.trim()
+                  ? { background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.55)", color: "#A78BFA" }
+                  : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
+                }>
+                <Icon name="submit" size={14} />
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </>
@@ -1269,13 +1372,11 @@ export default function Studio2Page() {
     });
   }, []);
 
-  // ─── Avatar type manual override ────────────────────────────────────────────
+  // ─── Avatar change (direct URL pick from bank) ───────────────────────────────
 
-  const handleAvatarTypeChange = useCallback((characterName: string, type: CharacterType) => {
+  const handleAvatarChange = useCallback((characterName: string, url: string, type: CharacterType) => {
+    setCharacterAvatars((prev) => ({ ...prev, [characterName]: url }));
     setCharacterTypes((prev) => ({ ...prev, [characterName]: type }));
-    fetchBankAvatars().then((bank) => {
-      setCharacterAvatars((prev) => ({ ...prev, [characterName]: pickBankAvatar(characterName, type, bank) }));
-    });
   }, []);
 
   // User-initiated block edits (text, SFX) — marks script dirty
@@ -1776,7 +1877,7 @@ export default function Studio2Page() {
                     avatars={characterAvatars}
                     characterTypes={characterTypes}
                     onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
-                    onAvatarTypeChange={handleAvatarTypeChange}
+                    onAvatarChange={handleAvatarChange}
                     onVoiceChange={handleCharacterVoiceChange}
                   />
                   <LessonEditor
