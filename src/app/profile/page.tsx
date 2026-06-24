@@ -6,7 +6,6 @@ import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import { useFontSize, type FontScale } from "@/context/FontSizeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { MOCK_USER } from "@/lib/mockData";
-import { SYSTEM_AVATARS } from "@/config/systemAvatars";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getNarratorVoiceId, setNarratorVoiceId } from "@/lib/narratorPreference";
 import type { UsageTotals } from "@/lib/usageTracker";
@@ -77,7 +76,11 @@ function ChildCard({
             border: `1.5px solid ${c1}50`,
           }}
         >
-          {child.avatarEmoji}
+          {child.avatarEmoji?.startsWith("http") ? (
+            <img src={child.avatarEmoji} alt={child.name} className="w-full h-full rounded-full object-cover" />
+          ) : (
+            child.avatarEmoji
+          )}
         </div>
         <span
           className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold"
@@ -99,69 +102,25 @@ function ChildCard({
 
 // ─── Avatar picker modal ──────────────────────────────────────────────────────
 
+type BankAvatar = { id: string; description: string; image_url: string };
+
 function AvatarPicker({
   current,
   onSelect,
   onClose,
 }: {
   current: string;
-  onSelect: (emoji: string) => void;
+  onSelect: (url: string) => void;
   onClose: () => void;
 }) {
-  const [portraitUrls, setPortraitUrls] = useState<Record<string, string>>({});
-  const [painting, setPainting] = useState(0);
-  const [paintingTotal, setPaintingTotal] = useState(0);
-  const seedingRef = useRef(false);
+  const [avatars, setAvatars] = useState<BankAvatar[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (seedingRef.current) return;
-    seedingRef.current = true;
-    let cancelled = false;
-
-    async function seedPortraits() {
-      try {
-        const res = await fetch("/api/admin/seed-system-avatars");
-        if (!res.ok) return;
-        const { missing, existingUrls } = await res.json() as {
-          missing: { id: string; prompt: string }[];
-          existingUrls: Record<string, string>;
-        };
-        if (existingUrls) setPortraitUrls((p) => ({ ...p, ...existingUrls }));
-        if (!missing?.length) return;
-        setPaintingTotal(Object.keys(existingUrls ?? {}).length + missing.length);
-        setPainting(Object.keys(existingUrls ?? {}).length);
-
-        for (const { id, prompt } of missing) {
-          if (cancelled) return;
-          for (let attempt = 0; attempt < 2; attempt++) {
-            try {
-              const seed = Math.floor(Math.random() * 999999);
-              const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=flux&width=512&height=512&seed=${seed}&nologo=true`;
-              const imgRes = await fetch(imgUrl, { signal: AbortSignal.timeout(25000) });
-              if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
-              if (cancelled) return;
-              const blob = await imgRes.blob();
-              const cacheRes = await fetch(`/api/admin/seed-system-avatars?avatarId=${id}`, {
-                method: "POST", body: blob, headers: { "Content-Type": blob.type },
-              });
-              if (cacheRes.ok) {
-                const { url: cachedUrl } = await cacheRes.json() as { url: string };
-                if (cachedUrl && !cancelled) {
-                  setPortraitUrls((p) => ({ ...p, [id]: cachedUrl }));
-                  setPainting((n) => n + 1);
-                  break;
-                }
-              }
-            } catch { /* retry or skip */ }
-            if (!cancelled) await new Promise((r) => setTimeout(r, 2000));
-          }
-          if (!cancelled) await new Promise((r) => setTimeout(r, 2000));
-        }
-      } catch { /* ignore */ }
-    }
-
-    seedPortraits();
-    return () => { cancelled = true; };
+    fetch("/api/avatar-bank-list")
+      .then((r) => r.json())
+      .then((data: { avatars: BankAvatar[] }) => { setAvatars(data.avatars ?? []); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   return (
@@ -185,14 +144,7 @@ function AvatarPicker({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
             <p className="text-white font-bold text-sm">Choose Avatar</p>
-            {paintingTotal > 0 && painting < paintingTotal ? (
-              <p className="text-[11px] mt-0.5 flex items-center gap-1.5" style={{ color: "rgba(79,195,247,0.7)" }}>
-                <span className="w-1.5 h-1.5 rounded-full inline-block animate-pulse" style={{ background: "#4fc3f7" }} />
-                Painting portraits… {painting}/{paintingTotal}
-              </p>
-            ) : (
-              <p className="text-white/30 text-[11px] mt-0.5">{SYSTEM_AVATARS.length} characters</p>
-            )}
+            <p className="text-white/30 text-[11px] mt-0.5">{loading ? "Loading…" : `${avatars.length} characters`}</p>
           </div>
           <button
             onClick={onClose}
@@ -204,14 +156,12 @@ function AvatarPicker({
         </div>
 
         <div className="grid grid-cols-4 gap-2.5 overflow-y-auto px-4 pb-6">
-          {SYSTEM_AVATARS.map((avatar) => {
-            const portraitUrl = portraitUrls[avatar.id];
-            const displayUrl = portraitUrl ?? avatar.url;
-            const isSelected = avatar.emoji === current;
+          {avatars.map((avatar) => {
+            const isSelected = avatar.image_url === current;
             return (
               <button
                 key={avatar.id}
-                onClick={() => { onSelect(avatar.emoji); onClose(); }}
+                onClick={() => { onSelect(avatar.image_url); onClose(); }}
                 className="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-2xl transition-all active:scale-95"
                 style={{
                   background: isSelected ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.03)",
@@ -221,8 +171,8 @@ function AvatarPicker({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={displayUrl}
-                  alt={avatar.label}
+                  src={avatar.image_url}
+                  alt={avatar.description}
                   className="w-14 h-14 rounded-full object-cover flex-shrink-0"
                   style={{
                     border: isSelected
@@ -230,9 +180,6 @@ function AvatarPicker({
                       : "1.5px solid rgba(255,255,255,0.13)",
                   }}
                 />
-                <span className="text-[9px] font-semibold text-white/40 truncate w-full text-center leading-tight">
-                  {avatar.label}
-                </span>
               </button>
             );
           })}
