@@ -92,77 +92,77 @@ export const AVATAR_BANK: AvatarDef[] = [
 
   // ── Adults – Female ───────────────────────────────────────────────────────────
   {
-    description: "elderly grandmother, 70s, white curly hair, warm wrinkled smile, floral cardigan, kind twinkling eyes",
+    description: "illustrated elderly grandmother character, white curly hair, warm wrinkled smile, floral cardigan, kind twinkling eyes",
     type: "adult", gender: "female", traits: ["elderly", "warm", "grandmother", "kind"],
   },
   {
-    description: "young woman, 22, long dark brown hair, bright green eyes, forest ranger uniform, adventurous spirit",
+    description: "illustrated adult ranger woman, long dark brown hair, bright green eyes, forest ranger uniform, adventurous spirit",
     type: "adult", gender: "female", traits: ["adventurous", "young", "ranger", "nature"],
   },
   {
-    description: "woman, 30, short natural afro, dark skin, scientist lab coat, brilliant warm expression",
+    description: "illustrated adult scientist woman, short natural afro, warm brown complexion, lab coat, brilliant warm expression",
     type: "adult", gender: "female", traits: ["brilliant", "scientist", "natural hair", "warm"],
   },
   {
-    description: "young woman, 24, fiery red hair, pale freckled skin, leather adventurer jacket, fierce brave look",
+    description: "illustrated adult adventurer woman, fiery red hair, pale freckled skin, leather jacket, fierce brave look",
     type: "adult", gender: "female", traits: ["fierce", "brave", "red hair", "adventurer"],
   },
   {
-    description: "woman, 35, East Asian features, long straight black hair, elegant purple sorceress robes, mysterious and graceful",
+    description: "illustrated adult sorceress character, long straight black hair, elegant purple robes, mysterious and graceful expression",
     type: "adult", gender: "female", traits: ["mysterious", "elegant", "magical", "graceful"],
   },
   {
-    description: "young woman, 20, streaks of violet in dark hair, fairy court outfit with wings, playful and magical expression",
+    description: "illustrated adult fairy woman, violet streaks in dark hair, fairy court outfit with wings, playful magical expression",
     type: "adult", gender: "female", traits: ["magical", "fairy", "playful", "whimsical"],
   },
   {
-    description: "woman, 45, silver-streaked dark hair, warm brown skin, professor's coat and wire-rim glasses, scholarly and kind",
+    description: "illustrated adult professor woman, silver-streaked dark hair, warm brown complexion, wire-rim glasses, scholarly and kind",
     type: "adult", gender: "female", traits: ["scholarly", "kind", "professor", "wise"],
   },
   {
-    description: "woman, 55, small and nimble, long silver braid, star-covered wizard cape, mischievously wise expression",
+    description: "illustrated adult wizard woman, small and nimble, long silver braid, star-covered wizard cape, mischievously wise expression",
     type: "adult", gender: "female", traits: ["wise", "mischievous", "wizard", "silver hair"],
   },
   {
-    description: "young woman, 28, olive skin, dark curly hair, golden crown, regal but warm princess expression",
+    description: "illustrated adult princess character, olive complexion, dark curly hair, golden crown, regal but warm expression",
     type: "adult", gender: "female", traits: ["regal", "princess", "warm", "dark hair"],
   },
 
   // ── Adults – Male ─────────────────────────────────────────────────────────────
   {
-    description: "elderly grandfather, 70s, silver hair, bushy white eyebrows, wearing suspenders and bowler hat, storyteller warmth in eyes",
+    description: "illustrated elderly grandfather character, silver hair, bushy white eyebrows, suspenders and bowler hat, storyteller warmth in eyes",
     type: "adult", gender: "male", traits: ["elderly", "grandfather", "wise", "warm"],
   },
   {
-    description: "young man, 22, curly blond hair, blue eyes, wizard apprentice robes with stars, eager and earnest expression",
+    description: "illustrated adult wizard apprentice, curly blond hair, blue eyes, robes with stars, eager and earnest expression",
     type: "adult", gender: "male", traits: ["young", "eager", "wizard", "blonde"],
   },
   {
-    description: "man, 35, strong build, dark beard and olive skin, shining knight armor, noble protective expression",
+    description: "illustrated adult knight character, strong build, dark beard and olive complexion, shining armor, noble protective expression",
     type: "adult", gender: "male", traits: ["noble", "knight", "protective", "strong"],
   },
   {
-    description: "man, 28, South Asian features, dark wavy hair, colorful musician's vest, joyful creative energy",
+    description: "illustrated adult musician character, dark wavy hair, warm olive complexion, colorful vest, joyful creative energy",
     type: "adult", gender: "male", traits: ["creative", "joyful", "musician", "South Asian"],
   },
   {
-    description: "man, 40, blonde beard, tall and broad, wearing flannel shirt, gentle giant with kind deep-set eyes",
+    description: "illustrated adult lumberjack character, blonde beard, tall and broad build, flannel shirt, gentle giant with kind eyes",
     type: "adult", gender: "male", traits: ["gentle", "kind", "giant", "blonde beard"],
   },
   {
-    description: "man, 50, round belly, full white beard, captain's coat with gold buttons, hearty laughing expression",
+    description: "illustrated adult sea captain character, round belly, full white beard, captain's coat with gold buttons, hearty laughing expression",
     type: "adult", gender: "male", traits: ["jolly", "captain", "white beard", "hearty"],
   },
   {
-    description: "man, 30, East Asian features, scholar's robes, bamboo staff, wise and centered calm expression",
+    description: "illustrated adult scholar character, almond-shaped eyes, scholar's robes, bamboo staff, wise and centered calm expression",
     type: "adult", gender: "male", traits: ["wise", "calm", "scholar", "East Asian"],
   },
   {
-    description: "young man, 19, dark skin, athletic build, wearing archer's green tunic and quiver, focused and intense",
+    description: "illustrated adult archer character, deep brown complexion, athletic build, green tunic and quiver, focused and intense expression",
     type: "adult", gender: "male", traits: ["focused", "archer", "athletic", "intense"],
   },
   {
-    description: "man, 45, weathered kind face, grey temples, wearing sea captain's coat, experienced storyteller expression",
+    description: "illustrated adult storyteller character, weathered kind face, grey temples, sea captain's coat, experienced warm expression",
     type: "adult", gender: "male", traits: ["experienced", "captain", "weathered", "kind"],
   },
 
