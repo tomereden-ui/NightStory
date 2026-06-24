@@ -88,10 +88,17 @@ function ScriptBrowser({
     e.stopPropagation();
     setDeletingId(id);
     try {
-      await fetch(`/api/script-saves/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/script-saves/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        console.error("[ScriptBrowser] delete failed:", res.status, await res.text().catch(() => ""));
+      }
+      // Always remove from local state — if API failed the item will reappear on next refresh
       setSaves((prev) => { const next = prev.filter((s) => s.id !== id); onCount?.(next.length); return next; });
-    } catch { /* ignore */ }
-    finally { setDeletingId(null); }
+    } catch (err) {
+      console.error("[ScriptBrowser] delete error:", err);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleClearAll = async () => {
@@ -183,7 +190,7 @@ function VersionList({
         const isLoading  = loadingId === s.id;
         const isDeleting = deletingId === s.id;
         const summarySnip = s.summary
-          ? s.summary.replace(/\n/g, " ").trim().slice(0, 80) + (s.summary.length > 80 ? "…" : "")
+          ? s.summary.replace(/\n/g, " ").trim().slice(0, 72) + (s.summary.length > 72 ? "…" : "")
           : null;
 
         return (
@@ -203,27 +210,38 @@ function VersionList({
                   ? "1px solid rgba(79,195,247,0.22)"
                   : "1px solid rgba(255,255,255,0.07)",
               opacity: isDeleting ? 0.35 : 1,
-              padding: "13px 14px",
+              padding: "10px 12px",
             }}
           >
+            {/* Cover thumbnail */}
+            <div className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+              style={{ width: 44, height: 44, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              {s.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.coverUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl">📖</span>
+              )}
+            </div>
+
             {/* Info */}
-            <div className="flex-1 min-w-0 flex flex-col gap-1">
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
               {/* Story name */}
               <div className="flex items-center gap-1.5">
-                {s.isAutosave && <span className="text-[13px] leading-none">⚡</span>}
-                <span className="text-[14px] font-semibold leading-snug truncate"
+                {s.isAutosave && <span className="text-[11px] leading-none">⚡</span>}
+                <span className="text-[13px] font-semibold leading-snug truncate"
                   style={{ color: s.isAutosave ? "rgba(245,158,11,0.95)" : "rgba(255,255,255,0.9)" }}>
                   {s.label}
                 </span>
               </div>
               {/* Summary line */}
               {summarySnip && (
-                <p className="text-[12px] leading-snug truncate" style={{ color: "rgba(255,255,255,0.42)" }}>
+                <p className="text-[11px] leading-snug truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
                   {summarySnip}
                 </p>
               )}
               {/* Timestamp */}
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+              <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.22)" }}>
                 {timeAgo(s.savedAt)}
               </p>
             </div>
@@ -239,11 +257,11 @@ function VersionList({
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete(s.id, e); }}
                 disabled={isDeleting}
-                className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.3)" }}
+                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.28)", color: "rgba(239,68,68,0.7)" }}
                 title="Delete this version"
               >
-                <Icon name="close" size={10} />
+                <Icon name="close" size={11} />
               </button>
             )}
           </div>
