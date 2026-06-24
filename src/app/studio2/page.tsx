@@ -288,8 +288,10 @@ function nameHash(name: string): number {
 function pickBankAvatar(characterName: string, type: CharacterType, bank: BankAvatar[]): string {
   const dbType = type === "narrator" ? "adult" : type;
   const pool = bank.filter((a) => a.type === dbType);
-  if (pool.length === 0) return buildDiceBearUrl(characterName, type);
-  return pool[nameHash(characterName) % pool.length].image_url;
+  // Fall back to the full bank if no type-matched entries (e.g. type column not yet populated)
+  const candidates = pool.length > 0 ? pool : bank;
+  if (candidates.length === 0) return buildDiceBearUrl(characterName, type);
+  return candidates[nameHash(characterName) % candidates.length].image_url;
 }
 
 // For narrator characters, always use the selected narrator voice's avatar
@@ -1551,7 +1553,13 @@ export default function Studio2Page() {
         const m = coverUrl.match(/^data:([^;]+);base64,(.+)$/);
         return m ? { mimeType: m[1], data: m[2] } : null;
       })();
-      if (coverPayload) { body.coverImageMimeType = coverPayload.mimeType; body.coverImageData = coverPayload.data; }
+      if (coverPayload) {
+        body.coverImageMimeType = coverPayload.mimeType;
+        body.coverImageData = coverPayload.data;
+      } else if (coverUrl && !coverUrl.startsWith("data:")) {
+        // Cover is a CDN URL (e.g. after save/reload) — pass it so the server can reuse without regenerating
+        body.existingCoverUrl = coverUrl.split("?")[0]; // strip cache-buster
+      }
       const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};
@@ -1925,7 +1933,7 @@ export default function Studio2Page() {
               title={storyTitle}
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
-              onRegenerateCover={scriptBlocks.length > 0 && !editingStoryId ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
+              onRegenerateCover={scriptBlocks.length > 0 && !!coverPrompt ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
               durationMinutes={durationMinutes}
               onDurationChange={setDurationMinutes}
               hideDirectorsNote

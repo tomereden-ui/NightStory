@@ -177,6 +177,7 @@ async function runProduction(
   existingCover?: { data: string; mimeType: string },
   force?: boolean,
   narratorVoiceId?: string,
+  existingCoverUrl?: string,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -243,7 +244,14 @@ async function runProduction(
     // create-story UI) — reuse that image instead of generating a brand new one here.
     const coverPromise: Promise<{ buf: Buffer; mimeType: string } | null> = existingCover
       ? Promise.resolve({ buf: Buffer.from(existingCover.data, "base64"), mimeType: existingCover.mimeType })
-      : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
+      : existingCoverUrl
+        ? fetch(existingCoverUrl).then(async (r) => {
+            if (!r.ok) return generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
+            const buf = Buffer.from(await r.arrayBuffer());
+            const mimeType = r.headers.get("content-type") ?? "image/jpeg";
+            return { buf, mimeType };
+          }).catch(() => generateCoverImage(drama.title, blocks, geminiKey, coverPrompt))
+        : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
 
     // ── Step 2: TTS for each dialogue line (batched parallel) ────────────────
     updateJob(jobId, {
@@ -626,6 +634,7 @@ export async function POST(req: NextRequest) {
       coverPrompt?: string;
       coverImageData?: string;
       coverImageMimeType?: string;
+      existingCoverUrl?: string;
       force?: boolean;
       narratorVoiceId?: string;
     };
@@ -659,7 +668,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {
