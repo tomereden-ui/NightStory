@@ -24,6 +24,10 @@ async function buildVoiceOverrides(
     new Set(blocks.map((b) => b.assignedVoiceId).filter((id) => id && !presetById[id])),
   );
 
+  // Real ElevenLabs voice IDs are 20-char alphanumeric strings; reject anything shorter
+  const isValidElId = (id: string | null | undefined): id is string =>
+    typeof id === "string" && id.length >= 15 && /^[a-zA-Z0-9]+$/.test(id);
+
   const familyById: Record<string, { elevenLabsId?: string; geminiVoiceName?: string }> = {};
   if (unresolvedIds.length > 0) {
     const { data, error } = await supabase.from("voices").select("*").in("id", unresolvedIds);
@@ -31,7 +35,10 @@ async function buildVoiceOverrides(
       console.warn(`[${ts()}][produce-drama] Failed to resolve family voices:`, error.message);
     } else {
       for (const row of data ?? []) {
-        familyById[row.id] = { elevenLabsId: row.el_voice_id ?? undefined, geminiVoiceName: row.gemini_voice_name ?? undefined };
+        familyById[row.id] = {
+          elevenLabsId: isValidElId(row.el_voice_id) ? row.el_voice_id : undefined,
+          geminiVoiceName: row.gemini_voice_name ?? undefined,
+        };
       }
     }
   }
