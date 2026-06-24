@@ -62,7 +62,7 @@ export const AVATAR_BANK: AvatarDef[] = [
     type: "child", gender: "boy", traits: ["mischievous", "freckles", "red hair", "playful"],
   },
   {
-    description: "young animated boy character, dark skin, big warm brown eyes, superhero cape, brave excited expression",
+    description: "animated cartoon superhero boy character, dark complexion, big warm brown eyes, red superhero cape, brave excited expression",
     type: "child", gender: "boy", traits: ["brave", "superhero", "dark skin", "excited"],
   },
   {
