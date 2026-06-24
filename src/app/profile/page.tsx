@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import { useFontSize, type FontScale } from "@/context/FontSizeContext";
@@ -202,7 +202,7 @@ function AddChildModal({
 }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
-  const [emoji, setEmoji] = useState(SYSTEM_AVATARS[0].emoji);
+  const [emoji, setEmoji] = useState("");
   const [pickingAvatar, setPickingAvatar] = useState(false);
 
   function handleSave() {
@@ -249,7 +249,10 @@ function AddChildModal({
               border: "1.5px solid rgba(79,195,247,0.3)",
             }}
           >
-            {emoji}
+            {emoji?.startsWith("http") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={emoji} alt="avatar" className="w-full h-full rounded-full object-cover" />
+            ) : emoji || <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 28 }}>＋</span>}
             <span
               className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm"
               style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
@@ -451,7 +454,9 @@ function ageToGroup(age: number): import("@/types").AgeGroup {
 // ─── Narrator voice picker ────────────────────────────────────────────────────
 
 function NarratorVoicePicker() {
-  const [selected, setSelected] = useState<string>(() => getNarratorVoiceId());
+  const [selected, setSelected] = useState<string>("Zephyr");
+
+  useEffect(() => { setSelected(getNarratorVoiceId()); }, []);
 
   function pick(id: string) {
     setSelected(id);
