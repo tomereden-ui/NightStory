@@ -105,9 +105,14 @@ function MessageBubble({
       </div>
 
       {!isLuna && (
-        <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0"
+        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-xl flex-shrink-0"
           style={{ background: "rgba(79,195,247,0.15)", border: "1.5px solid rgba(79,195,247,0.3)" }}>
-          {childEmoji ?? "🧒"}
+          {childEmoji?.startsWith("http") ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={childEmoji} alt="child" className="w-full h-full object-cover" />
+          ) : (
+            childEmoji ?? "🧒"
+          )}
         </div>
       )}
     </div>
