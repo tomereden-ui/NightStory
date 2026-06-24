@@ -46,9 +46,11 @@ function childHash(name: string) {
 function ChildCard({
   child,
   onChangeAvatar,
+  onDelete,
 }: {
   child: ChildProfile;
   onChangeAvatar: () => void;
+  onDelete: () => void;
 }) {
   const { t } = useLanguage();
   const [c1, c2] = CHILD_PALETTES[childHash(child.name) % CHILD_PALETTES.length];
@@ -64,6 +66,16 @@ function ChildCard({
         border: `1px solid ${c1}25`,
       }}
     >
+      {/* Delete button */}
+      <button
+        onClick={onDelete}
+        className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
+        style={{ background: "rgba(0,0,0,0.4)", color: "#fff" }}
+        title="Remove child"
+      >
+        <Icon name="close" size={12} />
+      </button>
+
       <button
         onClick={onChangeAvatar}
         className="relative group"
@@ -625,6 +637,13 @@ export default function ProfilePage() {
     } catch { /* ignore */ }
   }
 
+  async function handleDeleteChild(childId: string) {
+    setChildren((prev) => prev.filter((c) => c.id !== childId));
+    try {
+      await fetch(`/api/child-profiles/${childId}`, { method: "DELETE" });
+    } catch { /* ignore */ }
+  }
+
   async function handleChangeAvatar(childId: string, emoji: string) {
     setChildren((prev) => prev.map((c) => c.id === childId ? { ...c, avatarEmoji: emoji } : c));
     try {
@@ -667,6 +686,7 @@ export default function ProfilePage() {
                   key={child.id}
                   child={child}
                   onChangeAvatar={() => setEditAvatarFor(child.id)}
+                  onDelete={() => handleDeleteChild(child.id)}
                 />
               ))}
               <button
