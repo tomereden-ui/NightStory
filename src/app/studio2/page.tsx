@@ -160,17 +160,6 @@ function VersionList({
 }) {
   return (
     <div className="flex flex-col gap-2 pb-2">
-      {/* Clear all row */}
-      {onClearAll && (
-        <div className="flex items-center justify-end gap-2 px-1 pb-1">
-          <button onClick={onClearAll} disabled={clearing}
-            className="text-[11px] font-semibold px-3 py-1 rounded-lg transition-all active:scale-95"
-            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.28)", color: "rgba(239,68,68,0.75)" }}>
-            {clearing ? "Deleting…" : "Delete all"}
-          </button>
-        </div>
-      )}
-
       {saves.map((s) => {
         const isLoading  = loadingId === s.id;
         const isDeleting = deletingId === s.id;
@@ -242,16 +231,27 @@ function VersionList({
               <button
                 onClick={(e) => onDelete(s.id, e)}
                 disabled={isDeleting}
-                className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90"
-                style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.28)", color: "rgba(239,68,68,0.65)" }}
+                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }}
                 title="Delete this version"
               >
-                <Icon name="close" size={11} />
+                <Icon name="close" size={10} />
               </button>
             )}
           </div>
         );
       })}
+
+      {/* Delete all — bottom of list */}
+      {onClearAll && (
+        <div className="flex items-center justify-center pt-3 pb-1">
+          <button onClick={onClearAll} disabled={clearing}
+            className="text-[11px] font-medium px-4 py-1.5 rounded-xl transition-all active:scale-95"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }}>
+            {clearing ? "Deleting…" : "Delete all saved versions"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1992,8 +1992,8 @@ export default function Studio2Page() {
               background: "linear-gradient(180deg,rgba(12,18,40,1) 0%,rgba(7,10,22,1) 100%)",
               border: "1px solid rgba(255,255,255,0.09)",
               borderBottom: "none",
-              maxWidth: 560,
-              maxHeight: "78vh",
+              maxWidth: 430,
+              maxHeight: "72vh",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -2009,8 +2009,8 @@ export default function Studio2Page() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="text-base">🗂️</span>
-                <span className="text-sm font-bold tracking-wide text-white/90">Saved Versions</span>
+                <span className="text-base">📂</span>
+                <span className="text-sm font-semibold tracking-wide" style={{ color: "rgba(255,255,255,0.75)" }}>Saved Versions</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                   style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.25)", color: "rgba(79,195,247,0.8)" }}>
                   {savesCount}
