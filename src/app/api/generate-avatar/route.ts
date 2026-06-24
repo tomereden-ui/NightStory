@@ -1,47 +1,105 @@
+/**
+ * POST /api/generate-avatar
+ * Body: { description: string; type?: "child" | "adult" | "animal" | "narrator" }
+ *
+ * Generates a character portrait avatar via Imagen, uploads to Supabase storage,
+ * saves to avatar_bank for future reuse, and returns the public URL.
+ * Skips generation if an identical description is already in the bank.
+ */
 import { NextRequest, NextResponse } from "next/server";
-import { geminiPost, geminiText } from "@/lib/geminiClient";
-import { findBestAvatar } from "@/lib/services/avatarBankService";
+import { generateWithImagen } from "@/lib/services/imagenClient";
+import { supabase } from "@/lib/supabase";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
+const BUCKET = "avatars";
+
+function descriptionHash(description: string): string {
+  // Simple 32-bit hash → 8 hex chars, enough for storage key uniqueness
+  let h = 0x811c9dc5;
+  for (let i = 0; i < description.length; i++) {
+    h ^= description.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
+function buildAvatarPrompt(description: string): string {
+  return (
+    `3D Pixar-style circular portrait avatar. ${description}. ` +
+    `Centered composition, face and upper body clearly visible, expressive friendly face with large warm eyes. ` +
+    `Clean soft gradient background (deep navy blue to dark teal). ` +
+    `Warm cinematic rim lighting, soft volumetric glow. ` +
+    `Children's animation art style — Pixar quality. ` +
+    `Square canvas, subject perfectly centred for circular crop. ` +
+    `No text, no letters, no background characters.`
+  );
+}
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
+  if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
 
-  let characterName: string, summary: string | undefined;
+  let description: string;
+  let type: string | undefined;
   try {
-    ({ characterName, summary } = await req.json());
+    ({ description, type } = await req.json());
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
-  if (!characterName) return NextResponse.json({ error: "characterName required" }, { status: 400 });
+  if (!description?.trim()) return NextResponse.json({ error: "description required" }, { status: 400 });
 
-  // Step 1: Gemini writes a vivid portrait description of the character
-  let portraitDesc = `a children's story character, expressive face, wide eyes, dreamy look`;
-  try {
-    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
-      contents: [{
-        role: "user",
-        parts: [{
-          text: `You are a children's book illustrator writing a character description for avatar matching.
-Write 1 sentence in ENGLISH ONLY describing the character named "${characterName}".
+  description = description.trim();
+  const dbType = type === "narrator" ? "adult" : (type ?? "adult");
 
-Story context: ${summary ?? "a magical bedtime adventure"}
+  // ── Check if we already generated an avatar for this exact description ──────
+  const { data: existing } = await supabase
+    .from("avatar_bank")
+    .select("image_url")
+    .eq("description", description)
+    .maybeSingle();
 
-Include ONLY: age (child/young/middle-aged/elderly), species (human/animal type), gender, hair/fur color, eye color, and one personality trait visible in the expression.
-Do NOT include the character's name. Do NOT use non-Latin characters.
-Example: "7 year old girl, curly red hair, bright green eyes, wearing a blue cloak, brave and curious expression"`,
-        }],
-      }],
-      generationConfig: { temperature: 0.5, maxOutputTokens: 80, thinkingConfig: { thinkingBudget: 0 } },
-    });
-    const text = geminiText(data);
-    if (text && text.length > 20) portraitDesc = text.trim();
-  } catch {
-    console.warn("[AvatarGen] Gemini description failed, using fallback");
+  if (existing?.image_url) {
+    console.log("[AvatarGen] cache hit for:", description.slice(0, 60));
+    return NextResponse.json({ avatarUrl: existing.image_url });
   }
 
-  // Step 2: find closest avatar from the pre-seeded bank
-  const avatarUrl = await findBestAvatar(portraitDesc, apiKey);
+  // ── Generate fresh avatar via Imagen ─────────────────────────────────────────
+  console.log("[AvatarGen] generating:", description.slice(0, 80));
+  const prompt = buildAvatarPrompt(description);
+  const img = await generateWithImagen(prompt, apiKey);
 
-  console.log("[AvatarGen]", characterName, "→", portraitDesc.slice(0, 60), "→", avatarUrl ? "bank hit" : "no match");
+  if (!img) {
+    console.error("[AvatarGen] Imagen returned null for:", description.slice(0, 60));
+    return NextResponse.json({ avatarUrl: null });
+  }
+
+  // ── Upload to Supabase storage ────────────────────────────────────────────────
+  const ext = img.mimeType.includes("png") ? "png" : "jpg";
+  const hash = descriptionHash(description);
+  const storageKey = `char-avatar-${hash}.${ext}`;
+
+  const { error: uploadErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(storageKey, img.buf, { contentType: img.mimeType, upsert: true });
+
+  if (uploadErr) {
+    console.error("[AvatarGen] upload failed:", uploadErr.message);
+    return NextResponse.json({ avatarUrl: null });
+  }
+
+  const avatarUrl = supabase.storage.from(BUCKET).getPublicUrl(storageKey).data.publicUrl;
+
+  // ── Save to avatar_bank for future reuse ─────────────────────────────────────
+  await supabase.from("avatar_bank").insert({
+    description,
+    image_url: avatarUrl,
+    type: dbType,
+    gender: "neutral",
+    traits: [],
+  });
+
+  console.log("[AvatarGen] saved:", storageKey, "→", avatarUrl.slice(-40));
   return NextResponse.json({ avatarUrl });
 }

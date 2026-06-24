@@ -1223,17 +1223,17 @@ export default function Studio2Page() {
         if (info.visualDescription) descs[name] = info.visualDescription;
       }
       setCharacterDescriptions(descs);
-      // Rich descriptions from story generation — use semantic avatar matching via /api/avatar
+      // Rich descriptions from story generation — generate avatar via Imagen ad-hoc
       await Promise.allSettled(
         uniqueChars
           .filter((name) => storyCharacters[name]?.visualDescription && name !== "Narrator")
           .map(async (name) => {
             const { type, visualDescription } = storyCharacters[name];
             try {
-              const res = await fetch("/api/avatar", {
+              const res = await fetch("/api/generate-avatar", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ description: visualDescription }),
+                body: JSON.stringify({ description: visualDescription, type }),
               });
               if (!res.ok) return;
               const { avatarUrl } = await res.json() as { avatarUrl: string | null };

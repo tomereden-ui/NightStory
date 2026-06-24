@@ -41,62 +41,66 @@ export async function profileCharacters(
 
   const voiceList = AVAILABLE_VOICES.map((v) => `- "${v.label}": ${v.desc}`).join("\n");
 
-  // Build a character roster with visual descriptions + types when available
+  // Build character roster with visual descriptions and types
   const hasDescriptions = characterDescriptions && Object.keys(characterDescriptions).length > 0;
   const characterRoster = characters.map((name) => {
     const desc = characterDescriptions?.[name];
     const type = characterTypes?.[name];
-    const parts = [name];
-    if (type && type !== "narrator") parts.push(`[${type}]`);
-    if (desc) parts.push(`— ${desc}`);
-    return parts.join(" ");
-  }).join("\n");
+    const lines = [`CHARACTER: ${name}`];
+    if (type) lines.push(`  Type: ${type}`);
+    if (desc) lines.push(`  Appearance: ${desc}`);
+    return lines.join("\n");
+  }).join("\n\n");
 
   const prompt =
-    `You are a voice director for a children's bedtime audio drama (audience: ages 4–10, listening at bedtime).\n` +
-    `The target voice quality is professional animation movie acting — think Pixar or Studio Ghibli dubs:\n` +
-    `warm, clear, beautifully articulated, emotionally genuine, never harsh or over-performed.\n` +
-    `Every character must sound like a skilled voice actor: soft consonants, smooth transitions, natural breath.\n\n` +
-    `Characters${hasDescriptions ? " (with visual descriptions to guide voice casting)" : ""}:\n${characterRoster}\n\n` +
-    `Script sample:\n${scriptSample}\n\n` +
-    `Available voices:\n${voiceList}\n\n` +
-    `For EACH character produce:\n` +
-    `1. voiceName — choose from the list above (label name only, e.g. "Adam").\n` +
-    `   Base your choice on the character's actual role, lines in the script${hasDescriptions ? ", and visual description" : ""}.\n` +
-    `   A fox cub or small bird → bright, playful voice (Harry/Elli/Dorothy).\n` +
-    `   An elderly grandparent → warm, mature voice (Thomas/Adam).\n` +
-    `   A young child → light, energetic voice (Harry/Elli).\n` +
-    `2. persona — exactly 1 sentence (max 20 words) telling the TTS engine HOW to speak.\n` +
-    `   Derive it from: visual description + how this character speaks in the script + bedtime audience.\n` +
-    `   Cover: pace (slow/measured/fast) · pitch (low/mid/high) · emotional tone (warm, curious, playful, etc.).\n` +
-    `   For animals: match the creature's size and energy — small/quick animals are higher-pitched and faster.\n` +
-    `   Example narrator:     "Slow, low-pitched and warm — soft like a Pixar narrator, pausing at wonder."\n` +
-    `   Example child hero:   "Upbeat, mid-high-pitched and bright — breathless and clear like a Disney child."\n` +
-    `   Example fox cub:      "Fast, high-pitched and playful — bright squeaky voice, quick and mischievous."\n` +
-    `   Example elderly owl:  "Slow, low and gravelly — wise and unhurried, each word deliberate and warm."\n` +
-    `   Example grandmother:  "Gentle, mid-low and tender — soft and unhurried like a Ghibli elder grandmother."\n` +
-    `3. stability — a number 0.0–1.0 based on how variable this character's emotions are in the script:\n` +
-    `   • 0.2–0.4 = highly expressive (excited children, small playful animals, comedic characters)\n` +
-    `   • 0.5–0.6 = naturally expressive (most characters)\n` +
-    `   • 0.7–0.9 = calm, consistent (narrators, wise elders, large dignified animals)\n` +
-    `4. style — a number 0.0–1.0 based on how theatrical this character is in the script:\n` +
-    `   • 0.0–0.2 = understated, natural\n` +
-    `   • 0.3–0.5 = noticeable personality\n` +
-    `   • 0.6–0.8 = strong stylistic expression\n\n` +
-    `Rules:\n` +
-    `- Narrator uses "Adam" (or "Rachel" if female narrator) with stability 0.75, style 0.1.\n` +
-    `- Child characters use "Harry" (boys) or "Elli" (girls) with stability 0.3, style 0.5.\n` +
-    `- Small playful animals (fox cub, bird, bunny) use "Elli" or "Harry" with stability 0.3, style 0.6.\n` +
-    `- Large/dignified animals (elephant, bear, owl) use "Thomas" or "Dorothy" with stability 0.65, style 0.3.\n` +
-    `- Elderly characters use "Thomas" (male) or "Emily" (female) with stability 0.7, style 0.2.\n` +
-    `- Each character MUST get a different voice where possible.\n\n` +
-    `Return ONLY valid JSON (all keys double-quoted), no markdown:\n` +
-    `{ "CharacterName": { "voiceName": "Adam", "persona": "...", "stability": 0.7, "style": 0.1 }, ... }`;
+    `You are a Pixar/Ghibli voice casting director for a children's bedtime audio drama (ages 4–10).\n` +
+    `Target quality: professional animation voice acting — warm, clear, emotionally genuine, never harsh.\n\n` +
+    `════════════ CHARACTERS TO CAST ════════════\n` +
+    `${characterRoster}\n\n` +
+    `════════════ SCRIPT SAMPLE ════════════\n` +
+    `${scriptSample}\n\n` +
+    `════════════ AVAILABLE VOICES ════════════\n` +
+    `${voiceList}\n\n` +
+    `════════════ CASTING INSTRUCTIONS ════════════\n` +
+    `For EACH character, do the following research and casting:\n\n` +
+    `STEP 1 — ARCHETYPE RESEARCH\n` +
+    `Think about what this character IS:\n` +
+    (hasDescriptions
+      ? `  • Use the visual description to identify the exact archetype (tiny fox cub, wise grandmother, adventurous child, etc.)\n`
+      : `  • Infer archetype from the character's name and how they speak in the script\n`) +
+    `  • Consider how this archetype is voiced in acclaimed children's animation (Pixar, Ghibli, Disney)\n` +
+    `  • Reference specific examples: "A wise elderly owl like Archimedes in The Sword in the Stone…"\n\n` +
+    `STEP 2 — VOICE SPECIFICATION\n` +
+    `Define EXACTLY how this character should sound:\n` +
+    `  • PITCH: very high / high / mid / low / very low\n` +
+    `  • PACE: fast/erratic / natural / slow/measured / very slow\n` +
+    `  • ENERGY: bouncy/excitable / warm/engaging / calm/steady / weary/deliberate\n` +
+    `  • TEXTURE: breathy / clear / raspy / smooth / gravelly\n` +
+    `  • KEY TRAIT: the one quality that makes this voice instantly recognisable\n\n` +
+    `STEP 3 — CASTING\n` +
+    `Choose the best voice from the list and write a 1–2 sentence persona that tells the TTS engine EXACTLY how to perform.\n\n` +
+    `CASTING RULES (apply strictly):\n` +
+    `- Narrator: "Adam" with stability 0.80, style 0.05. Slow, warm, authoritative.\n` +
+    `- Young child characters (human): "Harry" (boys) or "Elli" (girls) — high-pitched, fast, bubbly. Stability 0.25, style 0.55.\n` +
+    `- Small playful animals (fox cub, bunny, bird, mouse, puppy): "Harry" or "Elli" — very high-pitched, quick, mischievous. Stability 0.2, style 0.65.\n` +
+    `- Large/powerful animals (bear, elephant, lion, dragon): "Arnold" or "Thomas" — deep, rumbling, slow. Stability 0.6, style 0.35.\n` +
+    `- Elderly male (grandfather, wizard, old knight): "Thomas" — low, unhurried, grandfatherly. Stability 0.75, style 0.15.\n` +
+    `- Elderly female (grandmother, old fairy, elder): "Emily" — soft, gentle, slow. Stability 0.75, style 0.15.\n` +
+    `- Young adult female: "Rachel" or "Dorothy" — warm, clear, expressive. Stability 0.5, style 0.35.\n` +
+    `- Young adult male: "Arnold" — energetic, bold, clear. Stability 0.45, style 0.4.\n` +
+    `- Each character MUST get a DIFFERENT voice from every other character (except Narrator vs others).\n\n` +
+    `Return ONLY valid JSON — no markdown, no explanation:\n` +
+    `{ "CharacterName": { "voiceName": "Adam", "persona": "...", "stability": 0.8, "style": 0.05 }, ... }`;
 
   try {
     const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 2048, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 2048,
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 },
+      },
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
         { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
@@ -104,6 +108,7 @@ export async function profileCharacters(
         { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
       ],
     });
+
     const raw = (geminiText(data))
       .trim()
       .replace(/^```(?:json)?\n?/, "")
@@ -112,24 +117,26 @@ export async function profileCharacters(
 
     const parsed: Record<string, CharacterVoiceProfile> = JSON.parse(raw);
 
-    // Resolve label names → EL voice IDs, validate, and add geminiVoiceName from config
+    // Resolve label names → EL voice IDs, validate, assign Gemini voice from config
     const labelToId = Object.fromEntries(AVAILABLE_VOICES.map((v) => [v.label.toLowerCase(), v.name]));
     const validIds  = new Set(AVAILABLE_VOICES.map((v) => v.name));
     for (const char of characters) {
       const entry = parsed[char];
-      if (!entry) { parsed[char] = fallbackProfile(char); continue; }
+      if (!entry) { parsed[char] = fallbackProfile(char, characterDescriptions?.[char]); continue; }
       const resolved = labelToId[entry.voiceName.toLowerCase()];
       if (resolved) {
         parsed[char].voiceName = resolved;
       } else if (!validIds.has(entry.voiceName)) {
-        parsed[char] = fallbackProfile(char);
+        parsed[char] = fallbackProfile(char, characterDescriptions?.[char]);
       }
-      // Clamp numeric fields
       parsed[char].stability = Math.min(1, Math.max(0, parsed[char].stability ?? 0.55));
       parsed[char].style     = Math.min(1, Math.max(0, parsed[char].style     ?? 0.2));
-      // Assign Gemini voice using name + visual description for better age/type matching
+      // Assign Gemini voice using description for better age/type matching
       parsed[char].geminiVoiceName = pickGeminiVoice(char, characterDescriptions?.[char] ?? "");
     }
+
+    console.log("[CharacterProfiler] cast:", Object.entries(parsed)
+      .map(([n, p]) => `${n}→${p.voiceName.slice(0, 6)}/${p.geminiVoiceName}`).join(", "));
     return parsed;
   } catch (err) {
     console.warn("[CharacterProfiler] Falling back to defaults:", err);
@@ -140,13 +147,20 @@ export async function profileCharacters(
 function fallbackProfile(characterName: string, visualDescription?: string): CharacterVoiceProfile {
   const hint = `${characterName} ${visualDescription ?? ""}`.toLowerCase();
   if (/narrator|storyteller/.test(hint)) {
-    return { voiceName: NARRATOR_EL_VOICE_ID, geminiVoiceName: NARRATOR_GEMINI_VOICE, persona: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses.", stability: 0.75, style: 0.1 };
+    return { voiceName: NARRATOR_EL_VOICE_ID, geminiVoiceName: NARRATOR_GEMINI_VOICE, persona: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses.", stability: 0.80, style: 0.05 };
   }
-  if (/\b(child|kid|little|young|girl|boy|cub|puppy|kitten|chick)\b/.test(hint)) {
-    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness.", stability: 0.3, style: 0.5 };
+  if (/\b(cub|fawn|foal|kitten|puppy|chick|hatchling|baby|tiny|small)\b.*\b(fox|dog|cat|bird|rabbit|bunny|mouse|squirrel|animal)\b/.test(hint)
+      || /\b(playful|mischievous)\b.*\b(animal|creature)\b/.test(hint)) {
+    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Very high-pitched, fast and mischievous — quick bright delivery like a tiny playful animal, irresistibly cute.", stability: 0.2, style: 0.65 };
   }
-  if (/\b(elderly|elder|grandmother|grandfather|grandma|grandpa|old|aged|wise)\b/.test(hint)) {
-    return { voiceName: "GBv7mTt0atIp3Br8iCZE", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Slow, low-pitched and gentle — measured and unhurried, warm with age.", stability: 0.7, style: 0.2 };
+  if (/\b(child|kid|little|young|girl|boy)\b/.test(hint)) {
+    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "High-pitched, fast and bright — bubbly excited delivery like a Disney child hero.", stability: 0.25, style: 0.55 };
+  }
+  if (/\b(elderly|elder|grandmother|grandma|granny|old woman|aged woman)\b/.test(hint)) {
+    return { voiceName: "LcfcDJNUP1GQjkzn1xUU", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Slow, soft and gentle — warm grandmotherly pace, every word tender and unhurried.", stability: 0.75, style: 0.15 };
+  }
+  if (/\b(grandfather|grandpa|gramps|old man|wizard|elder|wise old|aged man)\b/.test(hint)) {
+    return { voiceName: "GBv7mTt0atIp3Br8iCZE", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Low, slow and gravelly — wise and deliberate, each word measured like a Ghibli elder.", stability: 0.75, style: 0.15 };
   }
   return { voiceName: "21m00Tcm4TlvDq8ikWAM", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Measured, mid-pitched and warm — speak naturally with clear emotional colour.", stability: 0.55, style: 0.25 };
 }
