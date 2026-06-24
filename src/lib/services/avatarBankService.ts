@@ -1,56 +1,54 @@
-import { getEmbedding } from "./embeddingService";
 import { supabase } from "@/lib/supabase";
+import { geminiPost, geminiText } from "@/lib/geminiClient";
 
-// Minimum cosine similarity to accept a match; below this we fall back to null.
-// Tune this after real usage — lower = more liberal matching, higher = stricter.
-const SIMILARITY_THRESHOLD = 0.65;
+let bankCache: Array<{ id: string; description: string; image_url: string }> | null = null;
 
-interface AvatarMatch {
-  imageUrl: string;
-  description: string;
-  type: string;
-  gender: string;
-  similarity: number;
+async function getBank() {
+  if (bankCache) return bankCache;
+  const { data } = await supabase.from("avatar_bank").select("id, description, image_url");
+  bankCache = data ?? [];
+  return bankCache;
 }
 
-/**
- * Find the closest pre-generated avatar from the bank for a given description.
- * Returns the public Storage URL, or null if no match clears the threshold
- * (which shouldn't happen once the bank is seeded — every bank entry is a valid fallback).
- */
 export async function findBestAvatar(
   description: string,
   apiKey: string,
 ): Promise<string | null> {
-  const embedding = await getEmbedding(description, apiKey);
-  if (!embedding) {
-    console.warn("[AvatarBank] embedding failed for:", description.slice(0, 60));
+  const bank = await getBank();
+  if (bank.length === 0) {
+    console.warn("[AvatarBank] bank is empty — run /api/admin/seed-avatar-bank first");
     return null;
   }
 
-  const { data, error } = await supabase.rpc("match_avatar", {
-    query_embedding: embedding,
-    match_threshold: SIMILARITY_THRESHOLD,
-  }) as { data: AvatarMatch[] | null; error: unknown };
+  const list = bank.map((a, i) => `${i + 1}. ${a.description}`).join("\n");
 
-  if (error) {
-    console.error("[AvatarBank] RPC error:", error);
-    return null;
+  try {
+    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `You are matching a character to the closest pre-made avatar.\n\nCharacter: "${description}"\n\nAvatars:\n${list}\n\nReply with ONLY the number of the best match. Nothing else.`,
+        }],
+      }],
+      generationConfig: { temperature: 0, maxOutputTokens: 5, thinkingConfig: { thinkingBudget: 0 } },
+    });
+
+    const text = geminiText(data)?.trim() ?? "";
+    const index = parseInt(text.replace(/\D/g, "")) - 1;
+
+    if (isNaN(index) || index < 0 || index >= bank.length) {
+      console.warn("[AvatarBank] unexpected Gemini response:", text);
+      return bank[0].image_url;
+    }
+
+    console.log(`[AvatarBank] matched "${description.slice(0, 50)}" → ${bank[index].description.slice(0, 50)}`);
+    return bank[index].image_url;
+  } catch (err) {
+    console.error("[AvatarBank] matching failed:", err);
+    return bank[0]?.image_url ?? null;
   }
-
-  const match = data?.[0];
-  if (!match) {
-    console.warn("[AvatarBank] no match above threshold for:", description.slice(0, 60));
-    return null;
-  }
-
-  console.log(`[AvatarBank] match (${(match.similarity * 100).toFixed(1)}%) → ${match.description.slice(0, 60)}`);
-  return match.imageUrl;
 }
 
-/**
- * Build a description string from child profile fields to pass into findBestAvatar.
- */
 export function childProfileDescription(
   name: string,
   age: number,
