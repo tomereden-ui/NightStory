@@ -569,6 +569,25 @@ export default function ProfilePage() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
 
+  // Load children from DB on mount
+  useEffect(() => {
+    fetch("/api/child-profiles")
+      .then((r) => r.json())
+      .then((data: Array<{ id: string; name: string; age: number; avatar_emoji: string }>) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setChildren(data.map((c) => ({
+            id: c.id,
+            name: c.name,
+            age: c.age,
+            avatarEmoji: c.avatar_emoji,
+            ageGroup: ageToGroup(c.age),
+            favoriteCategories: [],
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetch("/api/usage", { cache: "no-store" })
       .then((r) => r.json())
@@ -576,22 +595,32 @@ export default function ProfilePage() {
       .catch(() => {});
   }, []);
 
-  function handleAddChild(partial: Omit<ChildProfile, "id" | "favoriteCategories" | "ageGroup">) {
-    const newChild: ChildProfile = {
-      id: `c${Date.now()}`,
-      name: partial.name,
-      avatarEmoji: partial.avatarEmoji,
-      age: partial.age,
-      ageGroup: ageToGroup(partial.age ?? 6),
-      favoriteCategories: [],
-    };
-    setChildren((prev) => [...prev, newChild]);
+  async function handleAddChild(partial: Omit<ChildProfile, "id" | "favoriteCategories" | "ageGroup">) {
+    try {
+      const res = await fetch("/api/child-profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: partial.name, age: partial.age, avatar_emoji: partial.avatarEmoji ?? "", gender: "other" }),
+      });
+      if (res.ok) {
+        const saved = await res.json() as { id: string; name: string; age: number; avatar_emoji: string };
+        setChildren((prev) => [...prev, {
+          id: saved.id, name: saved.name, age: saved.age,
+          avatarEmoji: saved.avatar_emoji, ageGroup: ageToGroup(saved.age), favoriteCategories: [],
+        }]);
+      }
+    } catch { /* ignore */ }
   }
 
-  function handleChangeAvatar(childId: string, emoji: string) {
-    setChildren((prev) =>
-      prev.map((c) => c.id === childId ? { ...c, avatarEmoji: emoji } : c)
-    );
+  async function handleChangeAvatar(childId: string, emoji: string) {
+    setChildren((prev) => prev.map((c) => c.id === childId ? { ...c, avatarEmoji: emoji } : c));
+    try {
+      await fetch(`/api/child-profiles/${childId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_emoji: emoji }),
+      });
+    } catch { /* ignore */ }
   }
 
   const editingChild = children.find((c) => c.id === editAvatarFor);
