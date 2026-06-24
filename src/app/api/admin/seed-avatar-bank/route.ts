@@ -13,7 +13,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithImagen } from "@/lib/services/imagenClient";
-import { getEmbedding } from "@/lib/services/embeddingService";
 import { AVATAR_BANK, AVATAR_STYLE_SUFFIX } from "@/config/avatarBankPrompts";
 import { supabase } from "@/lib/supabase";
 
@@ -79,19 +78,15 @@ export async function POST(req: NextRequest) {
 
       const imageUrl = supabase.storage.from(BUCKET).getPublicUrl(fileName).data.publicUrl;
 
-      // 3. Generate embedding of the plain description (not the style-augmented prompt)
-      const embedding = await getEmbedding(def.description, apiKey);
-      if (!embedding) throw new Error("Embedding returned null");
-
-      // 4. Insert into avatar_bank
+      // 3. Insert into avatar_bank (matching uses Gemini Flash, no embedding needed)
       const { error: insertErr } = await supabase.from("avatar_bank").insert({
         description: def.description,
-        prompt_embedding: embedding,
         image_url: imageUrl,
         type: def.type,
         gender: def.gender,
         traits: def.traits,
       });
+
       if (insertErr) throw new Error(`Insert failed: ${insertErr.message}`);
 
       results.push({ index: globalIndex, description: def.description.slice(0, 50), status: "seeded" });
