@@ -569,20 +569,33 @@ export default function ProfilePage() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
 
-  // Load children from DB on mount
+  // Load children from DB on mount; seed mock defaults if table is empty
   useEffect(() => {
     fetch("/api/child-profiles")
       .then((r) => r.json())
-      .then((data: Array<{ id: string; name: string; age: number; avatar_emoji: string }>) => {
+      .then(async (data: Array<{ id: string; name: string; age: number; avatar_emoji: string }>) => {
         if (Array.isArray(data) && data.length > 0) {
           setChildren(data.map((c) => ({
-            id: c.id,
-            name: c.name,
-            age: c.age,
-            avatarEmoji: c.avatar_emoji,
-            ageGroup: ageToGroup(c.age),
-            favoriteCategories: [],
+            id: c.id, name: c.name, age: c.age,
+            avatarEmoji: c.avatar_emoji, ageGroup: ageToGroup(c.age), favoriteCategories: [],
           })));
+        } else {
+          // Seed mock defaults into DB so future PATCHes work
+          const seeded: ChildProfile[] = [];
+          for (const mock of MOCK_USER.childProfiles) {
+            try {
+              const res = await fetch("/api/child-profiles", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: mock.name, age: mock.age ?? 5, avatar_emoji: mock.avatarEmoji ?? "", gender: "other" }),
+              });
+              if (res.ok) {
+                const saved = await res.json() as { id: string; name: string; age: number; avatar_emoji: string };
+                seeded.push({ id: saved.id, name: saved.name, age: saved.age, avatarEmoji: saved.avatar_emoji, ageGroup: ageToGroup(saved.age), favoriteCategories: [] });
+              }
+            } catch { /* ignore */ }
+          }
+          if (seeded.length > 0) setChildren(seeded);
         }
       })
       .catch(() => {});
