@@ -112,9 +112,10 @@ MANDATORY SFX PLACEMENT (every story must include all of these)
 ---------------------------------------------------------------
   OPENING SEQUENCE (blocks #1–#3, all consecutive SFX — no dialogue yet)
   -----------------------------------------------------------------------
-  The story must open with 2–3 consecutive SFX-only blocks that immerse the listener
-  in the story's world BEFORE the first word is spoken. Think of it as a cinema scene
-  establishing shot — the audience hears the world snap into existence around them.
+  ⚠ MANDATORY: The very first 2–3 blocks of EVERY story MUST be SFX blocks.
+  NO narration or dialogue may appear before these opening SFX. This is non-negotiable.
+  The listener must hear the world come alive BEFORE a single word is spoken.
+  Think of it as a cinema establishing shot — atmosphere first, then story.
 
   Block #1 — WORLD LAYER (required)
      The broadest environmental sound that defines where and when we are.
@@ -252,8 +253,10 @@ Example response (no STORY VALUES — four fields only):
   "summary": "Milo and his dragon Pip discover a lost star that has fallen into the Whispering Woods. Together they must carry it back to the sky before sunrise.",
   "coverPrompt": "A small brave child and a tiny glowing dragon carrying a fallen star through a dark magical forest, warm golden light, ethereal atmosphere",
   "blocks": [
-    { "characterName": "SFX",      "textPayload": "[SFX: gentle underwater bubbles rising slowly, soft and dreamlike | 5s]" },
-    { "characterName": "Narrator", "textPayload": "[warmly] Deep beneath the waves, where the light turns silver..." },
+    { "characterName": "SFX",      "textPayload": "[SFX: deep forest night sounds — crickets singing, a gentle breeze stirring the treetops, distant owl hooting softly | 6s]" },
+    { "characterName": "SFX",      "textPayload": "[SFX: small dragon footsteps on dry leaves, a soft snuffling sound close by, tiny wings rustling | 3s]" },
+    { "characterName": "SFX",      "textPayload": "[SFX: a single chime, clear and magical, fading gently into the night like a falling star | 2s]" },
+    { "characterName": "Narrator", "textPayload": "[warmly] Deep in the Whispering Woods, where the trees stand tall as sleeping giants, a tiny star had fallen." },
     { "characterName": "SFX",      "textPayload": "[SFX: soft wind through tall grass fading slowly into silence, peaceful | 6s]" }
   ]
 }
@@ -264,8 +267,10 @@ Example response (with STORY VALUES — five fields, lessonImplementations requi
   "summary": "Milo and his dragon Pip discover a lost star that has fallen into the Whispering Woods. Together they must carry it back to the sky before sunrise.",
   "coverPrompt": "A small brave child and a tiny glowing dragon carrying a fallen star through a dark magical forest, warm golden light, ethereal atmosphere",
   "blocks": [
-    { "characterName": "SFX",      "textPayload": "[SFX: gentle forest night sounds, crickets and a soft breeze | 5s]" },
-    { "characterName": "Narrator", "textPayload": "[warmly] Deep in the Whispering Woods, Milo felt his heart pounding..." },
+    { "characterName": "SFX",      "textPayload": "[SFX: deep forest night — crickets, a gentle wind through tall pines, distant stream trickling | 6s]" },
+    { "characterName": "SFX",      "textPayload": "[SFX: small careful footsteps crunching through fallen leaves, getting closer | 3s]" },
+    { "characterName": "SFX",      "textPayload": "[SFX: a soft magical shimmer, warm and golden, like something waking up | 2s]" },
+    { "characterName": "Narrator", "textPayload": "[warmly] Deep in the Whispering Woods, Milo walked carefully, his lantern bobbing in the dark." },
     { "characterName": "Milo",     "textPayload": "[bravely, though a little scared] I'll do it. Pip needs me." },
     { "characterName": "SFX",      "textPayload": "[SFX: soft wind through tall grass fading slowly into silence, peaceful | 6s]" }
   ],
@@ -274,7 +279,7 @@ Example response (with STORY VALUES — five fields, lessonImplementations requi
       "lesson": "Bravery",
       "implemented": true,
       "how": "When Milo chooses to cross the dark part of the forest alone to reach Pip, despite trembling with fear.",
-      "blockIndices": [2]
+      "blockIndices": [4]
     }
   ]
 }
