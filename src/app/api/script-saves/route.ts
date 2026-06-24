@@ -46,7 +46,11 @@ async function writeManualIndex(index: ScriptSaveMeta[]): Promise<void> {
 async function writeSave(save: ScriptSaveFull): Promise<void> {
   const blob = new Blob([JSON.stringify(save)], { type: "application/json" });
   const path = save.isAutosave ? "autosave.json" : `${save.id}.json`;
-  await supabase.storage.from(BUCKET).upload(path, blob, { upsert: true });
+  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { upsert: true });
+  if (error) {
+    console.error("[ScriptSaves] writeSave failed:", error.message, "path:", path);
+    throw new Error(`Storage upload failed: ${error.message}`);
+  }
 }
 
 // GET — return merged list: autosave first, then manual saves newest-first

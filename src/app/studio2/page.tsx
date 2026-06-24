@@ -56,7 +56,6 @@ function ScriptBrowser({
   const [expanded, setExpanded] = useState(forceExpanded);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [clearConfirm, setClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
@@ -72,13 +71,17 @@ function ScriptBrowser({
     setLoadingId(id);
     try {
       const res = await fetch(`/api/script-saves/${id}`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Not found");
+      if (!res.ok) {
+        console.error("[ScriptBrowser] load failed:", res.status, id);
+        alert("Could not load this version — the file may be missing from storage.");
+        return;
+      }
       const save = await res.json() as ScriptSaveFull;
       onLoad(save);
       setExpanded(false);
       onClose?.();
-    } catch {
-      // keep open
+    } catch (err) {
+      console.error("[ScriptBrowser] load error:", err);
     } finally {
       setLoadingId(null);
     }
@@ -102,13 +105,12 @@ function ScriptBrowser({
   };
 
   const handleClearAll = async () => {
-    if (!clearConfirm) { setClearConfirm(true); return; }
+    if (!confirm("Delete all saved versions? This cannot be undone.")) return;
     setClearing(true);
     const manuals = saves.filter((s) => !s.isAutosave);
     await Promise.allSettled(manuals.map((s) => fetch(`/api/script-saves/${s.id}`, { method: "DELETE" })));
     setSaves((prev) => { const next = prev.filter((s) => s.isAutosave); onCount?.(next.length); return next; });
     setClearing(false);
-    setClearConfirm(false);
   };
 
   const manualSaves = saves.filter((s) => !s.isAutosave);
@@ -139,15 +141,13 @@ function ScriptBrowser({
       onLoad={handleLoad}
       onDelete={handleDelete}
       onClearAll={manualSaves.length > 0 ? handleClearAll : undefined}
-      clearConfirm={clearConfirm}
       clearing={clearing}
-      onCancelClear={() => setClearConfirm(false)}
     />
   );
 }
 
 function VersionList({
-  saves, loadingId, deletingId, onLoad, onDelete, onClearAll, clearConfirm, clearing, onCancelClear,
+  saves, loadingId, deletingId, onLoad, onDelete, onClearAll, clearing,
 }: {
   saves: ScriptSaveMeta[];
   loadingId: string | null;
@@ -155,34 +155,18 @@ function VersionList({
   onLoad: (id: string) => void;
   onDelete: (id: string, e: React.MouseEvent) => void;
   onClearAll?: () => void;
-  clearConfirm?: boolean;
   clearing?: boolean;
-  onCancelClear?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-2 pb-2">
       {/* Clear all row */}
       {onClearAll && (
         <div className="flex items-center justify-end gap-2 px-1 pb-1">
-          {clearConfirm ? (
-            <>
-              <span className="text-[11px] text-white/40">Delete all manual saves?</span>
-              <button onClick={onClearAll} disabled={clearing}
-                className="text-[11px] font-bold px-3 py-1 rounded-lg transition-all active:scale-95"
-                style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.35)", color: "#f87171" }}>
-                {clearing ? "Deleting…" : "Yes, clear all"}
-              </button>
-              <button onClick={onCancelClear}
-                className="text-[11px] font-medium px-2 py-1 rounded-lg"
-                style={{ color: "rgba(255,255,255,0.3)" }}>Cancel</button>
-            </>
-          ) : (
-            <button onClick={onClearAll}
-              className="text-[11px] font-semibold transition-all active:scale-95"
-              style={{ color: "rgba(239,68,68,0.5)" }}>
-              Delete all
-            </button>
-          )}
+          <button onClick={onClearAll} disabled={clearing}
+            className="text-[11px] font-semibold px-3 py-1 rounded-lg transition-all active:scale-95"
+            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.28)", color: "rgba(239,68,68,0.75)" }}>
+            {clearing ? "Deleting…" : "Delete all"}
+          </button>
         </div>
       )}
 
