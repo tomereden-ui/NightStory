@@ -24,6 +24,8 @@ export interface CharacterVoiceProfile {
 export async function profileCharacters(
   blocks: ScriptBlock[],
   apiKey: string,
+  characterDescriptions?: Record<string, string>,
+  characterTypes?: Record<string, string>,
 ): Promise<Record<string, CharacterVoiceProfile>> {
   const seen = new Set<string>();
   const characters = blocks.map((b) => b.characterName).filter((c) => {
@@ -39,27 +41,44 @@ export async function profileCharacters(
 
   const voiceList = AVAILABLE_VOICES.map((v) => `- "${v.label}": ${v.desc}`).join("\n");
 
+  // Build a character roster with visual descriptions + types when available
+  const hasDescriptions = characterDescriptions && Object.keys(characterDescriptions).length > 0;
+  const characterRoster = characters.map((name) => {
+    const desc = characterDescriptions?.[name];
+    const type = characterTypes?.[name];
+    const parts = [name];
+    if (type && type !== "narrator") parts.push(`[${type}]`);
+    if (desc) parts.push(`— ${desc}`);
+    return parts.join(" ");
+  }).join("\n");
+
   const prompt =
     `You are a voice director for a children's bedtime audio drama (audience: ages 4–10, listening at bedtime).\n` +
     `The target voice quality is professional animation movie acting — think Pixar or Studio Ghibli dubs:\n` +
     `warm, clear, beautifully articulated, emotionally genuine, never harsh or over-performed.\n` +
     `Every character must sound like a skilled voice actor: soft consonants, smooth transitions, natural breath.\n\n` +
-    `Characters: ${characters.join(", ")}\n\n` +
+    `Characters${hasDescriptions ? " (with visual descriptions to guide voice casting)" : ""}:\n${characterRoster}\n\n` +
     `Script sample:\n${scriptSample}\n\n` +
     `Available voices:\n${voiceList}\n\n` +
     `For EACH character produce:\n` +
     `1. voiceName — choose from the list above (label name only, e.g. "Adam").\n` +
-    `   Base your choice on the character's actual role and lines in the script.\n` +
+    `   Base your choice on the character's actual role, lines in the script${hasDescriptions ? ", and visual description" : ""}.\n` +
+    `   A fox cub or small bird → bright, playful voice (Harry/Elli/Dorothy).\n` +
+    `   An elderly grandparent → warm, mature voice (Thomas/Adam).\n` +
+    `   A young child → light, energetic voice (Harry/Elli).\n` +
     `2. persona — exactly 1 sentence (max 20 words) telling the TTS engine HOW to speak.\n` +
-    `   Derive it from: how this character speaks in the script + their role in the story + the bedtime audience.\n` +
-    `   Cover: pace (slow/measured/fast) · pitch (low/mid/high) · emotional tone (e.g. warm, curious, tender, playful).\n` +
-    `   Example narrator:   "Slow, low-pitched and warm — soft and clear like a Pixar narrator, pausing at wonder."\n` +
-    `   Example child hero: "Upbeat, mid-pitched and bright — clear and breathless like a Disney child hero."\n` +
-    `   Example wise elder: "Measured, low-pitched and tender — smooth like a Ghibli elder, every word unhurried."\n` +
+    `   Derive it from: visual description + how this character speaks in the script + bedtime audience.\n` +
+    `   Cover: pace (slow/measured/fast) · pitch (low/mid/high) · emotional tone (warm, curious, playful, etc.).\n` +
+    `   For animals: match the creature's size and energy — small/quick animals are higher-pitched and faster.\n` +
+    `   Example narrator:     "Slow, low-pitched and warm — soft like a Pixar narrator, pausing at wonder."\n` +
+    `   Example child hero:   "Upbeat, mid-high-pitched and bright — breathless and clear like a Disney child."\n` +
+    `   Example fox cub:      "Fast, high-pitched and playful — bright squeaky voice, quick and mischievous."\n` +
+    `   Example elderly owl:  "Slow, low and gravelly — wise and unhurried, each word deliberate and warm."\n` +
+    `   Example grandmother:  "Gentle, mid-low and tender — soft and unhurried like a Ghibli elder grandmother."\n` +
     `3. stability — a number 0.0–1.0 based on how variable this character's emotions are in the script:\n` +
-    `   • 0.2–0.4 = highly expressive (excited children, comedic characters)\n` +
+    `   • 0.2–0.4 = highly expressive (excited children, small playful animals, comedic characters)\n` +
     `   • 0.5–0.6 = naturally expressive (most characters)\n` +
-    `   • 0.7–0.9 = calm, consistent (narrators, wise elders)\n` +
+    `   • 0.7–0.9 = calm, consistent (narrators, wise elders, large dignified animals)\n` +
     `4. style — a number 0.0–1.0 based on how theatrical this character is in the script:\n` +
     `   • 0.0–0.2 = understated, natural\n` +
     `   • 0.3–0.5 = noticeable personality\n` +
@@ -67,6 +86,9 @@ export async function profileCharacters(
     `Rules:\n` +
     `- Narrator uses "Adam" (or "Rachel" if female narrator) with stability 0.75, style 0.1.\n` +
     `- Child characters use "Harry" (boys) or "Elli" (girls) with stability 0.3, style 0.5.\n` +
+    `- Small playful animals (fox cub, bird, bunny) use "Elli" or "Harry" with stability 0.3, style 0.6.\n` +
+    `- Large/dignified animals (elephant, bear, owl) use "Thomas" or "Dorothy" with stability 0.65, style 0.3.\n` +
+    `- Elderly characters use "Thomas" (male) or "Emily" (female) with stability 0.7, style 0.2.\n` +
     `- Each character MUST get a different voice where possible.\n\n` +
     `Return ONLY valid JSON (all keys double-quoted), no markdown:\n` +
     `{ "CharacterName": { "voiceName": "Adam", "persona": "...", "stability": 0.7, "style": 0.1 }, ... }`;
@@ -105,23 +127,26 @@ export async function profileCharacters(
       // Clamp numeric fields
       parsed[char].stability = Math.min(1, Math.max(0, parsed[char].stability ?? 0.55));
       parsed[char].style     = Math.min(1, Math.max(0, parsed[char].style     ?? 0.2));
-      // Assign Gemini voice from config (not from Gemini's LLM response)
-      parsed[char].geminiVoiceName = pickGeminiVoice(char);
+      // Assign Gemini voice using name + visual description for better age/type matching
+      parsed[char].geminiVoiceName = pickGeminiVoice(char, characterDescriptions?.[char] ?? "");
     }
     return parsed;
   } catch (err) {
     console.warn("[CharacterProfiler] Falling back to defaults:", err);
-    return Object.fromEntries(characters.map((c) => [c, fallbackProfile(c)]));
+    return Object.fromEntries(characters.map((c) => [c, fallbackProfile(c, characterDescriptions?.[c])]));
   }
 }
 
-function fallbackProfile(characterName: string): CharacterVoiceProfile {
-  const name = characterName.toLowerCase();
-  if (/narrator|storyteller/.test(name)) {
+function fallbackProfile(characterName: string, visualDescription?: string): CharacterVoiceProfile {
+  const hint = `${characterName} ${visualDescription ?? ""}`.toLowerCase();
+  if (/narrator|storyteller/.test(hint)) {
     return { voiceName: NARRATOR_EL_VOICE_ID, geminiVoiceName: NARRATOR_GEMINI_VOICE, persona: "Slow, low-pitched and warm — speak with quiet authority and gentle pauses.", stability: 0.75, style: 0.1 };
   }
-  if (/child|kid|little|young/.test(name)) {
-    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", geminiVoiceName: pickGeminiVoice(characterName), persona: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness.", stability: 0.3, style: 0.5 };
+  if (/\b(child|kid|little|young|girl|boy|cub|puppy|kitten|chick)\b/.test(hint)) {
+    return { voiceName: "SOYHLrjzK2X1ezoPC6cr", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Fast, high-pitched and bright — speak with bubbly excitement and natural breathiness.", stability: 0.3, style: 0.5 };
   }
-  return { voiceName: "21m00Tcm4TlvDq8ikWAM", geminiVoiceName: pickGeminiVoice(characterName), persona: "Measured, mid-pitched and warm — speak naturally with clear emotional colour.", stability: 0.55, style: 0.25 };
+  if (/\b(elderly|elder|grandmother|grandfather|grandma|grandpa|old|aged|wise)\b/.test(hint)) {
+    return { voiceName: "GBv7mTt0atIp3Br8iCZE", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Slow, low-pitched and gentle — measured and unhurried, warm with age.", stability: 0.7, style: 0.2 };
+  }
+  return { voiceName: "21m00Tcm4TlvDq8ikWAM", geminiVoiceName: pickGeminiVoice(characterName, visualDescription ?? ""), persona: "Measured, mid-pitched and warm — speak naturally with clear emotional colour.", stability: 0.55, style: 0.25 };
 }

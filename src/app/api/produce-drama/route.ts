@@ -178,6 +178,8 @@ async function runProduction(
   force?: boolean,
   narratorVoiceId?: string,
   existingCoverUrl?: string,
+  characterDescriptions?: Record<string, string>,
+  characterTypes?: Record<string, string>,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -230,7 +232,7 @@ async function runProduction(
     // Run drama planning, voice profiling, and language detection all in parallel
     const [drama, voiceProfiles, scriptLanguage] = await Promise.all([
       planDrama(blocks, geminiKey, durationMinutes),
-      profileCharacters(blocks, geminiKey),
+      profileCharacters(blocks, geminiKey, characterDescriptions, characterTypes),
       detectScriptLanguage(blocks, geminiKey),
     ]);
     console.log(`[${ts()}][TTS] Detected language: ${scriptLanguage}`);
@@ -637,6 +639,8 @@ export async function POST(req: NextRequest) {
       existingCoverUrl?: string;
       force?: boolean;
       narratorVoiceId?: string;
+      characterDescriptions?: Record<string, string>;
+      characterTypes?: Record<string, string>;
     };
     try {
       body = await req.json();
@@ -668,7 +672,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

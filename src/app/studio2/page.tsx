@@ -1091,8 +1091,9 @@ export default function Studio2Page() {
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
   // ─── Character avatars (AI-generated, optional) ─────────────────────────────
-  const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
-  const [characterTypes, setCharacterTypes]     = useState<Record<string, CharacterType>>({});
+  const [characterAvatars, setCharacterAvatars]           = useState<Record<string, string>>({});
+  const [characterTypes, setCharacterTypes]               = useState<Record<string, CharacterType>>({});
+  const [characterDescriptions, setCharacterDescriptions] = useState<Record<string, string>>({});
 
   // ─── Pending character directions ──────────────────────────────────────────
   const [pendingDirections, setPendingDirections] = useState<string[]>([]);
@@ -1216,6 +1217,12 @@ export default function Studio2Page() {
     setCharacterAvatars(defaultAvatars);
 
     if (storyCharacters && Object.keys(storyCharacters).length > 0) {
+      // Store descriptions so produce-drama can use them for voice profiling
+      const descs: Record<string, string> = {};
+      for (const [name, info] of Object.entries(storyCharacters)) {
+        if (info.visualDescription) descs[name] = info.visualDescription;
+      }
+      setCharacterDescriptions(descs);
       // Rich descriptions from story generation — use semantic avatar matching via /api/avatar
       await Promise.allSettled(
         uniqueChars
@@ -1315,6 +1322,7 @@ export default function Studio2Page() {
       cleanLessonsRef.current = selectedLessons;
       setCharacterAvatars({});
       setCharacterTypes({});
+      setCharacterDescriptions({});
       setTotalExpectedBlocks(rawBlocks.length);
       setGenerating(false);   // ← flip now so validating phase starts cleanly
       setIsValidating(true);
@@ -1584,7 +1592,7 @@ export default function Studio2Page() {
     setProduceError(null);
     setActiveTab("producing");
     try {
-      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId() };
+      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes };
       if (editingStoryId) {
         body.editingStoryId = editingStoryId;
         // Always force re-production when editing an existing story — the server-side
@@ -1866,6 +1874,7 @@ export default function Studio2Page() {
                 setLessonImplementations([]);
                 setCharacterAvatars({});
                 setCharacterTypes({});
+                setCharacterDescriptions({});
                 setTotalExpectedBlocks(rawBlocks.length);
                 setIsValidating(true);
                 if (cp) fetchCover(cp, sm);
