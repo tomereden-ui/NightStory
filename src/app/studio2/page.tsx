@@ -44,16 +44,20 @@ function ScriptBrowser({
   refreshKey,
   forceExpanded = false,
   onCount,
+  onClose,
 }: {
   onLoad: (save: ScriptSaveFull) => void;
   refreshKey: number;
   forceExpanded?: boolean;
   onCount?: (n: number) => void;
+  onClose?: () => void;
 }) {
   const [saves, setSaves] = useState<ScriptSaveMeta[]>([]);
   const [expanded, setExpanded] = useState(forceExpanded);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [clearConfirm, setClearConfirm] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     fetch("/api/script-saves", { cache: "no-store" })
@@ -72,8 +76,9 @@ function ScriptBrowser({
       const save = await res.json() as ScriptSaveFull;
       onLoad(save);
       setExpanded(false);
+      onClose?.();
     } catch {
-      // keep expanded
+      // keep open
     } finally {
       setLoadingId(null);
     }
@@ -84,90 +89,177 @@ function ScriptBrowser({
     setDeletingId(id);
     try {
       await fetch(`/api/script-saves/${id}`, { method: "DELETE" });
-      setSaves((prev) => prev.filter((s) => s.id !== id));
-    } catch {
-      // ignore
-    } finally {
-      setDeletingId(null);
-    }
+      setSaves((prev) => { const next = prev.filter((s) => s.id !== id); onCount?.(next.length); return next; });
+    } catch { /* ignore */ }
+    finally { setDeletingId(null); }
   };
 
-  return (
-    <div
-      className="mb-5 rounded-2xl overflow-hidden"
-      style={{
-        background: "linear-gradient(145deg, rgba(10,18,40,0.95) 0%, rgba(5,8,20,0.98) 100%)",
-        border: "1px solid rgba(79,195,247,0.18)",
-        boxShadow: "0 4px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(79,195,247,0.06) inset",
-      }}
-    >
-      {/* Header */}
-      {!forceExpanded && (
-        <button
-          onClick={() => setExpanded((p) => !p)}
-          className="w-full flex items-center justify-between px-4 py-3 text-left"
-        >
+  const handleClearAll = async () => {
+    if (!clearConfirm) { setClearConfirm(true); return; }
+    setClearing(true);
+    const manuals = saves.filter((s) => !s.isAutosave);
+    await Promise.allSettled(manuals.map((s) => fetch(`/api/script-saves/${s.id}`, { method: "DELETE" })));
+    setSaves((prev) => { const next = prev.filter((s) => s.isAutosave); onCount?.(next.length); return next; });
+    setClearing(false);
+    setClearConfirm(false);
+  };
+
+  const manualSaves = saves.filter((s) => !s.isAutosave);
+
+  if (!forceExpanded) {
+    return (
+      <div className="mb-5 rounded-2xl overflow-hidden"
+        style={{ background: "linear-gradient(145deg,rgba(10,18,40,0.95) 0%,rgba(5,8,20,0.98) 100%)", border: "1px solid rgba(79,195,247,0.18)", boxShadow: "0 4px 32px rgba(0,0,0,0.4)" }}>
+        <button onClick={() => setExpanded((p) => !p)} className="w-full flex items-center justify-between px-4 py-3 text-left">
           <div className="flex items-center gap-2.5">
             <Icon name="folder" size={14} />
-            <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>
-              Saved versions
-            </span>
-            <span
-              className="min-w-[18px] h-4.5 px-1.5 rounded-full text-[9px] font-bold flex items-center justify-center"
-              style={{ background: "rgba(79,195,247,0.15)", color: "rgba(79,195,247,0.85)", border: "1px solid rgba(79,195,247,0.3)" }}
-            >
-              {saves.length}
-            </span>
+            <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved versions</span>
+            <span className="min-w-[18px] h-4 px-1.5 rounded-full text-[9px] font-bold flex items-center justify-center"
+              style={{ background: "rgba(79,195,247,0.15)", color: "rgba(79,195,247,0.85)", border: "1px solid rgba(79,195,247,0.3)" }}>{saves.length}</span>
           </div>
           <span className="text-white/25 text-sm">{expanded ? "↑" : "↓"}</span>
         </button>
+        {expanded && <VersionList saves={saves} loadingId={loadingId} deletingId={deletingId} onLoad={handleLoad} onDelete={handleDelete} />}
+      </div>
+    );
+  }
+
+  return (
+    <VersionList
+      saves={saves}
+      loadingId={loadingId}
+      deletingId={deletingId}
+      onLoad={handleLoad}
+      onDelete={handleDelete}
+      onClearAll={manualSaves.length > 0 ? handleClearAll : undefined}
+      clearConfirm={clearConfirm}
+      clearing={clearing}
+      onCancelClear={() => setClearConfirm(false)}
+    />
+  );
+}
+
+function CoverThumb({ url }: { url?: string }) {
+  return (
+    <div className="flex-shrink-0 rounded-xl overflow-hidden"
+      style={{ width: 72, height: 48, background: "radial-gradient(ellipse at 40% 50%,rgba(45,27,78,0.9) 0%,rgba(8,12,24,1) 100%)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      {url
+        ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={url} alt="Cover" className="w-full h-full object-cover" />
+        : <div className="w-full h-full flex items-center justify-center"><span className="text-xl opacity-20">🌙</span></div>
+      }
+    </div>
+  );
+}
+
+function VersionList({
+  saves, loadingId, deletingId, onLoad, onDelete, onClearAll, clearConfirm, clearing, onCancelClear,
+}: {
+  saves: ScriptSaveMeta[];
+  loadingId: string | null;
+  deletingId: string | null;
+  onLoad: (id: string) => void;
+  onDelete: (id: string, e: React.MouseEvent) => void;
+  onClearAll?: () => void;
+  clearConfirm?: boolean;
+  clearing?: boolean;
+  onCancelClear?: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 pb-2">
+      {/* Clear all row */}
+      {onClearAll && (
+        <div className="flex items-center justify-end gap-2 px-1 pb-1">
+          {clearConfirm ? (
+            <>
+              <span className="text-[10px] text-white/40">Delete all manual saves?</span>
+              <button onClick={onClearAll} disabled={clearing}
+                className="text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all active:scale-95"
+                style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.35)", color: "#f87171" }}>
+                {clearing ? "Deleting…" : "Yes, clear all"}
+              </button>
+              <button onClick={onCancelClear}
+                className="text-[10px] font-medium px-2.5 py-1 rounded-lg"
+                style={{ color: "rgba(255,255,255,0.3)" }}>Cancel</button>
+            </>
+          ) : (
+            <button onClick={onClearAll}
+              className="text-[10px] font-semibold transition-all active:scale-95"
+              style={{ color: "rgba(239,68,68,0.55)" }}>
+              Delete all
+            </button>
+          )}
+        </div>
       )}
 
-      {/* List */}
-      {(expanded || forceExpanded) && (
-        <>
-          <div className="h-px mx-4" style={{ background: "rgba(79,195,247,0.12)" }} />
-          <div className="p-3 flex flex-col gap-2 max-h-72 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
-            {saves.map((s) => {
-              const isLoading = loadingId === s.id;
-              const isDeleting = deletingId === s.id;
-              return (
-                <div
-                  key={s.id}
-                  onClick={() => handleLoad(s.id)}
-                  className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all active:scale-[0.98]"
-                  style={{
-                    background: isLoading ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.04)",
-                    border: isLoading ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.07)",
-                    opacity: isDeleting ? 0.4 : 1,
-                  }}
-                >
-                  {s.isAutosave ? <span className="text-base">⚡</span> : <Icon name="save" size={14} />}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold text-white/80 truncate">{s.label}</p>
-                    <p className="text-[10px] text-white/30">{s.blockCount} blocks · {timeAgo(s.savedAt)}</p>
-                  </div>
-                  {isLoading && (
-                    <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin flex-shrink-0"
-                      style={{ borderColor: "rgba(255,255,255,0.1)", borderTopColor: "#4fc3f7" }} />
-                  )}
-                  {/* Delete button — floats top-right */}
-                  {!s.isAutosave && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(s.id, e); }}
-                      disabled={isDeleting}
-                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-all"
-                      style={{ background: "rgba(0,0,0,0.55)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.12)" }}
-                    >
-                      {isDeleting ? "…" : <Icon name="close" size={10} />}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+      {saves.map((s) => {
+        const isLoading  = loadingId === s.id;
+        const isDeleting = deletingId === s.id;
+        return (
+          <div
+            key={s.id}
+            onClick={() => !isDeleting && onLoad(s.id)}
+            className="relative flex items-center gap-3 rounded-2xl cursor-pointer transition-all active:scale-[0.985] overflow-hidden"
+            style={{
+              background: s.isAutosave
+                ? "linear-gradient(135deg,rgba(245,158,11,0.1) 0%,rgba(10,18,40,0.6) 100%)"
+                : isLoading
+                  ? "rgba(79,195,247,0.08)"
+                  : "rgba(255,255,255,0.03)",
+              border: s.isAutosave
+                ? "1px solid rgba(245,158,11,0.28)"
+                : isLoading
+                  ? "1px solid rgba(79,195,247,0.25)"
+                  : "1px solid rgba(255,255,255,0.07)",
+              opacity: isDeleting ? 0.35 : 1,
+              padding: "10px 12px",
+            }}
+          >
+            {/* Cover thumbnail */}
+            <CoverThumb url={s.coverUrl} />
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                {s.isAutosave
+                  ? <span className="text-[11px]">⚡</span>
+                  : <Icon name="save" size={11} style={{ color: "rgba(255,255,255,0.3)", flexShrink: 0 }} />
+                }
+                <span className="text-[12px] font-semibold truncate"
+                  style={{ color: s.isAutosave ? "rgba(245,158,11,0.9)" : "rgba(255,255,255,0.82)" }}>
+                  {s.label}
+                </span>
+              </div>
+              <p className="text-[10px] leading-tight truncate" style={{ color: "rgba(255,255,255,0.28)" }}>
+                {s.blockCount} blocks · {timeAgo(s.savedAt)}
+              </p>
+              {s.summary && (
+                <p className="text-[10px] mt-0.5 line-clamp-1 leading-tight" style={{ color: "rgba(255,255,255,0.2)" }}>
+                  {s.summary}
+                </p>
+              )}
+            </div>
+
+            {/* Loading spinner */}
+            {isLoading && (
+              <span className="w-4 h-4 border-2 rounded-full animate-spin flex-shrink-0"
+                style={{ borderColor: "rgba(79,195,247,0.2)", borderTopColor: "#4fc3f7" }} />
+            )}
+
+            {/* Delete button — manual saves only */}
+            {!s.isAutosave && !isLoading && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(s.id, e); }}
+                disabled={isDeleting}
+                className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all hover:bg-red-500/20"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }}
+                title="Delete this version"
+              >
+                <Icon name="close" size={9} />
+              </button>
+            )}
           </div>
-        </>
-      )}
+        );
+      })}
     </div>
   );
 }
@@ -1899,30 +1991,61 @@ export default function Studio2Page() {
       {versionsOpen && (
         <div
           className="fixed inset-0 z-50 flex flex-col justify-end"
-          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+          style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
           onClick={() => setVersionsOpen(false)}
         >
           <div
-            className="rounded-t-3xl pb-8 pt-4 px-4 mx-auto w-full"
+            className="rounded-t-3xl mx-auto w-full flex flex-col"
             style={{
-              background: "linear-gradient(180deg, rgba(14,20,45,0.99) 0%, rgba(8,12,28,1) 100%)",
-              border: "1px solid rgba(79,195,247,0.15)",
+              background: "linear-gradient(180deg,rgba(12,18,40,1) 0%,rgba(7,10,22,1) 100%)",
+              border: "1px solid rgba(255,255,255,0.09)",
               borderBottom: "none",
               maxWidth: 560,
+              maxHeight: "78vh",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: "rgba(255,255,255,0.15)" }} />
-            <div className="flex items-center justify-between mb-4 px-1">
-              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved Versions</span>
-              <button onClick={() => setVersionsOpen(false)} className="text-white/30"><Icon name="close" size={14} /></button>
+            {/* Top accent bar */}
+            <div className="h-0.5 rounded-t-3xl flex-shrink-0"
+              style={{ background: "linear-gradient(90deg,#4fc3f7,#8B5CF6,#4fc3f7)" }} />
+
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-9 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
             </div>
-            <ScriptBrowser
-              onLoad={(save) => { handleLoadSave(save); setVersionsOpen(false); }}
-              refreshKey={savesRefreshKey}
-              forceExpanded
-              onCount={setSavesCount}
-            />
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">🗂️</span>
+                <span className="text-sm font-bold tracking-wide text-white/90">Saved Versions</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.25)", color: "rgba(79,195,247,0.8)" }}>
+                  {savesCount}
+                </span>
+              </div>
+              <button
+                onClick={() => setVersionsOpen(false)}
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
+              >
+                <Icon name="close" size={12} />
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="mx-5 flex-shrink-0" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+
+            {/* Scrollable list */}
+            <div className="overflow-y-auto px-5 pt-3 pb-8 flex-1" style={{ scrollbarWidth: "none" }}>
+              <ScriptBrowser
+                onLoad={(save) => { handleLoadSave(save); setVersionsOpen(false); }}
+                refreshKey={savesRefreshKey}
+                forceExpanded
+                onCount={setSavesCount}
+                onClose={() => setVersionsOpen(false)}
+              />
+            </div>
           </div>
         </div>
       )}
