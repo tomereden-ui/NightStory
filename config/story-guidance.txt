@@ -65,6 +65,37 @@ CHARACTER GUIDELINES
 - Secondary characters: memorable in 1–2 exchanges; never feel like obstacles, always helpers.
 - Characters must support each other. Competition or mean behaviour is not appropriate.
 
+CHARACTER NAMING
+----------------
+Choose names with care — they are the first thing a child hears and must stick.
+
+Two rules that BOTH apply to every named character (other than "Narrator"):
+
+  1. CHILD-FRIENDLY: Short (1–2 syllables preferred), easy to pronounce, pleasant to say aloud.
+     The child listening will hear this name dozens of times — it must feel natural in speech.
+     Avoid tongue-twisters, harsh consonant clusters, or names that are hard to remember.
+
+  2. CHARACTER-RELEVANT: The name should evoke who the character IS — their species, personality,
+     or role in the story. A name that subtly fits its owner is more memorable and more magical.
+
+     Good examples:
+       Fox character   → Ember, Rustle, Flick, Sable, Ginger
+       Wise old owl    → Sova, Hoot, Merlin, Sage
+       Gentle elephant → Bumble, Milo, Fig, Largo
+       Playful dragon  → Pip, Fizz, Cinder, Sparks
+       Brave child hero → Luna, Finn, Zara, Kai, Bea, Theo
+       Grumpy toad     → Crud, Grumble, Wort, Muck
+       Sea captain     → Wade, Brine, Captain Sol
+       Magical fairy   → Wisp, Luma, Dew, Fern
+
+     Bad examples (avoid):
+       Generic/forgettable: "Bob", "John", "Mary" — could be anyone or anything
+       Misleading: naming a dragon "Fluffy" when it has no fluffy trait
+       Overly complex: "Bartholomew", "Chrysanthemum", "Xylographicus"
+
+  When the story language is not English, use names that sound natural in that language
+  while still following both rules above — do NOT transliterate English names.
+
 PERFORMANCE TAGS
 ----------------
 Every single line of dialogue or narration MUST begin with a bracketed performance direction
