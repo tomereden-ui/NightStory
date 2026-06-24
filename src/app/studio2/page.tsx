@@ -182,71 +182,71 @@ function VersionList({
           : null;
 
         return (
-          <div
-            key={s.id}
-            onClick={() => !isDeleting && !isLoading && onLoad(s.id)}
-            className="flex items-center gap-3 rounded-2xl cursor-pointer transition-all active:scale-[0.985]"
-            style={{
-              background: s.isAutosave
-                ? "linear-gradient(135deg,rgba(245,158,11,0.08) 0%,rgba(10,18,40,0.5) 100%)"
-                : isLoading
-                  ? "rgba(79,195,247,0.07)"
-                  : "rgba(255,255,255,0.03)",
-              border: s.isAutosave
-                ? "1px solid rgba(245,158,11,0.22)"
-                : isLoading
-                  ? "1px solid rgba(79,195,247,0.22)"
-                  : "1px solid rgba(255,255,255,0.07)",
-              opacity: isDeleting ? 0.35 : 1,
-              padding: "10px 12px",
-            }}
-          >
-            {/* Cover thumbnail */}
-            <div className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
-              style={{ width: 44, height: 44, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              {s.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.coverUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xl">📖</span>
-              )}
-            </div>
+          /* Row wrapper — card + delete are siblings, not nested */
+          <div key={s.id} className="flex items-center gap-2" style={{ opacity: isDeleting ? 0.35 : 1 }}>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              {/* Story name */}
-              <div className="flex items-center gap-1.5">
-                {s.isAutosave && <span className="text-[11px] leading-none">⚡</span>}
-                <span className="text-[13px] font-semibold leading-snug truncate"
-                  style={{ color: s.isAutosave ? "rgba(245,158,11,0.95)" : "rgba(255,255,255,0.9)" }}>
-                  {s.label}
-                </span>
+            {/* Clickable story card */}
+            <div
+              onClick={() => !isDeleting && !isLoading && onLoad(s.id)}
+              className="flex items-center gap-3 rounded-2xl cursor-pointer transition-all active:scale-[0.985] flex-1 min-w-0"
+              style={{
+                background: s.isAutosave
+                  ? "linear-gradient(135deg,rgba(245,158,11,0.08) 0%,rgba(10,18,40,0.5) 100%)"
+                  : isLoading
+                    ? "rgba(79,195,247,0.07)"
+                    : "rgba(255,255,255,0.03)",
+                border: s.isAutosave
+                  ? "1px solid rgba(245,158,11,0.22)"
+                  : isLoading
+                    ? "1px solid rgba(79,195,247,0.22)"
+                    : "1px solid rgba(255,255,255,0.07)",
+                padding: "10px 12px",
+              }}
+            >
+              {/* Cover thumbnail */}
+              <div className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+                style={{ width: 44, height: 44, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                {s.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={s.coverUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl">📖</span>
+                )}
               </div>
-              {/* Summary line */}
-              {summarySnip && (
-                <p className="text-[11px] leading-snug truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
-                  {summarySnip}
+
+              {/* Info */}
+              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  {s.isAutosave && <span className="text-[11px] leading-none">⚡</span>}
+                  <span className="text-[13px] font-semibold leading-snug truncate"
+                    style={{ color: s.isAutosave ? "rgba(245,158,11,0.95)" : "rgba(255,255,255,0.9)" }}>
+                    {s.label}
+                  </span>
+                </div>
+                {summarySnip && (
+                  <p className="text-[11px] leading-snug truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    {summarySnip}
+                  </p>
+                )}
+                <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.22)" }}>
+                  {timeAgo(s.savedAt)}
                 </p>
+              </div>
+
+              {/* Loading spinner inside card */}
+              {isLoading && (
+                <span className="w-4 h-4 border-2 rounded-full animate-spin flex-shrink-0"
+                  style={{ borderColor: "rgba(79,195,247,0.2)", borderTopColor: "#4fc3f7" }} />
               )}
-              {/* Timestamp */}
-              <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.22)" }}>
-                {timeAgo(s.savedAt)}
-              </p>
             </div>
 
-            {/* Loading spinner */}
-            {isLoading && (
-              <span className="w-4 h-4 border-2 rounded-full animate-spin flex-shrink-0"
-                style={{ borderColor: "rgba(79,195,247,0.2)", borderTopColor: "#4fc3f7" }} />
-            )}
-
-            {/* Delete — manual saves only, hidden while loading */}
+            {/* Delete button — sits OUTSIDE the card, clearly separate */}
             {!s.isAutosave && !isLoading && (
               <button
-                onClick={(e) => { e.stopPropagation(); onDelete(s.id, e); }}
+                onClick={(e) => onDelete(s.id, e)}
                 disabled={isDeleting}
-                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.28)", color: "rgba(239,68,68,0.7)" }}
+                className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90"
+                style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.28)", color: "rgba(239,68,68,0.65)" }}
                 title="Delete this version"
               >
                 <Icon name="close" size={11} />
