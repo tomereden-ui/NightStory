@@ -1189,6 +1189,39 @@ export default function Studio2Page() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generating, isValidating]);
 
+  // ─── Shared: classify cast + assign bank avatars ────────────────────────────
+
+  const resolveAndSetCharacterAvatars = useCallback(async (blocks: ScriptBlock[], summary: string) => {
+    const uniqueChars = Array.from(new Set(
+      blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)
+    ));
+    if (!uniqueChars.length) return;
+    const bank = await fetchBankAvatars();
+    const defaultTypes: Record<string, CharacterType> = {};
+    const defaultAvatars: Record<string, string> = {};
+    for (const name of uniqueChars) {
+      const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
+      defaultTypes[name] = t;
+      defaultAvatars[name] = resolveCharacterAvatar(name, t, bank, voicePool);
+    }
+    setCharacterTypes(defaultTypes);
+    setCharacterAvatars(defaultAvatars);
+    fetch("/api/classify-characters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ characters: uniqueChars, summary }),
+    }).then((r) => r.json()).then((types: Record<string, string>) => {
+      const refined: Record<string, CharacterType> = {};
+      const refinedAvatars: Record<string, string> = {};
+      for (const [name, type] of Object.entries(types)) {
+        refined[name] = type as CharacterType;
+        refinedAvatars[name] = resolveCharacterAvatar(name, type as CharacterType, bank, voicePool);
+      }
+      setCharacterTypes(refined);
+      setCharacterAvatars(refinedAvatars);
+    }).catch(() => console.warn("[Avatars] AI classification failed, keeping defaults"));
+  }, [voicePool]);
+
   // ─── Generate story ─────────────────────────────────────────────────────────
 
   const handleGenerate = useCallback(async (selectedLessons: string[]) => {
@@ -1269,40 +1302,7 @@ export default function Studio2Page() {
         }, i * 65);
       }
 
-      // Classify characters and assign bank avatars
-      const uniqueChars = Array.from(new Set(blocks.filter((b: ScriptBlock) => b.characterName !== "SFX").map((b: ScriptBlock) => b.characterName)));
-      if (uniqueChars.length) {
-        // Fetch bank + run classification in parallel
-        const [bank] = await Promise.all([
-          fetchBankAvatars(),
-          Promise.resolve(), // placeholder to keep structure symmetric
-        ]);
-        // Set defaults immediately using bank avatars
-        const defaultTypes: Record<string, CharacterType> = {};
-        const defaultAvatars: Record<string, string> = {};
-        for (const name of uniqueChars) {
-          const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
-          defaultTypes[name] = t;
-          defaultAvatars[name] = resolveCharacterAvatar(name, t, bank, voicePool);
-        }
-        setCharacterTypes(defaultTypes);
-        setCharacterAvatars(defaultAvatars);
-        // Refine with AI classification then re-pick with corrected types
-        fetch("/api/classify-characters", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ characters: uniqueChars, summary: sm }),
-        }).then((r) => r.json()).then((types: Record<string, string>) => {
-          const refined: Record<string, CharacterType> = {};
-          const refinedAvatars: Record<string, string> = {};
-          for (const [name, type] of Object.entries(types)) {
-            refined[name] = type as CharacterType;
-            refinedAvatars[name] = resolveCharacterAvatar(name, type as CharacterType, bank, voicePool);
-          }
-          setCharacterTypes(refined);
-          setCharacterAvatars(refinedAvatars);
-        }).catch(() => console.warn("[Avatars] AI classification failed, keeping defaults"));
-      }
+      void resolveAndSetCharacterAvatars(blocks, sm);
     } catch (err: unknown) {
       setGenerateError(err instanceof Error ? err.message : "Something went wrong");
       setActiveTab("step-by-step");
@@ -1763,6 +1763,7 @@ export default function Studio2Page() {
                 .then((r) => r.json())
                 .then((valData) => {
                   const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
+                  void resolveAndSetCharacterAvatars(blocks, draft.summary);
                   blocks.forEach((block, i) => {
                     setTimeout(() => {
                       setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
@@ -1776,6 +1777,7 @@ export default function Studio2Page() {
                 })
                 .catch(() => {
                   // Fallback: show unvalidated blocks
+                  void resolveAndSetCharacterAvatars(rawBlocks, draft.summary);
                   rawBlocks.forEach((block, i) => {
                     setTimeout(() => {
                       setScriptBlocks((prev) => [...prev, block]);
@@ -1829,6 +1831,7 @@ export default function Studio2Page() {
                   .then((r) => r.json())
                   .then((valData) => {
                     const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
+                    void resolveAndSetCharacterAvatars(blocks, sm);
                     blocks.forEach((block, i) => {
                       setTimeout(() => {
                         setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
@@ -1841,6 +1844,7 @@ export default function Studio2Page() {
                     });
                   })
                   .catch(() => {
+                    void resolveAndSetCharacterAvatars(rawBlocks, sm);
                     rawBlocks.forEach((block, i) => {
                       setTimeout(() => {
                         setScriptBlocks((prev) => [...prev, block]);
@@ -2099,7 +2103,7 @@ export default function Studio2Page() {
             {/* Produce Audio */}
             {(() => {
               const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
-              const blocked = isProducing || hasPending || isValidating || generating;
+              const blocked = isProducing || hasPending || isValidating || generating || isFetchingCover;
               return (
                 <button
                   onClick={() => !blocked && handleProduce(scriptBlocks, durationMinutes)}
