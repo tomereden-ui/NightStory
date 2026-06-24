@@ -260,13 +260,45 @@ function VersionList({
 
 type CharacterType = "child" | "adult" | "animal" | "narrator";
 
-function buildAvatarUrl(characterName: string, type: CharacterType): string {
+// Bank avatar type (matches avatar-bank-list API response)
+interface BankAvatar { id: string; description: string; image_url: string; type: string; gender: string; }
+
+// Module-level cache so we only fetch once per session
+let _bankCache: BankAvatar[] | null = null;
+async function fetchBankAvatars(): Promise<BankAvatar[]> {
+  if (_bankCache) return _bankCache;
+  try {
+    const res = await fetch("/api/avatar-bank-list");
+    const data = await res.json() as { avatars: BankAvatar[] };
+    _bankCache = data.avatars ?? [];
+  } catch {
+    _bankCache = [];
+  }
+  return _bankCache;
+}
+
+// Simple deterministic hash so the same character always gets the same avatar
+function nameHash(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// Pick a bank avatar matching the character type, falling back to DiceBear on empty bank
+function pickBankAvatar(characterName: string, type: CharacterType, bank: BankAvatar[]): string {
+  const dbType = type === "narrator" ? "adult" : type;
+  const pool = bank.filter((a) => a.type === dbType);
+  if (pool.length === 0) return buildDiceBearUrl(characterName, type);
+  return pool[nameHash(characterName) % pool.length].image_url;
+}
+
+function buildDiceBearUrl(characterName: string, type: CharacterType): string {
   const seed = encodeURIComponent(characterName);
   const bg = "0d1b4a";
   switch (type) {
-    case "child":    return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}&backgroundColor=${bg}`;
-    case "animal":   return `https://api.dicebear.com/9.x/croodles/svg?seed=${seed}&backgroundColor=${bg}&scale=90`;
-    default:         return `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=${bg}&scale=85`;
+    case "child":  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}&backgroundColor=${bg}`;
+    case "animal": return `https://api.dicebear.com/9.x/croodles/svg?seed=${seed}&backgroundColor=${bg}&scale=90`;
+    default:       return `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=${bg}&scale=85`;
   }
 }
 
@@ -567,7 +599,7 @@ function CharacterCard({
   useEffect(() => { setImgError(false); }, [avatarUrl]);
 
   const accentColor = isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)";
-  const displayUrl = avatarUrl || buildAvatarUrl(characterName, isNarrator ? "narrator" : "adult");
+  const displayUrl = avatarUrl || buildDiceBearUrl(characterName, isNarrator ? "narrator" : "adult");
 
   return (
     <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
@@ -1058,20 +1090,25 @@ export default function Studio2Page() {
         }, i * 65);
       }
 
-      // Classify characters in background (avatars) — unchanged
+      // Classify characters and assign bank avatars
       const uniqueChars = Array.from(new Set(blocks.filter((b: ScriptBlock) => b.characterName !== "SFX").map((b: ScriptBlock) => b.characterName)));
       if (uniqueChars.length) {
-        // Set defaults immediately so avatars appear right away
+        // Fetch bank + run classification in parallel
+        const [bank] = await Promise.all([
+          fetchBankAvatars(),
+          Promise.resolve(), // placeholder to keep structure symmetric
+        ]);
+        // Set defaults immediately using bank avatars
         const defaultTypes: Record<string, CharacterType> = {};
         const defaultAvatars: Record<string, string> = {};
         for (const name of uniqueChars) {
           const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
           defaultTypes[name] = t;
-          defaultAvatars[name] = buildAvatarUrl(name, t);
+          defaultAvatars[name] = pickBankAvatar(name, t, bank);
         }
         setCharacterTypes(defaultTypes);
         setCharacterAvatars(defaultAvatars);
-        // Refine with AI classification
+        // Refine with AI classification then re-pick from bank with corrected types
         fetch("/api/classify-characters", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1081,7 +1118,7 @@ export default function Studio2Page() {
           const refinedAvatars: Record<string, string> = {};
           for (const [name, type] of Object.entries(types)) {
             refined[name] = type as CharacterType;
-            refinedAvatars[name] = buildAvatarUrl(name, type as CharacterType);
+            refinedAvatars[name] = pickBankAvatar(name, type as CharacterType, bank);
           }
           setCharacterTypes(refined);
           setCharacterAvatars(refinedAvatars);
@@ -1207,24 +1244,38 @@ export default function Studio2Page() {
     setPendingDirections([]);
     setHasScriptChanges(false);
     cleanLessonsRef.current = [];
-    // Build default avatars for the loaded cast
+    // Build default avatars for the loaded cast using bank avatars
     const uniqueChars = Array.from(new Set(save.blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
     const defaultTypes: Record<string, CharacterType> = {};
     const defaultAvatars: Record<string, string> = {};
     for (const name of uniqueChars) {
       const t: CharacterType = name === "Narrator" ? "narrator" : "adult";
       defaultTypes[name] = t;
-      defaultAvatars[name] = buildAvatarUrl(name, t);
+      defaultAvatars[name] = buildDiceBearUrl(name, t); // immediate placeholder
     }
     setCharacterTypes(defaultTypes);
     setCharacterAvatars(defaultAvatars);
+    // Swap to bank avatars once fetched
+    fetchBankAvatars().then((bank) => {
+      if (bank.length === 0) return;
+      setCharacterAvatars((prev) => {
+        const next = { ...prev };
+        for (const name of uniqueChars) {
+          const t = defaultTypes[name];
+          next[name] = pickBankAvatar(name, t, bank);
+        }
+        return next;
+      });
+    });
   }, []);
 
   // ─── Avatar type manual override ────────────────────────────────────────────
 
   const handleAvatarTypeChange = useCallback((characterName: string, type: CharacterType) => {
     setCharacterTypes((prev) => ({ ...prev, [characterName]: type }));
-    setCharacterAvatars((prev) => ({ ...prev, [characterName]: buildAvatarUrl(characterName, type) }));
+    fetchBankAvatars().then((bank) => {
+      setCharacterAvatars((prev) => ({ ...prev, [characterName]: pickBankAvatar(characterName, type, bank) }));
+    });
   }, []);
 
   // User-initiated block edits (text, SFX) — marks script dirty
