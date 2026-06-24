@@ -387,7 +387,7 @@ const CHAR_CHIPS = [
   "More gentle", "More dramatic", "More playful", "Shorter lines", "More expressive",
 ];
 
-// ─── Avatar picker dropdown (mirrors the VoicePicker pattern) ────────────────
+// ─── Avatar picker gallery ────────────────────────────────────────────────────
 
 const AVATAR_TABS = [
   { key: "child",  label: "Kids",    emoji: "🧒" },
@@ -395,7 +395,7 @@ const AVATAR_TABS = [
   { key: "animal", label: "Animals", emoji: "🐾" },
 ];
 
-function AvatarPickerDropdown({
+function AvatarGallery({
   currentUrl,
   characterType,
   onSelect,
@@ -417,48 +417,53 @@ function AvatarPickerDropdown({
   const filtered = bank.filter((a) => a.type === activeTab);
 
   return (
-    <div className="rounded-2xl overflow-hidden mt-2"
-      style={{ background: "rgba(6,9,22,0.98)", border: "1px solid rgba(139,92,246,0.22)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
-
-      {/* Type tabs */}
-      <div className="flex gap-1 p-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: "rgba(5,7,18,0.97)", border: "1px solid rgba(139,92,246,0.2)" }}>
+      {/* Tabs */}
+      <div className="flex p-1.5 gap-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         {AVATAR_TABS.map(({ key, label, emoji }) => (
           <button key={key} onClick={() => setActiveTab(key)}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold transition-all active:scale-95"
             style={activeTab === key
-              ? { background: "rgba(139,92,246,0.22)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.4)" }
-              : { background: "transparent", color: "rgba(255,255,255,0.28)", border: "1px solid transparent" }
+              ? { background: "linear-gradient(135deg,rgba(139,92,246,0.3),rgba(79,195,247,0.15))", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.45)" }
+              : { color: "rgba(255,255,255,0.25)", border: "1px solid transparent" }
             }
           >
-            <span>{emoji}</span><span>{label}</span>
+            <span style={{ fontSize: 13 }}>{emoji}</span>
+            <span>{label}</span>
           </button>
         ))}
       </div>
-
       {/* Grid */}
-      <div className="p-2 overflow-y-auto" style={{ maxHeight: 196 }}>
+      <div className="p-2.5 overflow-y-auto" style={{ maxHeight: 210 }}>
         {loading ? (
-          <div className="flex justify-center py-6">
-            <span className="w-5 h-5 border-2 rounded-full animate-spin"
-              style={{ borderColor: "rgba(167,139,250,0.2)", borderTopColor: "#A78BFA" }} />
+          <div className="flex justify-center items-center py-8">
+            <span className="w-6 h-6 border-2 rounded-full animate-spin"
+              style={{ borderColor: "rgba(167,139,250,0.15)", borderTopColor: "#A78BFA" }} />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center py-4 text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>No avatars seeded yet</p>
+          <p className="text-center py-6 text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>No avatars yet</p>
         ) : (
-          <div className="grid grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-5 gap-2">
             {filtered.map((avatar) => {
               const selected = currentUrl === avatar.image_url;
               return (
                 <button key={avatar.id}
                   onClick={() => onSelect(avatar.image_url, activeTab as CharacterType)}
-                  className="aspect-square rounded-xl overflow-hidden transition-all active:scale-90 flex-shrink-0"
+                  className="aspect-square rounded-xl overflow-hidden transition-all active:scale-90 relative"
                   style={selected
-                    ? { boxShadow: "0 0 0 2.5px #A78BFA, 0 0 12px rgba(167,139,250,0.4)" }
-                    : { boxShadow: "0 0 0 1.5px rgba(255,255,255,0.07)" }
+                    ? { boxShadow: "0 0 0 3px #A78BFA, 0 0 18px rgba(167,139,250,0.45)", transform: "scale(1.04)" }
+                    : { boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }
                   }
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={avatar.image_url} alt="" className="w-full h-full object-cover" />
+                  {selected && (
+                    <div className="absolute inset-0 flex items-center justify-center"
+                      style={{ background: "rgba(139,92,246,0.25)" }}>
+                      <span style={{ fontSize: 16 }}>✓</span>
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -469,18 +474,7 @@ function AvatarPickerDropdown({
   );
 }
 
-// ─── Direction sheet — 3 clear sections ──────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[9px] font-bold uppercase tracking-[0.14em] mb-2"
-      style={{ color: "rgba(255,255,255,0.22)" }}>{children}</p>
-  );
-}
-
-function SheetDivider() {
-  return <div style={{ height: 1, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />;
-}
+// ─── Character direction sheet — full redesign ────────────────────────────────
 
 function DirectionSheet({
   characterName,
@@ -519,161 +513,225 @@ function DirectionSheet({
     onClose();
   };
 
+  // Accent colours per section
+  const avatarAccent = "#A78BFA"; // violet
+  const voiceAccent  = "#4FC3F7"; // cyan
+  const directAccent = "#FCD34D"; // amber
+
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-      {/* inset-x-3 constrains width to screen − 24 px — no overflow possible */}
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
+        onClick={onClose} />
+
+      {/* Sheet — centered, max-width, constrained to viewport */}
       <div
-        className="fixed inset-x-3 bottom-20 z-50 rounded-2xl flex flex-col overflow-hidden"
+        className="fixed z-50 flex flex-col overflow-hidden"
         style={{
-          background: "linear-gradient(160deg, rgba(14,20,45,0.99) 0%, rgba(8,12,28,1) 100%)",
-          border: "1px solid rgba(139,92,246,0.3)",
-          boxShadow: "0 8px 48px rgba(0,0,0,0.65)",
-          maxHeight: "calc(100dvh - 180px)",
+          left: "50%", transform: "translateX(-50%)",
+          bottom: 80,
+          width: "calc(100vw - 24px)",
+          maxWidth: 460,
+          maxHeight: "calc(100dvh - 160px)",
+          borderRadius: 24,
+          background: "linear-gradient(170deg, #0d1530 0%, #080d1e 55%, #0a0618 100%)",
+          border: "1px solid rgba(139,92,246,0.35)",
+          boxShadow: "0 24px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(139,92,246,0.08) inset, 0 1px 0 rgba(255,255,255,0.06) inset",
         }}
       >
-        {/* ── Header ── */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0"
-            style={{ border: "2px solid rgba(139,92,246,0.45)" }}>
-            {avatarUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-sm font-bold"
-                style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD" }}>
-                {characterName.charAt(0)}
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white leading-tight truncate">{characterName}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
-              {voice?.name ?? "No voice assigned"}
-            </p>
-          </div>
-          <button onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full flex-shrink-0 transition-all active:scale-90"
-            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.45)" }}>
-            <Icon name="close" size={14} />
-          </button>
-        </div>
+        {/* ── HERO HEADER ── */}
+        <div className="relative flex-shrink-0 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(160deg, rgba(88,28,220,0.22) 0%, rgba(30,58,120,0.18) 100%)",
+            borderBottom: "1px solid rgba(139,92,246,0.18)",
+          }}>
+          {/* Glow blob behind avatar */}
+          <div className="absolute left-4 top-3 w-20 h-20 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle, rgba(139,92,246,0.35) 0%, transparent 70%)", filter: "blur(12px)" }} />
 
-        {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto">
-
-          {/* SECTION 1 — AVATAR */}
-          <div className="px-4 pt-3 pb-3">
-            <SectionLabel>Avatar</SectionLabel>
-            <button
-              onClick={() => { setShowAvatarPicker((p) => !p); setShowVoicePicker(false); }}
-              className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 transition-all active:scale-[0.98]"
-              style={showAvatarPicker
-                ? { background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.5)" }
-                : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
-              }
-            >
-              <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0"
-                style={{ border: "1px solid rgba(255,255,255,0.12)" }}>
+          <div className="flex items-center gap-4 relative">
+            {/* Large avatar */}
+            <div className="flex-shrink-0 relative">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden"
+                style={{ boxShadow: "0 0 0 2.5px rgba(167,139,250,0.6), 0 0 20px rgba(139,92,246,0.4), 0 4px 16px rgba(0,0,0,0.5)" }}>
                 {avatarUrl
                   ? /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center text-xs font-bold"
-                      style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD" }}>
+                    <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-xl font-black"
+                      style={{ background: "linear-gradient(135deg,rgba(88,28,220,0.5),rgba(30,58,120,0.5))", color: "#C4B5FD" }}>
                       {characterName.charAt(0)}
                     </div>
                 }
               </div>
-              <span className="text-sm font-medium flex-1 text-left" style={{ color: "rgba(255,255,255,0.6)" }}>
-                Choose avatar
-              </span>
-              <Icon name={showAvatarPicker ? "collapse" : "expand"} size={12} className="text-white/25" />
+              {/* Character type badge */}
+              <div className="absolute -bottom-1.5 -right-1.5 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider"
+                style={{ background: "linear-gradient(135deg,#7C3AED,#4338CA)", color: "#E9D5FF", boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+                {isNarrator ? "🎙" : characterType === "animal" ? "🐾" : characterType === "child" ? "🧒" : "🧑"}
+              </div>
+            </div>
+
+            {/* Name + voice */}
+            <div className="flex-1 min-w-0">
+              <p className="font-black leading-tight truncate"
+                style={{ fontSize: 20, color: "#fff", textShadow: "0 2px 12px rgba(139,92,246,0.5)" }}>
+                {characterName}
+              </p>
+              {voice && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>🎙</span>
+                  <span className="text-xs truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{voice.name}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Close */}
+            <button onClick={onClose}
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90"
+              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+              <Icon name="close" size={14} />
             </button>
+          </div>
+        </div>
+
+        {/* ── SCROLLABLE BODY ── */}
+        <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-4">
+
+          {/* ── SECTION 1: AVATAR ── */}
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: "rgba(88,28,220,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
+            {/* Section header row (always visible) */}
+            <button
+              onClick={() => { setShowAvatarPicker((p) => !p); setShowVoicePicker(false); }}
+              className="flex items-center gap-3 w-full px-4 py-3 transition-all active:scale-[0.99]"
+            >
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: `rgba(167,139,250,0.15)`, border: `1px solid rgba(167,139,250,0.3)` }}>
+                <span style={{ fontSize: 15 }}>🎭</span>
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: avatarAccent }}>Avatar</p>
+                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  {showAvatarPicker ? "Tap an image to select" : "Choose how this character looks"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {avatarUrl && (
+                  <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0"
+                    style={{ border: `1.5px solid rgba(167,139,250,0.4)` }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <Icon name={showAvatarPicker ? "collapse" : "expand"} size={12}
+                  style={{ color: "rgba(167,139,250,0.5)" }} />
+              </div>
+            </button>
+            {/* Expandable gallery */}
             {showAvatarPicker && (
-              <AvatarPickerDropdown
-                currentUrl={avatarUrl}
-                characterType={characterType}
-                onSelect={(url, type) => { onAvatarChange(url, type); setShowAvatarPicker(false); }}
-              />
+              <div className="px-3 pb-3">
+                <AvatarGallery
+                  currentUrl={avatarUrl}
+                  characterType={characterType}
+                  onSelect={(url, type) => { onAvatarChange(url, type); setShowAvatarPicker(false); }}
+                />
+              </div>
             )}
           </div>
 
-          <SheetDivider />
-
-          {/* SECTION 2 — VOICE */}
-          <div className="px-4 pt-3 pb-3">
-            <SectionLabel>Voice</SectionLabel>
-            <div className="relative">
-              <button
-                onClick={() => { setShowVoicePicker((p) => !p); setShowAvatarPicker(false); }}
-                className="flex items-center gap-2.5 w-full rounded-xl px-3 py-2.5 transition-all active:scale-[0.98]"
-                style={showVoicePicker
-                  ? { background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.4)" }
-                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }
-                }
-              >
-                {voice?.avatarUrl
-                  ? /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={voice.avatarUrl} alt={voice.name}
-                      className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-                      style={{ border: "1px solid rgba(255,255,255,0.12)" }} />
-                  : <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0"
-                      style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.2)" }}>
-                      🎙️
-                    </div>
-                }
-                <span className="text-sm font-medium text-white/70 flex-1 text-left truncate">
-                  {voice?.name ?? "Select voice"}
-                </span>
-                <Icon name={showVoicePicker ? "collapse" : "expand"} size={12} className="text-white/30" />
-              </button>
-              {showVoicePicker && (
+          {/* ── SECTION 2: VOICE ── */}
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: "rgba(14,78,107,0.15)", border: "1px solid rgba(79,195,247,0.18)" }}>
+            <button
+              onClick={() => { setShowVoicePicker((p) => !p); setShowAvatarPicker(false); }}
+              className="flex items-center gap-3 w-full px-4 py-3 transition-all active:scale-[0.99]"
+            >
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.28)" }}>
+                <span style={{ fontSize: 15 }}>🎙️</span>
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: voiceAccent }}>Voice</p>
+                <p className="text-xs mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  {voice?.name ?? "No voice selected"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {voice?.avatarUrl && (
+                  <div className="w-7 h-7 rounded-full overflow-hidden"
+                    style={{ border: "1.5px solid rgba(79,195,247,0.4)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={voice.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <Icon name={showVoicePicker ? "collapse" : "expand"} size={12}
+                  style={{ color: "rgba(79,195,247,0.45)" }} />
+              </div>
+            </button>
+            {showVoicePicker && (
+              <div className="px-3 pb-3">
                 <VoicePicker
                   voices={voicePool}
                   selectedVoiceId={voice?.id ?? ""}
                   onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
                   onClose={() => setShowVoicePicker(false)}
                 />
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          <SheetDivider />
+          {/* ── SECTION 3: DIRECTION ── */}
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: "rgba(120,80,0,0.1)", border: "1px solid rgba(252,211,77,0.15)" }}>
+            <div className="px-4 pt-3 pb-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(252,211,77,0.1)", border: "1px solid rgba(252,211,77,0.25)" }}>
+                  <span style={{ fontSize: 15 }}>✏️</span>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: directAccent }}>
+                    Direct this character
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Shape how they perform in this story
+                  </p>
+                </div>
+              </div>
 
-          {/* SECTION 3 — DIRECTION */}
-          <div className="px-4 pt-3 pb-5">
-            <SectionLabel>Direct this character</SectionLabel>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {CHAR_CHIPS.map((chip) => (
-                <button key={chip} onClick={() => submit(chip)}
-                  className="text-[11px] px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
-                  style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}>
-                  {chip}
-                </button>
-              ))}
+              {/* Quick chips */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {CHAR_CHIPS.map((chip) => (
+                  <button key={chip} onClick={() => submit(chip)}
+                    className="text-[11px] px-3 py-1.5 rounded-full font-semibold transition-all active:scale-95"
+                    style={{ background: "rgba(252,211,77,0.08)", border: "1px solid rgba(252,211,77,0.22)", color: "#FCD34D" }}>
+                    {chip}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-2 items-center">
-              <input
-                ref={inputRef}
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") onClose(); }}
-                placeholder={`Custom direction, e.g. "speak slower"`}
-                className="flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none text-white/80 placeholder-white/20"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.22)" }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.55)")}
-                onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.22)")}
-              />
-              <button onClick={() => submit(note)} disabled={!note.trim()}
-                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 flex-shrink-0"
-                style={note.trim()
-                  ? { background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.55)", color: "#A78BFA" }
-                  : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
-                }>
-                <Icon name="submit" size={14} />
-              </button>
+
+            {/* Custom text input */}
+            <div className="px-3 pb-3">
+              <div className="flex gap-2 items-center rounded-xl px-3 py-2"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(252,211,77,0.15)" }}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") onClose(); }}
+                  placeholder={`Custom direction, e.g. "speak slower"`}
+                  className="flex-1 bg-transparent outline-none text-sm text-white/80 placeholder-white/20"
+                />
+                <button onClick={() => submit(note)} disabled={!note.trim()}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+                  style={note.trim()
+                    ? { background: "rgba(252,211,77,0.2)", border: "1px solid rgba(252,211,77,0.45)", color: "#FCD34D" }
+                    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.15)" }
+                  }>
+                  <Icon name="submit" size={13} />
+                </button>
+              </div>
             </div>
           </div>
 
