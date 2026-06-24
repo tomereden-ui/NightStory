@@ -15,7 +15,7 @@ const SAVES_INDEX   = "saves-index.json";   // list of manual saves only
 const MAX_MANUAL_SAVES = 10;
 
 async function ensureBucket() {
-  const { error } = await supabase.storage.createBucket(BUCKET, { public: false });
+  const { error } = await supabase.storage.createBucket(BUCKET, { public: true });
   if (error && !error.message.toLowerCase().includes("already exists")) {
     console.warn("[ScriptSaves] bucket:", error.message);
   }

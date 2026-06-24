@@ -26,7 +26,18 @@ export async function GET(
   const { id } = params;
   const path = id === "autosave" ? "autosave.json" : `${id}.json`;
   const { data, error } = await supabase.storage.from(BUCKET).download(path);
-  if (error || !data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (error || !data) {
+    console.error("[ScriptSaves] GET missing file:", path, error?.message);
+    // Auto-clean phantom index entries so they stop appearing in the list
+    if (id !== "autosave") {
+      const manuals = await readManualIndex();
+      if (manuals.some((s) => s.id === id)) {
+        await writeManualIndex(manuals.filter((s) => s.id !== id));
+        console.warn("[ScriptSaves] removed phantom entry:", id);
+      }
+    }
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   try {
     const full = JSON.parse(await data.text()) as ScriptSaveFull;
     return NextResponse.json(full);

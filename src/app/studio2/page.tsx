@@ -71,9 +71,13 @@ function ScriptBrowser({
     setLoadingId(id);
     try {
       const res = await fetch(`/api/script-saves/${id}`, { cache: "no-store" });
+      if (res.status === 404) {
+        // Phantom entry — server already removed it from index, drop from local list too
+        setSaves((prev) => { const next = prev.filter((s) => s.id !== id); onCount?.(next.length); return next; });
+        return;
+      }
       if (!res.ok) {
         console.error("[ScriptBrowser] load failed:", res.status, id);
-        alert("Could not load this version — the file may be missing from storage.");
         return;
       }
       const save = await res.json() as ScriptSaveFull;
