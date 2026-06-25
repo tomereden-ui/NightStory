@@ -631,7 +631,8 @@ export default function ProfilePage() {
   const { t, isRTL } = useLanguage();
   const { mode, setMode } = useViewMode();
   const [usage, setUsage] = useState<UsageTotals | null>(null);
-  const [children, setChildren] = useState<ChildProfile[]>(MOCK_USER.childProfiles);
+  const [children, setChildren] = useState<ChildProfile[]>([]);
+  const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
   const [narratorOpen, setNarratorOpen] = useState(false);
@@ -646,6 +647,7 @@ export default function ProfilePage() {
             id: c.id, name: c.name, age: c.age,
             avatarEmoji: c.avatar_emoji, ageGroup: ageToGroup(c.age), favoriteCategories: [],
           })));
+          setChildrenLoaded(true);
         } else {
           // Seed mock defaults into DB so future PATCHes work
           const seeded: ChildProfile[] = [];
@@ -663,9 +665,10 @@ export default function ProfilePage() {
             } catch { /* ignore */ }
           }
           if (seeded.length > 0) setChildren(seeded);
+          setChildrenLoaded(true);
         }
       })
-      .catch(() => {});
+      .catch(() => { setChildrenLoaded(true); });
   }, []);
 
   useEffect(() => {
@@ -736,14 +739,23 @@ export default function ProfilePage() {
           <div className="mb-7">
             <SectionHeader label={t("childProfiles")} />
             <div className="grid grid-cols-2 gap-2.5">
-              {children.map((child) => (
-                <ChildCard
-                  key={child.id}
-                  child={child}
-                  onChangeAvatar={() => setEditAvatarFor(child.id)}
-                  onDelete={() => handleDeleteChild(child.id)}
-                />
-              ))}
+              {!childrenLoaded
+                ? [0, 1].map((i) => (
+                    <div
+                      key={i}
+                      className="rounded-2xl animate-pulse"
+                      style={{ minHeight: 130, background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))
+                : children.map((child) => (
+                    <ChildCard
+                      key={child.id}
+                      child={child}
+                      onChangeAvatar={() => setEditAvatarFor(child.id)}
+                      onDelete={() => handleDeleteChild(child.id)}
+                    />
+                  ))
+              }
               <button
                 onClick={() => setShowAddChild(true)}
                 className="rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.97] hover:border-white/20"
