@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock } from "@/types";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 300; // 5 min — POST returns immediately; production runs in background
 import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
 import { pickGeminiVoice as pickGeminiVoiceForChar } from "@/config/ttsDefaults";
 import { PRESET_VOICES } from "@/config/presetVoices";
@@ -172,6 +175,24 @@ function cleanTempDir(jobId: string) {
   }
 }
 
+// Sweep any job dirs older than 2 hours left behind by crashed processes
+function sweepOrphanedTempDirs() {
+  try {
+    if (!fs.existsSync(TMP_DIR)) return;
+    const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+    for (const entry of fs.readdirSync(TMP_DIR)) {
+      const dir = path.join(TMP_DIR, entry);
+      try {
+        const stat = fs.statSync(dir);
+        if (stat.isDirectory() && stat.mtimeMs < cutoff) {
+          fs.rmSync(dir, { recursive: true, force: true });
+          console.log(`[TempSweep] Removed orphaned dir: ${entry}`);
+        }
+      } catch { /* skip */ }
+    }
+  } catch { /* best effort */ }
+}
+
 async function runProduction(
   jobId: string,
   storyId: string,
@@ -291,9 +312,11 @@ async function runProduction(
     let cacheSfxHits = 0;
     console.log(`[${ts()}][ElementStore] Loaded ${elementCache.size} cached elements for story ${storyId}`);
 
-    // Gemini TTS quota is tight — process dialogue one at a time
-    for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart++) {
-      const batch = [dialogueTracks[batchStart]];
+    // Process dialogue in small parallel batches — 3 concurrent keeps Gemini TTS
+    // quota comfortable while cutting wall-clock time by ~3×.
+    const DIALOGUE_BATCH = 3;
+    for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += DIALOGUE_BATCH) {
+      const batch = dialogueTracks.slice(batchStart, batchStart + DIALOGUE_BATCH);
       let batchFromCache = false;
 
       await Promise.all(
@@ -360,8 +383,9 @@ async function runProduction(
           });
         }),
       );
-      // Skip Gemini quota delay for cache hits (no API call was made)
-      if (batchStart < dialogueTracks.length - 1 && !batchFromCache) await sleep(500);
+      // Skip quota delay when entire batch was served from cache (no API calls made)
+      const hasMore = batchStart + DIALOGUE_BATCH < dialogueTracks.length;
+      if (hasMore && !batchFromCache) await sleep(500);
     }
 
     // ── Step 3: SFX generation ────────────────────────────────────────────
@@ -664,6 +688,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Cannot create temp directory: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
     }
 
+    sweepOrphanedTempDirs();
     pruneJobs();
 
     const jobId = crypto.randomUUID();

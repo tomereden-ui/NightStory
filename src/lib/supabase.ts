@@ -11,7 +11,15 @@ function getClient(): SupabaseClient {
       "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local"
     );
   }
-  _client = createClient(url, serviceKey, { auth: { persistSession: false } });
+  _client = createClient(url, serviceKey, {
+    auth: { persistSession: false },
+    // The JS SDK talks to PostgREST over HTTP — no raw Postgres connections.
+    // For direct SQL via supabase.rpc() at high concurrency, point
+    // SUPABASE_DB_URL at the Supabase connection pooler (PgBouncer) URL
+    // from the dashboard: Settings → Database → Connection Pooling.
+    db: { schema: "public" },
+    global: { headers: { "x-app-name": "nightstory" } },
+  });
   return _client;
 }
 
