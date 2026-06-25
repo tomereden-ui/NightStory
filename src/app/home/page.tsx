@@ -260,7 +260,17 @@ function ChildPill({
         color: "rgba(255,255,255,0.45)",
       }}
     >
-      <span className="text-base leading-none">{child.avatar_emoji}</span>
+      {child.avatar_emoji?.startsWith("http") ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={child.avatar_emoji}
+          alt={child.name}
+          className="rounded-full object-cover flex-shrink-0"
+          style={{ width: 20, height: 20 }}
+        />
+      ) : (
+        <span className="text-base leading-none">{child.avatar_emoji || "🧒"}</span>
+      )}
       <span className="text-xs font-semibold">{child.name}</span>
     </button>
   );
