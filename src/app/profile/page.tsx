@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import { useFontSize, type FontScale } from "@/context/FontSizeContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
+import FamilyVoicesPanel from "@/components/profile/FamilyVoicesPanel";
 import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getNarratorVoiceId, setNarratorVoiceId } from "@/lib/narratorPreference";
@@ -703,6 +704,9 @@ export default function ProfilePage() {
               </button>
             </div>
           </div>
+
+          {/* ── Family Voices ────────────────────────────────────────── */}
+          <FamilyVoicesPanel />
 
           {/* ── Display mode ─────────────────────────────────────────── */}
           <div className="mb-7">
