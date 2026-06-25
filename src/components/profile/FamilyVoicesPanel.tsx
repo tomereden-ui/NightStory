@@ -411,6 +411,7 @@ function AddVoiceSheet({
 
 export default function FamilyVoicesPanel() {
   const { language } = useLanguage();
+  const [open, setOpen] = useState(false);
   const [voices, setVoices] = useState<VoiceRecord[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -459,57 +460,70 @@ export default function FamilyVoicesPanel() {
 
   return (
     <div className="mb-7">
-      {/* Section header */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
+      {/* Section header — tap to expand/collapse */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between mb-3"
+      >
+        <div className="text-left">
           <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
             Family Voices
           </p>
           <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-            Hear your stories in voices you love
+            {open ? "Hear your stories in voices you love" : `${voices.length > 0 ? `${voices.length} voice${voices.length > 1 ? "s" : ""} saved` : "Tap to add voices"}`}
           </p>
         </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
-          style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.25)" }}
+        <span
+          className="text-white/30 text-xs transition-transform"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
-          ＋ Add
-        </button>
-      </div>
+          ▾
+        </span>
+      </button>
 
-      {/* Empty state */}
-      {voices.length === 0 && (
-        <button
-          onClick={() => setShowAdd(true)}
-          className="w-full rounded-2xl flex flex-col items-center justify-center gap-3 py-8 transition-all active:scale-[0.98]"
-          style={{ background: "rgba(167,139,250,0.05)", border: "1.5px dashed rgba(167,139,250,0.2)" }}
-        >
-          <span className="text-3xl">🎙</span>
-          <div className="text-center">
-            <p className="text-white/50 text-sm font-medium">Add your family&apos;s voices</p>
-            <p className="text-white/25 text-xs mt-1">Dad, Mom, Grandma — anyone can narrate</p>
-          </div>
-          <span className="px-4 py-1.5 rounded-full text-xs font-semibold" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.3)" }}>
-            Get started →
-          </span>
-        </button>
-      )}
+      {open && (
+        <>
+          {/* Empty state */}
+          {voices.length === 0 && (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="w-full rounded-2xl flex flex-col items-center justify-center gap-3 py-8 transition-all active:scale-[0.98]"
+              style={{ background: "rgba(167,139,250,0.05)", border: "1.5px dashed rgba(167,139,250,0.2)" }}
+            >
+              <span className="text-3xl">🎙</span>
+              <div className="text-center">
+                <p className="text-white/50 text-sm font-medium">Add your family&apos;s voices</p>
+                <p className="text-white/25 text-xs mt-1">Dad, Mom, Grandma — anyone can narrate</p>
+              </div>
+              <span className="px-4 py-1.5 rounded-full text-xs font-semibold" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.3)" }}>
+                Get started →
+              </span>
+            </button>
+          )}
 
-      {/* Voice list */}
-      {voices.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {voices.map((v) => (
-            <VoiceCard
-              key={v.id}
-              voice={v}
-              playingId={playingId}
-              onPlay={handlePlay}
-              onDelete={handleDelete}
-              onAvatarChange={handleAvatarChange}
-            />
-          ))}
-        </div>
+          {/* Voice list */}
+          {voices.length > 0 && (
+            <div className="flex flex-col gap-2 mb-3">
+              {voices.map((v) => (
+                <VoiceCard
+                  key={v.id}
+                  voice={v}
+                  playingId={playingId}
+                  onPlay={handlePlay}
+                  onDelete={handleDelete}
+                  onAvatarChange={handleAvatarChange}
+                />
+              ))}
+              <button
+                onClick={() => setShowAdd(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 self-start mt-1"
+                style={{ background: "rgba(167,139,250,0.1)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.22)" }}
+              >
+                ＋ Add voice
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Add sheet */}
@@ -517,7 +531,7 @@ export default function FamilyVoicesPanel() {
         <AddVoiceSheet
           language={language}
           onClose={() => setShowAdd(false)}
-          onSaved={(v) => setVoices((prev) => [v, ...prev])}
+          onSaved={(v) => { setVoices((prev) => [v, ...prev]); }}
         />
       )}
     </div>
