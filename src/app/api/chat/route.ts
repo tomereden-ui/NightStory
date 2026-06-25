@@ -17,6 +17,7 @@ interface ChildProfileCtx {
   gender?: string;
   favorite_themes?: string[];
   interests?: string;
+  avoid?: string;
 }
 
 function buildChildContext(p: ChildProfileCtx | null | undefined): string {
@@ -25,7 +26,10 @@ function buildChildContext(p: ChildProfileCtx | null | undefined): string {
   if (p.gender && p.gender !== "other") parts.push(`Gender: ${p.gender}`);
   if (p.favorite_themes?.length) parts.push(`Favourite story themes: ${p.favorite_themes.join(", ")}`);
   if (p.interests) parts.push(`Interests: ${p.interests}`);
-  return `\n\nACTIVE CHILD PROFILE\n====================\n${parts.join("\n")}\nUse this profile to personalise your greeting (use the child's name!) and to bias story suggestions toward their interests and age-appropriate language.`;
+  const avoidPart = p.avoid
+    ? `\n\nCONTENT TO STRICTLY AVOID\n--------------------------\n${p.avoid}\nNEVER include these elements in any story suggestion or generated story. This is a hard rule — not a preference.`
+    : "";
+  return `\n\nACTIVE CHILD PROFILE\n====================\n${parts.join("\n")}\nUse this profile to personalise your greeting (use the child's name!) and to bias story suggestions toward their interests and age-appropriate language.${avoidPart}`;
 }
 
 function loadChatGuide(): string {

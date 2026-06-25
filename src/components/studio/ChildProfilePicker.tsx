@@ -35,6 +35,7 @@ function AddProfileModal({
   const [avatar, setAvatar] = useState("⭐");
   const [themes, setThemes] = useState<string[]>([]);
   const [interests, setInterests] = useState("");
+  const [avoid, setAvoid] = useState("");
   const [saving, setSaving] = useState(false);
 
   function toggleTheme(id: string) {
@@ -58,6 +59,7 @@ function AddProfileModal({
           avatar_emoji: avatar,
           favorite_themes: themes,
           interests,
+          avoid,
         }),
       });
       if (res.ok) {
@@ -180,6 +182,22 @@ function AddProfileModal({
               className="w-full px-4 py-3 rounded-2xl text-white text-sm outline-none"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
             />
+          </div>
+
+          {/* Things to avoid */}
+          <div>
+            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold block mb-1.5">
+              Things to avoid <span className="normal-case opacity-60">(fears, sensitivities)</span>
+            </label>
+            <input
+              type="text" value={avoid} onChange={(e) => setAvoid(e.target.value)}
+              placeholder="e.g. spiders, loud monsters, darkness, being lost"
+              className="w-full px-4 py-3 rounded-2xl text-white text-sm outline-none"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(236,72,153,0.2)" }}
+            />
+            <p className="text-white/20 text-[10px] mt-1.5 leading-snug">
+              Gemini will never include these in any story
+            </p>
           </div>
 
           <button

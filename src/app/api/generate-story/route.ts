@@ -28,6 +28,8 @@ export interface GenerateStoryRequest {
   lessons?: string[];
   // language for story generation (ISO 639-1 code)
   language?: string;
+  // content to strictly avoid (fears, sensitivities from child profile)
+  avoid?: string;
 }
 
 interface RawBlock {
@@ -110,7 +112,7 @@ function ageLanguageRules(ageGroup: string): string {
   );
 }
 
-function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string, lessons?: string[], language?: string): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string, lessons?: string[], language?: string, avoid?: string): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
@@ -125,7 +127,11 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, child
     ? `\n\nLANGUAGE\n--------\nWrite the ENTIRE story in ${language} (ISO 639-1: "${language}"). All dialogue, narration, SFX labels, and the title must be in this language.`
     : "";
 
-  return `${guidance}${lessonPart}${agePart}${langPart}
+  const avoidPart = avoid
+    ? `\n\nCONTENT TO STRICTLY AVOID\n--------------------------\n${avoid}\nThis is a HARD rule. Never include these elements — not even briefly, not even resolved positively. The child has fears or sensitivities around these topics.`
+    : "";
+
+  return `${guidance}${lessonPart}${agePart}${langPart}${avoidPart}
 
 RUNTIME TARGETS FOR THIS STORY
 -------------------------------
@@ -168,7 +174,7 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons, body.language),
+      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons, body.language, body.avoid),
       generationConfig: {
         temperature: 0.85,
         maxOutputTokens: 8192,

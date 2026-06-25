@@ -1300,6 +1300,7 @@ export default function Studio2Page() {
         : MOCK_USER.preferredAgeGroup,
       language,
       ...(selectedLessons.length > 0 ? { lessons: selectedLessons } : {}),
+      ...(activeChild?.avoid ? { avoid: activeChild.avoid } : {}),
     };
 
     try {

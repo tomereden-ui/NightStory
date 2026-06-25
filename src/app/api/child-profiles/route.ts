@@ -12,6 +12,7 @@ export interface DBChildProfile {
   favorite_animals: string[];
   favorite_themes: string[];
   interests?: string;
+  avoid?: string;
   notes?: string;
   created_at: number;
   updated_at: number;
