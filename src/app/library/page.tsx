@@ -483,6 +483,60 @@ export default function LibraryPage() {
               </button>
             </div>
           ) : (
+            <>
+              {/* Recently Played — horizontal mini-rail, hidden during search/filter */}
+              {entries.length >= 2 && !search && durationFilter === "all" && (
+                <div className="mb-5 mt-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+                    Recently Played
+                  </p>
+                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                    {entries.slice(0, 5).map((entry) => {
+                      const [c1, c2] = cardPalette(entry.title);
+                      return (
+                        <Link
+                          key={entry.id}
+                          href={`/library/${entry.id}`}
+                          className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
+                          style={{ width: 108, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        >
+                          <div className="relative flex items-center justify-center" style={{ height: 86 }}>
+                            {entry.coverUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div
+                                className="w-full h-full flex items-center justify-center text-2xl"
+                                style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}33)` }}
+                              >
+                                🌙
+                              </div>
+                            )}
+                            {/* play hint overlay */}
+                            <div
+                              className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                              style={{ background: "rgba(0,0,0,0.35)" }}
+                            >
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center"
+                                style={{ background: "rgba(79,195,247,0.85)" }}
+                              >
+                                <span className="text-white text-xs pl-0.5">▶</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="px-2.5 py-2">
+                            <p className="text-white text-[10px] font-semibold leading-snug" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{entry.title}</p>
+                            <p className="text-white/30 text-[9px] mt-1">{durationLabel(entry.durationSeconds)}</p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "12px 0 14px" }} />
+                </div>
+              )}
+
             <div
               className={isMobile ? "flex flex-col gap-3" : "grid gap-4"}
               style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
@@ -626,6 +680,7 @@ export default function LibraryPage() {
                 );
               })}
             </div>
+            </>
           )
         )}
       </div>

@@ -396,8 +396,9 @@ function JourneySnippet({ childName }: { childName?: string }) {
   const mins  = data.totalMinutes % 60;
   const timeLabel = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   return (
-    <div
-      className="flex items-center gap-3 px-3 py-2.5 rounded-2xl mt-3"
+    <Link
+      href="/profile#story-journey"
+      className="flex items-center gap-3 px-3 py-2.5 rounded-2xl mt-3 transition-all active:scale-[0.98]"
       style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.14)" }}
     >
       {/* streak */}
@@ -430,7 +431,8 @@ function JourneySnippet({ childName }: { childName?: string }) {
           />
         ))}
       </div>
-    </div>
+      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>›</span>
+    </Link>
   );
 }
 

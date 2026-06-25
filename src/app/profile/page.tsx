@@ -707,7 +707,9 @@ export default function ProfilePage() {
           </div>
 
           {/* ── Story Journey ────────────────────────────────────────── */}
-          <StoryJourney />
+          <div id="story-journey">
+            <StoryJourney />
+          </div>
 
           {/* ── Family Voices ────────────────────────────────────────── */}
           <FamilyVoicesPanel />

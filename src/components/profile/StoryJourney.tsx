@@ -46,7 +46,7 @@ export const MOCK_JOURNEY = MOCK_CHILDREN;
 
 // ── Calendar heatmap ─────────────────────────────────────────────────────────
 
-const CELL = 11; // px per cell
+const CELL = 14; // px per cell
 const GAP  = 3;  // px gap
 
 function cellStyle(count: number): React.CSSProperties {
