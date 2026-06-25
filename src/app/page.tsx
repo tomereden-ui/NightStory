@@ -93,32 +93,12 @@ export default function SplashPage() {
           />
           {/* Top gradient so logo is readable */}
           <div className="absolute inset-0" style={{
-            background: "linear-gradient(to bottom, rgba(5,2,16,0.72) 0%, rgba(5,2,16,0.3) 20%, rgba(5,2,16,0.0) 45%, rgba(5,2,16,0.0) 60%, rgba(5,2,16,0.75) 80%, rgba(5,2,16,0.97) 100%)",
+            background: "linear-gradient(to bottom, rgba(5,2,16,0.0) 0%, rgba(5,2,16,0.0) 55%, rgba(5,2,16,0.75) 78%, rgba(5,2,16,0.97) 100%)",
           }} />
         </div>
 
-        {/* Logo — top */}
-        <div className="relative flex flex-col items-center gap-1 pt-14" style={{ animation: "ns-fadein 0.9s 0.2s ease both" }}>
-          <h1 className="text-5xl font-bold" style={{
-            background: "linear-gradient(90deg, #fbbf24, #c4b5fd, #67e8f9, #fbbf24)",
-            backgroundSize: "300% 300%",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            animation: "ns-shimmer 4s ease-in-out infinite",
-            fontFamily: "var(--font-outfit), sans-serif",
-            letterSpacing: "-0.02em",
-          }}>
-            NightStory
-          </h1>
-          <p className="text-xs font-medium" style={{
-            color: "rgba(196,181,253,0.65)",
-            letterSpacing: "0.24em",
-            animation: "ns-stars-in 1.2s 0.5s ease both",
-          }}>
-            ✦ MAGICAL BEDTIME STORIES ✦
-          </p>
-        </div>
+        {/* Spacer — pushes button to bottom */}
+        <div />
 
         {/* CTA Button — bottom */}
         <div className="relative flex justify-center pb-16">
@@ -151,7 +131,7 @@ export default function SplashPage() {
             (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
           }}
         >
-          Let&apos;s go ✨
+          ✨ Begin the Magic ✨
         </button>
         </div>
       </div>
