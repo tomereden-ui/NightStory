@@ -222,6 +222,12 @@ async function fetchChildAvatar(profile: DBChildProfile): Promise<string | null>
   const cacheKey = `${profile.id}-${profile.gender}`;
   if (avatarCache.has(cacheKey)) return avatarCache.get(cacheKey)!;
 
+  // If avatar_emoji is already a URL (same source home/profile use), use it directly
+  if (profile.avatar_emoji?.startsWith("http")) {
+    avatarCache.set(cacheKey, profile.avatar_emoji);
+    return profile.avatar_emoji;
+  }
+
   // Use stored avatar_url if already resolved (from DB or a previous session)
   if ((profile as DBChildProfile & { avatar_url?: string }).avatar_url) {
     const url = (profile as DBChildProfile & { avatar_url?: string }).avatar_url!;
