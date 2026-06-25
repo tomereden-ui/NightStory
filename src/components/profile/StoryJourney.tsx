@@ -104,46 +104,57 @@ function CalendarHeatmap({ days }: { days: number[] }) {
 // ── Single child journey card ─────────────────────────────────────────────────
 
 function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
+  const [open, setOpen] = useState(false);
   const hours = Math.floor(child.totalMinutes / 60);
   const mins  = child.totalMinutes % 60;
   const timeLabel = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
 
   return (
     <div
-      className="rounded-3xl overflow-hidden mb-4"
+      className="rounded-3xl overflow-hidden mb-3"
       style={{
         background: "rgba(255,255,255,0.03)",
         border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      {/* Header */}
-      <div
-        className="px-4 pt-4 pb-3 flex items-center justify-between"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+      {/* Header — always visible, tap to expand */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-4 pt-4 pb-3 flex items-center justify-between transition-colors"
+        style={{ borderBottom: open ? "1px solid rgba(255,255,255,0.06)" : "none" }}
       >
         <div className="flex items-center gap-2">
           <span className="text-2xl">{child.emoji}</span>
-          <div>
+          <div className="text-left">
             <p className="text-white text-sm font-bold">{child.name}&apos;s Story Journey</p>
-            <p className="text-white/30 text-[10px]">This month</p>
+            <p className="text-white/30 text-[10px]">This month · tap to {open ? "close" : "expand"}</p>
           </div>
         </div>
-        {/* Streak */}
-        <div
-          className="flex items-center gap-1 px-3 py-1.5 rounded-full"
-          style={{
-            background: "rgba(251,191,36,0.12)",
-            border: "1px solid rgba(251,191,36,0.3)",
-          }}
-        >
-          <span className="text-sm">🌙</span>
-          <span className="text-xs font-bold" style={{ color: "#fbbf24" }}>
-            {child.streak} nights
+        <div className="flex items-center gap-2">
+          {/* Streak pill */}
+          <div
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full"
+            style={{
+              background: "rgba(251,191,36,0.12)",
+              border: "1px solid rgba(251,191,36,0.3)",
+            }}
+          >
+            <span className="text-xs">🌙</span>
+            <span className="text-xs font-bold" style={{ color: "#fbbf24" }}>
+              {child.streak}
+            </span>
+          </div>
+          {/* Chevron */}
+          <span
+            className="text-white/25 text-xs transition-transform"
+            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+          >
+            ▾
           </span>
         </div>
-      </div>
+      </button>
 
-      <div className="px-4 pt-3 pb-4 flex flex-col gap-4">
+      {open && <div className="px-4 pt-3 pb-4 flex flex-col gap-4">
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -221,7 +232,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         >
           Share {child.name}&apos;s month with family 🌙
         </button>
-      </div>
+      </div>}
     </div>
   );
 }
