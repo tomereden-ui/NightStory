@@ -37,7 +37,7 @@ export default function SplashPage() {
   function handleGo() {
     if (exiting) return;
     setExiting(true);
-    setTimeout(() => router.replace("/library"), 500);
+    setTimeout(() => router.replace("/home"), 500);
   }
 
   return (

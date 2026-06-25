@@ -20,7 +20,7 @@ const NAV: Array<{
   {
     labelKey: "navStoryTime",
     iconName: "navStories",
-    href: "/library",
+    href: "/home",
     color: "#fbbf24",
     glow: "rgba(251,191,36,0.4)",
     bg: "rgba(251,191,36,0.12)",
