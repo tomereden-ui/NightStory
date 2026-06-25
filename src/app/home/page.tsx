@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
@@ -438,25 +439,52 @@ export default function HomePage() {
   return (
     <div className="cosmic-page min-h-full">
       {/* ── Header ── */}
+      <style>{`
+        @keyframes owl-float {
+          0%,100% { transform: translateY(0) rotate(-2deg); }
+          50%      { transform: translateY(-8px) rotate(2deg); }
+        }
+        @keyframes owl-glow {
+          0%,100% { filter: drop-shadow(0 0 10px rgba(167,139,250,0.5)); }
+          50%      { filter: drop-shadow(0 0 22px rgba(251,191,36,0.65)); }
+        }
+      `}</style>
       <div className="px-5 pt-12 pb-6">
         {/* Greeting */}
-        <div className="mb-4">
-          <h1
-            className="text-2xl font-bold tracking-tight"
-            style={{
-              background: "linear-gradient(135deg, #fff 0%, #4fc3f7 50%, #a78bfa 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex-1 min-w-0">
+            <h1
+              className="text-2xl font-bold tracking-tight"
+              style={{
+                background: "linear-gradient(135deg, #fff 0%, #4fc3f7 50%, #a78bfa 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              {greetingText}{greetingName} 🌙
+            </h1>
+            <p className="text-white/30 text-xs mt-1 tracking-wide">
+              {stories.length > 0
+                ? `${stories.length} ${stories.length === 1 ? "story" : "stories"} in your library`
+                : "Ready to create your first story?"}
+            </p>
+          </div>
+
+          {/* Owl avatar */}
+          <div
+            className="flex-shrink-0 ml-3"
+            style={{ animation: "owl-float 4s ease-in-out infinite, owl-glow 4s ease-in-out infinite" }}
           >
-            {greetingText}{greetingName} 🌙
-          </h1>
-          <p className="text-white/30 text-xs mt-1 tracking-wide">
-            {stories.length > 0
-              ? `${stories.length} ${stories.length === 1 ? "story" : "stories"} in your library`
-              : "Ready to create your first story?"}
-          </p>
+            <Image
+              src="/owl-avatar.png"
+              alt="NightStory owl"
+              width={72}
+              height={72}
+              priority
+              style={{ borderRadius: "50%", objectFit: "cover" }}
+            />
+          </div>
         </div>
 
         {/* Child switcher */}
