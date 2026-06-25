@@ -89,11 +89,11 @@ export default function SplashPage() {
             alt="NightStory owl wizard"
             fill
             priority
-            style={{ objectFit: "cover", objectPosition: "center" }}
+            style={{ objectFit: "contain", objectPosition: "center 20%" }}
           />
           {/* Dark gradient overlay so text stays readable */}
           <div className="absolute inset-0" style={{
-            background: "linear-gradient(to bottom, rgba(5,2,16,0.15) 0%, rgba(5,2,16,0.1) 40%, rgba(5,2,16,0.75) 70%, rgba(5,2,16,0.92) 100%)",
+            background: "linear-gradient(to bottom, rgba(5,2,16,0.1) 0%, rgba(5,2,16,0.05) 50%, rgba(5,2,16,0.82) 75%, rgba(5,2,16,0.97) 100%)",
           }} />
         </div>
 
