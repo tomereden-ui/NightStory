@@ -11,7 +11,7 @@ import Icon from "@/components/ui/Icon";
 
 const NAV: Array<{
   labelKey: TranslationKey;
-  iconName: "navStories" | "navCreate" | "navVoices" | "navMySpace";
+  iconName: "navStories" | "navCreate" | "navMySpace";
   href: string;
   color: string;
   glow: string;
@@ -34,12 +34,12 @@ const NAV: Array<{
     bg: "rgba(192,132,252,0.12)",
   },
   {
-    labelKey: "navVoices",
-    iconName: "navVoices",
-    href: "/voices",
-    color: "#f472b6",
-    glow: "rgba(244,114,182,0.4)",
-    bg: "rgba(244,114,182,0.12)",
+    labelKey: "library",
+    iconName: "navStories",
+    href: "/library",
+    color: "#4fc3f7",
+    glow: "rgba(79,195,247,0.4)",
+    bg: "rgba(79,195,247,0.12)",
   },
   {
     labelKey: "navMySpace",
