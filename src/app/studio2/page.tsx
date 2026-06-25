@@ -891,7 +891,7 @@ function SceneHeader() {
       <div className="absolute bottom-0 left-0 right-0 px-4 pt-8 pb-3"
         style={{ background: "linear-gradient(to top, rgba(6,11,30,0.97) 0%, rgba(6,11,30,0.7) 60%, transparent 100%)" }}>
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-0.5" style={{ color: "rgba(139,92,246,0.7)" }}>
-          Nightstory Studio
+          Dream Up
         </p>
         <h2 className="text-base font-bold leading-tight"
           style={{ background: "linear-gradient(90deg,#fff 0%,#4fc3f7 55%,#a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>

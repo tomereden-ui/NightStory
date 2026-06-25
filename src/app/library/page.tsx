@@ -67,6 +67,7 @@ function ClassicsTab() {
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const seedingRef = useRef(false);
 
   useEffect(() => {
@@ -125,12 +126,61 @@ function ClassicsTab() {
     );
   }
 
+  const q = search.toLowerCase().trim();
+  const filtered = classics.filter(
+    (c) => !q || c.title.toLowerCase().includes(q) || c.tagline.toLowerCase().includes(q)
+  );
+
   return (
+    <div className="pt-2">
+      {/* Search bar */}
+      <div className="relative mb-3">
+        <span
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
+          style={{ color: "rgba(255,255,255,0.25)" }}
+        >
+          <Icon name="search" size={14} />
+        </span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search classics…"
+          className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm text-white placeholder-white/20 outline-none"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.09)",
+          }}
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+          >
+            <Icon name="close" size={14} />
+          </button>
+        )}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="flex flex-col items-center justify-center pt-16 gap-3 text-center">
+          <span className="text-4xl" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
+          <p className="text-white/40 text-sm">No classics match your search</p>
+          <button
+            onClick={() => setSearch("")}
+            className="text-xs px-4 py-2 rounded-full transition-all"
+            style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
+          >
+            Clear search
+          </button>
+        </div>
+      )}
+
     <div
-      className={isMobile ? "flex flex-col gap-3 pt-2" : "grid gap-4 pt-2"}
+      className={isMobile ? "flex flex-col gap-3" : "grid gap-4"}
       style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
     >
-      {classics.map((meta) => {
+      {filtered.map((meta) => {
         const isGenerating = generatingId === meta.id;
         const [c1, c2] = cardPalette(meta.title);
 
@@ -232,6 +282,7 @@ function ClassicsTab() {
           </Link>
         );
       })}
+    </div>
     </div>
   );
 }
