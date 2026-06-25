@@ -480,37 +480,47 @@ function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onTogg
 
   return (
     <div className="mb-7">
-      <button onClick={onToggle} className="w-full flex items-center justify-between mb-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
-          {label}
-        </p>
-        <div className="flex items-center gap-2">
-          {/* Selected voice — always visible in header */}
-          <div className="flex items-center gap-1.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={selectedVoice.avatarUrl}
-              alt={selectedVoice.name}
-              className="w-5 h-5 rounded-full object-cover"
-              style={{ border: "1.5px solid rgba(79,195,247,0.5)" }}
-            />
-            <span className="text-xs font-semibold" style={{ color: "#4fc3f7" }}>{selectedVoice.name}</span>
-          </div>
-          <span
-            className="text-white/30 text-xs transition-transform"
-            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
-          >
-            ▾
-          </span>
+      {/* Section label */}
+      <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
+        {label}
+      </p>
+
+      {/* Collapsed row — always shows selected voice as a tappable card */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all active:scale-[0.98]"
+        style={{
+          background: "rgba(255,255,255,0.04)",
+          border: open ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={selectedVoice.avatarUrl}
+          alt={selectedVoice.name}
+          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+          style={{ border: "2px solid rgba(79,195,247,0.5)" }}
+        />
+        <div className="flex-1 text-left">
+          <p className="text-sm font-semibold" style={{ color: "#4fc3f7" }}>{selectedVoice.name}</p>
+          <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{selectedVoice.desc}</p>
         </div>
+        <span
+          className="text-white/30 text-xs flex-shrink-0 transition-transform"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+        >
+          ▾
+        </span>
       </button>
+
+      {/* Expanded — full carousel */}
       {open && (
-        <>
+        <div className="mt-3">
           <NarratorVoicePicker selected={selected} onPick={pick} />
           <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
             Used for Luna&apos;s chat voice and as the narrator in new stories.
           </p>
-        </>
+        </div>
       )}
     </div>
   );
