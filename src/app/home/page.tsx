@@ -168,70 +168,111 @@ function SkeletonRail() {
   );
 }
 
-// ── Featured "Tonight's Pick" card ────────────────────────────────────────────
+// ── Tonight's Picks rail ──────────────────────────────────────────────────────
 
-function FeaturedCard({ story, href }: { story: ClassicMeta | LibraryEntry; href: string }) {
-  const title = story.title;
-  const [c1, c2] = cardPalette(title);
-  const coverUrl = "coverUrl" in story ? story.coverUrl : null;
-  const summary = "summary" in story ? story.summary : ("tagline" in story ? (story as ClassicMeta).tagline : "");
-  const durationSeconds = story.durationSeconds ?? 0;
+type PickItem = {
+  title: string;
+  summary: string;
+  coverUrl?: string | null;
+  durationSeconds: number;
+  href: string;
+  tag: "Your Story" | "Classic";
+  emoji?: string;
+};
+
+function TonightsPickCard({ item }: { item: PickItem }) {
+  const [c1, c2] = cardPalette(item.title);
+  const isOwn = item.tag === "Your Story";
 
   return (
-    <div className="px-5 mb-8">
-      <h2 className="text-sm font-semibold tracking-widest uppercase mb-3" style={{ color: "rgba(255,255,255,0.55)" }}>
-        Tonight&apos;s Pick ✨
-      </h2>
-      <Link
-        href={href}
-        className="block rounded-3xl overflow-hidden transition-all active:scale-[0.98]"
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          border: `1px solid ${c1}33`,
-          boxShadow: `0 8px 40px rgba(0,0,0,0.5), 0 0 40px ${c1}18`,
-        }}
-      >
-        <div className="relative" style={{ height: 200 }}>
-          {coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUrl} alt={title} className="w-full h-full object-cover" />
-          ) : (
-            <div
-              className="w-full h-full flex items-center justify-center text-7xl"
-              style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}44)` }}
-            >
-              <span style={{ filter: `drop-shadow(0 0 20px ${c1}88)` }}>
-                {"emoji" in story ? (story as ClassicMeta).emoji : "🌙"}
-              </span>
-            </div>
-          )}
-          {/* Gradient overlay */}
+    <Link
+      href={item.href}
+      className="flex-shrink-0 rounded-3xl overflow-hidden transition-all active:scale-[0.97] select-none"
+      style={{
+        width: 220,
+        background: "rgba(255,255,255,0.04)",
+        border: `1px solid ${c1}30`,
+        boxShadow: `0 8px 32px rgba(0,0,0,0.45), 0 0 32px ${c1}12`,
+      }}
+    >
+      {/* Image area */}
+      <div className="relative overflow-hidden" style={{ height: 148 }}>
+        {item.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.coverUrl} alt={item.title} className="w-full h-full object-cover" />
+        ) : (
           <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(5,8,20,0.92) 100%)" }}
-          />
-          {/* Text on image */}
-          <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
-            <p className="text-white font-bold text-lg leading-tight tracking-wide">{title}</p>
-            {summary && <p className="text-white/55 text-xs mt-1 leading-snug line-clamp-2">{summary}</p>}
-          </div>
-          {/* Duration badge */}
-          {durationSeconds > 0 && (
-            <span
-              className="absolute top-3 right-3 text-[9px] font-bold tracking-widest px-2 py-0.5 rounded-full"
-              style={{
-                background: "rgba(5,8,20,0.65)",
-                backdropFilter: "blur(4px)",
-                color: c1,
-                border: `1px solid ${c1}44`,
-              }}
-            >
-              {durationLabel(durationSeconds)}
+            className="w-full h-full flex items-center justify-center text-5xl"
+            style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}44)` }}
+          >
+            <span style={{ filter: `drop-shadow(0 0 16px ${c1}88)` }}>
+              {item.emoji ?? "🌙"}
             </span>
-          )}
-        </div>
-      </Link>
-    </div>
+          </div>
+        )}
+        {/* Gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(5,8,20,0.88) 100%)" }}
+        />
+        {/* Type tag */}
+        <span
+          className="absolute top-2.5 left-2.5 text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+          style={{
+            background: isOwn ? "rgba(192,132,252,0.25)" : "rgba(251,191,36,0.2)",
+            border: isOwn ? "1px solid rgba(192,132,252,0.5)" : "1px solid rgba(251,191,36,0.4)",
+            color: isOwn ? "#c084fc" : "#fbbf24",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          {item.tag}
+        </span>
+        {/* Duration badge */}
+        {item.durationSeconds > 0 && (
+          <span
+            className="absolute top-2.5 right-2.5 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+            style={{
+              background: "rgba(5,8,20,0.65)",
+              backdropFilter: "blur(4px)",
+              color: c1,
+              border: `1px solid ${c1}44`,
+            }}
+          >
+            {durationLabel(item.durationSeconds)}
+          </span>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="px-3 pt-2.5 pb-3.5">
+        <div className="w-6 h-0.5 rounded-full mb-2" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
+        <p className="text-white text-sm font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
+        {item.summary && (
+          <p className="text-white/35 text-[10px] leading-snug mt-1 line-clamp-2">{item.summary}</p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function TonightsPicksRail({ picks }: { picks: PickItem[] }) {
+  if (picks.length === 0) return null;
+  return (
+    <section className="mb-8">
+      <div className="flex items-center justify-between px-5 mb-3">
+        <h2 className="text-sm font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.55)" }}>
+          Tonight&apos;s Picks ✨
+        </h2>
+      </div>
+      <div
+        className="flex gap-3 overflow-x-auto px-5 pb-1"
+        style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+      >
+        {picks.map((item, i) => (
+          <TonightsPickCard key={i} item={item} />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -363,11 +404,27 @@ export default function HomePage() {
 
   const activeChild = children.find((c) => c.id === activeChildId) ?? null;
 
-  // "Tonight's Pick" — prefer a generated classic with a cover, else first classic, else first story
-  const tonightsPick =
-    classics.find((c) => c.status === "ready" && c.coverUrl) ??
-    classics.find((c) => c.status === "ready") ??
-    null;
+  // "Tonight's Picks" — up to 2 user stories + up to 3 ready classics, interleaved
+  const readyClassics = classics.filter((c) => c.status === "ready");
+  const tonightsPicks: PickItem[] = [
+    ...stories.slice(0, 2).map((s) => ({
+      title: s.title,
+      summary: s.summary ?? "",
+      coverUrl: s.coverUrl,
+      durationSeconds: s.durationSeconds,
+      href: `/library/${s.id}`,
+      tag: "Your Story" as const,
+    })),
+    ...readyClassics.slice(0, 3).map((c) => ({
+      title: c.title,
+      summary: c.tagline,
+      coverUrl: c.coverUrl,
+      durationSeconds: c.durationSeconds ?? 0,
+      href: `/library/classics/${c.id}`,
+      tag: "Classic" as const,
+      emoji: c.emoji,
+    })),
+  ];
 
   // Recent stories (last 6)
   const recentStories = stories.slice(0, 6);
@@ -460,13 +517,8 @@ export default function HomePage() {
             {null}
           </Rail>
 
-          {/* ── Tonight's Pick ── */}
-          {tonightsPick && (
-            <FeaturedCard
-              story={tonightsPick}
-              href={`/library/classics/${tonightsPick.id}`}
-            />
-          )}
+          {/* ── Tonight's Picks ── */}
+          <TonightsPicksRail picks={tonightsPicks} />
 
           {/* ── Continue Listening ── */}
           {continueStories.length > 0 && (
