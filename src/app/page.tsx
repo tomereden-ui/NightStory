@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -30,16 +30,15 @@ const STARS = Array.from({ length: 70 }, (_, i) => ({
   duration: 2 + (i % 4),
 }));
 
-
 export default function SplashPage() {
   const router = useRouter();
-  const [visible, setVisible] = useState(true);
+  const [exiting, setExiting] = useState(false);
 
-  useEffect(() => {
-    const fadeOut = setTimeout(() => setVisible(false), 2600);
-    const nav     = setTimeout(() => router.replace("/library"), 3100);
-    return () => { clearTimeout(fadeOut); clearTimeout(nav); };
-  }, [router]);
+  function handleGo() {
+    if (exiting) return;
+    setExiting(true);
+    setTimeout(() => router.replace("/library"), 500);
+  }
 
   return (
     <>
@@ -48,17 +47,9 @@ export default function SplashPage() {
           0%,100% { opacity:0; transform:scale(0.4); }
           50%      { opacity:0.9; transform:scale(1); }
         }
-        @keyframes ns-sparkle {
-          0%,100% { opacity:0; transform:scale(0.3); }
-          40%,60% { opacity:1; transform:scale(1); }
-        }
         @keyframes ns-float {
           0%,100% { transform:translateY(0) rotate(-2deg); }
           50%      { transform:translateY(-14px) rotate(2deg); }
-        }
-        @keyframes ns-wand {
-          0%,100% { filter:drop-shadow(0 0 20px rgba(251,191,36,.65)) drop-shadow(0 0 44px rgba(167,139,250,.45)); }
-          50%      { filter:drop-shadow(0 0 36px rgba(251,191,36,1)) drop-shadow(0 0 70px rgba(167,139,250,.8)); }
         }
         @keyframes ns-shimmer {
           0%,100% { background-position:0% 50%; }
@@ -68,22 +59,26 @@ export default function SplashPage() {
           0%,100% { opacity:.7; transform:translateX(-50%) scale(1); }
           50%      { opacity:1; transform:translateX(-50%) scale(1.07); }
         }
-        @keyframes ns-blink {
-          0%,88%,100% { transform:scaleY(1); }
-          94%          { transform:scaleY(0.06); }
-        }
         @keyframes ns-fadein {
           from { opacity:0; transform:translateY(12px); }
           to   { opacity:1; transform:translateY(0); }
         }
+        @keyframes ns-btn-glow {
+          0%,100% { box-shadow: 0 0 24px 4px rgba(251,191,36,0.45), 0 0 60px 8px rgba(167,139,250,0.25); }
+          50%      { box-shadow: 0 0 40px 8px rgba(251,191,36,0.75), 0 0 90px 16px rgba(167,139,250,0.45); }
+        }
+        @keyframes ns-stars-in {
+          from { opacity:0; letter-spacing:0.5em; }
+          to   { opacity:1; letter-spacing:0.18em; }
+        }
+        .ns-go-btn:active { transform: scale(0.96) !important; }
       `}</style>
 
-      {/* Full-screen overlay — sits above AppShell nav */}
       <div
         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden select-none"
         style={{
           background: "radial-gradient(ellipse 110% 85% at 50% 28%, #1e1268 0%, #0c0628 45%, #050210 100%)",
-          opacity: visible ? 1 : 0,
+          opacity: exiting ? 0 : 1,
           transition: "opacity 0.5s ease",
         }}
       >
@@ -105,17 +100,17 @@ export default function SplashPage() {
           animation: "ns-moon 4s ease-in-out infinite",
         }} />
 
-        {/* OWL — Imagen-generated Pixar portrait */}
+        {/* OWL */}
         <div style={{
-          width: 300, height: 300,
+          width: 280, height: 280,
           animation: "ns-float 5s ease-in-out infinite, ns-fadein 0.9s 0.2s ease both",
           filter: "drop-shadow(0 0 40px rgba(167,139,250,0.5)) drop-shadow(0 0 80px rgba(251,191,36,0.25))",
         }}>
           <Image
             src="/owl-splash.png"
             alt="NightStory owl wizard"
-            width={300}
-            height={300}
+            width={280}
+            height={280}
             priority
             style={{ width: "100%", height: "100%", objectFit: "contain" }}
           />
@@ -135,25 +130,48 @@ export default function SplashPage() {
           }}>
             NightStory
           </h1>
-          <p className="text-xs tracking-widest uppercase font-medium" style={{
+          <p className="text-xs font-medium" style={{
             color: "rgba(196,181,253,0.6)",
             letterSpacing: "0.24em",
+            animation: "ns-stars-in 1.2s 0.6s ease both",
           }}>
-            Magical bedtime stories
+            ✦ MAGICAL BEDTIME STORIES ✦
           </p>
         </div>
 
-        {/* Animated loading dots */}
-        <div className="flex gap-2 mt-10" style={{ animation: "ns-fadein 0.9s 0.7s ease both" }}>
-          {[0.4, 1, 0.4].map((opacity, i) => (
-            <div key={i} className="rounded-full" style={{
-              width: i === 1 ? 22 : 7,
-              height: 7,
-              background: `rgba(167,139,250,${opacity})`,
-              boxShadow: i === 1 ? "0 0 12px rgba(167,139,250,0.6)" : undefined,
-            }} />
-          ))}
-        </div>
+        {/* CTA Button */}
+        <button
+          className="ns-go-btn"
+          onClick={handleGo}
+          style={{
+            marginTop: 40,
+            padding: "16px 48px",
+            borderRadius: 999,
+            border: "1.5px solid rgba(251,191,36,0.55)",
+            background: "linear-gradient(135deg, rgba(251,191,36,0.18) 0%, rgba(167,139,250,0.18) 100%)",
+            backdropFilter: "blur(12px)",
+            color: "#fff",
+            fontSize: "1.15rem",
+            fontWeight: 700,
+            fontFamily: "var(--font-outfit), sans-serif",
+            letterSpacing: "0.04em",
+            cursor: "pointer",
+            animation: "ns-fadein 0.9s 1s ease both, ns-btn-glow 3s 1.9s ease-in-out infinite",
+            transition: "transform 0.15s ease, background 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background =
+              "linear-gradient(135deg, rgba(251,191,36,0.32) 0%, rgba(167,139,250,0.32) 100%)";
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.05)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background =
+              "linear-gradient(135deg, rgba(251,191,36,0.18) 0%, rgba(167,139,250,0.18) 100%)";
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          }}
+        >
+          Let&apos;s go ✨
+        </button>
       </div>
     </>
   );
