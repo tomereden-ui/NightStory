@@ -75,7 +75,7 @@ export default function SplashPage() {
       `}</style>
 
       <div
-        className="fixed inset-0 z-[9999] flex flex-col items-center justify-end overflow-hidden select-none pb-16"
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-between overflow-hidden select-none"
         style={{
           background: "radial-gradient(ellipse 110% 85% at 50% 28%, #1e1268 0%, #0c0628 45%, #050210 100%)",
           opacity: exiting ? 0 : 1,
@@ -89,16 +89,16 @@ export default function SplashPage() {
             alt="NightStory owl wizard"
             fill
             priority
-            style={{ objectFit: "contain", objectPosition: "center 20%" }}
+            style={{ objectFit: "contain", objectPosition: "center 55%" }}
           />
-          {/* Dark gradient overlay so text stays readable */}
+          {/* Top gradient so logo is readable */}
           <div className="absolute inset-0" style={{
-            background: "linear-gradient(to bottom, rgba(5,2,16,0.1) 0%, rgba(5,2,16,0.05) 50%, rgba(5,2,16,0.82) 75%, rgba(5,2,16,0.97) 100%)",
+            background: "linear-gradient(to bottom, rgba(5,2,16,0.72) 0%, rgba(5,2,16,0.3) 20%, rgba(5,2,16,0.0) 45%, rgba(5,2,16,0.0) 60%, rgba(5,2,16,0.75) 80%, rgba(5,2,16,0.97) 100%)",
           }} />
         </div>
 
-        {/* Title & tagline */}
-        <div className="relative flex flex-col items-center gap-2" style={{ animation: "ns-fadein 0.9s 0.4s ease both" }}>
+        {/* Logo — top */}
+        <div className="relative flex flex-col items-center gap-1 pt-14" style={{ animation: "ns-fadein 0.9s 0.2s ease both" }}>
           <h1 className="text-5xl font-bold" style={{
             background: "linear-gradient(90deg, #fbbf24, #c4b5fd, #67e8f9, #fbbf24)",
             backgroundSize: "300% 300%",
@@ -112,20 +112,20 @@ export default function SplashPage() {
             NightStory
           </h1>
           <p className="text-xs font-medium" style={{
-            color: "rgba(196,181,253,0.6)",
+            color: "rgba(196,181,253,0.65)",
             letterSpacing: "0.24em",
-            animation: "ns-stars-in 1.2s 0.6s ease both",
+            animation: "ns-stars-in 1.2s 0.5s ease both",
           }}>
             ✦ MAGICAL BEDTIME STORIES ✦
           </p>
         </div>
 
-        {/* CTA Button */}
+        {/* CTA Button — bottom */}
+        <div className="relative flex justify-center pb-16">
         <button
           className="ns-go-btn"
           onClick={handleGo}
           style={{
-            marginTop: 28,
             padding: "16px 48px",
             borderRadius: 999,
             border: "1.5px solid rgba(251,191,36,0.55)",
@@ -153,6 +153,7 @@ export default function SplashPage() {
         >
           Let&apos;s go ✨
         </button>
+        </div>
       </div>
     </>
   );
