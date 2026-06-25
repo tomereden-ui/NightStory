@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { readDraft, writeDraft } from "@/lib/draftStore";
 import { useLanguage } from "@/context/LanguageContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ScriptTab from "@/components/studio/ScriptTab";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
@@ -1072,8 +1072,10 @@ export default function Studio2Page() {
   const [lessonImplementations, setLessonImplementations] = useState<{ lesson: string; implemented: boolean; how: string }[]>([]);
 
   // ─── Tab / view state ───────────────────────────────────────────────────────
-  const [activeTab, setActiveTab]           = useState<StudioTab>("chat");
-  const [createMode, setCreateMode]         = useState<"chat" | "step-by-step">("chat");
+  const searchParams = useSearchParams();
+  const startOnPrompt = searchParams.get("start") === "prompt";
+  const [activeTab, setActiveTab]           = useState<StudioTab>(startOnPrompt ? "step-by-step" : "chat");
+  const [createMode, setCreateMode]         = useState<"chat" | "step-by-step">(startOnPrompt ? "step-by-step" : "chat");
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob]     = useState<Job | null>(null);
   const [isProducing, setIsProducing]       = useState(false);
@@ -1153,9 +1155,9 @@ export default function Studio2Page() {
       // Migrate: support both old string `lesson` and new array `lessons`
       setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
       setLessonImplementations(draft.lessonImplementations ?? []);
-      setActiveTab("script");
+      if (!startOnPrompt) setActiveTab("script");
     } else {
-      setActiveTab("chat");
+      setActiveTab(startOnPrompt ? "step-by-step" : "chat");
     }
     setLoaded(true);
   }, []);

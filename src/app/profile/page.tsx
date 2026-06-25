@@ -582,6 +582,7 @@ export default function ProfilePage() {
   const [children, setChildren] = useState<ChildProfile[]>(MOCK_USER.childProfiles);
   const [showAddChild, setShowAddChild] = useState(false);
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
+  const [narratorOpen, setNarratorOpen] = useState(false);
 
   // Load children from DB on mount; seed mock defaults if table is empty
   useEffect(() => {
@@ -735,11 +736,28 @@ export default function ProfilePage() {
 
           {/* ── Narrator voice ───────────────────────────────────────── */}
           <div className="mb-7">
-            <SectionHeader label={t("defaultNarratorVoice")} />
-            <NarratorVoicePicker />
-            <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
-              Used for Luna&apos;s chat voice and as the narrator in new stories.
-            </p>
+            <button
+              onClick={() => setNarratorOpen((v) => !v)}
+              className="w-full flex items-center justify-between mb-3"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
+                {t("defaultNarratorVoice")}
+              </p>
+              <span
+                className="text-white/30 text-xs transition-transform"
+                style={{ transform: narratorOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+              >
+                ▾
+              </span>
+            </button>
+            {narratorOpen && (
+              <>
+                <NarratorVoicePicker />
+                <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
+                  Used for Luna&apos;s chat voice and as the narrator in new stories.
+                </p>
+              </>
+            )}
           </div>
 
           {/* ── Text Size ───────────────────────────────────────────── */}
