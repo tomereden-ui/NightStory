@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 
 // ── Mock data — replace with real Supabase queries once story_plays table exists ──
 
@@ -20,8 +20,8 @@ const MOCK_CHILDREN = [
       { label: "Friendship", count: 2, color: "#4fc3f7" },
     ],
     recentTitles: ["The Dragon Who Was Afraid of Fire", "Peter Pan", "Maya and the Star Garden"],
-    // last 28 days: 1 = had a story, 0 = no story
-    calendar: [1,0,1,1,0,1,1,1,0,0,1,1,1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1],
+    // last 28 days: 0 = no story, 1 = one story, 2 = two stories
+    calendar: [1,0,2,1,0,1,1,2,0,0,1,1,2,0,1,1,1,2,0,1,2,0,1,1,1,2,1,1],
   },
   {
     id: "lior",
@@ -37,36 +37,65 @@ const MOCK_CHILDREN = [
       { label: "Curiosity", count: 2, color: "#a78bfa" },
     ],
     recentTitles: ["Space Rangers: Lost on Mars", "The Brave Little Robot"],
-    calendar: [0,0,1,0,0,1,1,0,0,0,1,0,1,0,0,1,1,0,0,1,1,0,0,1,1,1,1,1],
+    calendar: [0,0,1,0,0,1,1,0,0,0,1,0,1,0,0,1,1,0,0,1,1,0,0,1,1,2,1,1],
   },
 ];
 
+// Exported for the home screen snippet
+export const MOCK_JOURNEY = MOCK_CHILDREN;
+
 // ── Calendar heatmap ─────────────────────────────────────────────────────────
 
+const CELL = 11; // px per cell
+const GAP  = 3;  // px gap
+
+function cellStyle(count: number): React.CSSProperties {
+  if (count === 0) return { background: "rgba(255,255,255,0.06)" };
+  if (count === 1) return {
+    background: "linear-gradient(135deg, #4fc3f7, #a78bfa)",
+    boxShadow: "0 0 5px rgba(79,195,247,0.35)",
+  };
+  return {
+    background: "linear-gradient(135deg, #fbbf24, #f472b6)",
+    boxShadow: "0 0 7px rgba(251,191,36,0.5)",
+  };
+}
+
 function CalendarHeatmap({ days }: { days: number[] }) {
-  const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
+  const DAY_LABELS = ["S","M","T","W","T","F","S"];
+  const totalW = 7 * CELL + 6 * GAP;
   return (
-    <div>
-      <div className="flex gap-0.5 mb-1">
-        {dayLabels.map((d, i) => (
-          <div key={i} className="flex-1 text-center text-[8px] font-bold" style={{ color: "rgba(255,255,255,0.2)" }}>
-            {d}
-          </div>
+    <div style={{ width: totalW }}>
+      {/* day-of-week labels */}
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP, marginBottom: 4 }}>
+        {DAY_LABELS.map((d, i) => (
+          <div key={i} style={{ width: CELL, textAlign: "center", fontSize: 7, fontWeight: 700, color: "rgba(255,255,255,0.2)" }}>{d}</div>
         ))}
       </div>
-      <div className="grid gap-0.5" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
-        {days.map((active, i) => (
+      {/* cells */}
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP }}>
+        {days.map((count, i) => (
           <div
             key={i}
-            className="rounded-sm aspect-square"
-            style={{
-              background: active
-                ? "linear-gradient(135deg, #4fc3f7, #a78bfa)"
-                : "rgba(255,255,255,0.05)",
-              boxShadow: active ? "0 0 6px rgba(79,195,247,0.4)" : "none",
-            }}
+            title={count > 0 ? `${count} ${count === 1 ? "story" : "stories"}` : undefined}
+            style={{ width: CELL, height: CELL, borderRadius: 3, ...cellStyle(count) }}
           />
         ))}
+      </div>
+      {/* legend */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "rgba(255,255,255,0.06)" }} />
+          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.2)" }}>none</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#4fc3f7,#a78bfa)" }} />
+          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.2)" }}>1 story</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#fbbf24,#f472b6)" }} />
+          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.2)" }}>2+ stories</span>
+        </div>
       </div>
     </div>
   );

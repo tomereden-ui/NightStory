@@ -7,6 +7,7 @@ import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
+import { MOCK_JOURNEY } from "@/components/profile/StoryJourney";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -382,6 +383,57 @@ function CreateCTA({ childName }: { childName?: string }) {
   );
 }
 
+// ── Journey snapshot strip ────────────────────────────────────────────────────
+
+const MINI_CELL = 8;
+const MINI_GAP  = 2;
+
+function JourneySnippet({ childName }: { childName?: string }) {
+  const data = MOCK_JOURNEY.find((c) => c.name === childName) ?? MOCK_JOURNEY[0];
+  if (!data) return null;
+  const last7 = data.calendar.slice(-7);
+  const hours = Math.floor(data.totalMinutes / 60);
+  const mins  = data.totalMinutes % 60;
+  const timeLabel = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  return (
+    <div
+      className="flex items-center gap-3 px-3 py-2.5 rounded-2xl mt-3"
+      style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.14)" }}
+    >
+      {/* streak */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <span style={{ fontSize: 13 }}>🌙</span>
+        <span className="text-xs font-bold" style={{ color: "#fbbf24" }}>{data.streak} nights</span>
+      </div>
+      <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
+      {/* stats */}
+      <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+        {data.storiesThisMonth} stories · {timeLabel} this month
+      </span>
+      {/* spacer */}
+      <div style={{ flex: 1 }} />
+      {/* mini 7-day heatmap */}
+      <div style={{ display: "flex", gap: MINI_GAP, flexShrink: 0 }}>
+        {last7.map((count, i) => (
+          <div
+            key={i}
+            style={{
+              width: MINI_CELL,
+              height: MINI_CELL,
+              borderRadius: 2,
+              background: count === 0
+                ? "rgba(255,255,255,0.07)"
+                : count === 1
+                  ? "linear-gradient(135deg,#4fc3f7,#a78bfa)"
+                  : "linear-gradient(135deg,#fbbf24,#f472b6)",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Home page ────────────────────────────────────────────────────────────
 
 export default function HomePage() {
@@ -511,6 +563,9 @@ export default function HomePage() {
             ))}
           </div>
         )}
+
+        {/* Journey snapshot — streak + 7-day mini heatmap */}
+        <JourneySnippet childName={activeChild?.name} />
       </div>
 
       {/* ── Content ── */}
