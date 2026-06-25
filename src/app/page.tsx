@@ -75,49 +75,30 @@ export default function SplashPage() {
       `}</style>
 
       <div
-        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden select-none"
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-end overflow-hidden select-none pb-16"
         style={{
           background: "radial-gradient(ellipse 110% 85% at 50% 28%, #1e1268 0%, #0c0628 45%, #050210 100%)",
           opacity: exiting ? 0 : 1,
           transition: "opacity 0.5s ease",
         }}
       >
-        {/* Stars */}
-        {STARS.map((s) => <Star key={s.id} {...s} />)}
-
-        {/* Moon glow */}
-        <div className="absolute rounded-full" style={{
-          width: 200, height: 200, top: "6%", left: "50%",
-          transform: "translateX(-50%)",
-          background: "radial-gradient(circle, rgba(255,245,200,.22) 0%, rgba(200,180,255,.09) 55%, transparent 80%)",
-          animation: "ns-moon 4s ease-in-out infinite",
-        }} />
-        <div className="absolute rounded-full" style={{
-          width: 80, height: 80, top: "9%", left: "50%",
-          transform: "translateX(-50%)",
-          background: "radial-gradient(circle, rgba(255,248,210,.6) 0%, rgba(255,235,150,.22) 65%, transparent 100%)",
-          boxShadow: "0 0 50px 24px rgba(255,235,150,.14)",
-          animation: "ns-moon 4s ease-in-out infinite",
-        }} />
-
-        {/* OWL */}
-        <div style={{
-          width: 280, height: 280,
-          animation: "ns-float 5s ease-in-out infinite, ns-fadein 0.9s 0.2s ease both",
-          filter: "drop-shadow(0 0 40px rgba(167,139,250,0.5)) drop-shadow(0 0 80px rgba(251,191,36,0.25))",
-        }}>
+        {/* OWL — full screen background */}
+        <div className="absolute inset-0">
           <Image
             src="/owl-splash.png"
             alt="NightStory owl wizard"
-            width={280}
-            height={280}
+            fill
             priority
-            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            style={{ objectFit: "cover", objectPosition: "center" }}
           />
+          {/* Dark gradient overlay so text stays readable */}
+          <div className="absolute inset-0" style={{
+            background: "linear-gradient(to bottom, rgba(5,2,16,0.15) 0%, rgba(5,2,16,0.1) 40%, rgba(5,2,16,0.75) 70%, rgba(5,2,16,0.92) 100%)",
+          }} />
         </div>
 
         {/* Title & tagline */}
-        <div className="flex flex-col items-center gap-2 mt-1" style={{ animation: "ns-fadein 0.9s 0.4s ease both" }}>
+        <div className="relative flex flex-col items-center gap-2" style={{ animation: "ns-fadein 0.9s 0.4s ease both" }}>
           <h1 className="text-5xl font-bold" style={{
             background: "linear-gradient(90deg, #fbbf24, #c4b5fd, #67e8f9, #fbbf24)",
             backgroundSize: "300% 300%",
@@ -144,7 +125,7 @@ export default function SplashPage() {
           className="ns-go-btn"
           onClick={handleGo}
           style={{
-            marginTop: 40,
+            marginTop: 28,
             padding: "16px 48px",
             borderRadius: 999,
             border: "1.5px solid rgba(251,191,36,0.55)",
