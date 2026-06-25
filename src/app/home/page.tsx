@@ -340,7 +340,18 @@ function SharedEmptyState() {
 
 // ── Create CTA ────────────────────────────────────────────────────────────────
 
-function CreateCTA() {
+const CTA_SUBTITLES = [
+  "What world should Maya visit tonight?",
+  "A new adventure in 2 minutes →",
+  "Every night a different story ✨",
+  "What happens in tonight's dream?",
+  "Your story, your characters, right now →",
+];
+
+function CreateCTA({ childName }: { childName?: string }) {
+  const [subtitleIdx] = useState(() => Math.floor(Math.random() * CTA_SUBTITLES.length));
+  const subtitle = CTA_SUBTITLES[subtitleIdx].replace("Maya", childName ?? "tonight");
+
   return (
     <div className="px-5 mb-10">
       <Link
@@ -354,7 +365,7 @@ function CreateCTA() {
       >
         <div>
           <p className="text-white font-bold text-base tracking-wide">Create a Story ✦</p>
-          <p className="text-white/40 text-xs mt-0.5">Your next adventure awaits</p>
+          <p className="text-white/40 text-xs mt-0.5">{subtitle}</p>
         </div>
         <span
           className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0"
@@ -606,7 +617,7 @@ export default function HomePage() {
           )}
 
           {/* ── Create CTA (bottom) ── */}
-          {stories.length > 0 && <CreateCTA />}
+          {stories.length > 0 && <CreateCTA childName={activeChild?.name} />}
         </>
       )}
 
