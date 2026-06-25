@@ -465,18 +465,60 @@ function ageToGroup(age: number): import("@/types").AgeGroup {
   return "10-12";
 }
 
-// ─── Narrator voice picker ────────────────────────────────────────────────────
+// ─── Narrator voice section (collapsible, shows selected in header) ───────────
 
-function NarratorVoicePicker() {
+function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
   const [selected, setSelected] = useState<string>("Zephyr");
-
   useEffect(() => { setSelected(getNarratorVoiceId()); }, []);
+
+  const selectedVoice = PRESET_VOICES.find((v) => v.id === selected) ?? PRESET_VOICES[0];
 
   function pick(id: string) {
     setSelected(id);
     setNarratorVoiceId(id);
   }
 
+  return (
+    <div className="mb-7">
+      <button onClick={onToggle} className="w-full flex items-center justify-between mb-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
+          {label}
+        </p>
+        <div className="flex items-center gap-2">
+          {/* Selected voice — always visible in header */}
+          <div className="flex items-center gap-1.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={selectedVoice.avatarUrl}
+              alt={selectedVoice.name}
+              className="w-5 h-5 rounded-full object-cover"
+              style={{ border: "1.5px solid rgba(79,195,247,0.5)" }}
+            />
+            <span className="text-xs font-semibold" style={{ color: "#4fc3f7" }}>{selectedVoice.name}</span>
+          </div>
+          <span
+            className="text-white/30 text-xs transition-transform"
+            style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+          >
+            ▾
+          </span>
+        </div>
+      </button>
+      {open && (
+        <>
+          <NarratorVoicePicker selected={selected} onPick={pick} />
+          <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
+            Used for Luna&apos;s chat voice and as the narrator in new stories.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Narrator voice picker ────────────────────────────────────────────────────
+
+function NarratorVoicePicker({ selected, onPick }: { selected: string; onPick: (id: string) => void }) {
   return (
     <div
       className="-mx-1 flex gap-2.5 overflow-x-auto pb-1"
@@ -487,7 +529,7 @@ function NarratorVoicePicker() {
         return (
           <button
             key={v.id}
-            onClick={() => pick(v.id)}
+            onClick={() => onPick(v.id)}
             className="flex-shrink-0 flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-2xl transition-all active:scale-95"
             style={{
               width: 72,
@@ -735,30 +777,7 @@ export default function ProfilePage() {
           </div>
 
           {/* ── Narrator voice ───────────────────────────────────────── */}
-          <div className="mb-7">
-            <button
-              onClick={() => setNarratorOpen((v) => !v)}
-              className="w-full flex items-center justify-between mb-3"
-            >
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
-                {t("defaultNarratorVoice")}
-              </p>
-              <span
-                className="text-white/30 text-xs transition-transform"
-                style={{ transform: narratorOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
-              >
-                ▾
-              </span>
-            </button>
-            {narratorOpen && (
-              <>
-                <NarratorVoicePicker />
-                <p className="text-white/18 text-[10px] mt-2 leading-relaxed">
-                  Used for Luna&apos;s chat voice and as the narrator in new stories.
-                </p>
-              </>
-            )}
-          </div>
+          <NarratorVoiceSection open={narratorOpen} onToggle={() => setNarratorOpen((v) => !v)} label={t("defaultNarratorVoice")} />
 
           {/* ── Text Size ───────────────────────────────────────────── */}
           <div className="mb-7">
