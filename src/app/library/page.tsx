@@ -302,6 +302,7 @@ export default function LibraryPage() {
     return saved === "classics" ? "classics" : "my-stories";
   });
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
+  const [recentClassics, setRecentClassics] = useState<ClassicMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [trashCount, setTrashCount] = useState(0);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -313,10 +314,13 @@ export default function LibraryPage() {
     Promise.all([
       fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/library/trash", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([lib, trash]) => {
+      .then(([lib, trash, cls]) => {
         setEntries(Array.isArray(lib) ? lib : []);
         setTrashCount(Array.isArray(trash) ? trash.length : 0);
+        const ready = (Array.isArray(cls) ? cls as ClassicMeta[] : []).filter((c) => c.status === "ready");
+        setRecentClassics(ready.slice(0, 5));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -382,6 +386,68 @@ export default function LibraryPage() {
           </h1>
           <div className="w-9" />
         </div>
+
+        {/* Recently Played — spans both tabs */}
+        {!loading && (entries.length > 0 || recentClassics.length > 0) && (
+          <div className="mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+              Recently Played
+            </p>
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {[
+                ...entries.slice(0, 3).map((e) => ({
+                  key: `s-${e.id}`,
+                  href: `/library/${e.id}`,
+                  title: e.title,
+                  coverUrl: e.coverUrl ?? null,
+                  duration: durationLabel(e.durationSeconds),
+                })),
+                ...recentClassics.slice(0, 3).map((c) => ({
+                  key: `c-${c.id}`,
+                  href: `/library/classics/${c.id}`,
+                  title: c.title,
+                  coverUrl: c.coverUrl ?? null,
+                  duration: durationLabel(c.durationSeconds ?? 0),
+                })),
+              ].slice(0, 5).map((item) => {
+                const [c1, c2] = cardPalette(item.title);
+                return (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
+                    style={{ width: 108, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <div className="relative" style={{ height: 86 }}>
+                      {item.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.coverUrl} alt={item.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl"
+                          style={{ background: `linear-gradient(145deg,${c1}22,${c2}33)` }}>🌙</div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                        style={{ background: "rgba(0,0,0,0.35)" }}>
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center"
+                          style={{ background: "rgba(79,195,247,0.85)" }}>
+                          <span className="text-white text-[10px] pl-0.5">▶</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="px-2.5 py-2">
+                      <p className="text-white text-[10px] font-semibold leading-snug"
+                        style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {item.title}
+                      </p>
+                      <p className="text-white/30 text-[9px] mt-1">{item.duration}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "10px 0 0" }} />
+          </div>
+        )}
 
         {/* Tab switcher */}
         <div className="flex gap-1.5 mb-4 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)" }}>
@@ -484,59 +550,6 @@ export default function LibraryPage() {
             </div>
           ) : (
             <>
-              {/* Recently Played — horizontal mini-rail, hidden during search/filter */}
-              {entries.length >= 2 && !search && durationFilter === "all" && (
-                <div className="mb-5 mt-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
-                    Recently Played
-                  </p>
-                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                    {entries.slice(0, 5).map((entry) => {
-                      const [c1, c2] = cardPalette(entry.title);
-                      return (
-                        <Link
-                          key={entry.id}
-                          href={`/library/${entry.id}`}
-                          className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
-                          style={{ width: 108, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                        >
-                          <div className="relative flex items-center justify-center" style={{ height: 86 }}>
-                            {entry.coverUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover" />
-                            ) : (
-                              <div
-                                className="w-full h-full flex items-center justify-center text-2xl"
-                                style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}33)` }}
-                              >
-                                🌙
-                              </div>
-                            )}
-                            {/* play hint overlay */}
-                            <div
-                              className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                              style={{ background: "rgba(0,0,0,0.35)" }}
-                            >
-                              <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center"
-                                style={{ background: "rgba(79,195,247,0.85)" }}
-                              >
-                                <span className="text-white text-xs pl-0.5">▶</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="px-2.5 py-2">
-                            <p className="text-white text-[10px] font-semibold leading-snug" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{entry.title}</p>
-                            <p className="text-white/30 text-[9px] mt-1">{durationLabel(entry.durationSeconds)}</p>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                  <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "12px 0 14px" }} />
-                </div>
-              )}
-
             <div
               className={isMobile ? "flex flex-col gap-3" : "grid gap-4"}
               style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
