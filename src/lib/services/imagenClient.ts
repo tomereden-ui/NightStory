@@ -1,3 +1,5 @@
+import { trackGeminiImage } from "@/lib/usageTracker";
+
 export const IMAGE_MODEL = "gemini-3.1-flash-image";
 
 interface ImagenResult {
@@ -46,6 +48,7 @@ export async function generateWithImagen(
     return null;
   }
 
+  trackGeminiImage().catch(() => {});
   return {
     buf: Buffer.from(imagePart.inlineData.data, "base64"),
     mimeType: imagePart.inlineData.mimeType ?? "image/png",

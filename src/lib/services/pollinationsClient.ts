@@ -2,6 +2,8 @@
 // voice avatar generation. Pollinations is free/no-key but rate-limited under
 // concurrent load (429). We retry with 429-aware backoff.
 
+import { trackPollinations } from "@/lib/usageTracker";
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -73,7 +75,10 @@ export async function fetchPollinationsImage(
 
     const result = await fetchOnce(prompt, width, height, timeoutMs, label);
 
-    if (result.ok) return { buf: result.buf, mimeType: result.mimeType };
+    if (result.ok) {
+      trackPollinations().catch(() => {});
+      return { buf: result.buf, mimeType: result.mimeType };
+    }
 
     // On 429, honour Retry-After (or default to 10s) before next attempt
     if (result.status === 429) {

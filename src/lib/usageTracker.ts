@@ -8,21 +8,25 @@ const BUCKET = "usage-stats";
 const FILE   = "totals.json";
 
 export interface UsageTotals {
-  gemini_tokens:   number;
-  gemini_calls:    number;
-  gemini_tts_chars: number;
-  gemini_tts_calls: number;
-  el_tts_chars:    number;
-  el_tts_calls:    number;
-  el_sfx_chars:    number;
-  el_sfx_calls:    number;
+  gemini_tokens:      number;
+  gemini_calls:       number;
+  gemini_tts_chars:   number;
+  gemini_tts_calls:   number;
+  gemini_image_calls: number;
+  el_tts_chars:       number;
+  el_tts_calls:       number;
+  el_sfx_chars:       number;
+  el_sfx_calls:       number;
+  pollinations_calls: number;
 }
 
 const ZERO: UsageTotals = {
-  gemini_tokens:    0, gemini_calls:     0,
-  gemini_tts_chars: 0, gemini_tts_calls: 0,
-  el_tts_chars:     0, el_tts_calls:     0,
-  el_sfx_chars:     0, el_sfx_calls:     0,
+  gemini_tokens:      0, gemini_calls:       0,
+  gemini_tts_chars:   0, gemini_tts_calls:   0,
+  gemini_image_calls: 0,
+  el_tts_chars:       0, el_tts_calls:       0,
+  el_sfx_chars:       0, el_sfx_calls:       0,
+  pollinations_calls: 0,
 };
 
 async function ensureUsageBucket() {
@@ -90,6 +94,18 @@ export async function trackELSfx(chars: number): Promise<void> {
   const current = await readTotals().catch(() => ({ ...ZERO }));
   current.el_sfx_chars += chars;
   current.el_sfx_calls += 1;
+  await writeTotals(current).catch(() => {});
+}
+
+export async function trackGeminiImage(): Promise<void> {
+  const current = await readTotals().catch(() => ({ ...ZERO }));
+  current.gemini_image_calls += 1;
+  await writeTotals(current).catch(() => {});
+}
+
+export async function trackPollinations(): Promise<void> {
+  const current = await readTotals().catch(() => ({ ...ZERO }));
+  current.pollinations_calls += 1;
   await writeTotals(current).catch(() => {});
 }
 

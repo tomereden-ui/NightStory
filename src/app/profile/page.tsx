@@ -431,13 +431,14 @@ function UsageRow({
 // ─── Cost estimator ───────────────────────────────────────────────────────────
 
 function estimateCosts(u: UsageTotals) {
-  const geminiText = (u.gemini_tokens / 1_000_000) * 0.15;
-  const geminiTts  = (u.gemini_tts_chars / 1_000) * 0.05;
-  const elTts      = (u.el_tts_chars / 1_000) * 0.30;
-  const elSfx      = (u.el_sfx_chars / 1_000) * 0.08;
-  const total      = geminiText + geminiTts + elTts + elSfx;
-  const fmtCost    = (n: number) => n < 0.01 ? "<$0.01" : `$${n.toFixed(2)}`;
-  return { geminiText: fmtCost(geminiText), geminiTts: fmtCost(geminiTts), elTts: fmtCost(elTts), elSfx: fmtCost(elSfx), total: fmtCost(total) };
+  const geminiText  = (u.gemini_tokens / 1_000_000) * 0.15;
+  const geminiTts   = (u.gemini_tts_chars / 1_000) * 0.05;
+  const geminiImage = (u.gemini_image_calls ?? 0) * 0.04;
+  const elTts       = (u.el_tts_chars / 1_000) * 0.30;
+  const elSfx       = (u.el_sfx_chars / 1_000) * 0.08;
+  const total       = geminiText + geminiTts + geminiImage + elTts + elSfx;
+  const fmtCost     = (n: number) => n < 0.01 ? "<$0.01" : `$${n.toFixed(2)}`;
+  return { geminiText: fmtCost(geminiText), geminiTts: fmtCost(geminiTts), geminiImage: fmtCost(geminiImage), elTts: fmtCost(elTts), elSfx: fmtCost(elSfx), total: fmtCost(total) };
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -1011,6 +1012,13 @@ export default function ProfilePage() {
                 sub={usage ? `${fmt(usage.gemini_tts_calls)} synthesis call${usage.gemini_tts_calls !== 1 ? "s" : ""}` : "—"}
                 value={usage ? fmt(usage.gemini_tts_chars) : "—"} unit="chars"
                 cost={usage ? estimateCosts(usage).geminiTts : undefined} />
+              <UsageRow iconName="sparkles" accent="#34d399" label="Gemini · Images"
+                sub={usage ? `${fmt(usage.gemini_image_calls ?? 0)} image${(usage.gemini_image_calls ?? 0) !== 1 ? "s" : ""} generated` : "—"}
+                value={usage ? fmt(usage.gemini_image_calls ?? 0) : "—"} unit="images"
+                cost={usage ? estimateCosts(usage).geminiImage : undefined} />
+              <UsageRow iconName="sparkles" accent="#6ee7b7" label="Pollinations · Images"
+                sub={usage ? `${fmt(usage.pollinations_calls ?? 0)} image${(usage.pollinations_calls ?? 0) !== 1 ? "s" : ""} generated` : "—"}
+                value={usage ? fmt(usage.pollinations_calls ?? 0) : "—"} unit="images" />
               <UsageRow iconName="waveform" accent="#F59E0B" label="ElevenLabs · TTS"
                 sub={usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
                 value={usage ? fmt(usage.el_tts_chars) : "—"} unit="chars"
