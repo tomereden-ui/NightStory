@@ -35,23 +35,20 @@ interface Answers {
 
 // ─── FairyFigure: animated Bluebell fairy portrait ───────────────────────────
 
-const FAIRY_AVATAR_URL =
-  "https://api.dicebear.com/9.x/adventurer/svg?seed=FairyFae-iridescent-wings&backgroundColor=f3e5f5&radius=50";
-
 function FairyFigure({ size = 80 }: { size?: number }) {
   return (
     <div style={{ position: "relative", display: "inline-block", width: size, height: size }}>
       <style>{`
-        @keyframes _fairyFloat {
+        @keyframes _owlFloat {
           0%,100% { transform: translateY(0px) rotate(0deg); }
-          30% { transform: translateY(-9px) rotate(-2.5deg); }
-          70% { transform: translateY(-5px) rotate(2deg); }
+          30% { transform: translateY(-7px) rotate(-2deg); }
+          70% { transform: translateY(-4px) rotate(1.5deg); }
         }
-        @keyframes _fairyGlow {
-          0%,100% { opacity: 0.55; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.18); }
+        @keyframes _owlGlow {
+          0%,100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 0.9; transform: scale(1.14); }
         }
-        @keyframes _fairySparkle {
+        @keyframes _owlSparkle {
           0%,100% { opacity: 0; transform: scale(0) rotate(0deg); }
           50% { opacity: 1; transform: scale(1) rotate(160deg); }
         }
@@ -59,29 +56,29 @@ function FairyFigure({ size = 80 }: { size?: number }) {
       {/* Soft glow halo */}
       <div style={{
         position: "absolute",
-        inset: -size * 0.25,
+        inset: -size * 0.28,
         borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(236,72,153,0.45) 0%, rgba(167,139,250,0.25) 40%, transparent 68%)",
-        animation: "_fairyGlow 2.4s ease-in-out infinite",
+        background: "radial-gradient(circle, rgba(79,195,247,0.35) 0%, rgba(167,139,250,0.2) 45%, transparent 70%)",
+        animation: "_owlGlow 3s ease-in-out infinite",
         pointerEvents: "none",
       }} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={FAIRY_AVATAR_URL}
+        src="/owl-avatar.png"
         alt="Bluebell"
         style={{
           width: size,
           height: size,
           position: "relative",
           zIndex: 1,
-          animation: "_fairyFloat 3.2s ease-in-out infinite",
-          filter: "drop-shadow(0 0 10px rgba(236,72,153,0.65)) drop-shadow(0 2px 6px rgba(167,139,250,0.5))",
+          borderRadius: "50%",
+          animation: "_owlFloat 4s ease-in-out infinite",
+          filter: "drop-shadow(0 0 10px rgba(79,195,247,0.5)) drop-shadow(0 2px 8px rgba(167,139,250,0.4))",
         }}
       />
       {/* Sparkles */}
-      <span style={{ position: "absolute", top: 0, right: -size * 0.18, fontSize: size * 0.22, zIndex: 2, animation: "_fairySparkle 2.1s ease-in-out infinite", lineHeight: 1 }}>✨</span>
-      <span style={{ position: "absolute", bottom: size * 0.05, left: -size * 0.22, fontSize: size * 0.16, zIndex: 2, animation: "_fairySparkle 2.8s ease-in-out infinite 0.7s", lineHeight: 1 }}>⭐</span>
-      <span style={{ position: "absolute", top: size * 0.18, left: -size * 0.15, fontSize: size * 0.13, zIndex: 2, animation: "_fairySparkle 1.9s ease-in-out infinite 0.35s", lineHeight: 1 }}>✦</span>
+      <span style={{ position: "absolute", top: 0, right: -size * 0.18, fontSize: size * 0.22, zIndex: 2, animation: "_owlSparkle 2.4s ease-in-out infinite", lineHeight: 1 }}>✨</span>
+      <span style={{ position: "absolute", bottom: size * 0.05, left: -size * 0.22, fontSize: size * 0.16, zIndex: 2, animation: "_owlSparkle 3s ease-in-out infinite 0.8s", lineHeight: 1 }}>⭐</span>
     </div>
   );
 }
@@ -231,13 +228,13 @@ function IllustratedCard({
       />
 
       {/* Label */}
-      <div className="absolute bottom-0 left-0 right-0 px-2 pb-2.5 text-center">
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6 text-center">
         {badge}
         <span
-          className="text-[11px] font-semibold leading-tight"
+          className="text-[14px] font-bold leading-tight"
           style={{
-            color: selected ? "#4fc3f7" : "rgba(255,255,255,0.92)",
-            textShadow: "0 1px 8px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,0.8)",
+            color: selected ? "#4fc3f7" : "rgba(255,255,255,0.95)",
+            textShadow: "0 1px 10px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.9)",
             display: "block",
           }}
         >
@@ -328,7 +325,7 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
 
 type Q1Mode = null | "own" | "magical" | "stranger" | "surprise";
 
-function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName, childAvatarUrl }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string }) {
   const [mode, setMode] = useState<Q1Mode>(null);
   const [textVal, setTextVal] = useState(initialHero);
   const [magicChip, setMagicChip] = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
@@ -364,7 +361,15 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl }: { initi
       <div className="flex flex-col gap-3">
         {mode === null && (
           <div className="grid grid-cols-2 gap-2.5">
-            <IllustratedCard label="Your own name"   emoji="👤" imageUrl={optionImages["hero-own"]}      onClick={() => setMode("own")} />
+            <IllustratedCard
+              label={childName ? childName : "Your own name"}
+              emoji="👤"
+              imageUrl={childAvatarUrl || optionImages["hero-own"]}
+              onClick={() => {
+                if (childName) { setTextVal(childName); confirm(childName); }
+                else setMode("own");
+              }}
+            />
             <IllustratedCard label="A magical name"  emoji="✨" imageUrl={optionImages["hero-magical"]}  onClick={() => setMode("magical")} />
             <IllustratedCard label="A brave stranger" emoji="🗺️" imageUrl={optionImages["hero-stranger"]} onClick={() => setMode("stranger")} />
             <IllustratedCard label="Surprise me!"    emoji="🎲" imageUrl={optionImages["hero-surprise"]} onClick={handleSurprise} />
@@ -808,7 +813,7 @@ const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", 
 export interface StoryCharacterInfo { type: "child" | "adult" | "animal" | "narrator"; visualDescription: string; }
 export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo> };
 
-export function FiveQuestionFlow({ onComplete, onGenerating }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void } = {}) {
+export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string } = {}) {
   const router = useRouter();
   const { language } = useLanguage();
 
@@ -1033,7 +1038,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating }: { onComplete?: (d
 
   // ─── Step routing ───────────────────────────────────────────────────────────
 
-  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={onComplete ? undefined : () => router.push("/create")} optionImages={optionImages} audioUrl={questionAudios.q1} />;
+  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={onComplete ? undefined : () => router.push("/create")} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} />;
   if (step === "q2") return <Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q2} />;
   if (step === "q3") return <Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q3} />;
   if (step === "q4") return <Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q4} />;

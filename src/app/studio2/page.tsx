@@ -1863,6 +1863,8 @@ export default function Studio2Page() {
         {activeTab === "step-by-step" && (
           <div className="-mx-5">
             <FiveQuestionFlow
+              childName={activeChild?.name}
+              childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
               onGenerating={() => {
                 setScriptBlocks([]);
                 setGenerating(true);
