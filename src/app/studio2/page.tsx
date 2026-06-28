@@ -108,9 +108,9 @@ function ScriptBrowser({
   const handleClearAll = async () => {
     if (!confirm("Delete all saved versions? This cannot be undone.")) return;
     setClearing(true);
-    const manuals = saves.filter((s) => !s.isAutosave);
-    await Promise.allSettled(manuals.map((s) => fetch(`/api/script-saves/${s.id}`, { method: "DELETE" })));
-    setSaves((prev) => { const next = prev.filter((s) => s.isAutosave); onCount?.(next.length); return next; });
+    await Promise.allSettled(saves.map((s) => fetch(`/api/script-saves/${s.id}`, { method: "DELETE" })));
+    setSaves([]);
+    onCount?.(0);
     setClearing(false);
   };
 
@@ -141,7 +141,7 @@ function ScriptBrowser({
       deletingId={deletingId}
       onLoad={handleLoad}
       onDelete={handleDelete}
-      onClearAll={manualSaves.length > 0 ? handleClearAll : undefined}
+      onClearAll={saves.length > 0 ? handleClearAll : undefined}
       clearing={clearing}
     />
   );
@@ -227,7 +227,7 @@ function VersionList({
             </div>
 
             {/* Delete button — sits OUTSIDE the card, clearly separate */}
-            {!s.isAutosave && !isLoading && (
+            {!isLoading && (
               <button
                 onClick={(e) => onDelete(s.id, e)}
                 disabled={isDeleting}
