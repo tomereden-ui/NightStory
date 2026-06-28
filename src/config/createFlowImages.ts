@@ -1,70 +1,82 @@
 // Pollinations.ai prompts for illustrated option cards in the 5-question creation flow.
 // Images are generated once browser-side and cached in Supabase (bucket: story-options).
-// v2 — dramatic cinematic concept-art style prompts
+// v3 — Pixar-style cinematic quality prompts
 
 export const WORLD_IMAGE_PROMPTS: Record<string, string> = {
   "deep-ocean":
-    "vast glowing underwater kingdom, towering bioluminescent coral spires, massive manta rays gliding through shafts of light, epic cinematic scale, children's fantasy concept art, breathtaking deep teal and electric blue, ultra detailed",
+    "Pixar animated movie scene, vast glowing underwater kingdom, friendly giant whale swimming past bioluminescent coral towers, shafts of golden light piercing deep blue water, tiny colorful fish in formation, warm cinematic lighting, ultra detailed, 3D animation style, breathtaking and magical",
   "enchanted-forest":
-    "ancient enchanted forest at night, enormous glowing mushrooms taller than houses, thousands of fireflies forming constellations, moonbeams through twisted silver trees, children's epic fantasy concept art, emerald and gold cinematic lighting",
+    "Pixar animated movie scene, magical ancient forest at twilight, giant glowing mushrooms taller than trees, thousands of fireflies forming a galaxy overhead, a tiny hidden fairy village nestled in mossy roots, warm golden and emerald light, 3D animation cinematic style, ultra detailed and enchanting",
   "space-station":
-    "dramatic futuristic space station soaring above a glowing planet, stars and nebula explosion through massive windows, astronaut silhouette against cosmos, children's fantasy concept art, electric blue and violet, cinematic and breathtaking",
+    "Pixar animated movie scene, gleaming futuristic space station orbiting a swirling nebula, a small brave astronaut child pressed against a massive window watching a comet streak past, Earth glowing below, dramatic starfield, 3D animation cinematic style, vivid electric blue and purple, breathtaking",
   "candy-kingdom":
-    "epic candy kingdom at golden hour, towering candy-cane skyscrapers, chocolate waterfalls cascading into rainbow rivers, cotton candy storm clouds, children's fantasy concept art, saturated jewel tones, cinematic wide shot",
+    "Pixar animated movie scene, epic candy kingdom stretching to the horizon, towering rainbow candy-cane spires, chocolate waterfalls tumbling into gummy rivers, cotton candy clouds raining sprinkles, cheerful candy citizens waving, warm saturated colors, 3D animation cinematic style, joyful and spectacular",
   "cloud-village":
-    "magical floating village suspended above the clouds at sunset, cozy cottages connected by rainbow bridges, giant airship docking nearby, god rays of golden light, children's fantasy concept art, warm epic cinematics",
+    "Pixar animated movie scene, whimsical floating village high above the clouds at golden sunset, cozy glowing cottages on fluffy cloud platforms connected by rainbow rope bridges, a grand airship arriving with passengers, warm amber and soft blue light, 3D animation cinematic style, magical and inviting",
   "underground-caves":
-    "spectacular underground crystal cavern, cathedral-sized amethyst formations glowing purple and teal, underground river reflecting a thousand prismatic lights, children's epic fantasy concept art, awe-inspiring and vast",
+    "Pixar animated movie scene, breathtaking underground crystal cavern the size of a cathedral, enormous glowing amethyst and emerald formations reflecting in a still underground lake, tiny explorers with lanterns dwarfed by the scale, teal and violet light, 3D animation cinematic style, awe-inspiring",
   "snowy-mountains":
-    "dramatic arctic mountain peak at night, northern lights aurora blazing in vivid greens and purples, lone cozy glowing cabin far below, frosted pine silhouettes, children's epic fantasy concept art, breathtaking cinematic scale",
+    "Pixar animated movie scene, majestic snow-capped mountain at night, northern lights blazing in vivid greens purples and pinks across the sky, a cozy glowing cabin with warm light pouring from its windows, a family of friendly polar bears passing by, 3D animation cinematic style, magical winter wonder",
   "desert-oasis":
-    "magical desert oasis at dusk, ancient ruins rising from golden sand, crystal blue pool glowing under two moons, billowing silk tents, children's fantasy concept art, warm gold and turquoise cinematic lighting",
+    "Pixar animated movie scene, magical desert oasis at dusk beneath two glowing moons, crystal turquoise pool surrounded by ancient stone ruins and swaying palms, colorful silk tents glowing from within, a friendly camel wearing a vest, warm gold and teal light, 3D animation cinematic style, adventurous",
+  "dragon-kingdom":
+    "Pixar animated movie scene, magnificent dragon kingdom built into the side of a volcanic mountain, friendly colorful dragons of all sizes soaring between glowing crystal towers, a dragon hatchery with glowing rainbow eggs, epic warm firelight and violet sky, 3D animation cinematic style, spectacular",
+  "pirate-ship":
+    "Pixar animated movie scene, magnificent magical pirate ship sailing through a glowing sea at sunset, colorful sails billowing, a friendly crew of animal pirates on deck, bioluminescent dolphins leaping alongside, treasure islands visible on the glowing horizon, 3D animation cinematic style, adventurous",
+  "magic-school":
+    "Pixar animated movie scene, grand magical school castle floating on a cloud island, towers shooting sparks of colored light into the sky, young wizard students flying on broomsticks, a dragon perched on the tallest spire, warm golden light from a thousand windows, 3D animation cinematic style, wondrous",
+  "jungle-temple":
+    "Pixar animated movie scene, ancient stone temple rising from a lush jungle, friendly exotic animals peering from vibrant foliage, glowing runes on the temple walls, golden treasure light spilling from a hidden door, colorful parrots and butterflies everywhere, 3D animation cinematic style, magical discovery",
+  "time-machine":
+    "Pixar animated movie scene, spectacular glowing time machine cockpit surrounded by swirling vortexes of different eras, dinosaurs visible through one portal, a futuristic city through another, a medieval castle through a third, warm brass and electric blue light, 3D animation cinematic style, thrilling",
+  "volcano-island":
+    "Pixar animated movie scene, dramatic tropical volcano island surrounded by sparkling sea, lava gently flowing to the water creating rainbow steam clouds, friendly fire spirits dancing near the caldera, a hidden tropical village with tiki torches, vivid orange gold and tropical green, 3D animation cinematic style",
 };
 
 export const COMPANION_IMAGE_PROMPTS: Record<string, string> = {
   friend:
-    "two children best friends laughing together in a burst of golden magical light, sparkles and stars swirling around them, epic warm cinematic glow, children's fantasy concept art, joyful and radiant",
+    "Pixar animated movie scene, two best friend children laughing together mid-adventure, golden magical sparkles bursting around them, warm cinematic glow, genuine joy, 3D animation cinematic style, radiant and heartwarming",
   pet:
-    "impossibly adorable magical creature with giant luminous eyes and soft glowing fur, sitting in a beam of golden light, surrounded by tiny dancing sparkles, children's fantasy concept art, heartwarming and breathtaking",
+    "Pixar animated movie scene, impossibly adorable magical animal companion with huge luminous eyes and soft glowing fur, sitting in a warm beam of light, tiny sparkles floating around it, 3D animation cinematic style, irresistibly cute",
   creature:
-    "majestic magical dragon-phoenix hybrid, iridescent scales and feathers catching rainbow light, wings spread dramatically, glowing softly in a misty forest, children's epic fantasy concept art, vivid and awe-inspiring",
+    "Pixar animated movie scene, majestic friendly dragon with iridescent glowing scales, wings spread wide against a dramatic sunset sky, a small child riding on its back looking amazed, 3D animation cinematic style, epic and joyful",
   family:
-    "warm silhouettes of a loving family embracing on a hilltop, magical golden sunset with rays of light breaking through dramatic clouds, children's epic fantasy concept art, deeply heartwarming",
+    "Pixar animated movie scene, a loving family silhouetted on a hilltop embracing at golden sunset, magical light rays breaking through dramatic clouds, warm amber glow, 3D animation cinematic style, deeply heartwarming",
 };
 
 export const ENGINE_IMAGE_PROMPTS: Record<string, string> = {
   funny:
-    "hilarious chaotic scene of cartoon characters mid-laugh, confetti explosion, pies flying through the air, exaggerated comic expressions, children's fantasy concept art, bright vivid colors, pure joyful mayhem",
+    "Pixar animated movie scene, hilarious chaotic moment with cartoon animal characters mid-laugh, a pie flying through the air, confetti explosion, exaggerated comic expressions and googly eyes, vivid bright colors, 3D animation cinematic style, pure joyful chaos",
   spooky:
-    "friendly spooky moonlit graveyard, cute glowing ghosts doing a dance, jack-o-lanterns with goofy smiles, bats wearing tiny hats, children's fantasy concept art, purple and warm orange, playful and charming not scary",
+    "Pixar animated movie scene, friendly cozy spooky graveyard under a full moon, cute glowing ghosts break-dancing, jack-o-lanterns with silly grins, tiny bats in bow ties, playful purple and warm orange light, 3D animation cinematic style, charming not scary",
   weird:
-    "surreal impossible dreamscape, houses floating upside down, fish flying through clouds, giant clocks melting over candy mountains, children's epic fantasy concept art, dreamlike pastel explosion, wonderfully bizarre",
+    "Pixar animated movie scene, wonderfully surreal dreamscape, houses floating upside down, giant fish swimming through colorful clouds, melting rainbow clocks draped over candy mountains, dreamlike pastel explosion, 3D animation cinematic style, delightfully bizarre",
   delicious:
-    "magical floating banquet of giant desserts, chocolate fountains erupting into the air, caramel rivers flowing between cake mountains, everything glowing with warm golden light, children's fantasy concept art, mouth-wateringly rich",
+    "Pixar animated movie scene, spectacular magical kitchen with giant floating desserts, chocolate fountains shooting into the air, caramel rivers winding between cake mountains, everything glowing with warm golden light, 3D animation cinematic style, mouth-wateringly epic",
 };
 
 export const MOOD_IMAGE_PROMPTS: Record<string, string> = {
   brave:
-    "young hero standing on a dramatic cliff edge, golden cape billowing in epic wind, vast fantasy landscape behind them, dramatic god rays from storm clouds breaking, children's epic fantasy concept art, heroic and breathtaking",
+    "Pixar animated movie scene, young hero child in a golden cape standing triumphantly on a dramatic cliff, vast magical kingdom stretching to the horizon behind them, storm clouds breaking with rays of epic golden light, 3D animation cinematic style, breathtaking and heroic",
   laughing:
-    "child mid-laugh with pure uncontrollable joy, confetti and stars exploding in every direction, radiant golden light, infectious happiness frozen in a perfect moment, children's fantasy concept art, vivid and euphoric",
+    "Pixar animated movie scene, child in mid-air mid-laugh with pure uncontrollable joy, confetti and stars exploding around them, friends laughing below, radiant golden light frozen at the perfect euphoric moment, 3D animation cinematic style, infectiously joyful",
   surprised:
-    "child's eyes wide with magical wonder at a breathtaking discovery, sparkles and starlight erupting around them, a glowing portal revealing an impossible world, children's epic fantasy concept art, awe and magic",
+    "Pixar animated movie scene, child's eyes wide with absolute wonder, jaw dropped, a breathtaking magical discovery glowing before them, sparkles and starlight erupting outward, 3D animation cinematic style, electric sense of awe and magic",
   sleepy:
-    "dreamy child tucked in a magical glowing bed, moonlight streaming through a starry window, dream clouds forming above filled with tiny adventures, soft twinkling stars, children's fantasy concept art, soft blues and warm gold, deeply peaceful",
+    "Pixar animated movie scene, small child peacefully asleep in a cozy glowing bed, moonlight streaming through a star-filled window, dream clouds forming above full of tiny wonderful adventures, a stuffed animal on the pillow, 3D animation cinematic style, soft blues and warm gold, deeply peaceful",
 };
 
 export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile";
 
 export const HERO_IMAGE_PROMPTS: Record<string, string> = {
   own:
-    "glowing child silhouette bursting with golden light in front of a magical mirror showing their radiant reflection, stars and sparkles cascading outward, children's epic fantasy concept art, triumphant and breathtaking",
+    "Pixar animated movie scene, a glowing child standing before a magical mirror, their reflection shining with golden light and stars swirling outward, warm triumphant moment, 3D animation cinematic style, heartwarming and breathtaking",
   magical:
-    "enchanted ancient runes and shimmering stardust forming a glowing name in a dark mystical cosmos, golden light particles swirling, deep purple nebula backdrop, children's fantasy concept art, epic and mystical",
+    "Pixar animated movie scene, enchanted glowing ancient runes and shimmering stardust floating in a deep purple cosmos, golden particles swirling forming a magical name, mystical and epic, 3D animation cinematic style, awe-inspiring",
   stranger:
-    "lone brave young adventurer on a dramatic hilltop, epic fantasy landscape stretching to the horizon behind them, dramatic clouds and golden sunrays, children's epic fantasy concept art, heroic cinematic scale",
+    "Pixar animated movie scene, brave young adventurer in a flowing cape standing on a dramatic hilltop, vast fantasy landscape of mountains and glowing valleys behind them, golden sunrise rays, 3D animation cinematic style, heroic",
   surprise:
-    "magical glowing chest bursting open with an explosion of golden light and rainbow confetti, stars and jewels erupting outward in every direction, children's epic fantasy concept art, sense of electric wonder",
+    "Pixar animated movie scene, magical treasure chest bursting open with an explosion of golden light, rainbow confetti, stars and glowing jewels erupting outward in every direction, electric sense of wonder, 3D animation cinematic style",
 };
 
 export interface CreateOptionSpec {
@@ -110,5 +122,5 @@ export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
 }
 
 export function optionStorageKey(type: CreateOptionType, id: string): string {
-  return `v2-${type}-${id}.jpg`;
+  return `v3-${type}-${id}.jpg`;
 }
