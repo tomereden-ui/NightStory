@@ -46,12 +46,14 @@ function StoryCard({
   coverUrl,
   durationSeconds,
   href,
+  showDuration = false,
 }: {
   title: string;
   summary?: string;
   coverUrl?: string | null;
   durationSeconds: number;
   href: string;
+  showDuration?: boolean;
 }) {
   const [c1, c2] = cardPalette(title);
   return (
@@ -84,18 +86,20 @@ function StoryCard({
         style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.98) 100%)" }}
       />
 
-      {/* Duration badge — top right */}
-      <span
-        className="absolute top-2 right-2 text-fs-body font-bold tracking-widest px-1.5 py-0.5 rounded-full"
-        style={{
-          background: "rgba(4,6,18,0.72)",
-          backdropFilter: "blur(6px)",
-          color: c1,
-          border: `1px solid ${c1}55`,
-        }}
-      >
-        {durationLabel(durationSeconds)}
-      </span>
+      {/* Duration badge — top right (Continue Listening only) */}
+      {showDuration && (
+        <span
+          className="absolute top-2 right-2 text-fs-body font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+          style={{
+            background: "rgba(4,6,18,0.72)",
+            backdropFilter: "blur(6px)",
+            color: c1,
+            border: `1px solid ${c1}55`,
+          }}
+        >
+          {durationLabel(durationSeconds)}
+        </span>
+      )}
 
       {/* Title — bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
@@ -230,21 +234,6 @@ function TonightsPickCard({ item }: { item: PickItem }) {
       >
         {item.tag}
       </span>
-
-      {/* Duration badge — top right */}
-      {item.durationSeconds > 0 && (
-        <span
-          className="absolute top-3 right-3 text-fs-body font-bold tracking-widest px-1.5 py-0.5 rounded-full"
-          style={{
-            background: "rgba(4,6,18,0.7)",
-            backdropFilter: "blur(6px)",
-            color: c1,
-            border: `1px solid ${c1}55`,
-          }}
-        >
-          {durationLabel(item.durationSeconds)}
-        </span>
-      )}
 
       {/* Title + accent — bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-4 pt-8">
@@ -659,6 +648,7 @@ export default function HomePage() {
                   coverUrl={s.coverUrl}
                   durationSeconds={s.durationSeconds}
                   href={`/library/${s.id}`}
+                  showDuration
                 />
               ))}
             </Rail>

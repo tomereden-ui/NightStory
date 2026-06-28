@@ -880,6 +880,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
   const LS_KEY = "ns-option-images-v5";
   const [optionImages, setOptionImages] = useState<Record<string, string>>({});
+  const [imagesGenerating, setImagesGenerating] = useState(false);
 
   // Load cached images from localStorage immediately so cards show on first render
   useEffect(() => {
@@ -965,7 +966,8 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
 
         if (!missing?.length) { return; }
 
-        const BATCH = 4;
+        setImagesGenerating(true);
+        const BATCH = 8;
         for (let i = 0; i < missing.length; i += BATCH) {
           if (cancelled) return;
           const batch = missing.slice(i, i + BATCH).filter(m => m.prompt);
@@ -985,10 +987,13 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
                     return next;
                   });
                 }
+              } else {
+                console.warn("[seedImages] failed:", key, await cacheRes.text().catch(() => ""));
               }
-            } catch { /* ignore individual failures */ }
+            } catch (e) { console.warn("[seedImages] error:", key, e); }
           }));
         }
+        setImagesGenerating(false);
       } catch (e) {
         console.warn("[seedImages] seed error", e);
       }
@@ -1103,11 +1108,18 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
 
   // ─── Step routing ───────────────────────────────────────────────────────────
 
-  if (step === "q1") return <Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={onComplete ? undefined : () => router.push("/create")} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} />;
-  if (step === "q2") return <Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q2} />;
-  if (step === "q3") return <Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q3} />;
-  if (step === "q4") return <Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q4} />;
-  if (step === "q5") return <Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q5} />;
+  const GeneratingBadge = imagesGenerating ? (
+    <div className="flex items-center justify-center gap-2 py-1.5 mb-2">
+      <span className="w-1.5 h-1.5 rounded-full bg-purple-bright animate-pulse" />
+      <span className="text-fs-body animate-pulse" style={{ color: "rgba(167,139,250,0.6)" }}>Painting images…</span>
+    </div>
+  ) : null;
+
+  if (step === "q1") return <>{GeneratingBadge}<Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={onComplete ? undefined : () => router.push("/create")} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} /></>;
+  if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q2} /></>;
+  if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q3} /></>;
+  if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q4} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
 
   if (step === "summary") return (
     <>
