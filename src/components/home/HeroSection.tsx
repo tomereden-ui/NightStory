@@ -36,7 +36,7 @@ export default function HeroSection() {
           {MOCK_USER.avatarEmoji}
         </div>
         <div>
-          <p className="text-white/25 text-fs-caption uppercase tracking-widest">Good Night</p>
+          <p className="text-white/25 text-fs-body uppercase tracking-widest">Good Night</p>
           <p className="text-white text-fs-body font-semibold">{MOCK_USER.displayName}</p>
         </div>
       </div>
@@ -48,7 +48,7 @@ export default function HeroSection() {
           style={{ background: "rgba(0,212,255,0.07)", border: "1px solid rgba(0,212,255,0.15)" }}
         >
           <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#00D4FF" }} />
-          <span className="text-fs-label font-medium tracking-wide" style={{ color: "rgba(0,212,255,0.8)" }}>
+          <span className="text-fs-body font-medium tracking-wide" style={{ color: "rgba(0,212,255,0.8)" }}>
             AI Story Generator
           </span>
         </div>
@@ -85,7 +85,7 @@ export default function HeroSection() {
         ].map((s) => (
           <div key={s.label} className="text-center">
             <p className="font-bold text-fs-heading leading-none" style={{ color: "#00D4FF" }}>{s.value}</p>
-            <p className="text-white/25 text-fs-caption mt-0.5">{s.label}</p>
+            <p className="text-white/25 text-fs-body mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>

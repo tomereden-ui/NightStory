@@ -107,7 +107,7 @@ function AvatarGallerySheet({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
             <h2 className="text-white font-bold text-fs-body">Choose Avatar</h2>
-            <p className="text-white/30 text-fs-caption mt-0.5">{loading ? "Loading…" : `${avatars.length} characters`}</p>
+            <p className="text-white/30 text-fs-body mt-0.5">{loading ? "Loading…" : `${avatars.length} characters`}</p>
           </div>
           <button
             onClick={onClose}
@@ -145,7 +145,7 @@ function AvatarGallerySheet({
 
         {/* Divider + Color section */}
         <div className="flex-shrink-0 px-5 pt-3 pb-6" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <p className="text-white/30 text-fs-caption uppercase tracking-widest mb-2.5 font-semibold">Color style</p>
+          <p className="text-white/30 text-fs-body uppercase tracking-widest mb-2.5 font-semibold">Color style</p>
           <div className="flex gap-2.5 flex-wrap">
             {AVATAR_STYLES.map(({ key, gradient, label }) => (
               <button
@@ -227,7 +227,7 @@ function VoiceCard({
         {/* Info */}
         <div className="flex-1 min-w-0">
           <p className="text-white text-fs-body font-semibold truncate">{voice.name}</p>
-          <p className="text-white/45 text-fs-label truncate mt-0.5">
+          <p className="text-white/45 text-fs-body truncate mt-0.5">
             {voice.description ?? voice.gemini_voice_name ?? (voice.type === "recorded" ? "Cloned voice" : "AI voice")}
           </p>
         </div>
@@ -236,7 +236,7 @@ function VoiceCard({
         <button
           disabled={!voice.sample_url}
           onClick={() => onPlay(voice)}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-fs-label flex-shrink-0 transition-all active:scale-95"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-fs-body flex-shrink-0 transition-all active:scale-95"
           style={{
             background: isPlaying ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)",
             color: isPlaying ? "#4fc3f7" : voice.sample_url ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.15)",
@@ -251,7 +251,7 @@ function VoiceCard({
         {/* Delete */}
         <button
           onClick={() => onDelete(voice.id)}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-fs-label flex-shrink-0 transition-all active:scale-95"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-fs-body flex-shrink-0 transition-all active:scale-95"
           style={{
             background: "rgba(255,255,255,0.04)",
             color: "rgba(255,255,255,0.3)",
@@ -305,12 +305,12 @@ function PresetCard({
 
       <div className="flex-1 min-w-0">
         <p className="text-white text-fs-body font-semibold">{voice.name}</p>
-        <p className="text-white/45 text-fs-label mt-0.5">{voice.desc}</p>
+        <p className="text-white/45 text-fs-body mt-0.5">{voice.desc}</p>
       </div>
 
       {isCached && !isPlaying && (
         <span
-          className="text-fs-micro px-1.5 py-0.5 rounded-md flex-shrink-0"
+          className="text-fs-body px-1.5 py-0.5 rounded-md flex-shrink-0"
           style={{
             background: "rgba(79,195,247,0.08)",
             color: "rgba(79,195,247,0.5)",
@@ -323,7 +323,7 @@ function PresetCard({
 
       <button
         onClick={() => onPlay(voice)}
-        className="w-8 h-8 rounded-full flex items-center justify-center text-fs-label flex-shrink-0 transition-all active:scale-95"
+        className="w-8 h-8 rounded-full flex items-center justify-center text-fs-body flex-shrink-0 transition-all active:scale-95"
         style={{
           background: isPlaying ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.05)",
           color: isPlaying ? "#F59E0B" : "rgba(255,255,255,0.45)",
@@ -550,7 +550,7 @@ function AddVoiceSheet({
 
           {/* Name */}
           <div className="mb-4">
-            <label className="text-white/50 text-fs-label mb-1.5 block">Name</label>
+            <label className="text-white/50 text-fs-body mb-1.5 block">Name</label>
             <input
               type="text"
               value={name}
@@ -563,7 +563,7 @@ function AddVoiceSheet({
 
           {/* Avatar picker */}
           <div className="mb-5">
-            <label className="text-white/50 text-fs-label mb-2 block">Avatar</label>
+            <label className="text-white/50 text-fs-body mb-2 block">Avatar</label>
             <button
               onClick={() => setAvatarPickerOpen(true)}
               className="flex items-center gap-3 w-full px-3 py-2.5 rounded-2xl transition-all active:scale-[0.98]"
@@ -579,16 +579,16 @@ function AddVoiceSheet({
                 size={36}
                 borderColor="rgba(79,195,247,0.3)"
               />
-              <span className="text-white/50 text-fs-label flex-1 text-left">
+              <span className="text-white/50 text-fs-body flex-1 text-left">
                 {currentAvatarIsUrl ? "Custom avatar selected" : "Choose from gallery…"}
               </span>
-              <span className="text-white/30 text-fs-label">›</span>
+              <span className="text-white/30 text-fs-body">›</span>
             </button>
           </div>
 
           {/* Method */}
           <div className="mb-5">
-            <label className="text-white/50 text-fs-label mb-2 block">Method</label>
+            <label className="text-white/50 text-fs-body mb-2 block">Method</label>
             <div
               className="flex gap-2 p-1 rounded-2xl"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
@@ -603,7 +603,7 @@ function AddVoiceSheet({
                     setPreviewError(null);
                     stopPreviewAudio();
                   }}
-                  className="flex-1 py-2 rounded-xl text-fs-label font-semibold transition-all"
+                  className="flex-1 py-2 rounded-xl text-fs-body font-semibold transition-all"
                   style={{
                     background: method === m ? "rgba(79,195,247,0.15)" : "transparent",
                     color: method === m ? "#4fc3f7" : "rgba(255,255,255,0.35)",
@@ -619,7 +619,7 @@ function AddVoiceSheet({
           {/* Text method */}
           {method === "text" && (
             <div className="mb-5">
-              <label className="text-white/50 text-fs-label mb-1.5 block">Voice description</label>
+              <label className="text-white/50 text-fs-body mb-1.5 block">Voice description</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -635,7 +635,7 @@ function AddVoiceSheet({
           {method === "record" && (
             <div className="mb-5 flex flex-col items-center gap-4">
               <div className="w-full">
-                <p className="text-white/50 text-fs-label mb-2">Read this text aloud for at least 30 seconds:</p>
+                <p className="text-white/50 text-fs-body mb-2">Read this text aloud for at least 30 seconds:</p>
                 <div
                   className="px-4 py-3 rounded-2xl text-fs-body leading-relaxed"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.65)" }}
@@ -663,7 +663,7 @@ function AddVoiceSheet({
                 {recordState === "recording" ? <Icon name="stop" size={14} /> : "🎤"}
               </button>
               {recordState === "done" && (
-                <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setRecordingSeconds(0); setPreviewState("idle"); setPreviewAudioUrl(null); stopPreviewAudio(); }} className="text-white/30 text-fs-label">
+                <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setRecordingSeconds(0); setPreviewState("idle"); setPreviewAudioUrl(null); stopPreviewAudio(); }} className="text-white/30 text-fs-body">
                   Re-record
                 </button>
               )}
@@ -671,7 +671,7 @@ function AddVoiceSheet({
           )}
 
           {previewError && (
-            <div className="mb-4 px-4 py-2.5 rounded-2xl text-fs-label" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
+            <div className="mb-4 px-4 py-2.5 rounded-2xl text-fs-body" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
               ⚠ {previewError}
             </div>
           )}
@@ -699,14 +699,14 @@ function AddVoiceSheet({
                 {previewPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
               </button>
               <div className="flex-1 min-w-0">
-                <p className="text-[#4fc3f7] text-fs-label font-medium">Preview ready</p>
-                {previewGeminiVoiceName && <p className="text-white/30 text-fs-caption">Voice: {previewGeminiVoiceName}</p>}
+                <p className="text-[#4fc3f7] text-fs-body font-medium">Preview ready</p>
+                {previewGeminiVoiceName && <p className="text-white/30 text-fs-body">Voice: {previewGeminiVoiceName}</p>}
               </div>
             </div>
           )}
 
           {saveError && (
-            <div className="mb-3 px-4 py-2.5 rounded-2xl text-fs-label" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
+            <div className="mb-3 px-4 py-2.5 rounded-2xl text-fs-body" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
               ⚠ {saveError}
             </div>
           )}
@@ -913,11 +913,11 @@ export default function VoicesPage() {
       <div className="px-5 pt-12 pb-4 flex items-center justify-between">
         <div>
           <h1 className="text-fs-heading font-semibold text-white tracking-wide mb-0.5">{i18nT(language, "navVoices")}</h1>
-          <p className="text-white/30 text-fs-label">Manage narrators for your stories</p>
+          <p className="text-white/30 text-fs-body">Manage narrators for your stories</p>
         </div>
         <button
           onClick={() => setShowAddSheet(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-fs-label font-semibold transition-all active:scale-95"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
           style={{ background: "rgba(79,195,247,0.1)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.25)" }}
         >
           ＋ Add Voice
@@ -931,7 +931,7 @@ export default function VoicesPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="flex-1 py-2 rounded-xl text-fs-label font-semibold transition-all"
+              className="flex-1 py-2 rounded-xl text-fs-body font-semibold transition-all"
               style={{
                 background: tab === t ? "rgba(79,195,247,0.12)" : "transparent",
                 color: tab === t ? "#4fc3f7" : "rgba(255,255,255,0.35)",
@@ -948,7 +948,7 @@ export default function VoicesPage() {
       {tab === "family" && (
         <div className="px-5 flex flex-col gap-3 pb-6">
           {loadError && (
-            <div className="px-4 py-2.5 rounded-2xl text-fs-label" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
+            <div className="px-4 py-2.5 rounded-2xl text-fs-body" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
               ⚠ {loadError}
             </div>
           )}
@@ -956,7 +956,7 @@ export default function VoicesPage() {
             <div className="py-10 flex flex-col items-center gap-2">
               <p className="text-fs-display">🎙</p>
               <p className="text-white/30 text-fs-body text-center">No family voices yet.</p>
-              <p className="text-white/20 text-fs-label text-center">Add a voice to personalize your stories.</p>
+              <p className="text-white/20 text-fs-body text-center">Add a voice to personalize your stories.</p>
             </div>
           )}
           {familyVoices.map((v) => (
@@ -976,7 +976,7 @@ export default function VoicesPage() {
       {tab === "general" && (
         <div className="px-5 flex flex-col gap-3 pb-6">
           {presetError && (
-            <div className="px-4 py-2.5 rounded-2xl text-fs-label mb-1" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
+            <div className="px-4 py-2.5 rounded-2xl text-fs-body mb-1" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
               ⚠ {presetError}
             </div>
           )}

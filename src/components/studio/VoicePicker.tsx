@@ -40,7 +40,7 @@ export default function VoicePicker({
       }}
     >
       <div className="px-3 py-2 border-b border-white/5">
-        <p className="text-white/30 text-fs-caption uppercase tracking-widest">Assign Voice</p>
+        <p className="text-white/30 text-fs-body uppercase tracking-widest">Assign Voice</p>
       </div>
 
       <ul className="py-1">
@@ -57,16 +57,16 @@ export default function VoicePicker({
                 <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.avatarEmoji} size={28} borderColor="rgba(79,195,247,0.2)" />
                 <div className="flex-1 min-w-0">
                   <p
-                    className={`text-fs-label font-semibold ${
+                    className={`text-fs-body font-semibold ${
                       isSelected ? "text-teal" : "text-white/80"
                     }`}
                   >
                     {voice.name}
                   </p>
-                  <p className="text-fs-caption text-white/25 capitalize">{voice.style}</p>
+                  <p className="text-fs-body text-white/25 capitalize">{voice.style}</p>
                 </div>
                 {isSelected && (
-                  <span className="text-teal text-fs-label flex-shrink-0">✓</span>
+                  <span className="text-teal text-fs-body flex-shrink-0">✓</span>
                 )}
               </button>
             </li>

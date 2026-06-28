@@ -70,10 +70,10 @@ function SfxInsertForm({
     >
       <div className="flex items-center gap-2">
         <span className="text-fs-body">🔊</span>
-        <span className="text-fs-caption font-bold uppercase tracking-widest flex-1" style={{ color: "rgba(245,158,11,0.7)" }}>
+        <span className="text-fs-body font-bold uppercase tracking-widest flex-1" style={{ color: "rgba(245,158,11,0.7)" }}>
           {t("newSoundEffect")}
         </span>
-        <button onClick={onCancel} className="text-white/30 text-fs-label hover:text-white/60 transition-colors">
+        <button onClick={onCancel} className="text-white/30 text-fs-body hover:text-white/60 transition-colors">
           {t("cancel")}
         </button>
       </div>
@@ -92,7 +92,7 @@ function SfxInsertForm({
       <button
         onClick={handleInsert}
         disabled={!desc.trim()}
-        className="w-full px-4 py-2 rounded-xl text-fs-label font-semibold transition-all active:scale-95"
+        className="w-full px-4 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
         style={desc.trim()
           ? { background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.5)", color: "#F59E0B" }
           : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
@@ -115,14 +115,14 @@ function BlockSeparator({ onAddSfx, onAddText }: { onAddSfx: () => void; onAddTe
         <>
           <button
             onClick={() => { setExpanded(false); onAddSfx(); }}
-            className="text-fs-label font-semibold px-3 py-1 rounded-full transition-all"
+            className="text-fs-body font-semibold px-3 py-1 rounded-full transition-all"
             style={{ color: "rgba(245,158,11,0.7)", border: "1px solid rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.06)" }}
           >
             🔊 Sound
           </button>
           <button
             onClick={() => { setExpanded(false); onAddText(); }}
-            className="text-fs-label font-semibold px-3 py-1 rounded-full transition-all"
+            className="text-fs-body font-semibold px-3 py-1 rounded-full transition-all"
             style={{ color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.2)", background: "rgba(79,195,247,0.05)" }}
           >
             💬 Dialogue
@@ -185,13 +185,13 @@ function AIBlockSeparator({
             }}
             placeholder='e.g. "Wendy says goodbye" or "add rain sounds"'
             disabled={isInserting}
-            className="flex-1 rounded-xl px-3 py-1.5 text-fs-label outline-none text-white/75 placeholder-white/20 min-w-0"
+            className="flex-1 rounded-xl px-3 py-1.5 text-fs-body outline-none text-white/75 placeholder-white/20 min-w-0"
             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.3)" }}
           />
           <button
             onClick={submit}
             disabled={!text.trim() || isInserting}
-            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-fs-label transition-all active:scale-95"
+            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-fs-body transition-all active:scale-95"
             style={text.trim() && !isInserting
               ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#A78BFA" }
               : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
@@ -287,7 +287,7 @@ function TextInsertModal({
 
         {/* Character name */}
         <div>
-          <label className="block text-fs-caption font-bold uppercase tracking-widest text-white/30 mb-2">Character</label>
+          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/30 mb-2">Character</label>
           <input
             type="text"
             value={charName}
@@ -302,7 +302,7 @@ function TextInsertModal({
               <button
                 key={s}
                 onClick={() => setCharName(s)}
-                className="text-fs-caption px-2.5 py-0.5 rounded-full transition-colors"
+                className="text-fs-body px-2.5 py-0.5 rounded-full transition-colors"
                 style={charName === s
                   ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
                   : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
@@ -316,7 +316,7 @@ function TextInsertModal({
 
         {/* Voice picker */}
         <div>
-          <label className="block text-fs-caption font-bold uppercase tracking-widest text-white/30 mb-2">Voice</label>
+          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/30 mb-2">Voice</label>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {voices.map((v) => (
               <button
@@ -329,20 +329,20 @@ function TextInsertModal({
                 }
               >
                 <VoiceAvatar avatarUrl={v.avatarUrl} emoji={v.avatarEmoji} size={32} borderColor="rgba(79,195,247,0.2)" />
-                <span className="text-fs-micro font-semibold" style={{ color: v.id === voiceId ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>
+                <span className="text-fs-body font-semibold" style={{ color: v.id === voiceId ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>
                   {v.name.split(" ")[0]}
                 </span>
               </button>
             ))}
           </div>
           {selectedVoice && (
-            <p className="text-fs-caption text-white/20 mt-1">{selectedVoice.name} · {selectedVoice.style}</p>
+            <p className="text-fs-body text-white/20 mt-1">{selectedVoice.name} · {selectedVoice.style}</p>
           )}
         </div>
 
         {/* Text input */}
         <div>
-          <label className="block text-fs-caption font-bold uppercase tracking-widest text-white/30 mb-2">Text</label>
+          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/30 mb-2">Text</label>
           <textarea
             ref={textareaRef}
             value={text}
@@ -359,7 +359,7 @@ function TextInsertModal({
 
         {/* Validation error */}
         {error && (
-          <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-fs-label leading-snug"
+          <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-fs-body leading-snug"
             style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "rgba(239,68,68,0.85)" }}>
             <span className="flex-shrink-0 mt-px">⚠</span>
             <span>{error}</span>
@@ -732,7 +732,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               {onRegenerateCover && !isFetchingCover && (
                 <button
                   onClick={onRegenerateCover}
-                  className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-caption font-semibold transition-all active:scale-95 hover:brightness-110"
+                  className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-body font-semibold transition-all active:scale-95 hover:brightness-110"
                   style={{
                     background: "rgba(5,8,20,0.75)",
                     border: "1px solid rgba(79,195,247,0.35)",
@@ -747,7 +747,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               )}
               {isFetchingCover && (
                 <div
-                  className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-caption font-semibold"
+                  className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-body font-semibold"
                   style={{
                     background: "rgba(5,8,20,0.75)",
                     border: "1px solid rgba(79,195,247,0.2)",
@@ -782,10 +782,10 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             {summary && (
               <div className="px-4 pt-3 pb-4" style={{ background: "rgba(10,12,20,1)" }}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
+                  <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
                   <button
                     onClick={toggleSummaryPlay}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-fs-caption font-medium transition-all active:scale-95"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-fs-body font-medium transition-all active:scale-95"
                     style={summaryPlaying || summaryLoading
                       ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
                       : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
@@ -831,7 +831,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           const isChecking = pendingCount > 0;
           return (
             <div className="flex items-center justify-between mb-2">
-              <p className="text-white/30 text-fs-label">
+              <p className="text-white/30 text-fs-body">
                 {speechBlocks.length} lines · {sfxBlocks.length} sfx · ~{estMin}:{String(estSec).padStart(2, "0")} min
               </p>
               <div className="flex items-center gap-1.5">
@@ -839,14 +839,14 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                   <>
                     <span className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0"
                       style={{ borderColor: "rgba(79,195,247,0.2)", borderTopColor: "#4fc3f7" }} />
-                    <span className="text-fs-caption font-semibold" style={{ color: "rgba(79,195,247,0.7)" }}>
+                    <span className="text-fs-body font-semibold" style={{ color: "rgba(79,195,247,0.7)" }}>
                       Checking {blocks.length} / {totalExpectedBlocks}
                     </span>
                   </>
                 ) : (
                   <>
                     <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-                    <span className="text-teal text-fs-caption font-semibold tracking-widest">{t("ready")}</span>
+                    <span className="text-teal text-fs-body font-semibold tracking-widest">{t("ready")}</span>
                   </>
                 )}
               </div>
@@ -857,7 +857,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {/* Script expand toggle */}
         <button
           onClick={() => setScriptExpanded((v) => !v)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 mb-3 rounded-xl text-fs-caption font-medium transition-all active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-1.5 py-2 mb-3 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
           style={{
             background: scriptExpanded ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
             border: scriptExpanded ? "1px solid rgba(79,195,247,0.2)" : "1px solid rgba(255,255,255,0.07)",
@@ -894,7 +894,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               {block.lessonHighlight && (
                 <div className="mb-1 px-0.5">
                   <span
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-fs-caption font-bold"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-fs-body font-bold"
                     style={{ background: "rgba(139,92,246,0.22)", border: "1.5px solid rgba(139,92,246,0.5)", color: "#C4B5FD", boxShadow: "0 0 8px rgba(139,92,246,0.2)" }}
                   >
                     <span>✦</span>
@@ -933,7 +933,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="w-2.5 h-2.5 rounded-full border border-current animate-spin"
                     style={{ borderColor: "rgba(79,195,247,0.25)", borderTopColor: "rgba(79,195,247,0.6)" }} />
-                  <span className="text-fs-micro font-medium" style={{ color: "rgba(79,195,247,0.45)" }}>checking…</span>
+                  <span className="text-fs-body font-medium" style={{ color: "rgba(79,195,247,0.45)" }}>checking…</span>
                 </div>
               </div>
             </div>
@@ -989,12 +989,12 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
             {validationIssues && (
               <div className="rounded-2xl p-3 flex flex-col gap-2" style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)" }}>
-                <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(239,68,68,0.7)" }}>
+                <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(239,68,68,0.7)" }}>
                   ⚠ {t("scriptIssues")}
                 </p>
                 <ul className="flex flex-col gap-1">
                   {validationIssues.map((issue, i) => (
-                    <li key={i} className="text-fs-label leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+                    <li key={i} className="text-fs-body leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
                       • {issue}
                     </li>
                   ))}
@@ -1009,7 +1009,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           <div className="mb-3 rounded-2xl px-4 py-3 flex flex-col gap-2"
             style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
             <div className="flex items-center justify-between">
-              <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+              <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
                 Story length
               </span>
               <span className="text-fs-body font-bold" style={{ color: "#4fc3f7" }}>
@@ -1026,7 +1026,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               className="w-full accent-teal h-1.5 rounded-full cursor-pointer"
               style={{ accentColor: "#4fc3f7" }}
             />
-            <div className="flex justify-between text-fs-micro" style={{ color: "rgba(255,255,255,0.2)" }}>
+            <div className="flex justify-between text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
               <span>1 min</span>
               <span>5 min</span>
               <span>10 min</span>
@@ -1041,11 +1041,11 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         >
           <div className="flex items-center gap-2">
             <span className="text-fs-body">🎬</span>
-            <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.7)" }}>
+            <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.7)" }}>
               Director&apos;s Note
             </span>
             {isRevising && (
-              <span className="ml-auto flex items-center gap-1 text-fs-caption" style={{ color: "rgba(139,92,246,0.6)" }}>
+              <span className="ml-auto flex items-center gap-1 text-fs-body" style={{ color: "rgba(139,92,246,0.6)" }}>
                 <span className="w-2.5 h-2.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(139,92,246,0.3)", borderTopColor: "#A78BFA" }} />
                 Revising…
               </span>
@@ -1064,7 +1064,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 key={label}
                 disabled={isRevising}
                 onClick={() => handleRevise(instruction)}
-                className="text-fs-caption px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+                className="text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
                 style={{
                   background: isRevising ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.1)",
                   border: "1px solid rgba(139,92,246,0.25)",
@@ -1090,7 +1090,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               rows={2}
               placeholder="Tell the story what to change… (e.g. make the ending happier, add more tension in the middle)"
               disabled={isRevising}
-              className="flex-1 rounded-xl px-3 py-2 text-fs-label leading-relaxed outline-none resize-none text-white/80 placeholder-white/20 transition-colors"
+              className="flex-1 rounded-xl px-3 py-2 text-fs-body leading-relaxed outline-none resize-none text-white/80 placeholder-white/20 transition-colors"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)" }}
               onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.45)")}
               onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.2)")}
@@ -1098,7 +1098,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             <button
               disabled={!directorNote.trim() || isRevising}
               onClick={() => handleRevise(directorNote)}
-              className="flex-shrink-0 px-3 py-2 rounded-xl text-fs-label font-semibold transition-all active:scale-95"
+              className="flex-shrink-0 px-3 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
               style={directorNote.trim() && !isRevising
                 ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.45)", color: "#A78BFA" }
                 : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
@@ -1109,7 +1109,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </div>
 
           {reviseError && (
-            <p className="text-fs-caption" style={{ color: "rgba(239,68,68,0.7)" }}>⚠ {reviseError}</p>
+            <p className="text-fs-body" style={{ color: "rgba(239,68,68,0.7)" }}>⚠ {reviseError}</p>
           )}
         </div>}
 

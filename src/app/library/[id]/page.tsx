@@ -47,7 +47,7 @@ function ReadOnlyCastPanel({ blocks }: { blocks: ScriptBlock[] }) {
 
   return (
     <div className="mb-1">
-      <p className="text-fs-caption font-bold uppercase tracking-widest mb-3 px-5" style={{ color: "rgba(79,195,247,0.45)" }}>
+      <p className="text-fs-body font-bold uppercase tracking-widest mb-3 px-5" style={{ color: "rgba(79,195,247,0.45)" }}>
         Cast
       </p>
       <div
@@ -83,7 +83,7 @@ function ReadOnlyCharacterCard({ characterName, avatarUrl }: { characterName: st
           </div>
         )}
       </div>
-      <p className="text-center text-fs-caption font-medium leading-tight" style={{ color: "rgba(255,255,255,0.5)", maxWidth: 68 }}>
+      <p className="text-center text-fs-body font-medium leading-tight" style={{ color: "rgba(255,255,255,0.5)", maxWidth: 68 }}>
         {characterName}
       </p>
     </div>
@@ -231,7 +231,7 @@ export default function StoryDetailPage() {
       <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
         <span className="text-fs-display">🌙</span>
         <p className="text-white/30 text-fs-body">Story not found.</p>
-        <button onClick={() => router.back()} className="text-fs-label" style={{ color: "rgba(79,195,247,0.5)" }}>Go back</button>
+        <button onClick={() => router.back()} className="text-fs-body" style={{ color: "rgba(79,195,247,0.5)" }}>Go back</button>
       </div>
     );
   }
@@ -297,7 +297,7 @@ export default function StoryDetailPage() {
           />
           {/* Now playing label */}
           <div className="absolute bottom-6 left-5">
-            <span className="text-fs-micro tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.7)" }}>
+            <span className="text-fs-body tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.7)" }}>
               Now Playing
             </span>
           </div>
@@ -325,7 +325,7 @@ export default function StoryDetailPage() {
           >
             {entry.title}
           </h1>
-          <p className="text-fs-caption" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
             {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
           </p>
         </div>
@@ -334,11 +334,11 @@ export default function StoryDetailPage() {
         {entry.summary && (
           <div className="mx-5 mt-3 mb-1 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center justify-between mb-2.5">
-              <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
+              <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
               <button
                 onClick={toggleSummaryPlay}
                 disabled={summaryLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-label font-semibold transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
                 style={summaryPlaying
                   ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7", boxShadow: "0 0 10px rgba(79,195,247,0.2)" }
                   : summaryLoading
@@ -382,7 +382,7 @@ export default function StoryDetailPage() {
         <div className="px-5 mb-3">
           <button
             onClick={() => setScriptExpanded((v) => !v)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-caption font-medium transition-all active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
             style={{
               background: scriptExpanded ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
               border: scriptExpanded ? "1px solid rgba(79,195,247,0.2)" : "1px solid rgba(255,255,255,0.07)",
@@ -405,7 +405,7 @@ export default function StoryDetailPage() {
                 <div key={block.id}>
                   {!isNarrator && (
                     <p
-                      className="text-fs-caption font-semibold uppercase tracking-widest mb-1 ml-3"
+                      className="text-fs-body font-semibold uppercase tracking-widest mb-1 ml-3"
                       style={{ color: "rgba(79,195,247,0.72)" }}
                     >
                       {block.characterName}
@@ -479,7 +479,7 @@ export default function StoryDetailPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-white text-fs-body font-medium truncate leading-snug">{entry.title}</p>
                 {entry.summary && (
-                  <p className="text-fs-label truncate" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.3)" }}>
                     {entry.summary.split(" ").slice(0, 6).join(" ")}…
                   </p>
                 )}
@@ -487,7 +487,7 @@ export default function StoryDetailPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-fs-caption w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span className="text-fs-body w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                 {formatTime(currentTime)}
               </span>
               <input
@@ -500,7 +500,7 @@ export default function StoryDetailPage() {
                 className="flex-1 cursor-pointer"
                 style={{ accentColor: "#4fc3f7" }}
               />
-              <span className="text-fs-caption w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span className="text-fs-body w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                 {formatTime(duration || entry.durationSeconds)}
               </span>
             </div>

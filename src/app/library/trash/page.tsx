@@ -136,7 +136,7 @@ export default function TrashPage() {
 
         {/* Info blurb */}
         {entries.length > 0 && (
-          <p className="text-fs-label text-center mb-5" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-fs-body text-center mb-5" style={{ color: "rgba(255,255,255,0.25)" }}>
             {t("keptFor30Days")}
           </p>
         )}
@@ -193,9 +193,9 @@ export default function TrashPage() {
                         {entry.title}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-white/25 text-fs-caption">{durationLabel(entry.durationSeconds)}</span>
+                        <span className="text-white/25 text-fs-body">{durationLabel(entry.durationSeconds)}</span>
                         <span
-                          className="text-fs-micro px-1.5 py-0.5 rounded-full font-semibold"
+                          className="text-fs-body px-1.5 py-0.5 rounded-full font-semibold"
                           style={
                             days <= 3
                               ? { background: "rgba(236,72,153,0.12)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.3)" }
@@ -216,7 +216,7 @@ export default function TrashPage() {
                     <button
                       onClick={() => handleRestore(entry.id)}
                       disabled={isBusy}
-                      className="flex-1 py-2.5 text-fs-label font-medium transition-all active:opacity-60"
+                      className="flex-1 py-2.5 text-fs-body font-medium transition-all active:opacity-60"
                       style={{ color: "rgba(79,195,247,0.7)" }}
                     >
                       <Icon name="restore" size={14} className="inline-block align-middle mr-1" /> {t("restore")}
@@ -225,7 +225,7 @@ export default function TrashPage() {
                     <button
                       onClick={() => handleDeleteForever(entry.id)}
                       disabled={isBusy}
-                      className="flex-1 py-2.5 text-fs-label font-medium transition-all active:opacity-60"
+                      className="flex-1 py-2.5 text-fs-body font-medium transition-all active:opacity-60"
                       style={{ color: "rgba(236,72,153,0.6)" }}
                     >
                       {t("deleteForever")}

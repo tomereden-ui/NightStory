@@ -99,7 +99,7 @@ export default function BottomNav() {
                     </span>
                   </span>
                   <span
-                    className="text-fs-micro font-semibold tracking-wide text-center"
+                    className="text-fs-body font-semibold tracking-wide text-center"
                     style={{ color: isActive ? item.color : "rgba(255,255,255,0.25)" }}
                   >
                     {t(language, item.labelKey)}
@@ -156,7 +156,7 @@ export default function BottomNav() {
                   </span>
                 </span>
                 <span
-                  className="text-fs-micro font-bold tracking-wide transition-colors duration-200"
+                  className="text-fs-body font-bold tracking-wide transition-colors duration-200"
                   style={{ color: isActive ? item.color : "rgba(255,255,255,0.22)" }}
                 >
                   {t(language, item.labelKey)}

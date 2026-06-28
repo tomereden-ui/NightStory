@@ -63,7 +63,7 @@ export default function LessonStep({
         {onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 mb-4 text-fs-label font-medium transition-opacity active:opacity-60"
+            className="flex items-center gap-1.5 mb-4 text-fs-body font-medium transition-opacity active:opacity-60"
             style={{ color: "rgba(255,255,255,0.3)" }}
           >
             <Icon name="back" size={14} />
@@ -74,13 +74,13 @@ export default function LessonStep({
           className="rounded-2xl px-4 py-4"
           style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(79,195,247,0.05) 100%)", border: "1px solid rgba(139,92,246,0.2)" }}
         >
-          <p className="text-fs-caption font-bold uppercase tracking-[0.18em] mb-1.5" style={{ color: "rgba(139,92,246,0.7)" }}>
+          <p className="text-fs-body font-bold uppercase tracking-[0.18em] mb-1.5" style={{ color: "rgba(139,92,246,0.7)" }}>
             Optional · Step 2
           </p>
           <h2 className="text-fs-heading font-bold text-white leading-snug mb-1">
             Want today&apos;s story to teach something?
           </h2>
-          <p className="text-fs-label leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>
+          <p className="text-fs-body leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>
             Pick one or more values — they&apos;ll be woven in naturally, never stated out loud.
           </p>
         </div>
@@ -100,16 +100,16 @@ export default function LessonStep({
               <div className="flex items-center justify-between">
                 <span className="text-fs-title leading-none">{icon}</span>
                 {isSelected && (
-                  <span className="text-fs-caption font-bold" style={{ color: "#4fc3f7" }}>✓</span>
+                  <span className="text-fs-body font-bold" style={{ color: "#4fc3f7" }}>✓</span>
                 )}
               </div>
               <span
-                className="text-fs-label font-bold leading-tight"
+                className="text-fs-body font-bold leading-tight"
                 style={{ color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.85)" }}
               >
                 {label}
               </span>
-              <span className="text-fs-caption leading-snug" style={{ color: "rgba(255,255,255,0.38)" }}>
+              <span className="text-fs-body leading-snug" style={{ color: "rgba(255,255,255,0.38)" }}>
                 {desc}
               </span>
             </button>
@@ -125,7 +125,7 @@ export default function LessonStep({
           : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)" }
         }
       >
-        <label className="text-fs-caption font-bold uppercase tracking-widest block mb-2" style={{ color: "rgba(79,195,247,0.5)" }}>
+        <label className="text-fs-body font-bold uppercase tracking-widest block mb-2" style={{ color: "rgba(79,195,247,0.5)" }}>
           Or describe your own
         </label>
         <textarea

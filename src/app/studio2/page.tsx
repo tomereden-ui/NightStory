@@ -123,8 +123,8 @@ function ScriptBrowser({
         <button onClick={() => setExpanded((p) => !p)} className="w-full flex items-center justify-between px-4 py-3 text-left">
           <div className="flex items-center gap-2.5">
             <Icon name="folder" size={14} />
-            <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved versions</span>
-            <span className="min-w-[18px] h-4 px-1.5 rounded-full text-fs-micro font-bold flex items-center justify-center"
+            <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved versions</span>
+            <span className="min-w-[18px] h-4 px-1.5 rounded-full text-fs-body font-bold flex items-center justify-center"
               style={{ background: "rgba(79,195,247,0.15)", color: "rgba(79,195,247,0.85)", border: "1px solid rgba(79,195,247,0.3)" }}>{saves.length}</span>
           </div>
           <span className="text-white/25 text-fs-body">{expanded ? "↑" : "↓"}</span>
@@ -203,18 +203,18 @@ function VersionList({
               {/* Info */}
               <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
-                  {s.isAutosave && <span className="text-fs-caption leading-none">⚡</span>}
-                  <span className="text-fs-label font-semibold leading-snug truncate"
+                  {s.isAutosave && <span className="text-fs-body leading-none">⚡</span>}
+                  <span className="text-fs-body font-semibold leading-snug truncate"
                     style={{ color: s.isAutosave ? "rgba(245,158,11,0.95)" : "rgba(255,255,255,0.9)" }}>
                     {s.label}
                   </span>
                 </div>
                 {summarySnip && (
-                  <p className="text-fs-caption leading-snug truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <p className="text-fs-body leading-snug truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
                     {summarySnip}
                   </p>
                 )}
-                <p className="text-fs-caption" style={{ color: "rgba(255,255,255,0.22)" }}>
+                <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.22)" }}>
                   {timeAgo(s.savedAt)}
                 </p>
               </div>
@@ -246,7 +246,7 @@ function VersionList({
       {onClearAll && (
         <div className="flex items-center justify-center pt-3 pb-1">
           <button onClick={onClearAll} disabled={clearing}
-            className="text-fs-caption font-medium px-4 py-1.5 rounded-xl transition-all active:scale-95"
+            className="text-fs-body font-medium px-4 py-1.5 rounded-xl transition-all active:scale-95"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }}>
             {clearing ? "Deleting…" : "Delete all saved versions"}
           </button>
@@ -367,7 +367,7 @@ function CharacterCards({
 
   return (
     <div className="mb-5">
-      <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
+      <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
         {i18nT(language, "castSection")}
       </p>
       <div className="flex gap-3 pb-2 -mx-5 px-5" style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
@@ -440,7 +440,7 @@ function AvatarGallery({
       <div className="flex p-1.5 gap-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         {AVATAR_TABS.map(({ key, label, emoji }) => (
           <button key={key} onClick={() => setActiveTab(key)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-caption font-bold transition-all active:scale-95"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-bold transition-all active:scale-95"
             style={activeTab === key
               ? { background: "linear-gradient(135deg,rgba(139,92,246,0.3),rgba(79,195,247,0.15))", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.45)" }
               : { color: "rgba(255,255,255,0.25)", border: "1px solid transparent" }
@@ -459,7 +459,7 @@ function AvatarGallery({
               style={{ borderColor: "rgba(167,139,250,0.15)", borderTopColor: "#A78BFA" }} />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center py-6 text-fs-caption" style={{ color: "rgba(255,255,255,0.2)" }}>No avatars yet</p>
+          <p className="text-center py-6 text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>No avatars yet</p>
         ) : (
           <div className="grid grid-cols-5 gap-2">
             {filtered.map((avatar) => {
@@ -581,7 +581,7 @@ function DirectionSheet({
                 }
               </div>
               {/* Character type badge */}
-              <div className="absolute -bottom-1.5 -right-1.5 px-1.5 py-0.5 rounded-full text-fs-micro font-black uppercase tracking-wider"
+              <div className="absolute -bottom-1.5 -right-1.5 px-1.5 py-0.5 rounded-full text-fs-body font-black uppercase tracking-wider"
                 style={{ background: "linear-gradient(135deg,#7C3AED,#4338CA)", color: "#E9D5FF", boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                 {isNarrator ? "🎙" : characterType === "animal" ? "🐾" : characterType === "child" ? "🧒" : "🧑"}
               </div>
@@ -596,7 +596,7 @@ function DirectionSheet({
               {voice && (
                 <div className="flex items-center gap-1.5 mt-1">
                   <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.35)" }}>🎙</span>
-                  <span className="text-fs-label truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{voice.name}</span>
+                  <span className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{voice.name}</span>
                 </div>
               )}
             </div>
@@ -626,8 +626,8 @@ function DirectionSheet({
                 <span style={{ fontSize: "var(--fs-body)" }}>🎭</span>
               </div>
               <div className="flex-1 text-left">
-                <p className="text-fs-caption font-black uppercase tracking-widest" style={{ color: avatarAccent }}>Avatar</p>
-                <p className="text-fs-label mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: avatarAccent }}>Avatar</p>
+                <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
                   {showAvatarPicker ? "Tap an image to select" : "Choose how this character looks"}
                 </p>
               </div>
@@ -667,8 +667,8 @@ function DirectionSheet({
                 <span style={{ fontSize: "var(--fs-body)" }}>🎙️</span>
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-fs-caption font-black uppercase tracking-widest" style={{ color: voiceAccent }}>Voice</p>
-                <p className="text-fs-label mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
+                <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: voiceAccent }}>Voice</p>
+                <p className="text-fs-body mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
                   {voice?.name ?? "No voice selected"}
                 </p>
               </div>
@@ -706,10 +706,10 @@ function DirectionSheet({
                   <span style={{ fontSize: "var(--fs-body)" }}>✏️</span>
                 </div>
                 <div>
-                  <p className="text-fs-caption font-black uppercase tracking-widest" style={{ color: directAccent }}>
+                  <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: directAccent }}>
                     Direct this character
                   </p>
-                  <p className="text-fs-label mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
                     Shape how they perform in this story
                   </p>
                 </div>
@@ -719,7 +719,7 @@ function DirectionSheet({
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {CHAR_CHIPS.map((chip) => (
                   <button key={chip} onClick={() => submit(chip)}
-                    className="text-fs-caption px-3 py-1.5 rounded-full font-semibold transition-all active:scale-95"
+                    className="text-fs-body px-3 py-1.5 rounded-full font-semibold transition-all active:scale-95"
                     style={{ background: "rgba(252,211,77,0.08)", border: "1px solid rgba(252,211,77,0.22)", color: "#FCD34D" }}>
                     {chip}
                   </button>
@@ -822,12 +822,12 @@ function CharacterCard({
             }}>👑</span>
           )}
         </div>
-        <span className="text-fs-caption font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
+        <span className="text-fs-body font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
           style={{ color: accentColor }}>
           {characterName}
         </span>
         {voice && (
-          <span className="text-fs-caption font-medium text-center truncate w-full" style={{ color: "rgba(255,255,255,0.4)" }}>{voice.name.split(" ")[0]}</span>
+          <span className="text-fs-body font-medium text-center truncate w-full" style={{ color: "rgba(255,255,255,0.4)" }}>{voice.name.split(" ")[0]}</span>
         )}
       </button>
     </div>
@@ -904,7 +904,7 @@ function SceneHeader() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={cachedUrls[c.label] ?? c.url} alt={c.label} className="w-full h-full" style={{ imageRendering: "auto" }} />
           </div>
-          <span className="mt-1 text-fs-micro font-semibold tracking-wide"
+          <span className="mt-1 text-fs-body font-semibold tracking-wide"
             style={{ color: `${c.glow}cc`, textShadow: `0 0 8px ${c.glow}88` }}>
             {c.label}
           </span>
@@ -913,7 +913,7 @@ function SceneHeader() {
 
       <div className="absolute bottom-0 left-0 right-0 px-4 pt-8 pb-3"
         style={{ background: "linear-gradient(to top, rgba(6,11,30,0.97) 0%, rgba(6,11,30,0.7) 60%, transparent 100%)" }}>
-        <p className="text-fs-caption font-semibold uppercase tracking-[0.18em] mb-0.5" style={{ color: "rgba(139,92,246,0.7)" }}>
+        <p className="text-fs-body font-semibold uppercase tracking-[0.18em] mb-0.5" style={{ color: "rgba(139,92,246,0.7)" }}>
           Dream Up
         </p>
         <h2 className="text-fs-heading font-bold leading-tight"
@@ -945,11 +945,11 @@ function PromptTabContent({
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+          <label className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
             Your story idea
           </label>
           {wordCount > 0 && (
-            <span className="text-fs-caption" style={{ color: "rgba(255,255,255,0.2)" }}>{wordCount} words</span>
+            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>{wordCount} words</span>
           )}
         </div>
         <div className="relative">
@@ -972,7 +972,7 @@ function PromptTabContent({
 
       {!promptText && (
         <div>
-          <p className="text-fs-caption font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+          <p className="text-fs-body font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.2)" }}>
             Or try an idea
           </p>
           <div className="flex flex-col gap-1.5">
@@ -984,7 +984,7 @@ function PromptTabContent({
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
               >
                 <span className="text-fs-heading flex-shrink-0">{seed.icon}</span>
-                <span className="text-fs-label leading-snug" style={{ color: "rgba(255,255,255,0.5)" }}>{seed.text}</span>
+                <span className="text-fs-body leading-snug" style={{ color: "rgba(255,255,255,0.5)" }}>{seed.text}</span>
               </button>
             ))}
           </div>
@@ -993,7 +993,7 @@ function PromptTabContent({
 
       <div className="rounded-2xl px-4 py-3.5" style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Story length</span>
+          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Story length</span>
           <span className="text-fs-body font-bold tabular-nums" style={{ color: "#4fc3f7" }}>{durationMinutes} min</span>
         </div>
         <div className="flex gap-2">
@@ -1008,8 +1008,8 @@ function PromptTabContent({
               }
             >
               <span className="text-fs-heading mb-0.5">{p.icon}</span>
-              <span className="text-fs-caption font-bold" style={{ color: durationMinutes === p.value ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>{p.label}</span>
-              <span className="text-fs-micro" style={{ color: durationMinutes === p.value ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>{p.desc}</span>
+              <span className="text-fs-body font-bold" style={{ color: durationMinutes === p.value ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>{p.label}</span>
+              <span className="text-fs-body" style={{ color: durationMinutes === p.value ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>{p.desc}</span>
             </button>
           ))}
         </div>
@@ -1028,7 +1028,7 @@ function PromptTabContent({
         return (
           <div className="flex items-center justify-center gap-1.5 py-1.5">
             <span className="text-fs-heading">{meta.flag}</span>
-            <span className="text-fs-caption" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
               Story will be generated in <span style={{ color: "rgba(255,255,255,0.55)" }}>{meta.label}</span>
             </span>
           </div>
@@ -1734,7 +1734,7 @@ export default function Studio2Page() {
           >
             <Icon name="folder" size={15} />
             {savesCount > 0 && (
-              <span className="text-fs-label font-bold leading-none">{savesCount}</span>
+              <span className="text-fs-body font-bold leading-none">{savesCount}</span>
             )}
           </button>
         </div>
@@ -1750,7 +1750,7 @@ export default function Studio2Page() {
             {/* CREATE tab */}
             <button
               onClick={() => setActiveTab(createMode)}
-              className={`relative flex-1 pb-3 text-fs-caption font-bold tracking-wider uppercase transition-colors ${isOnCreateTab ? "text-white" : "text-white/30"}`}
+              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${isOnCreateTab ? "text-white" : "text-white/30"}`}
             >
               <span className="flex items-center justify-center gap-1.5">
                 <span>✨</span>
@@ -1762,7 +1762,7 @@ export default function Studio2Page() {
             <button
               onClick={() => { if (hasScript) setActiveTab("script"); }}
               disabled={!hasScript}
-              className={`relative flex-1 pb-3 text-fs-caption font-bold tracking-wider uppercase transition-colors ${activeTab === "script" ? "text-white" : !hasScript ? "text-white/15 cursor-not-allowed" : "text-white/30"}`}
+              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${activeTab === "script" ? "text-white" : !hasScript ? "text-white/15 cursor-not-allowed" : "text-white/30"}`}
             >
               <span className="flex items-center justify-center gap-1.5">
                 <span>📜</span>
@@ -1779,7 +1779,7 @@ export default function Studio2Page() {
           <div className="flex gap-1.5 mb-6 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <button
               onClick={() => { setCreateMode("chat"); setActiveTab("chat"); }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-caption font-semibold transition-all active:scale-[0.97]"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.97]"
               style={createMode === "chat"
                 ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
                 : { color: "rgba(255,255,255,0.35)" }
@@ -1790,7 +1790,7 @@ export default function Studio2Page() {
             </button>
             <button
               onClick={() => { setCreateMode("step-by-step"); setActiveTab("step-by-step"); }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-caption font-semibold transition-all active:scale-[0.97]"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.97]"
               style={createMode === "step-by-step"
                 ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
                 : { color: "rgba(255,255,255,0.35)" }
@@ -1804,7 +1804,7 @@ export default function Studio2Page() {
 
         {/* Error banner */}
         {(generateError || produceError) && (
-          <div className="mb-5 px-4 py-3 rounded-2xl text-fs-label leading-relaxed"
+          <div className="mb-5 px-4 py-3 rounded-2xl text-fs-body leading-relaxed"
             style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
             ⚠ {generateError ?? produceError}
           </div>
@@ -1952,7 +1952,7 @@ export default function Studio2Page() {
             {!generating && (
               <button
                 onClick={() => setActiveTab(createMode)}
-                className="flex items-center gap-1.5 mb-4 text-fs-caption font-semibold transition-all active:scale-95"
+                className="flex items-center gap-1.5 mb-4 text-fs-body font-semibold transition-all active:scale-95"
                 style={{ color: "rgba(79,195,247,0.65)" }}
               >
                 <Icon name="back" size={13} />
@@ -1982,7 +1982,7 @@ export default function Studio2Page() {
                   {/* Text */}
                   <p className="text-fs-body font-bold text-white/80 tracking-wide">Crafting your story…</p>
                   {lessons.length > 0 && (
-                    <p className="text-fs-caption mt-1.5" style={{ color: "rgba(139,92,246,0.75)" }}>
+                    <p className="text-fs-body mt-1.5" style={{ color: "rgba(139,92,246,0.75)" }}>
                       Weaving in {lessons.join(" · ")}
                     </p>
                   )}
@@ -2061,11 +2061,11 @@ export default function Studio2Page() {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-fs-body opacity-60">🎬</span>
-                  <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
                     Director&apos;s Note
                   </span>
                   {isRevising && (
-                    <span className="ml-auto flex items-center gap-1.5 text-fs-caption" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    <span className="ml-auto flex items-center gap-1.5 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>
                       <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.5)" }} />
                       Revising…
                     </span>
@@ -2073,7 +2073,7 @@ export default function Studio2Page() {
                   {hasPending && !isRevising && (
                     <button
                       onClick={() => { setDirectorNote(""); setPendingDirections([]); setShowToast(false); }}
-                      className="ml-auto text-fs-caption font-medium transition-colors"
+                      className="ml-auto text-fs-body font-medium transition-colors"
                       style={{ color: "rgba(255,255,255,0.25)" }}
                     >
                       <Icon name="restore" size={14} className="inline-block align-middle" /> Discard
@@ -2094,7 +2094,7 @@ export default function Studio2Page() {
                       key={label}
                       disabled={isRevising}
                       onClick={() => handleRevise(instruction)}
-                      className="text-fs-caption px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+                      className="text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
                       style={{
                         background: isRevising ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.06)",
                         border: "1px solid rgba(255,255,255,0.1)",
@@ -2137,7 +2137,7 @@ export default function Studio2Page() {
                 </div>
 
                 {reviseError && (
-                  <p className="text-fs-caption" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
+                  <p className="text-fs-body" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
                 )}
               </div>
               );
@@ -2173,7 +2173,7 @@ export default function Studio2Page() {
                     <span className="flex items-center gap-2">
                       <span className="text-fs-heading leading-none">✨</span>
                       {i18nT(language, "updateScript")}
-                      <span className="px-1.5 py-0.5 rounded-full text-fs-caption font-bold" style={{ background: "rgba(103,232,249,0.2)", color: "#67e8f9" }}>
+                      <span className="px-1.5 py-0.5 rounded-full text-fs-body font-bold" style={{ background: "rgba(103,232,249,0.2)", color: "#67e8f9" }}>
                         {dirCount}
                       </span>
                     </span>
@@ -2281,7 +2281,7 @@ export default function Studio2Page() {
               }}
             >
               <div
-                className="px-4 py-2.5 rounded-2xl text-fs-label font-semibold whitespace-nowrap"
+                className="px-4 py-2.5 rounded-2xl text-fs-body font-semibold whitespace-nowrap"
                 style={{ background: "rgba(139,92,246,0.92)", color: "#fff", boxShadow: "0 4px 20px rgba(139,92,246,0.45)", backdropFilter: "blur(8px)" }}
               >
                 ✏️ Tap &quot;Update Script&quot; to apply your direction
@@ -2324,7 +2324,7 @@ export default function Studio2Page() {
               <div className="flex items-center gap-2.5">
                 <Icon name="folder" size={16} />
                 <span className="text-fs-body font-semibold tracking-wide" style={{ color: "rgba(255,255,255,0.75)" }}>Saved Versions</span>
-                <span className="text-fs-caption font-bold px-1.5 py-0.5 rounded-full"
+                <span className="text-fs-body font-bold px-1.5 py-0.5 rounded-full"
                   style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.25)", color: "rgba(79,195,247,0.8)" }}>
                   {savesCount}
                 </span>

@@ -103,11 +103,11 @@ function ScriptBrowser({
             >
               📂
             </span>
-            <span className="text-fs-label font-bold tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.75)", letterSpacing: "0.08em" }}>
+            <span className="text-fs-body font-bold tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.75)", letterSpacing: "0.08em" }}>
               Saved Versions
             </span>
             <span
-              className="text-fs-caption px-2 py-0.5 rounded-full font-bold tabular-nums"
+              className="text-fs-body px-2 py-0.5 rounded-full font-bold tabular-nums"
               style={{
                 background: "linear-gradient(135deg, rgba(79,195,247,0.2), rgba(79,195,247,0.08))",
                 color: "#4fc3f7",
@@ -118,7 +118,7 @@ function ScriptBrowser({
             </span>
           </div>
           <span
-            className="text-white/40 text-fs-label transition-transform duration-200"
+            className="text-white/40 text-fs-body transition-transform duration-200"
             style={{ display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
           >
             ▾
@@ -175,7 +175,7 @@ function ScriptBrowser({
                       {/* Autosave badge */}
                       {s.isAutosave && (
                         <span
-                          className="absolute top-1.5 left-1.5 text-fs-micro font-bold px-1.5 py-0.5 rounded-md"
+                          className="absolute top-1.5 left-1.5 text-fs-body font-bold px-1.5 py-0.5 rounded-md"
                           style={{ background: "rgba(79,195,247,0.25)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.4)" }}
                         >
                           AUTO
@@ -186,12 +186,12 @@ function ScriptBrowser({
                     {/* Info */}
                     <div className="flex flex-col gap-0.5 px-2.5 py-2">
                       <span
-                        className="text-fs-caption font-bold truncate"
+                        className="text-fs-body font-bold truncate"
                         style={{ color: s.isAutosave ? "#4fc3f7" : "rgba(255,255,255,0.75)" }}
                       >
                         {isLoading ? "Loading…" : s.label}
                       </span>
-                      <span className="text-fs-micro" style={{ color: "rgba(255,255,255,0.28)" }}>
+                      <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.28)" }}>
                         {s.blockCount} lines · {timeAgo(s.savedAt)}
                       </span>
                     </div>
@@ -202,7 +202,7 @@ function ScriptBrowser({
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(s.id, e); }}
                       disabled={isDeleting}
-                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-fs-caption transition-all"
+                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-fs-body transition-all"
                       style={{ background: "rgba(0,0,0,0.55)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.12)" }}
                     >
                       {isDeleting ? "…" : "×"}
@@ -259,7 +259,7 @@ function CharacterCards({
 
   return (
     <div className="mb-5">
-      <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
+      <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
         Cast — tap to direct a character
       </p>
       <div className="flex gap-3 pb-2 -mx-5 px-5" style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
@@ -377,9 +377,9 @@ function DirectionSheet({
             )}
           </div>
           <div>
-            <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>Direct</p>
+            <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>Direct</p>
             <p className="text-fs-body font-bold text-white">{characterName}</p>
-            {voice && <p className="text-fs-caption" style={{ color: "rgba(255,255,255,0.3)" }}>{voice.name}</p>}
+            {voice && <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>{voice.name}</p>}
           </div>
         </div>
 
@@ -389,7 +389,7 @@ function DirectionSheet({
             <button
               key={chip}
               onClick={() => submit(chip)}
-              className="text-fs-caption px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+              className="text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
               style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
             >
               {chip}
@@ -494,13 +494,13 @@ function CharacterCard({
           )}
         </div>
         <span
-          className="text-fs-caption font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
+          className="text-fs-body font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
           style={{ color: accentColor }}
         >
           {characterName}
         </span>
         {voice && (
-          <span className="text-fs-micro text-white/25 text-center truncate w-full">{voice.name.split(" ")[0]}</span>
+          <span className="text-fs-body text-white/25 text-center truncate w-full">{voice.name.split(" ")[0]}</span>
         )}
       </button>
     </div>
@@ -585,7 +585,7 @@ function SceneHeader() {
             <img src={cachedUrls[c.label] ?? c.url} alt={c.label} className="w-full h-full" style={{ imageRendering: "auto" }} />
           </div>
           <span
-            className="mt-1 text-fs-micro font-semibold tracking-wide"
+            className="mt-1 text-fs-body font-semibold tracking-wide"
             style={{ color: `${c.glow}cc`, textShadow: `0 0 8px ${c.glow}88` }}
           >
             {c.label}
@@ -598,7 +598,7 @@ function SceneHeader() {
         className="absolute bottom-0 left-0 right-0 px-4 pt-8 pb-3"
         style={{ background: "linear-gradient(to top, rgba(6,11,30,0.97) 0%, rgba(6,11,30,0.7) 60%, transparent 100%)" }}
       >
-        <p className="text-fs-caption font-semibold uppercase tracking-[0.18em] mb-0.5" style={{ color: "rgba(139,92,246,0.7)" }}>
+        <p className="text-fs-body font-semibold uppercase tracking-[0.18em] mb-0.5" style={{ color: "rgba(139,92,246,0.7)" }}>
           Nightstory Studio
         </p>
         <h2
@@ -633,11 +633,11 @@ function PromptTabContent({
       {/* ── Story prompt textarea ──────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+          <label className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
             Your story idea
           </label>
           {wordCount > 0 && (
-            <span className="text-fs-caption" style={{ color: "rgba(255,255,255,0.2)" }}>{wordCount} words</span>
+            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>{wordCount} words</span>
           )}
         </div>
         <div className="relative">
@@ -666,7 +666,7 @@ function PromptTabContent({
       {/* ── Quick-seed example pills ───────────────────────────────────── */}
       {!promptText && (
         <div>
-          <p className="text-fs-caption font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+          <p className="text-fs-body font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.2)" }}>
             Or try an idea
           </p>
           <div className="flex flex-col gap-1.5">
@@ -681,7 +681,7 @@ function PromptTabContent({
                 }}
               >
                 <span className="text-fs-heading flex-shrink-0">{seed.icon}</span>
-                <span className="text-fs-label leading-snug" style={{ color: "rgba(255,255,255,0.5)" }}>{seed.text}</span>
+                <span className="text-fs-body leading-snug" style={{ color: "rgba(255,255,255,0.5)" }}>{seed.text}</span>
               </button>
             ))}
           </div>
@@ -694,7 +694,7 @@ function PromptTabContent({
         style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}
       >
         <div className="flex items-center justify-between mb-3">
-          <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
+          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
             Story length
           </span>
           <span className="text-fs-body font-bold tabular-nums" style={{ color: "#4fc3f7" }}>
@@ -713,8 +713,8 @@ function PromptTabContent({
               }
             >
               <span className="text-fs-heading mb-0.5">{p.icon}</span>
-              <span className="text-fs-caption font-bold" style={{ color: durationMinutes === p.value ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>{p.label}</span>
-              <span className="text-fs-micro" style={{ color: durationMinutes === p.value ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>{p.desc}</span>
+              <span className="text-fs-body font-bold" style={{ color: durationMinutes === p.value ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>{p.label}</span>
+              <span className="text-fs-body" style={{ color: durationMinutes === p.value ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>{p.desc}</span>
             </button>
           ))}
         </div>
@@ -1163,7 +1163,7 @@ export default function StudioPage() {
             <span className="text-fs-body">📂</span>
             {savesCount > 0 && (
               <span
-                className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 rounded-full text-fs-micro font-bold flex items-center justify-center"
+                className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 rounded-full text-fs-body font-bold flex items-center justify-center"
                 style={{ background: "rgba(79,195,247,0.85)", color: "#05080F" }}
               >
                 {savesCount}
@@ -1189,7 +1189,7 @@ export default function StudioPage() {
                   setActiveTab(id);
                 }}
                 disabled={isDisabled}
-                className={`relative flex-1 pb-3 text-fs-caption font-bold tracking-wider uppercase transition-colors ${
+                className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${
                   isActive ? "text-white" : isDisabled ? "text-white/15 cursor-not-allowed" : "text-white/30"
                 }`}
               >
@@ -1210,7 +1210,7 @@ export default function StudioPage() {
 
         {/* Error banner */}
         {(generateError || produceError) && (
-          <div className="mb-5 px-4 py-3 rounded-2xl text-fs-label leading-relaxed"
+          <div className="mb-5 px-4 py-3 rounded-2xl text-fs-body leading-relaxed"
             style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
             ⚠ {generateError ?? produceError}
           </div>
@@ -1285,11 +1285,11 @@ export default function StudioPage() {
                 {/* Header */}
                 <div className="flex items-center gap-2">
                   <span className="text-fs-body opacity-60">🎬</span>
-                  <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
                     Director&apos;s Note
                   </span>
                   {isRevising && (
-                    <span className="ml-auto flex items-center gap-1.5 text-fs-caption" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    <span className="ml-auto flex items-center gap-1.5 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>
                       <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.5)" }} />
                       Revising…
                     </span>
@@ -1297,7 +1297,7 @@ export default function StudioPage() {
                   {hasPending && !isRevising && (
                     <button
                       onClick={() => { setDirectorNote(""); setPendingDirections([]); setShowToast(false); }}
-                      className="ml-auto text-fs-caption font-medium transition-colors"
+                      className="ml-auto text-fs-body font-medium transition-colors"
                       style={{ color: "rgba(255,255,255,0.25)" }}
                     >
                       ↩ Discard
@@ -1319,7 +1319,7 @@ export default function StudioPage() {
                       key={label}
                       disabled={isRevising}
                       onClick={() => handleRevise(instruction)}
-                      className="text-fs-caption px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+                      className="text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
                       style={{
                         background: isRevising ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.06)",
                         border: "1px solid rgba(255,255,255,0.1)",
@@ -1363,7 +1363,7 @@ export default function StudioPage() {
                 </div>
 
                 {reviseError && (
-                  <p className="text-fs-caption" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
+                  <p className="text-fs-body" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
                 )}
               </div>
               );
@@ -1423,7 +1423,7 @@ export default function StudioPage() {
                   )}
                 </button>
                 {hasUnapplied && !isProducing && (
-                  <p className="text-center text-fs-caption mt-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  <p className="text-center text-fs-body mt-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
                     Apply or discard your director&apos;s note first
                   </p>
                 )}
@@ -1459,7 +1459,7 @@ export default function StudioPage() {
               }}
             >
               <div
-                className="px-4 py-2.5 rounded-2xl text-fs-label font-semibold whitespace-nowrap"
+                className="px-4 py-2.5 rounded-2xl text-fs-body font-semibold whitespace-nowrap"
                 style={{ background: "rgba(139,92,246,0.92)", color: "#fff", boxShadow: "0 4px 20px rgba(139,92,246,0.45)", backdropFilter: "blur(8px)" }}
               >
                 ✏️ Tap &quot;Update Script&quot; to apply your direction
@@ -1488,7 +1488,7 @@ export default function StudioPage() {
           >
             <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: "rgba(255,255,255,0.15)" }} />
             <div className="flex items-center justify-between mb-4 px-1">
-              <span className="text-fs-label font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved Versions</span>
+              <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved Versions</span>
               <button onClick={() => setVersionsOpen(false)} className="text-white/30 text-fs-heading leading-none">×</button>
             </div>
             <ScriptBrowser

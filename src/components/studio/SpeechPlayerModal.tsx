@@ -45,11 +45,11 @@ export default function SpeechPlayerModal({
           <div className="flex items-center gap-3">
             <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.avatarEmoji} size={40} borderColor="rgba(255,255,255,0.1)" />
             <div className="flex-1 min-w-0">
-              <p className="text-fs-caption font-bold uppercase tracking-widest"
+              <p className="text-fs-body font-bold uppercase tracking-widest"
                 style={{ color: soundActive ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>
                 {block.characterName}
               </p>
-              <p className="text-white/35 text-fs-caption">{voice.name} · Gemini TTS</p>
+              <p className="text-white/35 text-fs-body">{voice.name} · Gemini TTS</p>
             </div>
             {/* Sound bars or spinner */}
             {isLoading ? (
@@ -77,11 +77,11 @@ export default function SpeechPlayerModal({
           {/* Status or error */}
           {isLoading && (
             <div className="text-center py-1">
-              <p className="text-white/50 text-fs-label">Generating natural voice with Gemini AI…</p>
+              <p className="text-white/50 text-fs-body">Generating natural voice with Gemini AI…</p>
             </div>
           )}
           {speechError && !isLoading && (
-            <div className="px-3 py-2 rounded-xl text-fs-label leading-relaxed"
+            <div className="px-3 py-2 rounded-xl text-fs-body leading-relaxed"
               style={{ background: "rgba(236,72,153,0.12)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
               ⚠ {speechError}
             </div>

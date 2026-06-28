@@ -158,7 +158,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
     return (
       <div className="flex flex-col">
         <StepDots step={1} />
-        <p className="text-white/40 text-fs-caption font-bold uppercase tracking-widest text-center mb-5">
+        <p className="text-white/40 text-fs-body font-bold uppercase tracking-widest text-center mb-5">
           {t("pickWorld")}
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -201,7 +201,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
                 className="absolute bottom-0 left-0 right-0 px-2 py-2.5"
                 style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)" }}
               >
-                <span className="text-white text-fs-caption font-medium leading-tight block text-center tracking-wide">
+                <span className="text-white text-fs-body font-medium leading-tight block text-center tracking-wide">
                   {world.label}
                 </span>
               </div>
@@ -224,7 +224,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
           >
             ←
           </button>
-          <p className="flex-1 text-center text-white/40 text-fs-caption font-bold uppercase tracking-widest">
+          <p className="flex-1 text-center text-white/40 text-fs-body font-bold uppercase tracking-widest">
             {t("pickMood")}
           </p>
           <div className="w-8" />
@@ -254,7 +254,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
               <span className="text-fs-display">{mood.emoji}</span>
               <div className="flex flex-col flex-1">
                 <span className="text-white font-semibold text-fs-body">{mood.label}</span>
-                <span className="text-white/40 text-fs-label mt-0.5">{mood.desc}</span>
+                <span className="text-white/40 text-fs-body mt-0.5">{mood.desc}</span>
               </div>
               <div
                 className="w-2 h-2 rounded-full opacity-60"
@@ -283,7 +283,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
         >
           ←
         </button>
-        <p className="flex-1 text-center text-white/40 text-fs-caption font-bold uppercase tracking-widest">
+        <p className="flex-1 text-center text-white/40 text-fs-body font-bold uppercase tracking-widest">
           {t("addYourStamp")}
         </p>
         <div className="w-8" />
@@ -328,7 +328,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
             >
               {isRecording ? "🔴" : "🎙️"}
             </button>
-            <span className="text-white/30 text-fs-caption">
+            <span className="text-white/30 text-fs-body">
               {t("holdToSpeak")}
             </span>
           </div>

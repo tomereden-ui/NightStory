@@ -38,17 +38,17 @@ export default function StoryCard({ story, variant = "compact" }: StoryCardProps
 
           {/* Bottom info overlay */}
           <div className="absolute bottom-0 left-0 right-0 p-3" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)" }}>
-            {story.isFavorite && <span className="text-pink text-fs-label">♥ </span>}
-            <h3 className="text-white text-fs-label font-semibold leading-tight line-clamp-2">{title}</h3>
+            {story.isFavorite && <span className="text-pink text-fs-body">♥ </span>}
+            <h3 className="text-white text-fs-body font-semibold leading-tight line-clamp-2">{title}</h3>
             <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-teal/70 text-fs-caption">{story.voice.avatarEmoji}</span>
-              <span className="text-white/40 text-fs-caption">{formatDuration(story.durationSeconds)}</span>
+              <span className="text-teal/70 text-fs-body">{story.voice.avatarEmoji}</span>
+              <span className="text-white/40 text-fs-body">{formatDuration(story.durationSeconds)}</span>
             </div>
           </div>
 
           {/* Category badge */}
           <div className="absolute top-2.5 left-2.5">
-            <span className="text-fs-micro font-medium uppercase tracking-wider bg-black/40 backdrop-blur-sm text-white/60 px-2 py-0.5 rounded-full border border-white/10">
+            <span className="text-fs-body font-medium uppercase tracking-wider bg-black/40 backdrop-blur-sm text-white/60 px-2 py-0.5 rounded-full border border-white/10">
               {story.category}
             </span>
           </div>
@@ -72,19 +72,19 @@ export default function StoryCard({ story, variant = "compact" }: StoryCardProps
           {/* Info */}
           <div className="flex-1 min-w-0">
             <h3 className="text-white text-fs-body font-semibold truncate">{title}</h3>
-            <p className="text-white/35 text-fs-label mt-0.5 truncate">{description}</p>
+            <p className="text-white/35 text-fs-body mt-0.5 truncate">{description}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-teal/60 text-fs-caption">
+              <span className="text-teal/60 text-fs-body">
                 {story.voice.avatarEmoji} {language === "he" ? story.voice.nameHe : story.voice.name}
               </span>
-              <span className="text-white/20 text-fs-caption">·</span>
-              <span className="text-white/30 text-fs-caption">{formatDuration(story.durationSeconds)}</span>
+              <span className="text-white/20 text-fs-body">·</span>
+              <span className="text-white/30 text-fs-body">{formatDuration(story.durationSeconds)}</span>
             </div>
           </div>
 
           {/* Play */}
           <div className="w-8 h-8 rounded-full border border-purple/40 flex items-center justify-center flex-shrink-0 group-hover:bg-purple/15 group-hover:border-purple/70 transition-all">
-            <span className="text-purple-bright text-fs-label ml-0.5">▶</span>
+            <span className="text-purple-bright text-fs-body ml-0.5">▶</span>
           </div>
         </div>
       </Link>
@@ -102,8 +102,8 @@ export default function StoryCard({ story, variant = "compact" }: StoryCardProps
           {story.coverEmoji}
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-2.5" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)" }}>
-          <h3 className="text-white text-fs-label font-semibold leading-tight line-clamp-2">{title}</h3>
-          <p className="text-white/40 text-fs-caption mt-0.5">{formatDuration(story.durationSeconds)}</p>
+          <h3 className="text-white text-fs-body font-semibold leading-tight line-clamp-2">{title}</h3>
+          <p className="text-white/40 text-fs-body mt-0.5">{formatDuration(story.durationSeconds)}</p>
         </div>
       </div>
     </Link>

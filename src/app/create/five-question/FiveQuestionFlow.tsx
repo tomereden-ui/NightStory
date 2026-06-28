@@ -180,7 +180,7 @@ function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: 
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-label font-semibold transition-all active:scale-95 self-start"
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95 self-start"
       style={{
         background: "rgba(255,255,255,0.06)",
         border: "1px solid rgba(255,255,255,0.14)",
@@ -277,7 +277,7 @@ function IllustratedCard({
       <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
         {badge}
         <span
-          className="text-fs-label font-bold leading-tight"
+          className="text-fs-body font-bold leading-tight"
           style={{
             color: selected ? c1 : "rgba(255,255,255,0.95)",
             textShadow: "0 1px 10px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.9)",
@@ -306,7 +306,7 @@ function StoryInput({ value, onChange, placeholder, maxSoftLimit, autoFocus, onS
         style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${over ? "rgba(236,72,153,0.5)" : "rgba(255,255,255,0.12)"}` }}
         onFocus={(e) => (e.currentTarget.style.borderColor = over ? "rgba(236,72,153,0.5)" : "rgba(79,195,247,0.4)")}
         onBlur={(e)  => (e.currentTarget.style.borderColor = over ? "rgba(236,72,153,0.5)" : "rgba(255,255,255,0.12)")} />
-      {over && <p className="text-fs-caption mt-1.5" style={{ color: "#EC4899" }}>{BLUEBELL.q4Hint}</p>}
+      {over && <p className="text-fs-body mt-1.5" style={{ color: "#EC4899" }}>{BLUEBELL.q4Hint}</p>}
     </div>
   );
 }
@@ -352,7 +352,7 @@ function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebe
         <div className="w-8" />
       </div>
       <div className="mb-7">
-        <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
+        <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
         <BluebellLine text={bluebellText} speed={bluebellSpeed} onComplete={onBluebellComplete} />
       </div>
       {children}
@@ -425,7 +425,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
           <>
             <BackButton onClick={() => setMode(null)} />
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextOwn} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-fs-label" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="That's the one!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
@@ -450,7 +450,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
           <>
             <BackButton onClick={() => setMode(null)} />
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextStranger} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-fs-label" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="That's the one!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
@@ -458,11 +458,11 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
           <>
             <div className="rounded-2xl px-5 py-4 text-center mb-2"
               style={{ background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.25)" }}>
-              <p className="text-white/40 text-fs-label mb-1">Your hero is...</p>
+              <p className="text-white/40 text-fs-body mb-1">Your hero is...</p>
               <p className="text-white text-fs-title font-bold" style={{ color: "#4fc3f7" }}>{surpriseName}</p>
             </div>
             <PrimaryButton label={`Yes — ${surpriseName}!`} onClick={() => confirm(surpriseName)} />
-            <button onClick={handleSurprise} className="text-white/35 text-fs-label text-center w-full py-2">Try another</button>
+            <button onClick={handleSurprise} className="text-white/35 text-fs-body text-center w-full py-2">Try another</button>
           </>
         )}
       </div>
@@ -566,7 +566,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
               ))}
             </div>
             <OptionPill label="Surprise me!" emoji="🎲" onClick={() => { setTextVal(pickRandom(SURPRISE_COMPANIONS)); setMode("creature"); }} />
-            <p className="text-fs-label text-center mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
+            <p className="text-fs-body text-center mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
           </>
         )}
         {mode !== null && activeMode && (
@@ -574,7 +574,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
             <BackButton onClick={() => setMode(null)} />
             <p className="text-fs-body text-white/50">{activeMode.label}</p>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-fs-label" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="Magnificent!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
@@ -651,7 +651,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
             <BackButton onClick={() => setMode(null)} />
             <p className="text-fs-body text-white/50">{activeMode.label}</p>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} maxSoftLimit={80} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-fs-label" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="That's it!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
@@ -681,7 +681,7 @@ function Q5View({ heroName, engineText, onNext, onBack, optionImages, audioUrl }
             imageUrl={optionImages[`mood-${m.id}`]}
             onClick={() => onNext(m.id)}
             badge={m.isBedtime
-              ? <span className="block text-fs-micro font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
+              ? <span className="block text-fs-body font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
               : undefined
             }
           />
@@ -734,10 +734,10 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         {ROWS.map((row, i) => (
           <div key={row.label} className="flex items-center px-4 py-3 gap-3"
             style={{ borderBottom: i < ROWS.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-            <span className="text-fs-caption font-bold uppercase tracking-widest w-20 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{row.label}</span>
+            <span className="text-fs-body font-bold uppercase tracking-widest w-20 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{row.label}</span>
             <span className="flex-1 text-fs-body text-white/80 truncate">{row.value}</span>
             <button onClick={() => onEditStep(row.step)}
-              className="text-fs-caption px-2.5 py-1 rounded-lg flex-shrink-0"
+              className="text-fs-body px-2.5 py-1 rounded-lg flex-shrink-0"
               style={{ background: "rgba(79,195,247,0.08)", color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.2)" }}>
               edit
             </button>
@@ -749,8 +749,8 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
       {phase === "table" && (
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-white/40 text-fs-caption font-bold uppercase tracking-widest">Story Length</label>
-            <span className="text-fs-label font-bold px-2.5 py-0.5 rounded-full"
+            <label className="text-white/40 text-fs-body font-bold uppercase tracking-widest">Story Length</label>
+            <span className="text-fs-body font-bold px-2.5 py-0.5 rounded-full"
               style={{ background: "rgba(79,195,247,0.12)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.25)" }}>
               {durationMinutes} min
             </span>
@@ -758,7 +758,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
           <input type="range" min={1} max={15} step={1} value={durationMinutes}
             onChange={(e) => onDurationChange(+e.target.value)}
             className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
-          <div className="flex justify-between text-white/20 text-fs-caption mt-1">
+          <div className="flex justify-between text-white/20 text-fs-body mt-1">
             <span>1 min</span>
             <span className="text-white/15">· · · · · · · · · · · · · ·</span>
             <span>15 min</span>
@@ -774,7 +774,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
       {(phase === "script" || phase === "countdown" || phase === "herewego") && (
         <div className="flex flex-col gap-5">
           <div>
-            <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
+            <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
             <BluebellLine text={launchScript} speed={65}
               onComplete={() => { setShowReady(true); setTimeout(() => setPhase("countdown"), 600); }} />
           </div>
@@ -1082,7 +1082,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     <div className="mx-5 mb-4 px-4 py-3 rounded-2xl text-fs-body"
       style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
       <p>⚠ {BLUEBELL.apiError}</p>
-      <p className="text-fs-label mt-1 opacity-70">{error}</p>
+      <p className="text-fs-body mt-1 opacity-70">{error}</p>
     </div>
   ) : null;
 
@@ -1146,7 +1146,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
             <div className="w-8" />
           </div>
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-2xl text-fs-label" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
+            <div className="mb-4 px-4 py-3 rounded-2xl text-fs-body" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
               ⚠ {error}
             </div>
           )}

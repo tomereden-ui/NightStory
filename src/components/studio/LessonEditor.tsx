@@ -82,12 +82,12 @@ export default function LessonEditor({
         style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)" }}
       >
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>
+          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>
             ✦ Lessons
           </span>
           <button
             onClick={openEditor}
-            className="text-fs-caption font-semibold px-2.5 py-1 rounded-lg transition-all active:scale-95"
+            className="text-fs-body font-semibold px-2.5 py-1 rounded-lg transition-all active:scale-95"
             style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.25)", color: "#C4B5FD" }}
           >
             {hasLessons ? "Edit" : "+ Add lesson"}
@@ -109,7 +109,7 @@ export default function LessonEditor({
                 <div key={lesson}>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-fs-caption font-semibold"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-fs-body font-semibold"
                       style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
                     >
                       {preset && <span>{preset.icon}</span>}
@@ -128,7 +128,7 @@ export default function LessonEditor({
                     </button>
                   </div>
                   {impl && (
-                    <p className="mt-1 text-fs-caption leading-snug ml-1" style={{ color: impl.implemented ? "rgba(52,211,153,0.65)" : "rgba(251,191,36,0.65)" }}>
+                    <p className="mt-1 text-fs-body leading-snug ml-1" style={{ color: impl.implemented ? "rgba(52,211,153,0.65)" : "rgba(251,191,36,0.65)" }}>
                       {impl.implemented ? impl.how : "Could not be naturally integrated with this story"}
                     </p>
                   )}
@@ -137,14 +137,14 @@ export default function LessonEditor({
             })}
           </div>
         ) : (
-          <p className="text-fs-caption" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>
             No lesson selected — tap &quot;+ Add lesson&quot; to weave a value into the story.
           </p>
         )}
 
         {/* Rewrite shortcut — shown after lessons change or always when lessons present */}
         {hasLessons && lessonImplementations && lessonImplementations.length === 0 && (
-          <p className="mt-2 text-fs-caption" style={{ color: "rgba(139,92,246,0.45)" }}>
+          <p className="mt-2 text-fs-body" style={{ color: "rgba(139,92,246,0.45)" }}>
             ✦ Lesson badges appear in the script after generating a story with these lessons from the Prompt tab.
           </p>
         )}
@@ -152,7 +152,7 @@ export default function LessonEditor({
         {hasLessons && onRewrite && (
           <button
             onClick={() => onRewrite(buildRewriteInstruction(lessons))}
-            className="mt-3 w-full py-2 rounded-xl text-fs-caption font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
+            className="mt-3 w-full py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
             style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.22)", color: "#C4B5FD" }}
           >
             <span>✦</span>
@@ -175,10 +175,10 @@ export default function LessonEditor({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>
+          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>
             ✦ Lessons
           </span>
-          <p className="text-fs-caption mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
             Pick one or more values to weave into the story
           </p>
         </div>
@@ -206,13 +206,13 @@ export default function LessonEditor({
             >
               <div className="flex items-center justify-between">
                 <span className="text-fs-subtitle leading-none">{icon}</span>
-                {isSelected && <span className="text-fs-caption font-bold" style={{ color: "#4fc3f7" }}>✓</span>}
+                {isSelected && <span className="text-fs-body font-bold" style={{ color: "#4fc3f7" }}>✓</span>}
               </div>
-              <span className="text-fs-caption font-bold leading-tight"
+              <span className="text-fs-body font-bold leading-tight"
                 style={{ color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.85)" }}>
                 {label}
               </span>
-              <span className="text-fs-caption leading-snug" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <span className="text-fs-body leading-snug" style={{ color: "rgba(255,255,255,0.35)" }}>
                 {desc}
               </span>
             </button>
@@ -228,7 +228,7 @@ export default function LessonEditor({
           : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)" }
         }
       >
-        <label className="text-fs-caption font-bold uppercase tracking-widest block mb-1.5" style={{ color: "rgba(79,195,247,0.5)" }}>
+        <label className="text-fs-body font-bold uppercase tracking-widest block mb-1.5" style={{ color: "rgba(79,195,247,0.5)" }}>
           Or describe your own
         </label>
         <textarea
@@ -275,7 +275,7 @@ export default function LessonEditor({
       {hasLessons && (
         <button
           onClick={() => { onChange([]); setExpanded(false); }}
-          className="text-center text-fs-caption font-medium transition-opacity"
+          className="text-center text-fs-body font-medium transition-opacity"
           style={{ color: "rgba(255,255,255,0.2)" }}
         >
           Remove all lessons

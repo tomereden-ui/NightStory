@@ -187,7 +187,7 @@ function PlayerContent() {
                   boxShadow: isActive ? "0 0 16px rgba(0,212,255,0.08)" : "none",
                 }}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-fs-caption font-bold uppercase tracking-widest"
+                  <p className="text-fs-body font-bold uppercase tracking-widest"
                     style={{ color: seg.type === "narrator" ? "rgba(255,255,255,0.35)" : "rgba(0,212,255,0.6)" }}>
                     {seg.speaker}
                   </p>
@@ -223,7 +223,7 @@ function PlayerContent() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-fs-body font-semibold truncate">{title}</p>
-              <p className="text-white/30 text-fs-label">Gemini AI · Natural Voice</p>
+              <p className="text-white/30 text-fs-body">Gemini AI · Natural Voice</p>
             </div>
             <button className="text-white/25 text-fs-heading hover:text-white/50 transition-colors">
               {story.isFavorite ? "♥" : "♡"}
@@ -234,7 +234,7 @@ function PlayerContent() {
           <input type="range" min={0} max={100} value={progress}
             onChange={(e) => setProgress(+e.target.value)}
             className="w-full cursor-pointer mb-1" style={{ accentColor: "#00D4FF" }} />
-          <div className="flex justify-between text-white/20 text-fs-caption mb-3">
+          <div className="flex justify-between text-white/20 text-fs-body mb-3">
             <span>{formatTime(currentSec)}</span>
             <span>{formatTime(story.durationSeconds)}</span>
           </div>

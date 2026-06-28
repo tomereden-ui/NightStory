@@ -164,7 +164,7 @@ function ClassicsTab() {
           <p className="text-white/40 text-fs-body">No classics match your search</p>
           <button
             onClick={() => setSearch("")}
-            className="text-fs-label px-4 py-2 rounded-full transition-all"
+            className="text-fs-body px-4 py-2 rounded-full transition-all"
             style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
           >
             Clear search
@@ -211,16 +211,16 @@ function ClassicsTab() {
 
             {/* Info */}
             <div className="px-2 pt-2 pb-2.5">
-              <p className="text-white text-fs-label font-bold leading-snug line-clamp-2 tracking-wide">{meta.title}</p>
-              <p className="text-white/40 text-fs-caption mt-0.5 leading-snug line-clamp-1">{meta.tagline}</p>
+              <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{meta.title}</p>
+              <p className="text-white/40 text-fs-body mt-0.5 leading-snug line-clamp-1">{meta.tagline}</p>
               <div className="flex items-center gap-1.5 mt-1.5">
                 {meta.durationSeconds ? (
-                  <span className="text-fs-micro font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
+                  <span className="text-fs-body font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
                     style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}>
                     {durationLabel(meta.durationSeconds)}
                   </span>
                 ) : meta.status === "pending" ? (
-                  <span className="text-fs-micro" style={{ color: "rgba(255,255,255,0.2)" }}>Pending</span>
+                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>Pending</span>
                 ) : null}
               </div>
             </div>
@@ -323,7 +323,7 @@ export default function LibraryPage() {
               <Icon name="delete" size={18} />
               {trashCount > 0 && (
                 <span
-                  className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-fs-micro font-bold flex items-center justify-center"
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-fs-body font-bold flex items-center justify-center"
                   style={{ background: "rgba(236,72,153,0.8)", color: "#fff" }}
                 >
                   {trashCount > 9 ? "9+" : trashCount}
@@ -352,7 +352,7 @@ export default function LibraryPage() {
         {/* Recently Played — spans both tabs */}
         {!loading && (entries.length > 0 || recentClassics.length > 0) && (
           <div className="mb-4">
-            <p className="text-fs-caption font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
               Recently Played
             </p>
             <div className="relative">
@@ -408,12 +408,12 @@ export default function LibraryPage() {
                       </div>
                     )}
                     <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
-                    <span className="absolute top-2 right-2 text-fs-micro font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+                    <span className="absolute top-2 right-2 text-fs-body font-bold tracking-widest px-1.5 py-0.5 rounded-full"
                       style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
                       {item.duration}
                     </span>
                     <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
-                      <p className="text-white text-fs-caption font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
+                      <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
                     </div>
                   </Link>
                 );
@@ -436,7 +436,7 @@ export default function LibraryPage() {
               <button
                 key={key}
                 onClick={() => { setActiveTab(key); sessionStorage.setItem("library-tab", key); }}
-                className="flex-shrink-0 px-4 py-2 rounded-full text-fs-label font-medium tracking-wide transition-all"
+                className="flex-shrink-0 px-4 py-2 rounded-full text-fs-body font-medium tracking-wide transition-all"
                 style={active
                   ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
                   : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }
@@ -494,7 +494,7 @@ export default function LibraryPage() {
           <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
             <span className="text-5xl" style={{ filter: "drop-shadow(0 0 24px rgba(167,139,250,0.5))" }}>🌍</span>
             <p className="text-white/50 text-fs-body font-medium tracking-wide">Community Stories</p>
-            <p className="text-white/25 text-fs-label max-w-[220px] leading-relaxed">Stories created by families around the world will appear here soon.</p>
+            <p className="text-white/25 text-fs-body max-w-[220px] leading-relaxed">Stories created by families around the world will appear here soon.</p>
           </div>
         )}
 
@@ -510,7 +510,7 @@ export default function LibraryPage() {
             <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
               <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>🌙</span>
               <p className="text-white/40 text-fs-body font-light tracking-wide">{t("noStories")}</p>
-              <p className="text-white/20 text-fs-label">{t("createFirstStory")}</p>
+              <p className="text-white/20 text-fs-body">{t("createFirstStory")}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
@@ -518,7 +518,7 @@ export default function LibraryPage() {
               <p className="text-white/40 text-fs-body">No stories match your filter</p>
               <button
                 onClick={() => { setSearch(""); setDurationFilter("all"); }}
-                className="text-fs-label px-4 py-2 rounded-full transition-all"
+                className="text-fs-body px-4 py-2 rounded-full transition-all"
                 style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
               >
                 Clear filters
@@ -546,7 +546,7 @@ export default function LibraryPage() {
                         <p className="text-fs-body text-white/70">
                           {t("moveToTrash")} <span className="text-white font-medium">"{entry.title}"</span>?
                         </p>
-                        <p className="text-fs-label" style={{ color: "rgba(255,255,255,0.3)" }}>{t("keptFor30Days")}</p>
+                        <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>{t("keptFor30Days")}</p>
                         <div className="flex gap-2">
                           <button onClick={() => setConfirmingId(null)} className="flex-1 py-2.5 rounded-xl text-fs-body transition-all active:scale-[0.98]"
                             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
@@ -586,19 +586,19 @@ export default function LibraryPage() {
                     <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
                       <div className="flex-1 min-w-0">
                         <Link href={`/library/${entry.id}`}>
-                          <p className="text-white text-fs-label font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
+                          <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
                         </Link>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-fs-micro font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
+                          <span className="text-fs-body font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
                             style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}>
                             {durationLabel(entry.durationSeconds)}
                           </span>
                           {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
-                            <span className="text-fs-caption" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
+                            <span className="text-fs-body" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
                               {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
                             </span>
                           )}
-                          <span className="text-white/20 text-fs-micro">{timeAgo(entry.createdAt)}</span>
+                          <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt)}</span>
                         </div>
                       </div>
                       <button onClick={() => setConfirmingId(entry.id)}

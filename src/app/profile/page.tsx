@@ -97,7 +97,7 @@ function ChildCard({
           )}
         </div>
         <span
-          className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-fs-caption font-semibold"
+          className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-fs-body font-semibold"
           style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
         >
           ✏️
@@ -105,7 +105,7 @@ function ChildCard({
       </button>
       <span className="text-white text-fs-body font-semibold">{child.name}</span>
       <span
-        className="text-fs-caption px-2.5 py-0.5 rounded-full font-bold tracking-widest uppercase"
+        className="text-fs-body px-2.5 py-0.5 rounded-full font-bold tracking-widest uppercase"
         style={{ background: `${c1}14`, border: `1px solid ${c1}30`, color: c1 }}
       >
         {ageLabel}
@@ -158,7 +158,7 @@ function AvatarPicker({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
             <p className="text-white font-bold text-fs-body">Choose Avatar</p>
-            <p className="text-white/30 text-fs-caption mt-0.5">{loading ? "Loading…" : `${avatars.length} characters`}</p>
+            <p className="text-white/30 text-fs-body mt-0.5">{loading ? "Loading…" : `${avatars.length} characters`}</p>
           </div>
           <button
             onClick={onClose}
@@ -249,7 +249,7 @@ function AddChildModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <p className="text-white/70 text-fs-label uppercase tracking-widest font-bold">{t("addChild")}</p>
+          <p className="text-white/70 text-fs-body uppercase tracking-widest font-bold">{t("addChild")}</p>
           <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors"><Icon name="close" size={18} /></button>
         </div>
 
@@ -278,7 +278,7 @@ function AddChildModal({
 
         <div className="flex flex-col gap-3">
           <div>
-            <label className="text-white/40 text-fs-caption uppercase tracking-widest font-bold mb-1.5 block">{t("name")}</label>
+            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">{t("name")}</label>
             <input
               type="text"
               value={name}
@@ -295,7 +295,7 @@ function AddChildModal({
             />
           </div>
           <div>
-            <label className="text-white/40 text-fs-caption uppercase tracking-widest font-bold mb-1.5 block">{t("age")}</label>
+            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">{t("age")}</label>
             <input
               type="number"
               value={age}
@@ -361,7 +361,7 @@ function ViewModeBtn({
         <Ico d={iconD} size={22} />
       </span>
       <span
-        className="text-fs-caption font-semibold"
+        className="text-fs-body font-semibold"
         style={{ color: selected ? "#4fc3f7" : "rgba(255,255,255,0.35)" }}
       >
         {label}
@@ -387,7 +387,7 @@ function SettingRow({
         <Icon name={iconName} size={18} />
       </div>
       <span className="flex-1 text-white/80 text-fs-body font-medium">{label}</span>
-      {value && <span className="text-white/30 text-fs-label">{value}</span>}
+      {value && <span className="text-white/30 text-fs-body">{value}</span>}
       <Icon name="chevronRight" size={14} />
     </div>
   );
@@ -413,13 +413,13 @@ function UsageRow({
         <Icon name={iconName} size={18} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-white/80 text-fs-label font-semibold">{label}</p>
-        <p className="text-white/30 text-fs-caption mt-0.5">{sub}</p>
+        <p className="text-white/80 text-fs-body font-semibold">{label}</p>
+        <p className="text-white/30 text-fs-body mt-0.5">{sub}</p>
       </div>
       <div className="text-right flex-shrink-0">
         <p className="text-fs-body font-bold" style={{ color: accent }}>{value}</p>
-        <p className="text-fs-micro text-white/25 mt-0.5">{unit}</p>
-        {cost && <p className="text-fs-micro mt-0.5 font-semibold" style={{ color: `${accent}99` }}>~{cost}</p>}
+        <p className="text-fs-body text-white/25 mt-0.5">{unit}</p>
+        {cost && <p className="text-fs-body mt-0.5 font-semibold" style={{ color: `${accent}99` }}>~{cost}</p>}
       </div>
     </div>
   );
@@ -441,7 +441,7 @@ function estimateCosts(u: UsageTotals) {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
+    <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
       {label}
     </p>
   );
@@ -481,7 +481,7 @@ function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onTogg
   return (
     <div className="mb-7">
       {/* Section label */}
-      <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
+      <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
         {label}
       </p>
 
@@ -503,10 +503,10 @@ function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onTogg
         />
         <div className="flex-1 text-left">
           <p className="text-fs-body font-semibold" style={{ color: "#4fc3f7" }}>{selectedVoice.name}</p>
-          <p className="text-fs-caption mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{selectedVoice.desc}</p>
+          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{selectedVoice.desc}</p>
         </div>
         <span
-          className="text-white/30 text-fs-label flex-shrink-0 transition-transform"
+          className="text-white/30 text-fs-body flex-shrink-0 transition-transform"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
@@ -517,7 +517,7 @@ function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onTogg
       {open && (
         <div className="mt-3">
           <NarratorVoicePicker selected={selected} onPick={pick} />
-          <p className="text-white/18 text-fs-caption mt-2 leading-relaxed">
+          <p className="text-white/18 text-fs-body mt-2 leading-relaxed">
             Used for Luna&apos;s chat voice and as the narrator in new stories.
           </p>
         </div>
@@ -555,11 +555,11 @@ function NarratorVoicePicker({ selected, onPick }: { selected: string; onPick: (
               className="w-11 h-11 rounded-full object-cover"
               style={{ border: isActive ? "2px solid rgba(79,195,247,0.6)" : "1.5px solid rgba(255,255,255,0.12)" }}
             />
-            <span className="text-fs-caption font-semibold truncate w-full text-center"
+            <span className="text-fs-body font-semibold truncate w-full text-center"
               style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>
               {v.name}
             </span>
-            <span className="text-fs-micro text-center leading-tight"
+            <span className="text-fs-body text-center leading-tight"
               style={{ color: isActive ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>
               {v.desc.split(" ")[0]}
             </span>
@@ -606,7 +606,7 @@ function TextSizePicker() {
                 A
               </span>
               <span
-                className="text-fs-caption font-semibold"
+                className="text-fs-body font-semibold"
                 style={{ color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.35)" }}
               >
                 {opt.label}
@@ -730,7 +730,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-fs-heading font-semibold text-white tracking-wide mb-0.5">{t("navMySpace")}</h1>
-              <p className="text-white/30 text-fs-label">Manage your account & preferences</p>
+              <p className="text-white/30 text-fs-body">Manage your account & preferences</p>
             </div>
             <LanguageToggle />
           </div>
@@ -766,7 +766,7 @@ export default function ProfilePage() {
                 }}
               >
                 <span className="text-fs-subtitle font-light" style={{ color: "rgba(255,255,255,0.18)" }}>＋</span>
-                <span className="text-fs-caption font-medium" style={{ color: "rgba(255,255,255,0.22)" }}>{t("addChild")}</span>
+                <span className="text-fs-body font-medium" style={{ color: "rgba(255,255,255,0.22)" }}>{t("addChild")}</span>
               </button>
             </div>
           </div>
@@ -793,7 +793,7 @@ export default function ProfilePage() {
                 />
               ))}
             </div>
-            <p className="text-white/18 text-fs-caption mt-2 leading-relaxed">
+            <p className="text-white/18 text-fs-body mt-2 leading-relaxed">
               Forces the layout to a specific screen size regardless of your device.
             </p>
           </div>
@@ -835,8 +835,8 @@ export default function ProfilePage() {
                   style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
                 >
                   <div>
-                    <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Estimated spend</p>
-                    <p className="text-fs-caption mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>Rough estimate · verify in each provider dashboard</p>
+                    <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Estimated spend</p>
+                    <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>Rough estimate · verify in each provider dashboard</p>
                   </div>
                   <p className="text-fs-subtitle font-bold" style={{ color: "#4fc3f7" }}>{costs.total}</p>
                 </div>
@@ -879,7 +879,7 @@ export default function ProfilePage() {
         return (
           <div className="flex justify-center pb-6 pt-2">
             <span
-              className="text-fs-micro font-mono px-2.5 py-1 rounded-full"
+              className="text-fs-body font-mono px-2.5 py-1 rounded-full"
               style={{
                 background: "rgba(255,255,255,0.04)",
                 color: "rgba(255,255,255,0.18)",

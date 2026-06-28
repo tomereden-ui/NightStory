@@ -209,7 +209,7 @@ function ClipCard({
       <div className="flex items-center gap-2 px-3 pt-3 pb-1">
         {/* Type badge */}
         <span
-          className="text-fs-micro font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
+          className="text-fs-body font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
           style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}40` }}
         >
           {isSpeech ? "🎙️" : "🔊"}
@@ -218,14 +218,14 @@ function ClipCard({
         {/* Play */}
         <button
           onClick={() => { const a = audioRef.current; if (!a) return; playing ? a.pause() : a.play(); }}
-          className="w-7 h-7 rounded-full flex items-center justify-center text-fs-label flex-shrink-0 active:scale-95"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-fs-body flex-shrink-0 active:scale-95"
           style={{ background: `${accent}20`, border: `1px solid ${accent}40` }}
         >
           <span style={{ color: accent }}>{playing ? "⏸" : "▶"}</span>
         </button>
 
         {/* Voice · text */}
-        <p className="flex-1 text-fs-label truncate min-w-0">
+        <p className="flex-1 text-fs-body truncate min-w-0">
           {clip.voice && <span className="font-semibold mr-1" style={{ color: accent }}>{clip.voice}</span>}
           {audioError
             ? <span className="text-red-400">{audioError}</span>
@@ -235,7 +235,7 @@ function ClipCard({
         {/* Expand timing */}
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="text-fs-caption px-2 py-1 rounded-lg flex-shrink-0 transition-all"
+          className="text-fs-body px-2 py-1 rounded-lg flex-shrink-0 transition-all"
           style={{
             background: expanded ? `${accent}18` : "rgba(255,255,255,0.04)",
             color: expanded ? accent : "rgba(255,255,255,0.3)",
@@ -256,12 +256,12 @@ function ClipCard({
 
       {/* Seek bar */}
       <div className="flex items-center gap-2 px-3 pb-2">
-        <span className="text-white/20 text-fs-micro w-7 text-right flex-shrink-0 tabular-nums">{formatTime(currentTime)}</span>
+        <span className="text-white/20 text-fs-body w-7 text-right flex-shrink-0 tabular-nums">{formatTime(currentTime)}</span>
         <input
           type="range" min={0} max={duration || 1} step={0.1} value={currentTime}
           onChange={(e) => { const a = audioRef.current; if (a) a.currentTime = +e.target.value; }}
           className="flex-1 cursor-pointer" style={{ accentColor: accent }} />
-        <span className="text-white/20 text-fs-micro w-7 flex-shrink-0 tabular-nums">{formatTime(duration)}</span>
+        <span className="text-white/20 text-fs-body w-7 flex-shrink-0 tabular-nums">{formatTime(duration)}</span>
       </div>
 
       {/* Expanded timing controls */}
@@ -274,28 +274,28 @@ function ClipCard({
 
           {/* Offset */}
           <div className="flex items-center gap-3">
-            <span className="text-fs-caption font-semibold w-14 flex-shrink-0" style={{ color: accent }}>Start at</span>
+            <span className="text-fs-body font-semibold w-14 flex-shrink-0" style={{ color: accent }}>Start at</span>
             <input
               type="range" min={0} max={15} step={0.1} value={clip.offsetSec}
               onChange={(e) => onChange({ offsetSec: +e.target.value })}
               className="flex-1 cursor-pointer" style={{ accentColor: accent }} />
-            <span className="text-white/40 text-fs-caption w-10 text-right flex-shrink-0 tabular-nums">{clip.offsetSec.toFixed(1)}s</span>
+            <span className="text-white/40 text-fs-body w-10 text-right flex-shrink-0 tabular-nums">{clip.offsetSec.toFixed(1)}s</span>
           </div>
 
           {/* Volume */}
           <div className="flex items-center gap-3">
-            <span className="text-fs-caption font-semibold w-14 flex-shrink-0" style={{ color: accent }}>Volume</span>
+            <span className="text-fs-body font-semibold w-14 flex-shrink-0" style={{ color: accent }}>Volume</span>
             <input
               type="range" min={0} max={100} step={1} value={Math.round(clip.volume * 100)}
               onChange={(e) => onChange({ volume: +e.target.value / 100 })}
               className="flex-1 cursor-pointer" style={{ accentColor: accent }} />
-            <span className="text-white/40 text-fs-caption w-10 text-right flex-shrink-0 tabular-nums">{Math.round(clip.volume * 100)}%</span>
+            <span className="text-white/40 text-fs-body w-10 text-right flex-shrink-0 tabular-nums">{Math.round(clip.volume * 100)}%</span>
           </div>
 
           {/* Loop — SFX only */}
           {!isSpeech && (
             <div className="flex items-center justify-between">
-              <span className="text-fs-caption font-semibold" style={{ color: accent }}>Loop under speech</span>
+              <span className="text-fs-body font-semibold" style={{ color: accent }}>Loop under speech</span>
               <button
                 onClick={() => onChange({ loop: !clip.loop })}
                 className="w-10 h-6 rounded-full transition-all relative flex-shrink-0"
@@ -362,20 +362,20 @@ function MergedPlayer({ audioUrl }: { audioUrl: string }) {
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-white text-fs-body font-semibold">Final Mix</p>
-            <p className="text-white/30 text-fs-label">{formatTime(duration)} · browser-mixed WAV</p>
+            <p className="text-white/30 text-fs-body">{formatTime(duration)} · browser-mixed WAV</p>
           </div>
           <a href={audioUrl} download="nightstory-mix.wav"
-            className="text-fs-caption px-2.5 py-1.5 rounded-xl font-semibold flex-shrink-0"
+            className="text-fs-body px-2.5 py-1.5 rounded-xl font-semibold flex-shrink-0"
             style={{ background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)" }}>
             ↓ Save
           </a>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-white/25 text-fs-micro w-7 text-right flex-shrink-0 tabular-nums">{formatTime(currentTime)}</span>
+          <span className="text-white/25 text-fs-body w-7 text-right flex-shrink-0 tabular-nums">{formatTime(currentTime)}</span>
           <input type="range" min={0} max={duration || 1} step={0.1} value={currentTime}
             onChange={(e) => { const a = audioRef.current; if (a) a.currentTime = +e.target.value; }}
             className="flex-1 cursor-pointer" style={{ accentColor: "#8B5CF6" }} />
-          <span className="text-white/25 text-fs-micro w-7 flex-shrink-0 tabular-nums">{formatTime(duration)}</span>
+          <span className="text-white/25 text-fs-body w-7 flex-shrink-0 tabular-nums">{formatTime(duration)}</span>
         </div>
       </div>
     </>
@@ -575,7 +575,7 @@ export default function TestPage() {
           {(["tts", "sfx"] as Mode[]).map((m) => (
             <button key={m}
               onClick={() => { setMode(m); setError(null); }}
-              className="flex-1 py-2.5 rounded-lg text-fs-label font-bold uppercase tracking-widest transition-all"
+              className="flex-1 py-2.5 rounded-lg text-fs-body font-bold uppercase tracking-widest transition-all"
               style={mode === m ? {
                 background: m === "tts" ? "rgba(79,195,247,0.12)" : "rgba(139,92,246,0.12)",
                 color: m === "tts" ? "#4fc3f7" : "#a78bfa",
@@ -588,7 +588,7 @@ export default function TestPage() {
 
         {/* Input */}
         <div className="mb-2">
-          <label className="block text-white/40 text-fs-caption font-bold uppercase tracking-widest mb-2">
+          <label className="block text-white/40 text-fs-body font-bold uppercase tracking-widest mb-2">
             {mode === "tts" ? "Text to speak" : "Sound effect description"}
           </label>
           {mode === "tts" ? (
@@ -609,7 +609,7 @@ export default function TestPage() {
         </div>
 
         {mode === "sfx" && (
-          <p className="text-white/20 text-fs-caption mb-3">
+          <p className="text-white/20 text-fs-body mb-3">
             Requires <span style={{ color: "rgba(139,92,246,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
           </p>
         )}
@@ -620,7 +620,7 @@ export default function TestPage() {
 
             {/* Provider toggle */}
             <div>
-              <p className="text-white/30 text-fs-caption font-bold uppercase tracking-widest mb-1.5">Model</p>
+              <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">Model</p>
               <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                 {(["gemini", "el", "gcloud", "family"] as TtsProvider[]).map((p) => {
                   const colors: Record<TtsProvider, { bg: string; color: string; border: string }> = {
@@ -633,7 +633,7 @@ export default function TestPage() {
                   return (
                     <button key={p}
                       onClick={() => setTtsProvider(p)}
-                      className="flex-1 py-2 rounded-[10px] text-fs-caption font-bold transition-all"
+                      className="flex-1 py-2 rounded-[10px] text-fs-body font-bold transition-all"
                       style={ttsProvider === p ? {
                         background: colors[p].bg,
                         color: colors[p].color,
@@ -650,11 +650,11 @@ export default function TestPage() {
             {ttsProvider === "gemini" && (
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-white/30 text-fs-caption font-bold uppercase tracking-widest">Voice</p>
+                  <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest">Voice</p>
                   <button
                     onClick={generateAllSamples}
                     disabled={generatingSamples}
-                    className="text-fs-micro px-2 py-1 rounded-lg transition-all"
+                    className="text-fs-body px-2 py-1 rounded-lg transition-all"
                     style={{
                       background: generatingSamples ? "rgba(79,195,247,0.06)" : "rgba(79,195,247,0.1)",
                       color: generatingSamples ? "rgba(79,195,247,0.4)" : "#4fc3f7",
@@ -683,10 +683,10 @@ export default function TestPage() {
                           background: active ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.03)",
                           border: `1px solid ${active ? "rgba(79,195,247,0.35)" : "rgba(255,255,255,0.07)"}`,
                         }}>
-                        <p className="text-fs-caption font-semibold leading-tight pr-4" style={{ color: active ? "#4fc3f7" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
-                        <p className="text-fs-micro mt-0.5" style={{ color: active ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.25)" }}>{v.trait}</p>
+                        <p className="text-fs-body font-semibold leading-tight pr-4" style={{ color: active ? "#4fc3f7" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
+                        <p className="text-fs-body mt-0.5" style={{ color: active ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.25)" }}>{v.trait}</p>
                         {/* Sample indicator */}
-                        <span className="absolute top-1.5 right-1.5 text-fs-micro" style={{ color: isLoading ? "#F59E0B" : sampleUrl ? "#4fc3f7" : "rgba(255,255,255,0.12)" }}>
+                        <span className="absolute top-1.5 right-1.5 text-fs-body" style={{ color: isLoading ? "#F59E0B" : sampleUrl ? "#4fc3f7" : "rgba(255,255,255,0.12)" }}>
                           {isLoading ? "⏳" : sampleUrl ? "▶" : "·"}
                         </span>
                       </button>
@@ -700,7 +700,7 @@ export default function TestPage() {
             {ttsProvider === "el" && (
               <>
                 <div>
-                  <p className="text-white/30 text-fs-caption font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                  <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {elVoices.map((v) => {
                       const active = elVoiceId === v.id;
@@ -712,15 +712,15 @@ export default function TestPage() {
                             background: active ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.03)",
                             border: `1px solid ${active ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.07)"}`,
                           }}>
-                          <p className="text-fs-caption font-semibold leading-tight" style={{ color: active ? "#F59E0B" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
-                          <p className="text-fs-micro mt-0.5" style={{ color: active ? "rgba(245,158,11,0.6)" : "rgba(255,255,255,0.25)" }}>{v.category}</p>
+                          <p className="text-fs-body font-semibold leading-tight" style={{ color: active ? "#F59E0B" : "rgba(255,255,255,0.7)" }}>{v.name}</p>
+                          <p className="text-fs-body mt-0.5" style={{ color: active ? "rgba(245,158,11,0.6)" : "rgba(255,255,255,0.25)" }}>{v.category}</p>
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                <p className="text-white/20 text-fs-caption -mt-1">
+                <p className="text-white/20 text-fs-body -mt-1">
                   Requires <span style={{ color: "rgba(245,158,11,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
                 </p>
               </>
@@ -730,7 +730,7 @@ export default function TestPage() {
             {ttsProvider === "gcloud" && (
               <>
                 <div>
-                  <p className="text-white/30 text-fs-caption font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                  <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {CLOUD_TTS_VOICES.map((v) => {
                       const active = cloudVoiceId === v.id;
@@ -742,14 +742,14 @@ export default function TestPage() {
                             background: active ? "rgba(52,168,83,0.1)" : "rgba(255,255,255,0.03)",
                             border: `1px solid ${active ? "rgba(52,168,83,0.35)" : "rgba(255,255,255,0.07)"}`,
                           }}>
-                          <p className="text-fs-caption font-semibold leading-tight" style={{ color: active ? "#34A853" : "rgba(255,255,255,0.7)" }}>{v.label}</p>
-                          <p className="text-fs-micro mt-0.5" style={{ color: active ? "rgba(52,168,83,0.6)" : "rgba(255,255,255,0.25)" }}>{v.lang} · {v.gender === "M" ? "Male" : "Female"}</p>
+                          <p className="text-fs-body font-semibold leading-tight" style={{ color: active ? "#34A853" : "rgba(255,255,255,0.7)" }}>{v.label}</p>
+                          <p className="text-fs-body mt-0.5" style={{ color: active ? "rgba(52,168,83,0.6)" : "rgba(255,255,255,0.25)" }}>{v.lang} · {v.gender === "M" ? "Male" : "Female"}</p>
                         </button>
                       );
                     })}
                   </div>
                 </div>
-                <p className="text-white/20 text-fs-caption -mt-1">
+                <p className="text-white/20 text-fs-body -mt-1">
                   Requires <span style={{ color: "rgba(52,168,83,0.5)" }}>GOOGLE_CLOUD_TTS_API_KEY</span> in .env.local
                 </p>
               </>
@@ -758,9 +758,9 @@ export default function TestPage() {
             {/* My Family voice grid */}
             {ttsProvider === "family" && (
               <div>
-                <p className="text-white/30 text-fs-caption font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
                 {familyVoices.length === 0 ? (
-                  <p className="text-white/25 text-fs-label py-3 text-center">No family voices yet — add them in the Voices tab.</p>
+                  <p className="text-white/25 text-fs-body py-3 text-center">No family voices yet — add them in the Voices tab.</p>
                 ) : (
                   <div className="flex flex-col gap-1.5">
                     {familyVoices.map((v) => {
@@ -775,10 +775,10 @@ export default function TestPage() {
                           }}>
                           <span className="text-fs-subtitle flex-shrink-0">{v.avatar_emoji}</span>
                           <div className="min-w-0">
-                            <p className="text-fs-label font-semibold leading-tight" style={{ color: active ? "#a78bfa" : "rgba(255,255,255,0.8)" }}>{v.name}</p>
-                            {v.description && <p className="text-fs-micro mt-0.5 truncate" style={{ color: active ? "rgba(167,139,250,0.6)" : "rgba(255,255,255,0.25)" }}>{v.description}</p>}
+                            <p className="text-fs-body font-semibold leading-tight" style={{ color: active ? "#a78bfa" : "rgba(255,255,255,0.8)" }}>{v.name}</p>
+                            {v.description && <p className="text-fs-body mt-0.5 truncate" style={{ color: active ? "rgba(167,139,250,0.6)" : "rgba(255,255,255,0.25)" }}>{v.description}</p>}
                           </div>
-                          {v.el_voice_id && <span className="ml-auto text-fs-micro px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: "rgba(245,158,11,0.1)", color: "rgba(245,158,11,0.5)", border: "1px solid rgba(245,158,11,0.2)" }}>EL</span>}
+                          {v.el_voice_id && <span className="ml-auto text-fs-body px-1.5 py-0.5 rounded flex-shrink-0" style={{ background: "rgba(245,158,11,0.1)", color: "rgba(245,158,11,0.5)", border: "1px solid rgba(245,158,11,0.2)" }}>EL</span>}
                         </button>
                       );
                     })}
@@ -793,7 +793,7 @@ export default function TestPage() {
               const focusColor = ttsProvider === "gemini" ? "rgba(79,195,247,0.4)" : ttsProvider === "family" ? "rgba(139,92,246,0.4)" : ttsProvider === "gcloud" ? "rgba(52,168,83,0.4)" : "rgba(245,158,11,0.4)";
               return (
                 <div>
-                  <p className="text-white/30 text-fs-caption font-bold uppercase tracking-widest mb-1.5">
+                  <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">
                     Voice style <span className="normal-case font-normal text-white/20">(optional — e.g. "warmly", "whispering")</span>
                   </p>
                   <input
@@ -833,7 +833,7 @@ export default function TestPage() {
         </button>
 
         {error && (
-          <div className="mt-4 px-4 py-3 rounded-2xl text-fs-label"
+          <div className="mt-4 px-4 py-3 rounded-2xl text-fs-body"
             style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
             ⚠ {error}
           </div>
@@ -843,16 +843,16 @@ export default function TestPage() {
         {clips.length > 0 && (
           <div className="mt-6">
             <div className="flex items-center gap-2 mb-3">
-              <p className="text-white/25 text-fs-micro font-bold uppercase tracking-widest flex-1">
+              <p className="text-white/25 text-fs-body font-bold uppercase tracking-widest flex-1">
                 Mix Tracks ({clips.length})
               </p>
               {speechCount > 0 && (
-                <span className="text-fs-micro px-2 py-0.5 rounded-full" style={{ background: "rgba(79,195,247,0.1)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.2)" }}>
+                <span className="text-fs-body px-2 py-0.5 rounded-full" style={{ background: "rgba(79,195,247,0.1)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.2)" }}>
                   {speechCount} speech
                 </span>
               )}
               {sfxCount > 0 && (
-                <span className="text-fs-micro px-2 py-0.5 rounded-full" style={{ background: "rgba(139,92,246,0.1)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}>
+                <span className="text-fs-body px-2 py-0.5 rounded-full" style={{ background: "rgba(139,92,246,0.1)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}>
                   {sfxCount} sfx
                 </span>
               )}
@@ -895,7 +895,7 @@ export default function TestPage() {
             </button>
 
             {mergeError && (
-              <div className="mt-3 px-4 py-3 rounded-2xl text-fs-label"
+              <div className="mt-3 px-4 py-3 rounded-2xl text-fs-body"
                 style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
                 ⚠ {mergeError}
               </div>

@@ -253,7 +253,7 @@ export default function ClassicDetailPage() {
       <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
         <span className="text-fs-display">✨</span>
         <p className="text-white/30 text-fs-body">Classic not found.</p>
-        <button onClick={() => router.back()} className="text-fs-label" style={{ color: "rgba(79,195,247,0.5)" }}>
+        <button onClick={() => router.back()} className="text-fs-body" style={{ color: "rgba(79,195,247,0.5)" }}>
           Go back
         </button>
       </div>
@@ -330,7 +330,7 @@ export default function ClassicDetailPage() {
             {!uploadingCover ? (
               <button
                 onClick={handleUploadCover}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-fs-caption font-medium transition-all active:scale-95"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-fs-body font-medium transition-all active:scale-95"
                 style={{
                   background: "rgba(5,8,20,0.6)",
                   backdropFilter: "blur(8px)",
@@ -342,7 +342,7 @@ export default function ClassicDetailPage() {
               </button>
             ) : (
               <div
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-fs-caption"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-fs-body"
                 style={{ background: "rgba(5,8,20,0.6)", color: "rgba(255,255,255,0.3)" }}
               >
               <div
@@ -361,7 +361,7 @@ export default function ClassicDetailPage() {
           <div className="flex items-center gap-2 mb-3">
             <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${c1}55, transparent)` }} />
             <span
-              className="text-fs-micro font-bold tracking-[0.2em] uppercase px-2.5 py-0.5 rounded-full"
+              className="text-fs-body font-bold tracking-[0.2em] uppercase px-2.5 py-0.5 rounded-full"
               style={{
                 background: `linear-gradient(135deg, ${c1}18, ${c2}18)`,
                 border: `1px solid ${c1}44`,
@@ -393,7 +393,7 @@ export default function ClassicDetailPage() {
 
           {meta.durationSeconds && (
             <span
-              className="inline-block text-fs-micro font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full"
+              className="inline-block text-fs-body font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full"
               style={{
                 background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
                 border: `1px solid ${c1}44`,
@@ -425,7 +425,7 @@ export default function ClassicDetailPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <p
-                  className="text-fs-micro font-bold tracking-[0.18em] uppercase"
+                  className="text-fs-body font-bold tracking-[0.18em] uppercase"
                   style={{ color: `${c1}bb` }}
                 >
                   Story
@@ -433,7 +433,7 @@ export default function ClassicDetailPage() {
                 <button
                   onClick={toggleSummaryPlay}
                   disabled={summaryLoading}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-fs-caption font-medium transition-all active:scale-95"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-fs-body font-medium transition-all active:scale-95"
                   style={summaryPlaying
                     ? { background: `${c1}28`, border: `1px solid ${c1}55`, color: c1 }
                     : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
@@ -464,7 +464,7 @@ export default function ClassicDetailPage() {
           <div className="px-5 mb-3">
             <button
               onClick={() => setScriptExpanded((v) => !v)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-caption font-medium transition-all active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
               style={{
                 background: scriptExpanded ? `${c1}10` : "rgba(255,255,255,0.04)",
                 border: scriptExpanded ? `1px solid ${c1}33` : "1px solid rgba(255,255,255,0.07)",
@@ -488,7 +488,7 @@ export default function ClassicDetailPage() {
                 return (
                   <div key={block.id}>
                     <p
-                      className="text-fs-micro font-semibold uppercase tracking-widest mb-1 ml-3"
+                      className="text-fs-body font-semibold uppercase tracking-widest mb-1 ml-3"
                       style={{ color: isNarrator ? "rgba(255,255,255,0.25)" : "rgba(79,195,247,0.72)" }}
                     >
                       {isNarrator ? "Narrator" : block.characterName}
@@ -577,11 +577,11 @@ export default function ClassicDetailPage() {
                 </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-fs-body font-medium truncate leading-snug">{meta.title}</p>
-                  <p className="text-fs-label truncate" style={{ color: "rgba(255,255,255,0.3)" }}>✨ Classic story</p>
+                  <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.3)" }}>✨ Classic story</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-fs-caption w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <span className="text-fs-body w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                   {formatTime(currentTime)}
                 </span>
                 <input
@@ -594,7 +594,7 @@ export default function ClassicDetailPage() {
                   className="flex-1 cursor-pointer"
                   style={{ accentColor: "#4fc3f7" }}
                 />
-                <span className="text-fs-caption w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <span className="text-fs-body w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                   {formatTime(audioDuration || (meta.durationSeconds ?? 180))}
                 </span>
               </div>
@@ -611,7 +611,7 @@ export default function ClassicDetailPage() {
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-fs-body font-medium truncate">{produceStep}</p>
-                  <p className="text-fs-label truncate" style={{ color: `${c1}88` }}>Producing "{meta.title}"…</p>
+                  <p className="text-fs-body truncate" style={{ color: `${c1}88` }}>Producing "{meta.title}"…</p>
                 </div>
               </div>
               <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
