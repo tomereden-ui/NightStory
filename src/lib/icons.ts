@@ -38,6 +38,14 @@ const line = (x1: number, y1: number, x2: number, y2: number) => React.createEle
 
 export const ICONS = {
   // ── Bottom nav ───────────────────────────────────────────────────────────────
+  navHome: paths(
+    "m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+    "M9 22V12h6v10",
+  ),
+  navProfile: paths(
+    "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2",
+    "M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  ),
   navStories: paths(
     "M12 7v14",
     "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",

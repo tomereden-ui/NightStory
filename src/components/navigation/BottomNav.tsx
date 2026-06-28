@@ -11,22 +11,22 @@ import Icon from "@/components/ui/Icon";
 
 const NAV: Array<{
   labelKey: TranslationKey;
-  iconName: "navStories" | "navCreate" | "navMySpace";
+  iconName: "navHome" | "navCreate" | "navStories" | "navProfile";
   href: string;
   color: string;
   glow: string;
   bg: string;
 }> = [
   {
-    labelKey: "navStoryTime",
-    iconName: "navStories",
+    labelKey: "home",
+    iconName: "navHome",
     href: "/home",
     color: "#fbbf24",
     glow: "rgba(251,191,36,0.4)",
     bg: "rgba(251,191,36,0.12)",
   },
   {
-    labelKey: "navCreate",
+    labelKey: "studioTitle",
     iconName: "navCreate",
     href: "/studio2",
     color: "#c084fc",
@@ -42,8 +42,8 @@ const NAV: Array<{
     bg: "rgba(79,195,247,0.12)",
   },
   {
-    labelKey: "navMySpace",
-    iconName: "navMySpace",
+    labelKey: "profile",
+    iconName: "navProfile",
     href: "/profile",
     color: "#67e8f9",
     glow: "rgba(103,232,249,0.4)",

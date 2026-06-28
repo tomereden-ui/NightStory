@@ -729,7 +729,7 @@ export default function ProfilePage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-fs-heading font-semibold text-white tracking-wide mb-0.5">{t("navMySpace")}</h1>
+              <h1 className="text-fs-heading font-semibold text-white tracking-wide mb-0.5">{t("profile")}</h1>
               <p className="text-white/30 text-fs-body">Manage your account & preferences</p>
             </div>
             <LanguageToggle />
