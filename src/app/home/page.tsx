@@ -332,18 +332,20 @@ function TonightsPickCard({ item }: { item: PickItem }) {
         style={{ background: "linear-gradient(to bottom, transparent 38%, rgba(4,6,18,0.96) 100%)" }}
       />
 
-      {/* Type tag — top left */}
-      <span
-        className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-        style={{
-          background: isOwn ? "rgba(192,132,252,0.28)" : "rgba(251,191,36,0.22)",
-          border: isOwn ? "1px solid rgba(192,132,252,0.55)" : "1px solid rgba(251,191,36,0.45)",
-          color: isOwn ? "#c084fc" : "#fbbf24",
-          backdropFilter: "blur(8px)",
-        }}
-      >
-        {item.tag}
-      </span>
+      {/* Type tag — top left (Classics only) */}
+      {!isOwn && (
+        <span
+          className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+          style={{
+            background: "rgba(251,191,36,0.22)",
+            border: "1px solid rgba(251,191,36,0.45)",
+            color: "#fbbf24",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          {item.tag}
+        </span>
+      )}
 
       {/* Title + accent — bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-4 pt-8">
@@ -733,14 +735,6 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* ── Shared with Me ── */}
-          <Rail
-            title="Shared with Me 💌"
-            empty={<SharedEmptyState />}
-          >
-            {null}
-          </Rail>
-
           {/* ── Hero banner — featured Continue Listening story ── */}
           {continueStories.length > 0 && (
             <HeroBanner story={continueStories[0]} progressPercent={42} />
@@ -749,13 +743,13 @@ export default function HomePage() {
           {/* ── Tonight's Picks ── */}
           <TonightsPicksRail picks={tonightsPicks} />
 
-          {/* ── Continue Listening rail (remaining stories) ── */}
-          {continueStories.length > 1 && (
+          {/* ── Continue Listening rail (all in-progress stories) ── */}
+          {continueStories.length > 0 && (
             <Rail
               title="Continue Listening"
               action={{ label: "All Stories", href: "/library" }}
             >
-              {continueStories.slice(1).map((s, idx) => (
+              {continueStories.map((s, idx) => (
                 <StoryCard
                   key={s.id}
                   title={s.title}
@@ -764,7 +758,7 @@ export default function HomePage() {
                   durationSeconds={s.durationSeconds}
                   href={`/library/${s.id}`}
                   showDuration
-                  progressPercent={idx === 0 ? 68 : 23}
+                  progressPercent={[42, 68, 23][idx] ?? 30}
                 />
               ))}
             </Rail>
@@ -788,6 +782,14 @@ export default function HomePage() {
               ))}
             </Rail>
           )}
+
+          {/* ── Shared with Me ── */}
+          <Rail
+            title="Shared with Me 💌"
+            empty={<SharedEmptyState />}
+          >
+            {null}
+          </Rail>
 
           {/* ── Classics ── */}
           {classics.length > 0 && (
