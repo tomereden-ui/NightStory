@@ -14,7 +14,7 @@ const CONTAINER_WIDTH: Record<string, number> = {
   desktop: 896,
 };
 
-const PUBLIC_PATHS = ["/", "/login", "/set-password"];
+const PUBLIC_PATHS = ["/", "/login", "/set-password", "/auth/confirm"];
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { effective } = useViewMode();
@@ -40,7 +40,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }
 
   // Auth pages render full-screen with no chrome
-  if (pathname === "/login" || pathname === "/set-password") {
+  if (pathname === "/login" || pathname === "/set-password" || pathname === "/auth/confirm") {
     return <>{children}</>;
   }
 

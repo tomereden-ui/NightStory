@@ -11,15 +11,14 @@ export async function GET(req: NextRequest) {
   const next = searchParams.get("next") ?? "/home";
 
   if (code) {
-    // Google OAuth → go straight to /home after exchange
-    // Password reset / invite → go to /set-password to set a password
-    const isPasswordFlow = next === "/set-password" ||
-      searchParams.get("type") === "recovery" ||
-      searchParams.get("type") === "invite";
-
+    // Password reset / invite → set-password page (exchanges code + sets password)
+    // Google OAuth / email confirmation → home page (exchanges code + logs in)
+    const type = searchParams.get("type");
+    const isPasswordFlow = type === "recovery" || type === "invite" || next === "/set-password";
     const destination = isPasswordFlow ? `/set-password?code=${code}` : `/home?code=${code}`;
     return NextResponse.redirect(`${origin}${destination}`);
   }
 
-  return NextResponse.redirect(`${origin}/login`);
+  // No code — send to client-side handler that reads hash tokens (implicit flow fallback)
+  return NextResponse.redirect(`${origin}/auth/confirm`);
 }
