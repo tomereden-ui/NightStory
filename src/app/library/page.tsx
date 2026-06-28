@@ -580,6 +580,11 @@ export default function LibraryPage() {
                           <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                         </div>
                       )}
+                      {/* Duration badge — overlaid on image, matching Recently Played style */}
+                      <span className="absolute top-2 right-2 text-fs-body font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
+                        {durationLabel(entry.durationSeconds)}
+                      </span>
                     </Link>
 
                     {/* Info row */}
@@ -589,10 +594,6 @@ export default function LibraryPage() {
                           <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
                         </Link>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-fs-body font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
-                            style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}>
-                            {durationLabel(entry.durationSeconds)}
-                          </span>
                           {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
                             <span className="text-fs-body" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
                               {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
