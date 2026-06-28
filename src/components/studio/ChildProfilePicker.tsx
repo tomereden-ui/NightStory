@@ -338,26 +338,37 @@ export default function ChildProfilePicker({
               <button
                 key={p.id}
                 onClick={() => { if (!disabled) onChange(isActive ? null : p); }}
-                className="flex flex-col items-center gap-1.5 flex-shrink-0 transition-all active:scale-95"
-                style={{ width: 64, opacity: disabled && !isActive ? 0.35 : 1, cursor: disabled ? "default" : "pointer" }}
+                className="flex flex-col items-center gap-2 flex-shrink-0 transition-all active:scale-95"
+                style={{ width: 72, opacity: disabled && !isActive ? 0.35 : 1, cursor: disabled ? "default" : "pointer" }}
               >
-                <div
-                  className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 transition-all flex items-center justify-center"
-                  style={isActive
-                    ? { border: "2px solid rgba(79,195,247,0.75)", boxShadow: "0 0 18px rgba(79,195,247,0.3), 0 4px 12px rgba(0,0,0,0.4)", background: "#07091a" }
-                    : { border: "1.5px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", background: "#07091a" }
-                  }
-                >
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt={p.name} className="w-full h-full object-cover rounded-full" />
-                  ) : (
-                    <span className="text-2xl">{p.avatar_emoji || "⭐"}</span>
-                  )}
+                {/* gradient ring wrapper */}
+                <div style={{
+                  padding: isActive ? 2.5 : 1.5,
+                  borderRadius: "50%",
+                  background: isActive
+                    ? "linear-gradient(135deg,#4fc3f7,#f59e0b,#a78bfa)"
+                    : "linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))",
+                  boxShadow: isActive
+                    ? "0 0 22px rgba(79,195,247,0.45), 0 0 40px rgba(245,158,11,0.2)"
+                    : "0 4px 14px rgba(0,0,0,0.4)",
+                  transition: "all 0.2s ease",
+                }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: "50%",
+                    overflow: "hidden", background: "#07091a",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 28 }}>{p.avatar_emoji || "⭐"}</span>
+                    )}
+                  </div>
                 </div>
                 <span
                   className="text-[11px] font-bold text-center truncate w-full leading-tight"
-                  style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.6)" }}
+                  style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.55)" }}
                 >
                   {p.name}
                 </span>

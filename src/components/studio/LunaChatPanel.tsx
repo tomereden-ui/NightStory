@@ -21,13 +21,36 @@ interface ChatResponse {
 
 // ─── Typing dots ──────────────────────────────────────────────────────────────
 
+function OwlAvatar({ size = 44 }: { size?: number }) {
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <style>{`
+        @keyframes _lunaRing { 0%,100%{opacity:0.7;transform:scale(1) rotate(0deg);}50%{opacity:1;transform:scale(1.06) rotate(180deg);} }
+        @keyframes _lunaFloat { 0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);} }
+      `}</style>
+      {/* animated gradient ring */}
+      <div style={{
+        position:"absolute", inset:-3, borderRadius:"50%",
+        background:"conic-gradient(from 0deg,#a78bfa,#4fc3f7,#e879f9,#a78bfa)",
+        animation:"_lunaRing 4s linear infinite",
+        filter:"blur(1px)",
+      }}/>
+      <div style={{
+        position:"absolute", inset:1.5, borderRadius:"50%",
+        background:"#060912",
+        overflow:"hidden",
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/owl-avatar.png" alt="Luna" style={{ width:"100%", height:"100%", objectFit:"cover", animation:"_lunaFloat 4s ease-in-out infinite" }} />
+      </div>
+    </div>
+  );
+}
+
 function TypingDots() {
   return (
     <div className="flex justify-start gap-3 items-end">
-      <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
-        style={{ background: "linear-gradient(135deg,#2d1b69,#4fc3f7)", boxShadow: "0 0 16px rgba(79,195,247,0.35)" }}>
-        🌙
-      </div>
+      <OwlAvatar size={44} />
       <div className="px-4 py-3.5 rounded-2xl rounded-bl-sm flex items-center gap-2.5"
         style={{ background: "linear-gradient(135deg,rgba(88,28,220,0.18),rgba(30,58,120,0.2))", border: "1.5px solid rgba(167,139,250,0.25)" }}>
         {[0, 1, 2].map((i) => (
@@ -57,12 +80,7 @@ function MessageBubble({
   const isLuna = msg.role === "model";
   return (
     <div className={`flex gap-3 items-end ${isLuna ? "justify-start" : "justify-end"}`}>
-      {isLuna && (
-        <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
-          style={{ background: "linear-gradient(135deg,#2d1b69,#4fc3f7)", boxShadow: "0 0 14px rgba(79,195,247,0.28)" }}>
-          🌙
-        </div>
-      )}
+      {isLuna && <OwlAvatar size={44} />}
       <div className={`flex flex-col gap-1.5 ${isLuna ? "items-start" : "items-end"}`} style={{ maxWidth: "80%" }}>
         <div
           className="px-4 py-3.5 rounded-2xl leading-relaxed whitespace-pre-wrap text-fs-body"
@@ -105,11 +123,16 @@ function MessageBubble({
       </div>
 
       {!isLuna && (
-        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-xl flex-shrink-0"
-          style={{ background: "rgba(79,195,247,0.15)", border: "1.5px solid rgba(79,195,247,0.3)" }}>
+        <div className="flex-shrink-0" style={{
+          width:46, height:46, borderRadius:"50%", overflow:"hidden",
+          border:"2px solid rgba(79,195,247,0.5)",
+          boxShadow:"0 0 14px rgba(79,195,247,0.3), 0 2px 8px rgba(0,0,0,0.5)",
+          background:"rgba(10,20,50,0.8)",
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:22,
+        }}>
           {childEmoji?.startsWith("http") ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={childEmoji} alt="child" className="w-full h-full object-cover" />
+            <img src={childEmoji} alt="child" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
           ) : (
             childEmoji ?? "🧒"
           )}
@@ -436,12 +459,9 @@ export default function LunaChatPanel({
       <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
         style={{ background: "linear-gradient(135deg,rgba(45,27,105,0.5) 0%,rgba(10,20,60,0.4) 100%)", border: "1.5px solid rgba(167,139,250,0.2)" }}>
         <div className="relative flex-shrink-0">
-          <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
-            style={{ background: "linear-gradient(135deg,#2d1b69,#4fc3f7)", boxShadow: "0 0 20px rgba(79,195,247,0.4)" }}>
-            🌙
-          </div>
+          <OwlAvatar size={52} />
           <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0a0f1e] animate-pulse"
-            style={{ background: "#10D9A0" }} />
+            style={{ background: "#10D9A0", zIndex:10 }} />
         </div>
         <div>
           <p className="text-sm font-bold text-white">Luna</p>

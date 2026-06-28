@@ -776,27 +776,50 @@ function CharacterCard({
 
   useEffect(() => { setImgError(false); }, [avatarUrl]);
 
-  const accentColor = isNarrator ? "rgba(167,139,250,0.7)" : "rgba(79,195,247,0.7)";
+  const size = isNarrator ? 72 : 64;
+  // Narrator: gold/amber. Cast: cyan-to-purple gradient.
+  const ringActive = isNarrator
+    ? "linear-gradient(135deg,#f59e0b,#fbbf24,#f59e0b)"
+    : "linear-gradient(135deg,#4fc3f7,#a78bfa)";
+  const ringIdle = "linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))";
+  const glowActive = isNarrator
+    ? "0 0 22px rgba(245,158,11,0.5), 0 0 40px rgba(251,191,36,0.2)"
+    : "0 0 20px rgba(79,195,247,0.35), 0 0 36px rgba(167,139,250,0.2)";
+  const accentColor = isNarrator ? "#fbbf24" : "rgba(79,195,247,0.8)";
   const displayUrl = avatarUrl || buildDiceBearUrl(characterName, isNarrator ? "narrator" : "adult");
 
   return (
-    <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 68 }}>
+    <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: isNarrator ? 80 : 72 }}>
       <button onClick={onOpen} className="flex flex-col items-center gap-1.5 w-full" title={`Direct ${characterName}`}>
-        <div
-          className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-xl font-bold transition-all"
-          style={isOpen
-            ? { background: "#07091a", border: "2px solid rgba(139,92,246,0.65)", boxShadow: "0 0 16px rgba(139,92,246,0.3)" }
-            : { background: "#07091a", border: "1px solid rgba(255,255,255,0.1)" }
-          }
-        >
-          {!imgError ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={displayUrl} alt={characterName} className="w-full h-full object-cover rounded-full" onError={() => setImgError(true)} />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>
-              <span className="text-lg font-bold" style={{ color: accentColor }}>{characterName.charAt(0).toUpperCase()}</span>
-            </div>
+        {/* gradient ring wrapper */}
+        <div style={{
+          padding: isOpen ? 2.5 : 1.5,
+          borderRadius: "50%",
+          background: isOpen ? ringActive : ringIdle,
+          boxShadow: isOpen ? glowActive : "0 4px 14px rgba(0,0,0,0.4)",
+          transition: "all 0.2s ease",
+          position: "relative",
+        }}>
+          <div style={{
+            width: size, height: size, borderRadius: "50%",
+            overflow: "hidden", background: "#07091a",
+          }}>
+            {!imgError ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={displayUrl} alt={characterName} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={() => setImgError(true)} />
+            ) : (
+              <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
+                background: isNarrator ? "linear-gradient(135deg,rgba(120,80,10,0.5),rgba(80,50,5,0.5))" : "linear-gradient(135deg,rgba(30,80,120,0.5),rgba(60,20,120,0.5))" }}>
+                <span style={{ fontSize: 22, fontWeight: 900, color: accentColor }}>{characterName.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
+          </div>
+          {/* Narrator crown badge */}
+          {isNarrator && (
+            <span style={{
+              position:"absolute", top:-6, left:"50%", transform:"translateX(-50%)",
+              fontSize:14, filter:"drop-shadow(0 0 6px rgba(245,158,11,0.8))",
+            }}>👑</span>
           )}
         </div>
         <span className="text-[10px] font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
@@ -804,7 +827,7 @@ function CharacterCard({
           {characterName}
         </span>
         {voice && (
-          <span className="text-[10px] font-medium text-center truncate w-full" style={{ color: "rgba(255,255,255,0.45)" }}>{voice.name.split(" ")[0]}</span>
+          <span className="text-[10px] font-medium text-center truncate w-full" style={{ color: "rgba(255,255,255,0.4)" }}>{voice.name.split(" ")[0]}</span>
         )}
       </button>
     </div>
