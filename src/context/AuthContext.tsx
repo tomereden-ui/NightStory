@@ -22,10 +22,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabaseAuth.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+    // Exchange OAuth/magic-link code if present in URL (e.g. after Google login)
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const promise = code
+      ? supabaseAuth.auth.exchangeCodeForSession(code).then(({ data }) => data.session)
+      : supabaseAuth.auth.getSession().then(({ data }) => data.session);
+
+    promise.then((session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
+      // Clean code from URL without triggering a navigation
+      if (code) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("code");
+        window.history.replaceState({}, "", url.toString());
+      }
     });
 
     const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange((_event, session) => {

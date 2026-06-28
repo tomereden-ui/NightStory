@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAuth } from "@/lib/supabaseAuth";
 
 export const dynamic = "force-dynamic";
 
-// Handles email confirmation and password-reset redirects from Supabase.
+// Handles OAuth (Google etc.), email confirmation, and password-reset redirects.
+// The code is passed to a client-side page so the browser exchanges it and
+// stores the session in localStorage (server-side exchange doesn't persist).
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
+  const next = searchParams.get("next") ?? "/home";
 
   if (code) {
-    // Pass the code to the client-side set-password page to exchange there,
-    // so the session is stored in the browser (not just server memory).
-    return NextResponse.redirect(`${origin}/set-password?code=${code}`);
+    // Google OAuth → go straight to /home after exchange
+    // Password reset / invite → go to /set-password to set a password
+    const isPasswordFlow = next === "/set-password" ||
+      searchParams.get("type") === "recovery" ||
+      searchParams.get("type") === "invite";
+
+    const destination = isPasswordFlow ? `/set-password?code=${code}` : `/home?code=${code}`;
+    return NextResponse.redirect(`${origin}${destination}`);
   }
 
   return NextResponse.redirect(`${origin}/login`);
