@@ -4,6 +4,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ViewModeProvider } from "@/context/ViewModeContext";
 import { FontSizeProvider } from "@/context/FontSizeContext";
+import { AuthProvider } from "@/context/AuthContext";
 import AppShell from "@/components/layout/AppShell";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -27,13 +28,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" dir="ltr" className={`${inter.variable} ${outfit.variable} ${rubik.variable}`}>
       <body className="min-h-screen antialiased" style={{ background: "#0A0C14" }}>
-        <LanguageProvider>
-          <ViewModeProvider>
-            <FontSizeProvider>
-              <AppShell>{children}</AppShell>
-            </FontSizeProvider>
-          </ViewModeProvider>
-        </LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <ViewModeProvider>
+              <FontSizeProvider>
+                <AppShell>{children}</AppShell>
+              </FontSizeProvider>
+            </ViewModeProvider>
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );

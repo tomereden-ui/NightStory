@@ -1,8 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useViewMode } from "@/context/ViewModeContext";
+import { useAuth } from "@/context/AuthContext";
 import BottomNav from "@/components/navigation/BottomNav";
 import ScrollRestorer from "@/components/layout/ScrollRestorer";
 
@@ -12,11 +14,35 @@ const CONTAINER_WIDTH: Record<string, number> = {
   desktop: 896,
 };
 
+const PUBLIC_PATHS = ["/", "/login"];
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const { effective } = useViewMode();
+  const { user, loading } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const isMobile = effective === "mobile";
-  const isSplash = pathname === "/";
+  const isPublicPath = PUBLIC_PATHS.includes(pathname);
+
+  useEffect(() => {
+    if (!loading && !user && !isPublicPath) {
+      router.replace("/login");
+    }
+  }, [loading, user, isPublicPath, router]);
+
+  // On auth-gated pages, show nothing while session is loading or redirecting
+  if (!isPublicPath && (loading || !user)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0A0C14" }}>
+        <div className="w-8 h-8 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  // Login page renders full-screen with no chrome
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
 
   return (
     <div
@@ -24,8 +50,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       style={{ background: "#0A0C14" }}
     >
       <ScrollRestorer />
-      {!isSplash && <BottomNav />}
-      <main className={`flex-1 overflow-x-clip ${isMobile && !isSplash ? "pb-24" : "pb-8"}`}>
+      {pathname !== "/" && <BottomNav />}
+      <main className={`flex-1 overflow-x-clip ${isMobile && pathname !== "/" ? "pb-24" : "pb-8"}`}>
         <div
           className="mx-auto"
           style={{
