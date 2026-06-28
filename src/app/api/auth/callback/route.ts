@@ -9,9 +9,9 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get("code");
 
   if (code) {
-    await supabaseAuth.auth.exchangeCodeForSession(code);
-    // Redirect to set-password for both invites and password resets
-    return NextResponse.redirect(`${origin}/set-password`);
+    // Pass the code to the client-side set-password page to exchange there,
+    // so the session is stored in the browser (not just server memory).
+    return NextResponse.redirect(`${origin}/set-password?code=${code}`);
   }
 
   return NextResponse.redirect(`${origin}/login`);

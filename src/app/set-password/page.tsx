@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { supabaseAuth } from "@/lib/supabaseAuth";
 
 export default function SetPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,12 +15,20 @@ export default function SetPasswordPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Confirm a session exists (arrived via invite/reset link → callback)
-    supabaseAuth.auth.getSession().then(({ data }) => {
-      if (!data.session) router.replace("/login");
-      else setChecking(false);
-    });
-  }, [router]);
+    const code = searchParams.get("code");
+    if (code) {
+      // Exchange the code in the browser so the session is stored locally
+      supabaseAuth.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) { router.replace("/login"); return; }
+        setChecking(false);
+      });
+    } else {
+      supabaseAuth.auth.getSession().then(({ data }) => {
+        if (!data.session) router.replace("/login");
+        else setChecking(false);
+      });
+    }
+  }, [router, searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
