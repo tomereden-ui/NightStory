@@ -930,43 +930,52 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   }, [language]);
 
   // Image seeder: generates option card images via Gemini (server-side) and caches in Supabase.
-  // Calls GET to find missing keys, then POST per key to generate + store. Images load progressively.
+  // Calls GET to find missing keys, then POSTs in parallel batches of 4 to generate + store.
   useEffect(() => {
     let cancelled = false;
     async function seedImages() {
       try {
         const res = await fetch("/api/admin/seed-create-images");
-        if (!res.ok) return;
+        if (!res.ok) { console.warn("[seedImages] GET failed", res.status); return; }
         const { missing, existingImageUrls } = await res.json() as {
           missing: { key: string; prompt: string }[];
           existingImageUrls: Record<string, string>;
         };
 
         if (existingImageUrls && Object.keys(existingImageUrls).length > 0) {
+          console.log("[seedImages] cached images:", Object.keys(existingImageUrls));
           setOptionImages((prev) => ({ ...prev, ...existingImageUrls }));
         }
 
-        if (!missing?.length) return;
+        if (!missing?.length) { console.log("[seedImages] all images cached"); return; }
+        console.log("[seedImages] generating", missing.length, "images:", missing.map(m => m.key));
 
-        for (const { key, prompt } of missing) {
+        const BATCH = 4;
+        for (let i = 0; i < missing.length; i += BATCH) {
           if (cancelled) return;
-          if (!prompt) continue;
-          try {
-            const cacheRes = await fetch(`/api/admin/seed-create-images?key=${encodeURIComponent(key)}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ prompt }),
-            });
-            if (cacheRes.ok) {
-              const { imageKey, url: cachedUrl } = await cacheRes.json() as { ok: boolean; imageKey: string; url: string };
-              if (imageKey && cachedUrl) setOptionImages((prev) => ({ ...prev, [imageKey]: cachedUrl }));
+          const batch = missing.slice(i, i + BATCH).filter(m => m.prompt);
+          await Promise.all(batch.map(async ({ key, prompt }) => {
+            try {
+              const cacheRes = await fetch(`/api/admin/seed-create-images?key=${encodeURIComponent(key)}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt }),
+              });
+              if (cacheRes.ok) {
+                const { imageKey, url: cachedUrl } = await cacheRes.json() as { ok: boolean; imageKey: string; url: string };
+                console.log("[seedImages] generated:", key, "→", imageKey);
+                if (imageKey && cachedUrl) setOptionImages((prev) => ({ ...prev, [imageKey]: cachedUrl }));
+              } else {
+                const err = await cacheRes.json().catch(() => ({}));
+                console.warn("[seedImages] POST failed for", key, cacheRes.status, err);
+              }
+            } catch (e) {
+              console.warn("[seedImages] error for", key, e);
             }
-          } catch {
-            // ignore individual failures — will retry on next page visit
-          }
+          }));
         }
-      } catch {
-        // ignore seed failures silently
+      } catch (e) {
+        console.warn("[seedImages] seed error", e);
       }
     }
     seedImages();
