@@ -14,7 +14,7 @@ const CONTAINER_WIDTH: Record<string, number> = {
   desktop: 896,
 };
 
-const PUBLIC_PATHS = ["/", "/login", "/set-password", "/auth/confirm", "/join"];
+const PUBLIC_PATHS = ["/", "/login", "/set-password", "/auth/confirm", "/join", "/privacy"];
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { effective } = useViewMode();

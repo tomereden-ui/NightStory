@@ -642,6 +642,8 @@ export default function ProfilePage() {
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
   const [narratorOpen, setNarratorOpen] = useState(false);
   const [familyId, setFamilyId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<{ user_id: string; role: string }[]>([]);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -742,6 +744,28 @@ export default function ProfilePage() {
         }]);
       }
     } catch { /* ignore */ }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    try {
+      const { data: { session } } = await (await import("@/lib/supabaseAuth")).supabaseAuth.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { setDeleting(false); return; }
+      const res = await fetch("/api/account/delete", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        await signOut();
+        router.replace("/login");
+      } else {
+        setDeleting(false);
+        setShowDeleteConfirm(false);
+      }
+    } catch {
+      setDeleting(false);
+    }
   }
 
   async function handleDeleteChild(childId: string) {
@@ -886,7 +910,7 @@ export default function ProfilePage() {
           </div>
 
           {/* ── Sign out ─────────────────────────────────────────────── */}
-          <div className="mb-7">
+          <div className="mb-3">
             <button
               onClick={async () => { await signOut(); router.replace("/login"); }}
               className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold"
@@ -898,6 +922,19 @@ export default function ProfilePage() {
               }}
             >
               Sign out
+            </button>
+          </div>
+
+          {/* ── Privacy & Delete account ──────────────────────────────── */}
+          <div className="mb-7 flex items-center justify-between px-1">
+            <a href="/privacy" style={{ fontSize: 12, color: "rgba(148,163,184,0.4)", textDecoration: "underline" }}>
+              Privacy Policy
+            </a>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              style={{ fontSize: 12, color: "rgba(239,68,68,0.45)" }}
+            >
+              Delete account
             </button>
           </div>
 
@@ -1013,6 +1050,36 @@ export default function ProfilePage() {
           </div>
         );
       })()}
+
+      {/* Delete account confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}>
+          <div className="w-full rounded-2xl p-6" style={{ maxWidth: 360, background: "#0d0f22", border: "1px solid rgba(239,68,68,0.3)" }}>
+            <h2 className="font-bold mb-2" style={{ fontSize: 18, color: "#e2e8f0" }}>Delete account?</h2>
+            <p className="mb-6" style={{ fontSize: 14, color: "rgba(148,163,184,0.8)", lineHeight: 1.6 }}>
+              This will permanently delete your account, all stories, child profiles, and voice clones. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 rounded-xl py-3 font-semibold"
+                style={{ background: "rgba(255,255,255,0.06)", color: "#e2e8f0", fontSize: 14 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="flex-1 rounded-xl py-3 font-semibold"
+                style={{ background: "rgba(239,68,68,0.15)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.3)", fontSize: 14, opacity: deleting ? 0.6 : 1 }}
+              >
+                {deleting ? "Deleting…" : "Yes, delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add child modal */}
       {showAddChild && (

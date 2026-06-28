@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -30,6 +31,7 @@ export default function LoginPage() {
       if (error) { setError(error); setLoading(false); return; }
       router.replace("/home");
     } else if (mode === "signup") {
+      if (!consent) { setError("Please confirm you are a parent or guardian and agree to the Privacy Policy."); setLoading(false); return; }
       const { error } = await signUp(email, password);
       if (error) { setError(error); setLoading(false); return; }
       setSuccess("Check your email to confirm your account, then sign in.");
@@ -168,6 +170,26 @@ export default function LoginPage() {
                 onBlur={e => (e.currentTarget.style.border = "1px solid rgba(167,139,250,0.2)")}
               />
             </div>
+          )}
+
+          {/* Consent checkbox — signup only */}
+          {mode === "signup" && (
+            <label className="flex items-start gap-3 cursor-pointer" style={{ fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={e => setConsent(e.target.checked)}
+                className="mt-0.5 rounded"
+                style={{ accentColor: "#a78bfa", width: 16, height: 16, flexShrink: 0 }}
+              />
+              <span style={{ color: "rgba(148,163,184,0.8)", lineHeight: 1.5 }}>
+                I am a parent or guardian and I agree to the{" "}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#a78bfa", textDecoration: "underline" }}>
+                  Privacy Policy
+                </a>
+                . I consent to data collection for my family, including child profiles.
+              </span>
+            </label>
           )}
 
           {/* Error / Success */}
