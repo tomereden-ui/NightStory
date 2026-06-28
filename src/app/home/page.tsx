@@ -639,10 +639,6 @@ export default function HomePage() {
           0%,100% { transform: translateY(0) rotate(-2deg); }
           50%      { transform: translateY(-8px) rotate(2deg); }
         }
-        @keyframes owl-glow {
-          0%,100% { filter: drop-shadow(0 0 10px rgba(167,139,250,0.5)); }
-          50%      { filter: drop-shadow(0 0 22px rgba(251,191,36,0.65)); }
-        }
       `}</style>
       <div className="px-5 pt-12 pb-6">
         {/* Greeting */}
@@ -669,7 +665,7 @@ export default function HomePage() {
           {/* Owl avatar */}
           <div
             className="flex-shrink-0 ml-3"
-            style={{ animation: "owl-float 4s ease-in-out infinite, owl-glow 4s ease-in-out infinite" }}
+            style={{ animation: "owl-float 4s ease-in-out infinite" }}
           >
             <Image
               src="/owl-avatar.png"
