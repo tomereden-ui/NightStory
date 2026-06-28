@@ -14,7 +14,7 @@ const CONTAINER_WIDTH: Record<string, number> = {
   desktop: 896,
 };
 
-const PUBLIC_PATHS = ["/", "/login", "/set-password", "/auth/confirm"];
+const PUBLIC_PATHS = ["/", "/login", "/set-password", "/auth/confirm", "/join"];
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { effective } = useViewMode();
@@ -39,8 +39,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  // Auth pages render full-screen with no chrome
-  if (pathname === "/login" || pathname === "/set-password" || pathname === "/auth/confirm") {
+  // Auth/invite pages render full-screen with no chrome
+  if (["/login", "/set-password", "/auth/confirm", "/join"].includes(pathname)) {
     return <>{children}</>;
   }
 

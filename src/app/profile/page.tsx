@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import { useFontSize, type FontScale } from "@/context/FontSizeContext";
+import { useAuth } from "@/context/AuthContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import FamilyVoicesPanel from "@/components/profile/FamilyVoicesPanel";
 import StoryJourney from "@/components/profile/StoryJourney";
@@ -14,6 +15,7 @@ import type { UsageTotals } from "@/lib/usageTracker";
 import type { ChildProfile } from "@/types";
 import Icon from "@/components/ui/Icon";
 import { type IconName } from "@/lib/icons";
+import { supabase } from "@/lib/supabase";
 
 // ─── SVG icon helper ──────────────────────────────────────────────────────────
 
@@ -630,12 +632,57 @@ function TextSizePicker() {
 export default function ProfilePage() {
   const { t, isRTL } = useLanguage();
   const { mode, setMode } = useViewMode();
+  const { user, signOut } = useAuth();
   const [usage, setUsage] = useState<UsageTotals | null>(null);
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
   const [narratorOpen, setNarratorOpen] = useState(false);
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [familyMembers, setFamilyMembers] = useState<{ user_id: string; role: string }[]>([]);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const loadFamily = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("family_members")
+      .select("family_id, role")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    if (!data) return;
+    setFamilyId(data.family_id);
+    const { data: members } = await supabase
+      .from("family_members")
+      .select("user_id, role")
+      .eq("family_id", data.family_id);
+    setFamilyMembers(members ?? []);
+  }, [user]);
+
+  useEffect(() => { loadFamily(); }, [loadFamily]);
+
+  async function handleInvite() {
+    if (!familyId) return;
+    setInviteLoading(true);
+    setInviteLink(null);
+    const res = await fetch("/api/family/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ familyId }),
+    });
+    const data = await res.json();
+    if (data.token) {
+      const link = `${window.location.origin}/join?token=${data.token}`;
+      setInviteLink(link);
+      await navigator.clipboard.writeText(link).catch(() => {});
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 3000);
+    }
+    setInviteLoading(false);
+  }
 
   // Load children from DB on mount; seed mock defaults if table is empty
   useEffect(() => {
@@ -778,6 +825,79 @@ export default function ProfilePage() {
 
           {/* ── Family Voices ────────────────────────────────────────── */}
           <FamilyVoicesPanel />
+
+          {/* ── Family Members ───────────────────────────────────────── */}
+          <div className="mb-7">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-bold text-fs-heading" style={{ color: "#e2e8f0" }}>Family Members</p>
+              <span className="text-fs-label px-2 py-0.5 rounded-full" style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa" }}>
+                {familyMembers.length} member{familyMembers.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* Member list */}
+            <div className="flex flex-col gap-2 mb-3">
+              {familyMembers.map((m) => (
+                <div key={m.user_id} className="flex items-center justify-between px-4 py-3 rounded-2xl"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                      style={{ background: m.role === "owner" ? "linear-gradient(135deg,#f59e0b,#fbbf24)" : "linear-gradient(135deg,#a78bfa,#4fc3f7)", color: "#fff" }}>
+                      {m.role === "owner" ? "👑" : "👤"}
+                    </div>
+                    <div>
+                      <p className="text-fs-body font-medium" style={{ color: "#e2e8f0" }}>
+                        {m.user_id === user?.id ? "You" : "Family member"}
+                      </p>
+                      <p className="text-fs-label" style={{ color: "rgba(148,163,184,0.5)" }}>{m.role}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Invite button */}
+            <button
+              onClick={handleInvite}
+              disabled={inviteLoading}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold transition-opacity"
+              style={{
+                background: "linear-gradient(135deg, rgba(167,139,250,0.15), rgba(79,195,247,0.10))",
+                border: "1px solid rgba(167,139,250,0.3)",
+                color: "#a78bfa",
+                fontSize: 14,
+                opacity: inviteLoading ? 0.6 : 1,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>🔗</span>
+              {inviteLoading ? "Generating link…" : inviteCopied ? "✓ Link copied!" : "Invite family member"}
+            </button>
+
+            {inviteLink && (
+              <div className="mt-2 px-3 py-2 rounded-xl flex items-center gap-2"
+                style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
+                <p className="flex-1 text-fs-label truncate" style={{ color: "rgba(148,163,184,0.7)" }}>{inviteLink}</p>
+                <button onClick={() => { navigator.clipboard.writeText(inviteLink); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); }}
+                  style={{ color: "#4fc3f7", fontSize: 12, whiteSpace: "nowrap" }}>Copy</button>
+              </div>
+            )}
+          </div>
+
+          {/* ── Sign out ─────────────────────────────────────────────── */}
+          <div className="mb-7">
+            <button
+              onClick={() => signOut()}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold"
+              style={{
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                color: "#fca5a5",
+                fontSize: 14,
+              }}
+            >
+              Sign out
+            </button>
+          </div>
 
           {/* ── Display mode ─────────────────────────────────────────── */}
           <div className="mb-7">
