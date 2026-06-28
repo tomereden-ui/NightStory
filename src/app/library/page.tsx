@@ -296,11 +296,12 @@ export default function LibraryPage() {
   const { effective } = useViewMode();
   const isMobile = effective === "mobile";
 
-  const [activeTab, setActiveTab] = useState<LibraryTab>(() => {
-    if (typeof window === "undefined") return "my-stories";
+  const [activeTab, setActiveTab] = useState<LibraryTab>("my-stories");
+
+  useEffect(() => {
     const saved = sessionStorage.getItem("library-tab");
-    return saved === "classics" ? "classics" : "my-stories";
-  });
+    if (saved === "classics") setActiveTab("classics");
+  }, []);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [recentClassics, setRecentClassics] = useState<ClassicMeta[]>([]);
   const [loading, setLoading] = useState(true);
