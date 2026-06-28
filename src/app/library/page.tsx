@@ -255,6 +255,22 @@ export default function LibraryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [durationFilter, setDurationFilter] = useState<DurationFilter>("all");
+  const recentScrollRef = useRef<HTMLDivElement>(null);
+  const [recentCanScrollLeft, setRecentCanScrollLeft] = useState(false);
+  const [recentCanScrollRight, setRecentCanScrollRight] = useState(false);
+
+  const updateRecentScroll = () => {
+    const el = recentScrollRef.current;
+    if (!el) return;
+    setRecentCanScrollLeft(el.scrollLeft > 4);
+    setRecentCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  const scrollRecent = (dir: "left" | "right") => {
+    const el = recentScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === "left" ? -240 : 240, behavior: "smooth" });
+  };
 
   useEffect(() => {
     Promise.all([
@@ -269,7 +285,7 @@ export default function LibraryPage() {
         setRecentClassics(ready.slice(0, 5));
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setTimeout(updateRecentScroll, 50); });
   }, []);
 
   const q = search.toLowerCase().trim();
@@ -339,7 +355,25 @@ export default function LibraryPage() {
             <p className="text-[10px] font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
               Recently Played
             </p>
-            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            <div className="relative">
+              {/* Left arrow */}
+              {recentCanScrollLeft && (
+                <button onClick={() => scrollRecent("left")}
+                  className="absolute left-0 top-0 bottom-0 z-10 flex items-center justify-center w-8 transition-opacity"
+                  style={{ background: "linear-gradient(to right, rgba(4,6,18,0.85), transparent)" }}>
+                  <span className="text-white/60 text-lg">‹</span>
+                </button>
+              )}
+              {/* Right arrow */}
+              {recentCanScrollRight && (
+                <button onClick={() => scrollRecent("right")}
+                  className="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-center w-8 transition-opacity"
+                  style={{ background: "linear-gradient(to left, rgba(4,6,18,0.85), transparent)" }}>
+                  <span className="text-white/60 text-lg">›</span>
+                </button>
+              )}
+            <div ref={recentScrollRef} onScroll={updateRecentScroll}
+              className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {[
                 ...entries.slice(0, 3).map((e) => ({
                   key: `s-${e.id}`,
@@ -384,6 +418,7 @@ export default function LibraryPage() {
                   </Link>
                 );
               })}
+            </div>
             </div>
             <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "10px 0 0" }} />
           </div>
