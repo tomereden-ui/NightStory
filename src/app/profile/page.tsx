@@ -15,7 +15,7 @@ import type { UsageTotals } from "@/lib/usageTracker";
 import type { ChildProfile } from "@/types";
 import Icon from "@/components/ui/Icon";
 import { type IconName } from "@/lib/icons";
-import { supabase } from "@/lib/supabase";
+import { supabaseAuth } from "@/lib/supabaseAuth";
 
 // ─── SVG icon helper ──────────────────────────────────────────────────────────
 
@@ -647,7 +647,7 @@ export default function ProfilePage() {
 
   const loadFamily = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
+    const { data } = await supabaseAuth
       .from("family_members")
       .select("family_id, role")
       .eq("user_id", user.id)
@@ -655,7 +655,7 @@ export default function ProfilePage() {
       .maybeSingle();
     if (!data) return;
     setFamilyId(data.family_id);
-    const { data: members } = await supabase
+    const { data: members } = await supabaseAuth
       .from("family_members")
       .select("user_id, role")
       .eq("family_id", data.family_id);
