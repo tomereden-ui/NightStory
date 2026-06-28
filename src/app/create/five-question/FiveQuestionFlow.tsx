@@ -194,6 +194,24 @@ function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: 
 
 // ─── IllustratedCard: AI image card for world/companion/engine/mood options ────
 
+const CARD_PALETTES: [string, string][] = [
+  ["#4fc3f7", "#7c3aed"],
+  ["#f59e0b", "#ec4899"],
+  ["#10b981", "#4fc3f7"],
+  ["#a78bfa", "#f472b6"],
+  ["#38bdf8", "#818cf8"],
+  ["#fb923c", "#e879f9"],
+  ["#34d399", "#818cf8"],
+  ["#f87171", "#fbbf24"],
+  ["#c084fc", "#22d3ee"],
+  ["#4ade80", "#a78bfa"],
+];
+function cardPalette(label: string): [string, string] {
+  let h = 0;
+  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) >>> 0;
+  return CARD_PALETTES[h % CARD_PALETTES.length];
+}
+
 function IllustratedCard({
   label, emoji, imageUrl, selected, onClick, badge,
 }: {
@@ -201,6 +219,7 @@ function IllustratedCard({
   selected?: boolean; onClick: () => void; badge?: React.ReactNode;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [c1, c2] = cardPalette(label);
 
   return (
     <button
@@ -209,7 +228,7 @@ function IllustratedCard({
       style={{
         aspectRatio: "16/9",
         boxShadow: selected
-          ? "0 0 0 2px #4fc3f7, 0 8px 24px rgba(79,195,247,0.3)"
+          ? `0 0 0 2px ${c1}, 0 8px 24px ${c1}55`
           : "0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)",
       }}
     >
@@ -219,33 +238,39 @@ function IllustratedCard({
           src={imageUrl}
           alt={label}
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.5s ease" }}
+          style={{ opacity: imgLoaded ? 1 : 0, transition: "opacity 0.6s ease" }}
           onLoad={() => setImgLoaded(true)}
         />
       )}
 
-      {/* Placeholder while loading */}
+      {/* Vibrant themed placeholder — unique per card, looks great while image loads */}
       <div
-        className="absolute inset-0 flex items-center justify-center"
+        className="absolute inset-0 flex flex-col items-center justify-center gap-1"
         style={{
-          background: "radial-gradient(ellipse at 50% 40%, rgba(79,195,247,0.18), rgba(10,12,24,0.96))",
+          background: `radial-gradient(ellipse at 40% 35%, ${c1}55 0%, ${c2}33 50%, rgba(6,9,22,0.97) 100%)`,
           opacity: imgLoaded ? 0 : 1,
           transition: "opacity 0.4s ease",
           pointerEvents: "none",
         }}
       >
-        <span className="text-3xl" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.8))" }}>{emoji}</span>
+        {/* Glow ring behind emoji */}
+        <div style={{
+          position: "absolute", width: 64, height: 64, borderRadius: "50%",
+          background: `radial-gradient(circle, ${c1}44, transparent 70%)`,
+          filter: "blur(8px)",
+        }} />
+        <span className="text-4xl relative" style={{ filter: `drop-shadow(0 0 20px ${c1}) drop-shadow(0 0 8px ${c2})` }}>{emoji}</span>
       </div>
 
-      {/* Cinematic gradient — heavier at bottom for text */}
+      {/* Cinematic gradient overlay */}
       <div
         className="absolute inset-0"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.05) 100%)" }}
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.02) 100%)" }}
       />
 
-      {/* Selected glow overlay */}
+      {/* Selected tint */}
       {selected && (
-        <div className="absolute inset-0" style={{ background: "rgba(79,195,247,0.08)" }} />
+        <div className="absolute inset-0" style={{ background: `${c1}14` }} />
       )}
 
       {/* Label */}
@@ -254,7 +279,7 @@ function IllustratedCard({
         <span
           className="text-[13px] font-bold leading-tight"
           style={{
-            color: selected ? "#4fc3f7" : "rgba(255,255,255,0.95)",
+            color: selected ? c1 : "rgba(255,255,255,0.95)",
             textShadow: "0 1px 10px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.9)",
             display: "block",
           }}
