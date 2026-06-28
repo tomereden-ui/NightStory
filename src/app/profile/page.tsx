@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode, type ViewMode } from "@/context/ViewModeContext";
 import { useFontSize, type FontScale } from "@/context/FontSizeContext";
@@ -633,6 +634,7 @@ export default function ProfilePage() {
   const { t, isRTL } = useLanguage();
   const { mode, setMode } = useViewMode();
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const [usage, setUsage] = useState<UsageTotals | null>(null);
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [childrenLoaded, setChildrenLoaded] = useState(false);
@@ -886,7 +888,7 @@ export default function ProfilePage() {
           {/* ── Sign out ─────────────────────────────────────────────── */}
           <div className="mb-7">
             <button
-              onClick={() => signOut()}
+              onClick={async () => { await signOut(); router.replace("/login"); }}
               className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold"
               style={{
                 background: "rgba(239,68,68,0.08)",
