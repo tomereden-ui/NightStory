@@ -463,18 +463,72 @@ export default function FamilyVoicesPanel() {
       {/* Section header — tap to expand/collapse */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between mb-3"
+        className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all active:scale-[0.99] mb-3"
+        style={{
+          background: "linear-gradient(135deg, rgba(167,139,250,0.10) 0%, rgba(79,195,247,0.06) 100%)",
+          border: "1px solid rgba(167,139,250,0.22)",
+        }}
       >
-        <div className="text-left">
-          <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
-            Family Voices
-          </p>
-          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-            {open ? "Hear your stories in voices you love" : `${voices.length > 0 ? `${voices.length} voice${voices.length > 1 ? "s" : ""} saved` : "Tap to add voices"}`}
-          </p>
+        <div className="flex items-center gap-3">
+          {/* Mic icon in accent colour */}
+          <div
+            className="flex items-center justify-center rounded-xl flex-shrink-0"
+            style={{ width: 38, height: 38, background: "rgba(167,139,250,0.18)", border: "1px solid rgba(167,139,250,0.3)" }}
+          >
+            <span style={{ fontSize: 18 }}>🎙</span>
+          </div>
+
+          <div className="text-left">
+            <p
+              className="font-bold tracking-wide"
+              style={{
+                fontSize: "var(--fs-body)",
+                background: "linear-gradient(90deg, #a78bfa, #4fc3f7)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Family Voices
+            </p>
+
+            {/* Collapsed: avatar stack + count; Expanded: subtitle */}
+            {!open && voices.length > 0 ? (
+              <div className="flex items-center gap-2 mt-1">
+                {/* Mini avatar stack */}
+                <div className="flex -space-x-2">
+                  {voices.slice(0, 4).map((v) => (
+                    <div
+                      key={v.id}
+                      className="flex items-center justify-center rounded-full flex-shrink-0"
+                      style={{
+                        width: 22, height: 22,
+                        background: "rgba(167,139,250,0.2)",
+                        border: "1.5px solid rgba(167,139,250,0.5)",
+                        fontSize: 13,
+                      }}
+                    >
+                      {isAvatarUrl(v.avatar_emoji)
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={v.avatar_emoji} alt={v.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                        : v.avatar_emoji}
+                    </div>
+                  ))}
+                </div>
+                <span className="text-fs-body" style={{ color: "rgba(167,139,250,0.7)" }}>
+                  {voices.length} voice{voices.length > 1 ? "s" : ""} ready
+                </span>
+              </div>
+            ) : (
+              <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+                {open ? "Hear your stories in voices you love" : "Tap to add family voices"}
+              </p>
+            )}
+          </div>
         </div>
+
         <span
-          className="text-white/30 text-fs-body transition-transform"
+          className="text-white/30 text-fs-body transition-transform flex-shrink-0"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
