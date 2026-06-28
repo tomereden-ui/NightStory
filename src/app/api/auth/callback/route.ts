@@ -10,7 +10,9 @@ export async function GET(req: NextRequest) {
 
   if (code) {
     await supabaseAuth.auth.exchangeCodeForSession(code);
+    // Redirect to set-password for both invites and password resets
+    return NextResponse.redirect(`${origin}/set-password`);
   }
 
-  return NextResponse.redirect(`${origin}/home`);
+  return NextResponse.redirect(`${origin}/login`);
 }
