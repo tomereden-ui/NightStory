@@ -114,13 +114,9 @@ function ClassicsTab() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-3 pt-2">
-        {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="h-24 rounded-3xl animate-pulse"
-            style={{ background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.1}s` }}
-          />
+      <div className="grid gap-3 pt-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: "rgba(255,255,255,0.04)", aspectRatio: "2/3", animationDelay: `${i * 0.08}s` }} />
         ))}
       </div>
     );
@@ -178,7 +174,7 @@ function ClassicsTab() {
 
     <div
       className="grid gap-3"
-      style={{ gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
+      style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : effective === "tablet" ? "repeat(3, 1fr)" : "repeat(3, 1fr)" }}
     >
       {filtered.map((meta) => {
         const isGenerating = generatingId === meta.id;
@@ -188,57 +184,45 @@ function ClassicsTab() {
           <Link
             key={meta.id}
             href={`/library/classics/${meta.id}`}
-            className="relative rounded-2xl overflow-hidden transition-all active:scale-[0.97] select-none"
-            style={{
-              aspectRatio: "3/4",
-              boxShadow: "0 8px 28px rgba(0,0,0,0.55)",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
+            className="flex flex-col rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
           >
-            {/* Full-bleed image */}
-            {meta.coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={meta.coverUrl} alt={meta.title} className="absolute inset-0 w-full h-full object-cover" />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-5xl"
-                style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
-                <span style={{ filter: `drop-shadow(0 0 16px ${c1}aa)` }}>
-                  {isGenerating ? "✨" : meta.emoji}
-                </span>
+            {/* Image */}
+            <div className="relative w-full overflow-hidden" style={{ aspectRatio: "2/3" }}>
+              {meta.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={meta.coverUrl} alt={meta.title} className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-4xl"
+                  style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                  <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>
+                    {isGenerating ? "✨" : meta.emoji}
+                  </span>
+                </div>
+              )}
+              {isGenerating && (
+                <div className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: "rgba(5,8,20,0.55)", backdropFilter: "blur(4px)" }}>
+                  <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+                    style={{ borderColor: `${c1} transparent transparent transparent` }} />
+                </div>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="px-2 pt-2 pb-2.5">
+              <p className="text-white text-[12px] font-bold leading-snug line-clamp-2 tracking-wide">{meta.title}</p>
+              <p className="text-white/40 text-[10px] mt-0.5 leading-snug line-clamp-1">{meta.tagline}</p>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                {meta.durationSeconds ? (
+                  <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
+                    style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}>
+                    {durationLabel(meta.durationSeconds)}
+                  </span>
+                ) : meta.status === "pending" ? (
+                  <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>Pending</span>
+                ) : null}
               </div>
-            )}
-
-            {/* Gradient overlay */}
-            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.97) 100%)" }} />
-
-            {/* Generating spinner */}
-            {isGenerating && (
-              <div className="absolute inset-0 flex items-center justify-center"
-                style={{ background: "rgba(5,8,20,0.5)", backdropFilter: "blur(4px)" }}>
-                <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
-                  style={{ borderColor: `${c1} transparent transparent transparent` }} />
-              </div>
-            )}
-
-            {/* Duration badge */}
-            {meta.durationSeconds && !isGenerating && (
-              <span className="absolute top-2 right-2 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
-                style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
-                {durationLabel(meta.durationSeconds)}
-              </span>
-            )}
-
-            {/* Pending badge */}
-            {meta.status === "pending" && !isGenerating && (
-              <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full"
-                style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: "rgba(255,255,255,0.3)" }}>
-                Pending
-              </span>
-            )}
-
-            {/* Title at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
-              <p className="text-white text-[11px] font-bold leading-tight line-clamp-2 tracking-wide">{meta.title}</p>
             </div>
           </Link>
         );
@@ -477,13 +461,9 @@ export default function LibraryPage() {
         {/* ── My Stories tab ── */}
         {activeTab === "my-stories" && (
           loading ? (
-            <div className="flex flex-col gap-3 pt-4">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="h-24 rounded-3xl animate-pulse"
-                  style={{ background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.12}s` }}
-                />
+            <div className="grid gap-3 pt-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)", aspectRatio: "2/3", animationDelay: `${i * 0.08}s` }} />
               ))}
             </div>
           ) : entries.length === 0 ? (
@@ -508,7 +488,7 @@ export default function LibraryPage() {
             <>
             <div
               className="grid gap-3"
-              style={{ gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
+              style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : effective === "tablet" ? "repeat(3, 1fr)" : "repeat(3, 1fr)" }}
             >
               {filtered.map((entry) => {
                 const isConfirming = confirmingId === entry.id;
@@ -519,33 +499,22 @@ export default function LibraryPage() {
                   return (
                     <div
                       key={entry.id}
-                      className="rounded-2xl overflow-hidden col-span-2 transition-all"
-                      style={{
-                        background: "rgba(236,72,153,0.06)",
-                        border: "1px solid rgba(236,72,153,0.35)",
-                      }}
+                      className="rounded-xl overflow-hidden col-span-3 transition-all"
+                      style={{ background: "rgba(236,72,153,0.06)", border: "1px solid rgba(236,72,153,0.35)" }}
                     >
                       <div className="flex flex-col gap-3 px-4 py-4">
                         <p className="text-sm text-white/70">
                           {t("moveToTrash")} <span className="text-white font-medium">"{entry.title}"</span>?
                         </p>
-                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                          {t("keptFor30Days")}
-                        </p>
+                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{t("keptFor30Days")}</p>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => setConfirmingId(null)}
-                            className="flex-1 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
-                          >
+                          <button onClick={() => setConfirmingId(null)} className="flex-1 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
                             {t("cancel")}
                           </button>
-                          <button
-                            onClick={() => handleDeleteConfirm(entry.id)}
-                            disabled={isDeleting}
+                          <button onClick={() => handleDeleteConfirm(entry.id)} disabled={isDeleting}
                             className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
-                            style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.4)", color: "#EC4899" }}
-                          >
+                            style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.4)", color: "#EC4899" }}>
                             {isDeleting ? "…" : t("moveToTrash")}
                           </button>
                         </div>
@@ -557,57 +526,47 @@ export default function LibraryPage() {
                 return (
                   <div
                     key={entry.id}
-                    className="relative rounded-2xl overflow-hidden transition-all select-none"
-                    style={{
-                      aspectRatio: "3/4",
-                      boxShadow: "0 8px 28px rgba(0,0,0,0.55)",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                      opacity: isDeleting ? 0.4 : 1,
-                      transition: "opacity 0.2s",
-                    }}
+                    className="flex flex-col rounded-xl overflow-hidden transition-all select-none"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", opacity: isDeleting ? 0.4 : 1, transition: "opacity 0.2s" }}
                   >
-                    {/* Full-bleed image */}
-                    {entry.coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-5xl"
-                        style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
-                        <span style={{ filter: `drop-shadow(0 0 16px ${c1}aa)` }}>🌙</span>
-                      </div>
-                    )}
-
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.97) 100%)" }} />
-
-                    {/* Duration badge */}
-                    <span className="absolute top-2 right-2 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
-                      style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
-                      {durationLabel(entry.durationSeconds)}
-                    </span>
-
-                    {/* Language flag */}
-                    {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
-                      <span className="absolute top-2 left-2 text-sm" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
-                        {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
-                      </span>
-                    )}
-
-                    {/* Delete button */}
-                    <button
-                      onClick={() => setConfirmingId(entry.id)}
-                      className="absolute top-8 left-2 w-7 h-7 flex items-center justify-center rounded-full transition-opacity active:opacity-50"
-                      style={{ background: "rgba(4,6,18,0.65)", backdropFilter: "blur(6px)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.12)" }}
-                      aria-label="Delete story"
-                    >
-                      <Icon name="delete" size={13} />
-                    </button>
-
-                    {/* Title + link */}
-                    <Link href={`/library/${entry.id}`} className="absolute inset-0 flex flex-col justify-end p-3 active:opacity-80 transition-opacity">
-                      <p className="text-white text-[11px] font-bold leading-tight line-clamp-2 tracking-wide">{entry.title}</p>
-                      <p className="text-white/35 text-[9px] mt-0.5">{timeAgo(entry.createdAt)}</p>
+                    {/* Image */}
+                    <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
+                      {entry.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-4xl"
+                          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                          <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
+                        </div>
+                      )}
                     </Link>
+
+                    {/* Info row */}
+                    <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/library/${entry.id}`}>
+                          <p className="text-white text-[12px] font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
+                        </Link>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
+                            style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}>
+                            {durationLabel(entry.durationSeconds)}
+                          </span>
+                          {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
+                            <span className="text-[11px]" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
+                              {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
+                            </span>
+                          )}
+                          <span className="text-white/20 text-[9px]">{timeAgo(entry.createdAt)}</span>
+                        </div>
+                      </div>
+                      <button onClick={() => setConfirmingId(entry.id)}
+                        className="w-6 h-6 flex items-center justify-center flex-shrink-0 rounded-full transition-opacity active:opacity-50 mt-0.5"
+                        style={{ color: "rgba(255,255,255,0.2)" }} aria-label="Delete story">
+                        <Icon name="delete" size={13} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
