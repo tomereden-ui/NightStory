@@ -100,8 +100,9 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase.storage.from(BUCKET).upload(storageKey, buf, { contentType: mimeType, upsert: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const imageKey = storageKey.replace(/\.(jpg|png)$/, "");
+  // Strip version prefix (e.g. "v3-") so imageKey matches the frontend's optionImages lookup ("world-deep-ocean")
+  const imageKey = storageKey.replace(/\.(jpg|png)$/, "").replace(/^v\d+-/, "");
   const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(storageKey).data.publicUrl;
-  console.log("[seed-create-images] Generated + cached:", storageKey);
+  console.log("[seed-create-images] Generated + cached:", storageKey, "→ key:", imageKey);
   return NextResponse.json({ ok: true, imageKey, url: publicUrl });
 }

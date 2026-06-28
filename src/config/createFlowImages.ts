@@ -1,82 +1,82 @@
 // Pollinations.ai prompts for illustrated option cards in the 5-question creation flow.
 // Images are generated once browser-side and cached in Supabase (bucket: story-options).
-// v3 — Pixar-style cinematic quality prompts
+// v4 — Gemini-optimized concise Pixar 3D prompts
 
 export const WORLD_IMAGE_PROMPTS: Record<string, string> = {
   "deep-ocean":
-    "Pixar animated movie scene, vast glowing underwater kingdom, friendly giant whale swimming past bioluminescent coral towers, shafts of golden light piercing deep blue water, tiny colorful fish in formation, warm cinematic lighting, ultra detailed, 3D animation style, breathtaking and magical",
+    "A breathtaking glowing underwater kingdom, giant bioluminescent coral towers, colorful tropical fish, a friendly whale, golden light rays from above. Pixar 3D animated movie style, vibrant blues and teals, cinematic lighting.",
   "enchanted-forest":
-    "Pixar animated movie scene, magical ancient forest at twilight, giant glowing mushrooms taller than trees, thousands of fireflies forming a galaxy overhead, a tiny hidden fairy village nestled in mossy roots, warm golden and emerald light, 3D animation cinematic style, ultra detailed and enchanting",
+    "A magical glowing forest at night, giant luminous mushrooms, thousands of golden fireflies, ancient mossy trees with fairy lights. Pixar 3D animated movie style, warm emerald and amber tones, cinematic.",
   "space-station":
-    "Pixar animated movie scene, gleaming futuristic space station orbiting a swirling nebula, a small brave astronaut child pressed against a massive window watching a comet streak past, Earth glowing below, dramatic starfield, 3D animation cinematic style, vivid electric blue and purple, breathtaking",
+    "A sleek glowing space station orbiting Earth, a child astronaut looking out a giant window at a colorful nebula, floating stars and planets. Pixar 3D animated movie style, vivid blues and purples, cinematic.",
   "candy-kingdom":
-    "Pixar animated movie scene, epic candy kingdom stretching to the horizon, towering rainbow candy-cane spires, chocolate waterfalls tumbling into gummy rivers, cotton candy clouds raining sprinkles, cheerful candy citizens waving, warm saturated colors, 3D animation cinematic style, joyful and spectacular",
+    "A magical candy kingdom with towering candy-cane castles, chocolate waterfalls, rainbow gummy rivers, cotton candy clouds. Pixar 3D animated movie style, vibrant saturated colors, cinematic and joyful.",
   "cloud-village":
-    "Pixar animated movie scene, whimsical floating village high above the clouds at golden sunset, cozy glowing cottages on fluffy cloud platforms connected by rainbow rope bridges, a grand airship arriving with passengers, warm amber and soft blue light, 3D animation cinematic style, magical and inviting",
+    "A cozy floating village on fluffy clouds at golden sunset, tiny cottages with glowing windows, rainbow bridges, a hot air balloon. Pixar 3D animated movie style, warm amber and sky blue, cinematic.",
   "underground-caves":
-    "Pixar animated movie scene, breathtaking underground crystal cavern the size of a cathedral, enormous glowing amethyst and emerald formations reflecting in a still underground lake, tiny explorers with lanterns dwarfed by the scale, teal and violet light, 3D animation cinematic style, awe-inspiring",
+    "A spectacular underground crystal cavern, enormous glowing purple and teal crystals reflected in a still underground lake, tiny explorers with lanterns. Pixar 3D animated movie style, magical and awe-inspiring.",
   "snowy-mountains":
-    "Pixar animated movie scene, majestic snow-capped mountain at night, northern lights blazing in vivid greens purples and pinks across the sky, a cozy glowing cabin with warm light pouring from its windows, a family of friendly polar bears passing by, 3D animation cinematic style, magical winter wonder",
+    "A majestic snowy mountain peak at night, vivid green and purple northern lights blazing across the sky, a cozy glowing cabin below, friendly polar bears. Pixar 3D animated movie style, cinematic winter magic.",
   "desert-oasis":
-    "Pixar animated movie scene, magical desert oasis at dusk beneath two glowing moons, crystal turquoise pool surrounded by ancient stone ruins and swaying palms, colorful silk tents glowing from within, a friendly camel wearing a vest, warm gold and teal light, 3D animation cinematic style, adventurous",
+    "A magical desert oasis at sunset, glowing turquoise pool, ancient ruins, colorful silk tents, swaying palm trees, two moons in the sky. Pixar 3D animated movie style, warm gold and teal, cinematic.",
   "dragon-kingdom":
-    "Pixar animated movie scene, magnificent dragon kingdom built into the side of a volcanic mountain, friendly colorful dragons of all sizes soaring between glowing crystal towers, a dragon hatchery with glowing rainbow eggs, epic warm firelight and violet sky, 3D animation cinematic style, spectacular",
+    "A magnificent dragon kingdom carved into a volcanic mountain, friendly colorful dragons soaring between crystal towers, glowing dragon eggs, firelit sky. Pixar 3D animated movie style, epic and spectacular.",
   "pirate-ship":
-    "Pixar animated movie scene, magnificent magical pirate ship sailing through a glowing sea at sunset, colorful sails billowing, a friendly crew of animal pirates on deck, bioluminescent dolphins leaping alongside, treasure islands visible on the glowing horizon, 3D animation cinematic style, adventurous",
+    "A magical pirate ship sailing a glowing sea at sunset, colorful sails, friendly animal pirates on deck, bioluminescent dolphins leaping. Pixar 3D animated movie style, warm cinematic lighting, adventurous.",
   "magic-school":
-    "Pixar animated movie scene, grand magical school castle floating on a cloud island, towers shooting sparks of colored light into the sky, young wizard students flying on broomsticks, a dragon perched on the tallest spire, warm golden light from a thousand windows, 3D animation cinematic style, wondrous",
+    "A grand wizard school castle floating on clouds, towers sparking with colorful magic, students on broomsticks, a friendly dragon on the roof. Pixar 3D animated movie style, warm golden light, cinematic.",
   "jungle-temple":
-    "Pixar animated movie scene, ancient stone temple rising from a lush jungle, friendly exotic animals peering from vibrant foliage, glowing runes on the temple walls, golden treasure light spilling from a hidden door, colorful parrots and butterflies everywhere, 3D animation cinematic style, magical discovery",
+    "An ancient stone temple in a lush glowing jungle, exotic animals peeking from vivid foliage, glowing golden runes, treasure light inside. Pixar 3D animated movie style, vibrant greens and gold, cinematic.",
   "time-machine":
-    "Pixar animated movie scene, spectacular glowing time machine cockpit surrounded by swirling vortexes of different eras, dinosaurs visible through one portal, a futuristic city through another, a medieval castle through a third, warm brass and electric blue light, 3D animation cinematic style, thrilling",
+    "A glowing brass time machine cockpit, swirling portals showing dinosaurs, a futuristic city, a medieval castle, electric blue light. Pixar 3D animated movie style, warm brass and cyan, cinematic and thrilling.",
   "volcano-island":
-    "Pixar animated movie scene, dramatic tropical volcano island surrounded by sparkling sea, lava gently flowing to the water creating rainbow steam clouds, friendly fire spirits dancing near the caldera, a hidden tropical village with tiki torches, vivid orange gold and tropical green, 3D animation cinematic style",
+    "A dramatic tropical volcano island, gentle lava flowing into a sparkling sea, friendly glowing fire spirits, a cozy village with tiki torches. Pixar 3D animated movie style, vivid orange and tropical green, cinematic.",
 };
 
 export const COMPANION_IMAGE_PROMPTS: Record<string, string> = {
   friend:
-    "Pixar animated movie scene, two best friend children laughing together mid-adventure, golden magical sparkles bursting around them, warm cinematic glow, genuine joy, 3D animation cinematic style, radiant and heartwarming",
+    "Two best friend children laughing in mid-adventure, golden magical sparkles bursting around them, glowing forest background. Pixar 3D animated movie style, warm cinematic lighting, radiant and heartwarming.",
   pet:
-    "Pixar animated movie scene, impossibly adorable magical animal companion with huge luminous eyes and soft glowing fur, sitting in a warm beam of light, tiny sparkles floating around it, 3D animation cinematic style, irresistibly cute",
+    "An impossibly adorable magical animal companion with huge luminous eyes and soft glowing fur, tiny sparkles floating around it, warm beam of golden light. Pixar 3D animated movie style, irresistibly cute, cinematic.",
   creature:
-    "Pixar animated movie scene, majestic friendly dragon with iridescent glowing scales, wings spread wide against a dramatic sunset sky, a small child riding on its back looking amazed, 3D animation cinematic style, epic and joyful",
+    "A majestic friendly dragon with iridescent rainbow scales, wings spread wide against a dramatic sunset sky, a small amazed child riding on its back. Pixar 3D animated movie style, epic and joyful, cinematic lighting.",
   family:
-    "Pixar animated movie scene, a loving family silhouetted on a hilltop embracing at golden sunset, magical light rays breaking through dramatic clouds, warm amber glow, 3D animation cinematic style, deeply heartwarming",
+    "A loving family on a glowing hilltop at golden sunset, magical light rays breaking through dramatic clouds, warm amber glow all around. Pixar 3D animated movie style, deeply heartwarming, cinematic.",
 };
 
 export const ENGINE_IMAGE_PROMPTS: Record<string, string> = {
   funny:
-    "Pixar animated movie scene, hilarious chaotic moment with cartoon animal characters mid-laugh, a pie flying through the air, confetti explosion, exaggerated comic expressions and googly eyes, vivid bright colors, 3D animation cinematic style, pure joyful chaos",
+    "Hilarious chaotic moment with cartoon animal characters mid-laugh, a pie flying through the air, confetti explosion everywhere, exaggerated googly eyes. Pixar 3D animated movie style, vivid bright colors, pure joyful chaos, cinematic.",
   spooky:
-    "Pixar animated movie scene, friendly cozy spooky graveyard under a full moon, cute glowing ghosts break-dancing, jack-o-lanterns with silly grins, tiny bats in bow ties, playful purple and warm orange light, 3D animation cinematic style, charming not scary",
+    "A cozy friendly spooky graveyard under a full moon, cute glowing ghosts break-dancing, jack-o-lanterns with silly grins, tiny bats in bow ties. Pixar 3D animated movie style, playful purple and warm orange, charming not scary, cinematic.",
   weird:
-    "Pixar animated movie scene, wonderfully surreal dreamscape, houses floating upside down, giant fish swimming through colorful clouds, melting rainbow clocks draped over candy mountains, dreamlike pastel explosion, 3D animation cinematic style, delightfully bizarre",
+    "A surreal dreamscape with houses floating upside-down, giant fish swimming through colorful clouds, melting rainbow clocks draped over candy mountains. Pixar 3D animated movie style, dreamlike pastel explosion, delightfully bizarre, cinematic.",
   delicious:
-    "Pixar animated movie scene, spectacular magical kitchen with giant floating desserts, chocolate fountains shooting into the air, caramel rivers winding between cake mountains, everything glowing with warm golden light, 3D animation cinematic style, mouth-wateringly epic",
+    "A spectacular magical kitchen with giant floating desserts, chocolate fountains shooting upward, caramel rivers winding between enormous cake mountains. Pixar 3D animated movie style, warm golden light, mouth-wateringly epic, cinematic.",
 };
 
 export const MOOD_IMAGE_PROMPTS: Record<string, string> = {
   brave:
-    "Pixar animated movie scene, young hero child in a golden cape standing triumphantly on a dramatic cliff, vast magical kingdom stretching to the horizon behind them, storm clouds breaking with rays of epic golden light, 3D animation cinematic style, breathtaking and heroic",
+    "A young hero child in a golden cape standing triumphantly on a dramatic cliff, vast magical kingdom to the horizon, storm clouds breaking with epic golden light rays. Pixar 3D animated movie style, breathtaking and heroic, cinematic.",
   laughing:
-    "Pixar animated movie scene, child in mid-air mid-laugh with pure uncontrollable joy, confetti and stars exploding around them, friends laughing below, radiant golden light frozen at the perfect euphoric moment, 3D animation cinematic style, infectiously joyful",
+    "A child in mid-air mid-laugh with pure uncontrollable joy, confetti and stars exploding all around, friends laughing below, radiant golden light at the perfect euphoric moment. Pixar 3D animated movie style, infectiously joyful, cinematic.",
   surprised:
-    "Pixar animated movie scene, child's eyes wide with absolute wonder, jaw dropped, a breathtaking magical discovery glowing before them, sparkles and starlight erupting outward, 3D animation cinematic style, electric sense of awe and magic",
+    "A child's eyes wide with absolute wonder, jaw dropped, a breathtaking glowing magical discovery before them, sparkles and starlight erupting outward in all directions. Pixar 3D animated movie style, electric awe and magic, cinematic.",
   sleepy:
-    "Pixar animated movie scene, small child peacefully asleep in a cozy glowing bed, moonlight streaming through a star-filled window, dream clouds forming above full of tiny wonderful adventures, a stuffed animal on the pillow, 3D animation cinematic style, soft blues and warm gold, deeply peaceful",
+    "A small child peacefully asleep in a cozy glowing bed, moonlight through a star-filled window, dream clouds forming above with tiny wonderful adventures, a stuffed animal on the pillow. Pixar 3D animated movie style, soft blues and warm gold, deeply peaceful.",
 };
 
 export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile";
 
 export const HERO_IMAGE_PROMPTS: Record<string, string> = {
   own:
-    "Pixar animated movie scene, a glowing child standing before a magical mirror, their reflection shining with golden light and stars swirling outward, warm triumphant moment, 3D animation cinematic style, heartwarming and breathtaking",
+    "A glowing child standing before a magical mirror, their reflection shining with golden light and stars swirling outward, warm triumphant moment. Pixar 3D animated movie style, heartwarming and breathtaking, cinematic.",
   magical:
-    "Pixar animated movie scene, enchanted glowing ancient runes and shimmering stardust floating in a deep purple cosmos, golden particles swirling forming a magical name, mystical and epic, 3D animation cinematic style, awe-inspiring",
+    "Enchanted glowing ancient runes and shimmering stardust floating in a deep purple cosmos, golden particles swirling forming a magical name. Pixar 3D animated movie style, mystical and epic, awe-inspiring, cinematic.",
   stranger:
-    "Pixar animated movie scene, brave young adventurer in a flowing cape standing on a dramatic hilltop, vast fantasy landscape of mountains and glowing valleys behind them, golden sunrise rays, 3D animation cinematic style, heroic",
+    "A brave young adventurer in a flowing cape standing on a dramatic hilltop, vast fantasy landscape of glowing mountains and valleys, golden sunrise rays. Pixar 3D animated movie style, heroic and cinematic.",
   surprise:
-    "Pixar animated movie scene, magical treasure chest bursting open with an explosion of golden light, rainbow confetti, stars and glowing jewels erupting outward in every direction, electric sense of wonder, 3D animation cinematic style",
+    "A magical treasure chest bursting open with an explosion of golden light, rainbow confetti, stars and glowing jewels erupting outward in every direction. Pixar 3D animated movie style, electric sense of wonder, cinematic.",
 };
 
 export interface CreateOptionSpec {
@@ -122,5 +122,5 @@ export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
 }
 
 export function optionStorageKey(type: CreateOptionType, id: string): string {
-  return `v3-${type}-${id}.jpg`;
+  return `v4-${type}-${id}.jpg`;
 }
