@@ -1,69 +1,70 @@
 // Pollinations.ai prompts for illustrated option cards in the 5-question creation flow.
 // Images are generated once browser-side and cached in Supabase (bucket: story-options).
+// v2 — dramatic cinematic concept-art style prompts
 
 export const WORLD_IMAGE_PROMPTS: Record<string, string> = {
   "deep-ocean":
-    "magical deep underwater world, bioluminescent jellyfish and fish, glowing coral reefs, god rays of light from above, children's book digital illustration, dreamy teal and deep blue, highly detailed, painterly",
+    "vast glowing underwater kingdom, towering bioluminescent coral spires, massive manta rays gliding through shafts of light, epic cinematic scale, children's fantasy concept art, breathtaking deep teal and electric blue, ultra detailed",
   "enchanted-forest":
-    "magical enchanted forest at night, giant glowing mushrooms, fireflies, ancient mossy trees, fairy lights, children's book illustration, lush emerald and gold tones, painterly",
+    "ancient enchanted forest at night, enormous glowing mushrooms taller than houses, thousands of fireflies forming constellations, moonbeams through twisted silver trees, children's epic fantasy concept art, emerald and gold cinematic lighting",
   "space-station":
-    "futuristic space station orbiting Earth, stars and nebula through windows, glowing control panels, astronaut helmet reflection, children's book digital illustration, vivid blues and purples",
+    "dramatic futuristic space station soaring above a glowing planet, stars and nebula explosion through massive windows, astronaut silhouette against cosmos, children's fantasy concept art, electric blue and violet, cinematic and breathtaking",
   "candy-kingdom":
-    "magical candy kingdom, rainbow candy cane towers, chocolate river, gumdrop hills, cotton candy clouds, children's book illustration, bright saturated pastels, whimsical",
+    "epic candy kingdom at golden hour, towering candy-cane skyscrapers, chocolate waterfalls cascading into rainbow rivers, cotton candy storm clouds, children's fantasy concept art, saturated jewel tones, cinematic wide shot",
   "cloud-village":
-    "whimsical village on top of fluffy clouds, tiny cozy cottages, rainbow bridges, hot air balloons, golden sunrise light, children's book illustration, pastel sky blues and warm golds",
+    "magical floating village suspended above the clouds at sunset, cozy cottages connected by rainbow bridges, giant airship docking nearby, god rays of golden light, children's fantasy concept art, warm epic cinematics",
   "underground-caves":
-    "magical underground crystal cave, giant glowing amethyst crystals, underground river reflecting light, ancient stone bridges, children's book illustration, purple and teal glow",
+    "spectacular underground crystal cavern, cathedral-sized amethyst formations glowing purple and teal, underground river reflecting a thousand prismatic lights, children's epic fantasy concept art, awe-inspiring and vast",
   "snowy-mountains":
-    "magical snowy mountain landscape, cozy lit cottage, northern lights aurora borealis, frosted pine trees, starry night sky, children's book illustration, cool blues and warm amber",
+    "dramatic arctic mountain peak at night, northern lights aurora blazing in vivid greens and purples, lone cozy glowing cabin far below, frosted pine silhouettes, children's epic fantasy concept art, breathtaking cinematic scale",
   "desert-oasis":
-    "magical desert oasis at sunset, crystal blue pool, ancient stone ruins, palm trees, colorful tents, golden sand dunes, children's book illustration, warm golds and teals",
+    "magical desert oasis at dusk, ancient ruins rising from golden sand, crystal blue pool glowing under two moons, billowing silk tents, children's fantasy concept art, warm gold and turquoise cinematic lighting",
 };
 
 export const COMPANION_IMAGE_PROMPTS: Record<string, string> = {
   friend:
-    "two best friends children laughing together, magical sparkles around them, warm glowing light, cozy and joyful scene, children's book digital illustration, warm pastels",
+    "two children best friends laughing together in a burst of golden magical light, sparkles and stars swirling around them, epic warm cinematic glow, children's fantasy concept art, joyful and radiant",
   pet:
-    "adorable magical pet with glowing eyes, fluffy and friendly, magical sparkles around it, children's book illustration, soft warm light, cute and heartwarming",
+    "impossibly adorable magical creature with giant luminous eyes and soft glowing fur, sitting in a beam of golden light, surrounded by tiny dancing sparkles, children's fantasy concept art, heartwarming and breathtaking",
   creature:
-    "magical fantasy creature, cute dragon-unicorn hybrid with colorful wings, glowing softly, whimsical forest background, children's book illustration, vibrant colors",
+    "majestic magical dragon-phoenix hybrid, iridescent scales and feathers catching rainbow light, wings spread dramatically, glowing softly in a misty forest, children's epic fantasy concept art, vivid and awe-inspiring",
   family:
-    "warm loving family hugging together, golden sunset light through window, cozy home setting, children's book illustration, warm golden and amber tones, heartwarming",
+    "warm silhouettes of a loving family embracing on a hilltop, magical golden sunset with rays of light breaking through dramatic clouds, children's epic fantasy concept art, deeply heartwarming",
 };
 
 export const ENGINE_IMAGE_PROMPTS: Record<string, string> = {
   funny:
-    "hilarious cartoon scene, characters with exaggerated funny expressions, confetti and stars, children's book illustration, bright cheerful colors, pure joyful chaos",
+    "hilarious chaotic scene of cartoon characters mid-laugh, confetti explosion, pies flying through the air, exaggerated comic expressions, children's fantasy concept art, bright vivid colors, pure joyful mayhem",
   spooky:
-    "friendly cozy spooky scene, cute smiling ghost floating in moonlit graveyard, glowing jack-o-lanterns, children's book illustration, purple and orange, playful not scary",
+    "friendly spooky moonlit graveyard, cute glowing ghosts doing a dance, jack-o-lanterns with goofy smiles, bats wearing tiny hats, children's fantasy concept art, purple and warm orange, playful and charming not scary",
   weird:
-    "surreal magical impossible scene, house floating upside down, flying fish in the sky, melting clocks, children's book illustration, dreamy pastel colors, whimsical",
+    "surreal impossible dreamscape, houses floating upside down, fish flying through clouds, giant clocks melting over candy mountains, children's epic fantasy concept art, dreamlike pastel explosion, wonderfully bizarre",
   delicious:
-    "magical feast of floating desserts and treats, swirling cakes and candy, caramel rivers, golden light, children's book illustration, warm rich colors, mouthwatering",
+    "magical floating banquet of giant desserts, chocolate fountains erupting into the air, caramel rivers flowing between cake mountains, everything glowing with warm golden light, children's fantasy concept art, mouth-wateringly rich",
 };
 
 export const MOOD_IMAGE_PROMPTS: Record<string, string> = {
   brave:
-    "brave young child hero standing on a hilltop, golden cape flowing in wind, epic sunset sky behind, children's book illustration, dramatic golden and orange tones",
+    "young hero standing on a dramatic cliff edge, golden cape billowing in epic wind, vast fantasy landscape behind them, dramatic god rays from storm clouds breaking, children's epic fantasy concept art, heroic and breathtaking",
   laughing:
-    "child laughing with pure joy and delight, confetti and stars exploding around them, huge smile, children's book illustration, bright and colorful, infectious happiness",
+    "child mid-laugh with pure uncontrollable joy, confetti and stars exploding in every direction, radiant golden light, infectious happiness frozen in a perfect moment, children's fantasy concept art, vivid and euphoric",
   surprised:
-    "child with wide eyes of wonder at a magical discovery, sparkles and stars appearing, magical glow, children's book illustration, warm tones, sense of awe and magic",
+    "child's eyes wide with magical wonder at a breathtaking discovery, sparkles and starlight erupting around them, a glowing portal revealing an impossible world, children's epic fantasy concept art, awe and magic",
   sleepy:
-    "sleepy child tucked in cozy bed, moonlight through window, stars and moon outside, dream clouds forming, teddy bear, children's book illustration, soft blues and purples, peaceful",
+    "dreamy child tucked in a magical glowing bed, moonlight streaming through a starry window, dream clouds forming above filled with tiny adventures, soft twinkling stars, children's fantasy concept art, soft blues and warm gold, deeply peaceful",
 };
 
 export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile";
 
 export const HERO_IMAGE_PROMPTS: Record<string, string> = {
   own:
-    "happy child looking at their glowing reflection in a magical mirror, stars and sparkles, children's book digital illustration, warm golden light, joyful and proud",
+    "glowing child silhouette bursting with golden light in front of a magical mirror showing their radiant reflection, stars and sparkles cascading outward, children's epic fantasy concept art, triumphant and breathtaking",
   magical:
-    "enchanted glowing name written in floating stardust and light, magical runes and sparkles swirling, children's book illustration, deep purple and gold tones, mystical",
+    "enchanted ancient runes and shimmering stardust forming a glowing name in a dark mystical cosmos, golden light particles swirling, deep purple nebula backdrop, children's fantasy concept art, epic and mystical",
   stranger:
-    "brave young adventurer with a backpack and map standing on a hilltop, epic landscape behind, children's book illustration, warm amber sunset, heroic and curious",
+    "lone brave young adventurer on a dramatic hilltop, epic fantasy landscape stretching to the horizon behind them, dramatic clouds and golden sunrays, children's epic fantasy concept art, heroic cinematic scale",
   surprise:
-    "magical surprise box bursting open with stars, confetti, and glowing light, children's book illustration, bright vivid colors, sense of wonder and delight",
+    "magical glowing chest bursting open with an explosion of golden light and rainbow confetti, stars and jewels erupting outward in every direction, children's epic fantasy concept art, sense of electric wonder",
 };
 
 export interface CreateOptionSpec {
@@ -109,5 +110,5 @@ export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
 }
 
 export function optionStorageKey(type: CreateOptionType, id: string): string {
-  return `${type}-${id}.jpg`;
+  return `v2-${type}-${id}.jpg`;
 }

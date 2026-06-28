@@ -174,6 +174,24 @@ function OptionPill({ label, emoji, selected, onClick }: { label: string; emoji?
   );
 }
 
+// ─── BackButton ───────────────────────────────────────────────────────────────
+
+function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 self-start"
+      style={{
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.14)",
+        color: "rgba(255,255,255,0.5)",
+      }}
+    >
+      ← {label}
+    </button>
+  );
+}
+
 // ─── IllustratedCard: AI image card for world/companion/engine/mood options ────
 
 function IllustratedCard({
@@ -187,8 +205,13 @@ function IllustratedCard({
   return (
     <button
       onClick={onClick}
-      className="relative overflow-hidden rounded-2xl active:scale-[0.97] transition-transform"
-      style={{ aspectRatio: "4/3" }}
+      className="relative overflow-hidden rounded-2xl active:scale-[0.97] transition-all"
+      style={{
+        aspectRatio: "16/9",
+        boxShadow: selected
+          ? "0 0 0 2px #4fc3f7, 0 8px 24px rgba(79,195,247,0.3)"
+          : "0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)",
+      }}
     >
       {/* AI illustration */}
       {imageUrl && (
@@ -200,38 +223,36 @@ function IllustratedCard({
           onLoad={() => setImgLoaded(true)}
         />
       )}
-      {/* Gradient placeholder while loading / if no image yet */}
+
+      {/* Placeholder while loading */}
       <div
         className="absolute inset-0 flex items-center justify-center"
         style={{
-          background: "radial-gradient(ellipse at 40% 30%, rgba(79,195,247,0.22), rgba(10,12,24,0.95))",
+          background: "radial-gradient(ellipse at 50% 40%, rgba(79,195,247,0.18), rgba(10,12,24,0.96))",
           opacity: imgLoaded ? 0 : 1,
           transition: "opacity 0.4s ease",
           pointerEvents: "none",
         }}
       >
-        <span className="text-4xl" style={{ filter: "drop-shadow(0 0 14px rgba(79,195,247,0.7))" }}>{emoji}</span>
+        <span className="text-3xl" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.8))" }}>{emoji}</span>
       </div>
 
-      {/* Cinematic gradient overlay — always present for text legibility */}
+      {/* Cinematic gradient — heavier at bottom for text */}
       <div
         className="absolute inset-0"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.05) 100%)" }}
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.05) 100%)" }}
       />
 
-      {/* Selection ring */}
-      <div
-        className="absolute inset-0 rounded-2xl transition-all duration-200"
-        style={selected
-          ? { border: "2px solid #4fc3f7", boxShadow: "inset 0 0 20px rgba(79,195,247,0.25), 0 0 16px rgba(79,195,247,0.35)" }
-          : { border: "1px solid rgba(255,255,255,0.1)" }}
-      />
+      {/* Selected glow overlay */}
+      {selected && (
+        <div className="absolute inset-0" style={{ background: "rgba(79,195,247,0.08)" }} />
+      )}
 
       {/* Label */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6 text-center">
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
         {badge}
         <span
-          className="text-[14px] font-bold leading-tight"
+          className="text-[13px] font-bold leading-tight"
           style={{
             color: selected ? "#4fc3f7" : "rgba(255,255,255,0.95)",
             textShadow: "0 1px 10px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.9)",
@@ -297,7 +318,7 @@ function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebe
     <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
       <div className="flex items-center mb-8">
         {onBack
-          ? <button onClick={onBack} className="w-8 h-8 flex items-center justify-center text-white/40 text-base">←</button>
+          ? <BackButton onClick={onBack} />
           : <div className="w-8" />
         }
         <div className="flex-1 flex justify-center">
@@ -360,7 +381,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
     <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q1} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         {mode === null && (
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2">
             <IllustratedCard
               label={childName ? childName : "Your own name"}
               emoji="👤"
@@ -377,7 +398,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
         )}
         {mode === "own" && (
           <>
-            <button onClick={() => setMode(null)} className="text-white/35 text-xs mb-1 text-left">← back</button>
+            <BackButton onClick={() => setMode(null)} />
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextOwn} autoFocus onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-xs" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="That's the one!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
@@ -385,7 +406,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
         )}
         {mode === "magical" && (
           <>
-            <button onClick={() => setMode(null)} className="text-white/35 text-xs mb-1 text-left">← back</button>
+            <BackButton onClick={() => setMode(null)} />
             <div className="flex flex-wrap gap-2">
               {MAGICAL_NAME_CHIPS.map((n) => (
                 <button key={n} onClick={() => setMagicChip(n)}
@@ -402,7 +423,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
         )}
         {mode === "stranger" && (
           <>
-            <button onClick={() => setMode(null)} className="text-white/35 text-xs mb-1 text-left">← back</button>
+            <BackButton onClick={() => setMode(null)} />
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextStranger} autoFocus onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-xs" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="That's the one!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
@@ -445,7 +466,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, optionImages, audioUrl
 
   return (
     <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q2(heroName)} audioUrl={audioUrl}>
-      <div className="grid grid-cols-2 gap-2.5 mb-5">
+      <div className="grid grid-cols-2 gap-2 mb-5">
         {WORLD_OPTIONS.map((w) => {
           const isSel = selected === w.label;
           return (
@@ -508,7 +529,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
       <div className="flex flex-col gap-3">
         {mode === null && (
           <>
-            <div className="grid grid-cols-2 gap-2.5 mb-1">
+            <div className="grid grid-cols-2 gap-2 mb-1">
               {COMPANION_MODES.map((m) => (
                 <IllustratedCard
                   key={m.id}
@@ -525,7 +546,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
         )}
         {mode !== null && activeMode && (
           <>
-            <button onClick={() => setMode(null)} className="text-white/35 text-xs text-left">← back</button>
+            <BackButton onClick={() => setMode(null)} />
             <p className="text-sm text-white/50">{activeMode.label}</p>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} autoFocus onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-xs" style={{ color: "#EC4899" }}>{validationError}</p>}
@@ -586,7 +607,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
       <div className="flex flex-col gap-3">
         {mode === null && (
           <>
-            <div className="grid grid-cols-2 gap-2.5 mb-1">
+            <div className="grid grid-cols-2 gap-2 mb-1">
               {Q4_MODES.map((m) => (
                 <IllustratedCard
                   key={m.id}
@@ -602,7 +623,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
         )}
         {mode !== null && activeMode && (
           <>
-            <button onClick={() => setMode(null)} className="text-white/35 text-xs text-left">← back</button>
+            <BackButton onClick={() => setMode(null)} />
             <p className="text-sm text-white/50">{activeMode.label}</p>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} maxSoftLimit={80} autoFocus onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-xs" style={{ color: "#EC4899" }}>{validationError}</p>}
@@ -678,7 +699,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   return (
     <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
       <div className="flex items-center mb-8">
-        <button onClick={() => onEditStep("q5")} className="w-8 h-8 flex items-center justify-center text-white/40 text-base">←</button>
+        <BackButton onClick={() => onEditStep("q5")} />
         <div className="flex-1 flex justify-center"><FairyFigure size={52} /></div>
         <div className="w-8" />
       </div>
@@ -1061,7 +1082,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       <div className="min-h-full" style={{ background: "transparent" }}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
-            <button onClick={() => { setIsProducing(false); setProductionJobId(null); }} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+            <BackButton onClick={() => { setIsProducing(false); setProductionJobId(null); }} />
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Producing Drama</h1>
             <div className="w-8" />
           </div>
@@ -1075,7 +1096,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       <div className="min-h-full" style={{ background: "transparent" }}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
-            <button onClick={handleReset} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+            <BackButton onClick={handleReset} />
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Drama Ready</h1>
             <div className="w-8" />
           </div>
@@ -1089,7 +1110,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       <div className="min-h-full" style={{ background: "transparent" }}>
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
-            <button onClick={handleReset} className="w-8 h-8 flex items-center justify-center text-white/50 text-base">←</button>
+            <BackButton onClick={handleReset} />
             <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide truncate mx-2">
               {answers.q1_hero}&apos;s Story
             </h1>
