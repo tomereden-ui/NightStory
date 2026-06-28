@@ -39,11 +39,10 @@ function greeting(hour: number): string {
   return "Good night";
 }
 
-// ── Story card (portrait, for horizontal rails) ───────────────────────────────
+// ── Story card (portrait, Netflix/HBO style) ──────────────────────────────────
 
 function StoryCard({
   title,
-  summary,
   coverUrl,
   durationSeconds,
   href,
@@ -58,48 +57,49 @@ function StoryCard({
   return (
     <Link
       href={href}
-      className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97] select-none"
+      className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97] select-none relative"
       style={{
-        width: 140,
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+        width: 130,
+        height: 195,
+        boxShadow: "0 8px 28px rgba(0,0,0,0.55)",
+        border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      {/* Thumbnail */}
-      <div className="relative overflow-hidden" style={{ height: 100 }}>
-        {coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt={title} className="w-full h-full object-cover" />
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center text-3xl"
-            style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}44)` }}
-          >
-            <span style={{ filter: `drop-shadow(0 0 10px ${c1}99)` }}>🌙</span>
-          </div>
-        )}
-        {/* Duration badge */}
-        <span
-          className="absolute bottom-1.5 right-1.5 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
-          style={{
-            background: "rgba(5,8,20,0.7)",
-            backdropFilter: "blur(4px)",
-            color: c1,
-            border: `1px solid ${c1}44`,
-          }}
+      {/* Full-bleed image */}
+      {coverUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={coverUrl} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+      ) : (
+        <div
+          className="absolute inset-0 flex items-center justify-center text-5xl"
+          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)` }}
         >
-          {durationLabel(durationSeconds)}
-        </span>
-      </div>
+          <span style={{ filter: `drop-shadow(0 0 16px ${c1}aa)` }}>🌙</span>
+        </div>
+      )}
 
-      {/* Info */}
-      <div className="px-2.5 pt-2 pb-3">
-        <div className="w-6 h-0.5 rounded-full mb-1.5" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
-        <p className="text-white text-xs font-semibold leading-snug line-clamp-2 tracking-wide">{title}</p>
-        {summary && (
-          <p className="text-white/30 text-[10px] leading-snug mt-1 line-clamp-2">{summary}</p>
-        )}
+      {/* Bottom gradient overlay */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.98) 100%)" }}
+      />
+
+      {/* Duration badge — top right */}
+      <span
+        className="absolute top-2 right-2 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+        style={{
+          background: "rgba(4,6,18,0.72)",
+          backdropFilter: "blur(6px)",
+          color: c1,
+          border: `1px solid ${c1}55`,
+        }}
+      >
+        {durationLabel(durationSeconds)}
+      </span>
+
+      {/* Title — bottom overlay */}
+      <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
+        <p className="text-white text-[11px] font-bold leading-tight line-clamp-2 tracking-wide">{title}</p>
       </div>
     </Link>
   );
@@ -189,69 +189,67 @@ function TonightsPickCard({ item }: { item: PickItem }) {
   return (
     <Link
       href={item.href}
-      className="flex-shrink-0 rounded-3xl overflow-hidden transition-all active:scale-[0.97] select-none"
+      className="flex-shrink-0 rounded-3xl overflow-hidden transition-all active:scale-[0.97] select-none relative"
       style={{
-        width: 220,
-        background: "rgba(255,255,255,0.04)",
-        border: `1px solid ${c1}30`,
-        boxShadow: `0 8px 32px rgba(0,0,0,0.45), 0 0 32px ${c1}12`,
+        width: 200,
+        height: 290,
+        boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 32px ${c1}18`,
+        border: `1px solid ${c1}28`,
       }}
     >
-      {/* Image area */}
-      <div className="relative overflow-hidden" style={{ height: 148 }}>
-        {item.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.coverUrl} alt={item.title} className="w-full h-full object-cover" />
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center text-5xl"
-            style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}44)` }}
-          >
-            <span style={{ filter: `drop-shadow(0 0 16px ${c1}88)` }}>
-              {item.emoji ?? "🌙"}
-            </span>
-          </div>
-        )}
-        {/* Gradient overlay */}
+      {/* Full-bleed image */}
+      {item.coverUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.coverUrl} alt={item.title} className="absolute inset-0 w-full h-full object-cover" />
+      ) : (
         <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(5,8,20,0.88) 100%)" }}
-        />
-        {/* Type tag */}
+          className="absolute inset-0 flex items-center justify-center text-6xl"
+          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)` }}
+        >
+          <span style={{ filter: `drop-shadow(0 0 20px ${c1}aa)` }}>
+            {item.emoji ?? "🌙"}
+          </span>
+        </div>
+      )}
+
+      {/* Bottom gradient overlay */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(to bottom, transparent 38%, rgba(4,6,18,0.96) 100%)" }}
+      />
+
+      {/* Type tag — top left */}
+      <span
+        className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+        style={{
+          background: isOwn ? "rgba(192,132,252,0.28)" : "rgba(251,191,36,0.22)",
+          border: isOwn ? "1px solid rgba(192,132,252,0.55)" : "1px solid rgba(251,191,36,0.45)",
+          color: isOwn ? "#c084fc" : "#fbbf24",
+          backdropFilter: "blur(8px)",
+        }}
+      >
+        {item.tag}
+      </span>
+
+      {/* Duration badge — top right */}
+      {item.durationSeconds > 0 && (
         <span
-          className="absolute top-2.5 left-2.5 text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+          className="absolute top-3 right-3 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
           style={{
-            background: isOwn ? "rgba(192,132,252,0.25)" : "rgba(251,191,36,0.2)",
-            border: isOwn ? "1px solid rgba(192,132,252,0.5)" : "1px solid rgba(251,191,36,0.4)",
-            color: isOwn ? "#c084fc" : "#fbbf24",
+            background: "rgba(4,6,18,0.7)",
             backdropFilter: "blur(6px)",
+            color: c1,
+            border: `1px solid ${c1}55`,
           }}
         >
-          {item.tag}
+          {durationLabel(item.durationSeconds)}
         </span>
-        {/* Duration badge */}
-        {item.durationSeconds > 0 && (
-          <span
-            className="absolute top-2.5 right-2.5 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
-            style={{
-              background: "rgba(5,8,20,0.65)",
-              backdropFilter: "blur(4px)",
-              color: c1,
-              border: `1px solid ${c1}44`,
-            }}
-          >
-            {durationLabel(item.durationSeconds)}
-          </span>
-        )}
-      </div>
+      )}
 
-      {/* Info */}
-      <div className="px-3 pt-2.5 pb-3.5">
-        <div className="w-6 h-0.5 rounded-full mb-2" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
+      {/* Title + accent — bottom overlay */}
+      <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-4 pt-8">
+        <div className="w-7 h-[2px] rounded-full mb-2" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
         <p className="text-white text-sm font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
-        {item.summary && (
-          <p className="text-white/35 text-[10px] leading-snug mt-1 line-clamp-2">{item.summary}</p>
-        )}
       </div>
     </Link>
   );
