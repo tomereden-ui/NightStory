@@ -177,8 +177,8 @@ function ClassicsTab() {
       )}
 
     <div
-      className={isMobile ? "flex flex-col gap-3" : "grid gap-4"}
-      style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
+      className="grid gap-3"
+      style={{ gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
     >
       {filtered.map((meta) => {
         const isGenerating = generatingId === meta.id;
@@ -188,96 +188,57 @@ function ClassicsTab() {
           <Link
             key={meta.id}
             href={`/library/classics/${meta.id}`}
-            className="rounded-3xl overflow-hidden transition-all active:opacity-70"
+            className="relative rounded-2xl overflow-hidden transition-all active:scale-[0.97] select-none"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 2px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
-              backdropFilter: "blur(16px)",
+              aspectRatio: "3/4",
+              boxShadow: "0 8px 28px rgba(0,0,0,0.55)",
+              border: "1px solid rgba(255,255,255,0.07)",
             }}
           >
-            <div className="flex items-stretch">
-              {/* Thumbnail */}
-              <div
-                className="w-20 flex-shrink-0 self-stretch relative overflow-hidden"
-                style={{ minHeight: 80 }}
-              >
-                {meta.coverUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={meta.coverUrl}
-                    alt={meta.title}
-                    className="w-full h-full object-cover"
-                    style={{ minHeight: 80 }}
-                  />
-                ) : (
-                  <div
-                    className="w-full h-full flex items-center justify-center text-3xl"
-                    style={{ background: `linear-gradient(145deg, ${c1}22, ${c2}33)`, minHeight: 80 }}
-                  >
-                    <span style={{ filter: `drop-shadow(0 0 10px ${c1}88)` }}>
-                      {isGenerating ? "✨" : meta.emoji}
-                    </span>
-                  </div>
-                )}
-
-                {/* Generating overlay */}
-                {isGenerating && (
-                  <div
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{ background: "rgba(5,8,20,0.65)", backdropFilter: "blur(4px)" }}
-                  >
-                    <div
-                      className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
-                      style={{ borderColor: `${c1} transparent transparent transparent` }}
-                    />
-                  </div>
-                )}
-
-                {/* Gradient fade to card bg */}
-                <div
-                  className="absolute inset-y-0 right-0 w-8 pointer-events-none"
-                  style={{ background: "linear-gradient(to right, transparent, rgba(10,12,24,0.92))" }}
-                />
+            {/* Full-bleed image */}
+            {meta.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={meta.coverUrl} alt={meta.title} className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-5xl"
+                style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                <span style={{ filter: `drop-shadow(0 0 16px ${c1}aa)` }}>
+                  {isGenerating ? "✨" : meta.emoji}
+                </span>
               </div>
+            )}
 
-              {/* Info */}
-              <div className="flex-1 min-w-0 px-3 py-3.5">
-                <div
-                  className="w-8 h-0.5 rounded-full mb-2"
-                  style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
-                />
-                <p className="text-white text-sm font-semibold truncate leading-snug tracking-wide">
-                  {meta.title}
-                </p>
-                <p className="text-white/38 text-xs truncate mt-0.5 leading-snug">
-                  {meta.tagline}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  {meta.durationSeconds && (
-                    <span
-                      className="text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-                      style={{
-                        background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
-                        border: `1px solid ${c1}44`,
-                        color: c1,
-                      }}
-                    >
-                      {durationLabel(meta.durationSeconds)}
-                    </span>
-                  )}
-                  {isGenerating && (
-                    <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.28)" }}>
-                      Generating…
-                    </span>
-                  )}
-                  {meta.status === "pending" && !isGenerating && (
-                    <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>
-                      Pending
-                    </span>
-                  )}
-                </div>
+            {/* Gradient overlay */}
+            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.97) 100%)" }} />
+
+            {/* Generating spinner */}
+            {isGenerating && (
+              <div className="absolute inset-0 flex items-center justify-center"
+                style={{ background: "rgba(5,8,20,0.5)", backdropFilter: "blur(4px)" }}>
+                <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
+                  style={{ borderColor: `${c1} transparent transparent transparent` }} />
               </div>
+            )}
+
+            {/* Duration badge */}
+            {meta.durationSeconds && !isGenerating && (
+              <span className="absolute top-2 right-2 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+                style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
+                {durationLabel(meta.durationSeconds)}
+              </span>
+            )}
+
+            {/* Pending badge */}
+            {meta.status === "pending" && !isGenerating && (
+              <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full"
+                style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: "rgba(255,255,255,0.3)" }}>
+                Pending
+              </span>
+            )}
+
+            {/* Title at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
+              <p className="text-white text-[11px] font-bold leading-tight line-clamp-2 tracking-wide">{meta.title}</p>
             </div>
           </Link>
         );
@@ -416,31 +377,25 @@ export default function LibraryPage() {
                   <Link
                     key={item.key}
                     href={item.href}
-                    className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
-                    style={{ width: 108, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97] relative select-none"
+                    style={{ width: 110, height: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}
                   >
-                    <div className="relative" style={{ height: 86 }}>
-                      {item.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.coverUrl} alt={item.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-2xl"
-                          style={{ background: `linear-gradient(145deg,${c1}22,${c2}33)` }}>🌙</div>
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                        style={{ background: "rgba(0,0,0,0.35)" }}>
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center"
-                          style={{ background: "rgba(79,195,247,0.85)" }}>
-                          <span className="text-white text-[10px] pl-0.5">▶</span>
-                        </div>
+                    {item.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.coverUrl} alt={item.title} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-4xl"
+                        style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
+                        <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                       </div>
-                    </div>
-                    <div className="px-2.5 py-2">
-                      <p className="text-white text-[10px] font-semibold leading-snug"
-                        style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        {item.title}
-                      </p>
-                      <p className="text-white/30 text-[9px] mt-1">{item.duration}</p>
+                    )}
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
+                    <span className="absolute top-2 right-2 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+                      style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
+                      {item.duration}
+                    </span>
+                    <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
+                      <p className="text-white text-[10px] font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
                     </div>
                   </Link>
                 );
@@ -552,34 +507,24 @@ export default function LibraryPage() {
           ) : (
             <>
             <div
-              className={isMobile ? "flex flex-col gap-3" : "grid gap-4"}
-              style={isMobile ? undefined : { gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
+              className="grid gap-3"
+              style={{ gridTemplateColumns: effective === "desktop" ? "repeat(3, 1fr)" : "repeat(2, 1fr)" }}
             >
               {filtered.map((entry) => {
                 const isConfirming = confirmingId === entry.id;
                 const isDeleting = deletingId === entry.id;
                 const [c1, c2] = cardPalette(entry.title);
 
-                return (
-                  <div
-                    key={entry.id}
-                    className="rounded-3xl overflow-hidden transition-all"
-                    style={{
-                      background: isConfirming
-                        ? "rgba(236,72,153,0.06)"
-                        : "rgba(255,255,255,0.04)",
-                      border: isConfirming
-                        ? "1px solid rgba(236,72,153,0.35)"
-                        : "1px solid rgba(255,255,255,0.08)",
-                      boxShadow: isConfirming
-                        ? "none"
-                        : `0 2px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)`,
-                      backdropFilter: "blur(16px)",
-                      opacity: isDeleting ? 0.4 : 1,
-                      transition: "opacity 0.2s, border-color 0.2s",
-                    }}
-                  >
-                    {isConfirming ? (
+                if (isConfirming) {
+                  return (
+                    <div
+                      key={entry.id}
+                      className="rounded-2xl overflow-hidden col-span-2 transition-all"
+                      style={{
+                        background: "rgba(236,72,153,0.06)",
+                        border: "1px solid rgba(236,72,153,0.35)",
+                      }}
+                    >
                       <div className="flex flex-col gap-3 px-4 py-4">
                         <p className="text-sm text-white/70">
                           {t("moveToTrash")} <span className="text-white font-medium">"{entry.title}"</span>?
@@ -591,11 +536,7 @@ export default function LibraryPage() {
                           <button
                             onClick={() => setConfirmingId(null)}
                             className="flex-1 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
-                            style={{
-                              background: "rgba(255,255,255,0.05)",
-                              border: "1px solid rgba(255,255,255,0.1)",
-                              color: "rgba(255,255,255,0.5)",
-                            }}
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
                           >
                             {t("cancel")}
                           </button>
@@ -603,93 +544,70 @@ export default function LibraryPage() {
                             onClick={() => handleDeleteConfirm(entry.id)}
                             disabled={isDeleting}
                             className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
-                            style={{
-                              background: "rgba(236,72,153,0.15)",
-                              border: "1px solid rgba(236,72,153,0.4)",
-                              color: "#EC4899",
-                            }}
+                            style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.4)", color: "#EC4899" }}
                           >
                             {isDeleting ? "…" : t("moveToTrash")}
                           </button>
                         </div>
                       </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="relative rounded-2xl overflow-hidden transition-all select-none"
+                    style={{
+                      aspectRatio: "3/4",
+                      boxShadow: "0 8px 28px rgba(0,0,0,0.55)",
+                      border: "1px solid rgba(255,255,255,0.07)",
+                      opacity: isDeleting ? 0.4 : 1,
+                      transition: "opacity 0.2s",
+                    }}
+                  >
+                    {/* Full-bleed image */}
+                    {entry.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
-                      <div className="flex items-stretch">
-                        <Link
-                          href={`/library/${entry.id}`}
-                          className="flex-1 flex items-center gap-0 active:opacity-70 transition-opacity min-w-0"
-                        >
-                          <div
-                            className="w-20 flex-shrink-0 self-stretch relative overflow-hidden"
-                            style={{ minHeight: 80 }}
-                          >
-                            {entry.coverUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={entry.coverUrl}
-                                alt={entry.title}
-                                className="w-full h-full object-cover"
-                                style={{ minHeight: 80 }}
-                              />
-                            ) : (
-                              <div
-                                className="w-full h-full flex items-center justify-center text-3xl"
-                                style={{
-                                  background: `linear-gradient(145deg, ${c1}22, ${c2}33)`,
-                                  minHeight: 80,
-                                }}
-                              >
-                                <span style={{ filter: `drop-shadow(0 0 10px ${c1}88)` }}>🌙</span>
-                              </div>
-                            )}
-                            <div
-                              className="absolute inset-y-0 right-0 w-8 pointer-events-none"
-                              style={{ background: `linear-gradient(to right, transparent, rgba(10,12,24,0.92))` }}
-                            />
-                          </div>
-
-                          <div className="flex-1 min-w-0 px-3 py-3.5">
-                            <div
-                              className="w-8 h-0.5 rounded-full mb-2"
-                              style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }}
-                            />
-                            <p className="text-white text-sm font-semibold truncate leading-snug tracking-wide">
-                              {entry.title}
-                            </p>
-                            <p className="text-white/38 text-xs truncate mt-0.5 leading-snug">
-                              {entry.summary}
-                            </p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span
-                                className="text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-                                style={{
-                                  background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
-                                  border: `1px solid ${c1}44`,
-                                  color: c1,
-                                }}
-                              >
-                                {durationLabel(entry.durationSeconds)}
-                              </span>
-                              {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
-                                <span className="text-[11px]" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
-                                  {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
-                                </span>
-                              )}
-                              <span className="text-white/20 text-[10px]">{timeAgo(entry.createdAt)}</span>
-                            </div>
-                          </div>
-                        </Link>
-
-                        <button
-                          onClick={() => setConfirmingId(entry.id)}
-                          className="w-11 flex items-center justify-center flex-shrink-0 transition-opacity active:opacity-50"
-                          style={{ color: "rgba(255,255,255,0.15)" }}
-                          aria-label="Delete story"
-                        >
-                          <Icon name="delete" size={16} />
-                        </button>
+                      <div className="absolute inset-0 flex items-center justify-center text-5xl"
+                        style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                        <span style={{ filter: `drop-shadow(0 0 16px ${c1}aa)` }}>🌙</span>
                       </div>
                     )}
+
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.97) 100%)" }} />
+
+                    {/* Duration badge */}
+                    <span className="absolute top-2 right-2 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+                      style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
+                      {durationLabel(entry.durationSeconds)}
+                    </span>
+
+                    {/* Language flag */}
+                    {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
+                      <span className="absolute top-2 left-2 text-sm" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
+                        {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
+                      </span>
+                    )}
+
+                    {/* Delete button */}
+                    <button
+                      onClick={() => setConfirmingId(entry.id)}
+                      className="absolute top-8 left-2 w-7 h-7 flex items-center justify-center rounded-full transition-opacity active:opacity-50"
+                      style={{ background: "rgba(4,6,18,0.65)", backdropFilter: "blur(6px)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.12)" }}
+                      aria-label="Delete story"
+                    >
+                      <Icon name="delete" size={13} />
+                    </button>
+
+                    {/* Title + link */}
+                    <Link href={`/library/${entry.id}`} className="absolute inset-0 flex flex-col justify-end p-3 active:opacity-80 transition-opacity">
+                      <p className="text-white text-[11px] font-bold leading-tight line-clamp-2 tracking-wide">{entry.title}</p>
+                      <p className="text-white/35 text-[9px] mt-0.5">{timeAgo(entry.createdAt)}</p>
+                    </Link>
                   </div>
                 );
               })}
