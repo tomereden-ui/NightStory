@@ -878,7 +878,16 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const [coverPrompt, setCoverPrompt]     = useState("");
   const [isFetchingCover, setIsFetchingCover] = useState(false);
   const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
+  const LS_KEY = "ns-option-images-v5";
   const [optionImages, setOptionImages] = useState<Record<string, string>>({});
+
+  // Load cached images from localStorage immediately so cards show on first render
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(LS_KEY);
+      if (cached) setOptionImages(JSON.parse(cached) as Record<string, string>);
+    } catch { /* ignore */ }
+  }, []);
   const [questionAudios, setQuestionAudios] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -942,13 +951,19 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
           existingImageUrls: Record<string, string>;
         };
 
+        const saveToLS = (imgs: Record<string, string>) => {
+          try { localStorage.setItem(LS_KEY, JSON.stringify(imgs)); } catch { /* ignore */ }
+        };
+
         if (existingImageUrls && Object.keys(existingImageUrls).length > 0) {
-          console.log("[seedImages] cached images:", Object.keys(existingImageUrls));
-          setOptionImages((prev) => ({ ...prev, ...existingImageUrls }));
+          setOptionImages((prev) => {
+            const next = { ...prev, ...existingImageUrls };
+            saveToLS(next);
+            return next;
+          });
         }
 
-        if (!missing?.length) { console.log("[seedImages] all images cached"); return; }
-        console.log("[seedImages] generating", missing.length, "images:", missing.map(m => m.key));
+        if (!missing?.length) { return; }
 
         const BATCH = 4;
         for (let i = 0; i < missing.length; i += BATCH) {
@@ -963,15 +978,15 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
               });
               if (cacheRes.ok) {
                 const { imageKey, url: cachedUrl } = await cacheRes.json() as { ok: boolean; imageKey: string; url: string };
-                console.log("[seedImages] generated:", key, "→", imageKey);
-                if (imageKey && cachedUrl) setOptionImages((prev) => ({ ...prev, [imageKey]: cachedUrl }));
-              } else {
-                const err = await cacheRes.json().catch(() => ({}));
-                console.warn("[seedImages] POST failed for", key, cacheRes.status, err);
+                if (imageKey && cachedUrl) {
+                  setOptionImages((prev) => {
+                    const next = { ...prev, [imageKey]: cachedUrl };
+                    saveToLS(next);
+                    return next;
+                  });
+                }
               }
-            } catch (e) {
-              console.warn("[seedImages] error for", key, e);
-            }
+            } catch { /* ignore individual failures */ }
           }));
         }
       } catch (e) {

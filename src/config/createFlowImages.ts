@@ -122,5 +122,5 @@ export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
 }
 
 export function optionStorageKey(type: CreateOptionType, id: string): string {
-  return `v4-${type}-${id}.jpg`;
+  return `v5-${type}-${id}.jpg`;
 }
