@@ -115,7 +115,7 @@ function BluebellLine({
   }, [text, speed]);
 
   return (
-    <p className="text-white/85 text-[17px] leading-relaxed font-light">
+    <p className="text-white/85 text-fs-heading leading-relaxed font-light">
       {words.map((w, i) => (
         <span
           key={i}
@@ -164,11 +164,11 @@ function LaunchCountdown({ onComplete }: { onComplete: () => void }) {
 function OptionPill({ label, emoji, selected, onClick }: { label: string; emoji?: string; selected?: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="w-full text-left px-4 py-3 rounded-2xl text-sm font-medium transition-all active:scale-[0.98] flex items-center gap-2"
+      className="w-full text-left px-4 py-3 rounded-2xl text-fs-body font-medium transition-all active:scale-[0.98] flex items-center gap-2"
       style={selected
         ? { background: "rgba(79,195,247,0.14)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7" }
         : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.75)" }}>
-      {emoji && <span className="text-base">{emoji}</span>}
+      {emoji && <span className="text-fs-heading">{emoji}</span>}
       <span>{label}</span>
     </button>
   );
@@ -180,7 +180,7 @@ function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: 
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 self-start"
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-label font-semibold transition-all active:scale-95 self-start"
       style={{
         background: "rgba(255,255,255,0.06)",
         border: "1px solid rgba(255,255,255,0.14)",
@@ -259,7 +259,7 @@ function IllustratedCard({
           background: `radial-gradient(circle, ${c1}44, transparent 70%)`,
           filter: "blur(8px)",
         }} />
-        <span className="text-4xl relative" style={{ filter: `drop-shadow(0 0 20px ${c1}) drop-shadow(0 0 8px ${c2})` }}>{emoji}</span>
+        <span className="text-fs-display relative" style={{ filter: `drop-shadow(0 0 20px ${c1}) drop-shadow(0 0 8px ${c2})` }}>{emoji}</span>
       </div>
 
       {/* Cinematic gradient overlay */}
@@ -277,7 +277,7 @@ function IllustratedCard({
       <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
         {badge}
         <span
-          className="text-[13px] font-bold leading-tight"
+          className="text-fs-label font-bold leading-tight"
           style={{
             color: selected ? c1 : "rgba(255,255,255,0.95)",
             textShadow: "0 1px 10px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.9)",
@@ -302,11 +302,11 @@ function StoryInput({ value, onChange, placeholder, maxSoftLimit, autoFocus, onS
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && onSubmit?.()}
         placeholder={placeholder}
-        className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none transition-colors"
+        className="w-full rounded-xl px-4 py-3 text-fs-body text-white placeholder-white/25 outline-none transition-colors"
         style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${over ? "rgba(236,72,153,0.5)" : "rgba(255,255,255,0.12)"}` }}
         onFocus={(e) => (e.currentTarget.style.borderColor = over ? "rgba(236,72,153,0.5)" : "rgba(79,195,247,0.4)")}
         onBlur={(e)  => (e.currentTarget.style.borderColor = over ? "rgba(236,72,153,0.5)" : "rgba(255,255,255,0.12)")} />
-      {over && <p className="text-[11px] mt-1.5" style={{ color: "#EC4899" }}>{BLUEBELL.q4Hint}</p>}
+      {over && <p className="text-fs-caption mt-1.5" style={{ color: "#EC4899" }}>{BLUEBELL.q4Hint}</p>}
     </div>
   );
 }
@@ -314,7 +314,7 @@ function StoryInput({ value, onChange, placeholder, maxSoftLimit, autoFocus, onS
 function PrimaryButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
   return (
     <button onClick={onClick} disabled={disabled}
-      className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
+      className="w-full py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
       style={!disabled
         ? { background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }
         : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -352,7 +352,7 @@ function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebe
         <div className="w-8" />
       </div>
       <div className="mb-7">
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
+        <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
         <BluebellLine text={bluebellText} speed={bluebellSpeed} onComplete={onBluebellComplete} />
       </div>
       {children}
@@ -398,7 +398,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
       <FairyFigure size={80} />
-      <p className="text-white text-xl font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
+      <p className="text-white text-fs-subtitle font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
     </div>
   );
 
@@ -425,7 +425,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
           <>
             <BackButton onClick={() => setMode(null)} />
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextOwn} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-xs" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {validationError && <p className="text-fs-label" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="That's the one!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
@@ -435,7 +435,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
             <div className="flex flex-wrap gap-2">
               {MAGICAL_NAME_CHIPS.map((n) => (
                 <button key={n} onClick={() => setMagicChip(n)}
-                  className="px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95"
+                  className="px-4 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                   style={magicChip === n
                     ? { background: "rgba(79,195,247,0.18)", border: "1.5px solid #4fc3f7", color: "#4fc3f7" }
                     : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }}>
@@ -450,7 +450,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
           <>
             <BackButton onClick={() => setMode(null)} />
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextStranger} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-xs" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {validationError && <p className="text-fs-label" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="That's the one!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
@@ -458,11 +458,11 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
           <>
             <div className="rounded-2xl px-5 py-4 text-center mb-2"
               style={{ background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.25)" }}>
-              <p className="text-white/40 text-xs mb-1">Your hero is...</p>
-              <p className="text-white text-2xl font-bold" style={{ color: "#4fc3f7" }}>{surpriseName}</p>
+              <p className="text-white/40 text-fs-label mb-1">Your hero is...</p>
+              <p className="text-white text-fs-title font-bold" style={{ color: "#4fc3f7" }}>{surpriseName}</p>
             </div>
             <PrimaryButton label={`Yes — ${surpriseName}!`} onClick={() => confirm(surpriseName)} />
-            <button onClick={handleSurprise} className="text-white/35 text-xs text-center w-full py-2">Try another</button>
+            <button onClick={handleSurprise} className="text-white/35 text-fs-label text-center w-full py-2">Try another</button>
           </>
         )}
       </div>
@@ -485,7 +485,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, optionImages, audioUrl
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
       <FairyFigure size={80} />
-      <p className="text-xl font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
+      <p className="text-fs-subtitle font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
     </div>
   );
 
@@ -543,7 +543,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
       <FairyFigure size={80} />
-      <p className="text-xl font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
+      <p className="text-fs-subtitle font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{transitionMsg}</p>
     </div>
   );
 
@@ -566,15 +566,15 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
               ))}
             </div>
             <OptionPill label="Surprise me!" emoji="🎲" onClick={() => { setTextVal(pickRandom(SURPRISE_COMPANIONS)); setMode("creature"); }} />
-            <p className="text-xs text-center mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
+            <p className="text-fs-label text-center mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
           </>
         )}
         {mode !== null && activeMode && (
           <>
             <BackButton onClick={() => setMode(null)} />
-            <p className="text-sm text-white/50">{activeMode.label}</p>
+            <p className="text-fs-body text-white/50">{activeMode.label}</p>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-xs" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {validationError && <p className="text-fs-label" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="Magnificent!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
@@ -620,7 +620,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
   if (phase === "reaction2") return (
     <div className="flex flex-col min-h-full items-center justify-center px-5 gap-5">
       <FairyFigure size={72} />
-      <p className="text-xl font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{BLUEBELL.q4Confirm(confirmedEngine)}</p>
+      <p className="text-fs-subtitle font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{BLUEBELL.q4Confirm(confirmedEngine)}</p>
       <AutoAdvance delay={1200} onAdvance={() => onNext(confirmedEngine)} />
     </div>
   );
@@ -649,9 +649,9 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
         {mode !== null && activeMode && (
           <>
             <BackButton onClick={() => setMode(null)} />
-            <p className="text-sm text-white/50">{activeMode.label}</p>
+            <p className="text-fs-body text-white/50">{activeMode.label}</p>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} maxSoftLimit={80} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-xs" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {validationError && <p className="text-fs-label" style={{ color: "#EC4899" }}>{validationError}</p>}
             <PrimaryButton label="That's it!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
@@ -681,7 +681,7 @@ function Q5View({ heroName, engineText, onNext, onBack, optionImages, audioUrl }
             imageUrl={optionImages[`mood-${m.id}`]}
             onClick={() => onNext(m.id)}
             badge={m.isBedtime
-              ? <span className="block text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
+              ? <span className="block text-fs-micro font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
               : undefined
             }
           />
@@ -734,10 +734,10 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         {ROWS.map((row, i) => (
           <div key={row.label} className="flex items-center px-4 py-3 gap-3"
             style={{ borderBottom: i < ROWS.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-            <span className="text-[10px] font-bold uppercase tracking-widest w-20 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{row.label}</span>
-            <span className="flex-1 text-sm text-white/80 truncate">{row.value}</span>
+            <span className="text-fs-caption font-bold uppercase tracking-widest w-20 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{row.label}</span>
+            <span className="flex-1 text-fs-body text-white/80 truncate">{row.value}</span>
             <button onClick={() => onEditStep(row.step)}
-              className="text-[10px] px-2.5 py-1 rounded-lg flex-shrink-0"
+              className="text-fs-caption px-2.5 py-1 rounded-lg flex-shrink-0"
               style={{ background: "rgba(79,195,247,0.08)", color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.2)" }}>
               edit
             </button>
@@ -749,8 +749,8 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
       {phase === "table" && (
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Story Length</label>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full"
+            <label className="text-white/40 text-fs-caption font-bold uppercase tracking-widest">Story Length</label>
+            <span className="text-fs-label font-bold px-2.5 py-0.5 rounded-full"
               style={{ background: "rgba(79,195,247,0.12)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.25)" }}>
               {durationMinutes} min
             </span>
@@ -758,7 +758,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
           <input type="range" min={1} max={15} step={1} value={durationMinutes}
             onChange={(e) => onDurationChange(+e.target.value)}
             className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
-          <div className="flex justify-between text-white/20 text-[10px] mt-1">
+          <div className="flex justify-between text-white/20 text-fs-caption mt-1">
             <span>1 min</span>
             <span className="text-white/15">· · · · · · · · · · · · · ·</span>
             <span>15 min</span>
@@ -774,16 +774,16 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
       {(phase === "script" || phase === "countdown" || phase === "herewego") && (
         <div className="flex flex-col gap-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
+            <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
             <BluebellLine text={launchScript} speed={65}
               onComplete={() => { setShowReady(true); setTimeout(() => setPhase("countdown"), 600); }} />
           </div>
           {showReady && phase !== "herewego" && (
-            <p className="text-white/60 text-sm italic text-center">Are you ready?</p>
+            <p className="text-white/60 text-fs-body italic text-center">Are you ready?</p>
           )}
           {phase === "countdown" && <LaunchCountdown onComplete={handleCountdownDone} />}
           {phase === "herewego" && (
-            <p className="text-center text-lg font-semibold" style={{ color: "#4fc3f7" }}>{BLUEBELL.hereWeGo}</p>
+            <p className="text-center text-fs-heading font-semibold" style={{ color: "#4fc3f7" }}>{BLUEBELL.hereWeGo}</p>
           )}
         </div>
       )}
@@ -839,8 +839,8 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
         <div className="relative z-10"><FairyFigure size={100} /></div>
       </div>
       <div className="flex flex-col gap-2">
-        <p className="text-white text-base font-medium">{messages[msgIdx]}</p>
-        {showLong && <p className="text-white/40 text-sm">{BLUEBELL.generatingLong}</p>}
+        <p className="text-white text-fs-heading font-medium">{messages[msgIdx]}</p>
+        {showLong && <p className="text-white/40 text-fs-body">{BLUEBELL.generatingLong}</p>}
       </div>
       <div className="flex gap-2">
         {[0, 1, 2, 3].map((i) => (
@@ -1079,10 +1079,10 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     : null;
 
   const ErrorBanner = error ? (
-    <div className="mx-5 mb-4 px-4 py-3 rounded-2xl text-sm"
+    <div className="mx-5 mb-4 px-4 py-3 rounded-2xl text-fs-body"
       style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
       <p>⚠ {BLUEBELL.apiError}</p>
-      <p className="text-xs mt-1 opacity-70">{error}</p>
+      <p className="text-fs-label mt-1 opacity-70">{error}</p>
     </div>
   ) : null;
 
@@ -1112,7 +1112,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
             <BackButton onClick={() => { setIsProducing(false); setProductionJobId(null); }} />
-            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Producing Drama</h1>
+            <h1 className="flex-1 text-center text-fs-heading font-semibold text-white tracking-wide">Producing Drama</h1>
             <div className="w-8" />
           </div>
           <ProductionProgress jobId={productionJobId} onDone={handleProductionDone} onError={handleProductionError} coverUrl={coverUrl || undefined} />
@@ -1126,7 +1126,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
             <BackButton onClick={handleReset} />
-            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">Drama Ready</h1>
+            <h1 className="flex-1 text-center text-fs-heading font-semibold text-white tracking-wide">Drama Ready</h1>
             <div className="w-8" />
           </div>
           <DramaPlayer job={completedJob} onGenerateAnother={handleReset} />
@@ -1140,13 +1140,13 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
             <BackButton onClick={handleReset} />
-            <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide truncate mx-2">
+            <h1 className="flex-1 text-center text-fs-heading font-semibold text-white tracking-wide truncate mx-2">
               {answers.q1_hero}&apos;s Story
             </h1>
             <div className="w-8" />
           </div>
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-2xl text-xs" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
+            <div className="mb-4 px-4 py-3 rounded-2xl text-fs-label" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
               ⚠ {error}
             </div>
           )}

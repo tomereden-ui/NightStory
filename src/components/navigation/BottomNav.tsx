@@ -67,7 +67,7 @@ export default function BottomNav() {
           borderRight: "1px solid rgba(255,255,255,0.07)",
         }}
       >
-        <span className="text-2xl mb-5" aria-hidden>🌙</span>
+        <span className="text-fs-title mb-5" aria-hidden>🌙</span>
 
         <ul className="flex flex-col items-center gap-1.5 flex-1">
           {NAV.map((item) => {
@@ -99,7 +99,7 @@ export default function BottomNav() {
                     </span>
                   </span>
                   <span
-                    className="text-[9px] font-semibold tracking-wide text-center"
+                    className="text-fs-micro font-semibold tracking-wide text-center"
                     style={{ color: isActive ? item.color : "rgba(255,255,255,0.25)" }}
                   >
                     {t(language, item.labelKey)}
@@ -156,7 +156,7 @@ export default function BottomNav() {
                   </span>
                 </span>
                 <span
-                  className="text-[9px] font-bold tracking-wide transition-colors duration-200"
+                  className="text-fs-micro font-bold tracking-wide transition-colors duration-200"
                   style={{ color: isActive ? item.color : "rgba(255,255,255,0.22)" }}
                 >
                   {t(language, item.labelKey)}

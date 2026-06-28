@@ -132,7 +132,7 @@ function ClassicsTab() {
       {/* Search bar */}
       <div className="relative mb-3">
         <span
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
           style={{ color: "rgba(255,255,255,0.25)" }}
         >
           <Icon name="search" size={14} />
@@ -142,7 +142,7 @@ function ClassicsTab() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search classics…"
-          className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm text-white placeholder-white/20 outline-none"
+          className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-fs-body text-white placeholder-white/20 outline-none"
           style={{
             background: "rgba(255,255,255,0.05)",
             border: "1px solid rgba(255,255,255,0.09)",
@@ -160,11 +160,11 @@ function ClassicsTab() {
 
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center pt-16 gap-3 text-center">
-          <span className="text-4xl" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
-          <p className="text-white/40 text-sm">No classics match your search</p>
+          <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
+          <p className="text-white/40 text-fs-body">No classics match your search</p>
           <button
             onClick={() => setSearch("")}
-            className="text-xs px-4 py-2 rounded-full transition-all"
+            className="text-fs-label px-4 py-2 rounded-full transition-all"
             style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
           >
             Clear search
@@ -193,7 +193,7 @@ function ClassicsTab() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={meta.coverUrl} alt={meta.title} className="absolute inset-0 w-full h-full object-cover" />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-4xl"
+                <div className="absolute inset-0 flex items-center justify-center text-fs-display"
                   style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
                   <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>
                     {isGenerating ? "✨" : meta.emoji}
@@ -211,16 +211,16 @@ function ClassicsTab() {
 
             {/* Info */}
             <div className="px-2 pt-2 pb-2.5">
-              <p className="text-white text-[12px] font-bold leading-snug line-clamp-2 tracking-wide">{meta.title}</p>
-              <p className="text-white/40 text-[10px] mt-0.5 leading-snug line-clamp-1">{meta.tagline}</p>
+              <p className="text-white text-fs-label font-bold leading-snug line-clamp-2 tracking-wide">{meta.title}</p>
+              <p className="text-white/40 text-fs-caption mt-0.5 leading-snug line-clamp-1">{meta.tagline}</p>
               <div className="flex items-center gap-1.5 mt-1.5">
                 {meta.durationSeconds ? (
-                  <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
+                  <span className="text-fs-micro font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
                     style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}>
                     {durationLabel(meta.durationSeconds)}
                   </span>
                 ) : meta.status === "pending" ? (
-                  <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>Pending</span>
+                  <span className="text-fs-micro" style={{ color: "rgba(255,255,255,0.2)" }}>Pending</span>
                 ) : null}
               </div>
             </div>
@@ -323,7 +323,7 @@ export default function LibraryPage() {
               <Icon name="delete" size={18} />
               {trashCount > 0 && (
                 <span
-                  className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-fs-micro font-bold flex items-center justify-center"
                   style={{ background: "rgba(236,72,153,0.8)", color: "#fff" }}
                 >
                   {trashCount > 9 ? "9+" : trashCount}
@@ -335,7 +335,7 @@ export default function LibraryPage() {
           )}
 
           <h1
-            className="text-lg font-light tracking-widest"
+            className="text-fs-heading font-light tracking-widest"
             style={{
               background: "linear-gradient(135deg,#fff 0%,#4fc3f7 55%,#a78bfa 100%)",
               WebkitBackgroundClip: "text",
@@ -352,7 +352,7 @@ export default function LibraryPage() {
         {/* Recently Played — spans both tabs */}
         {!loading && (entries.length > 0 || recentClassics.length > 0) && (
           <div className="mb-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+            <p className="text-fs-caption font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
               Recently Played
             </p>
             <div className="relative">
@@ -361,7 +361,7 @@ export default function LibraryPage() {
                 <button onClick={() => scrollRecent("left")}
                   className="absolute left-0 top-0 bottom-0 z-10 flex items-center justify-center w-8 transition-opacity"
                   style={{ background: "linear-gradient(to right, rgba(4,6,18,0.85), transparent)" }}>
-                  <span className="text-white/60 text-lg">‹</span>
+                  <span className="text-white/60 text-fs-heading">‹</span>
                 </button>
               )}
               {/* Right arrow */}
@@ -369,7 +369,7 @@ export default function LibraryPage() {
                 <button onClick={() => scrollRecent("right")}
                   className="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-center w-8 transition-opacity"
                   style={{ background: "linear-gradient(to left, rgba(4,6,18,0.85), transparent)" }}>
-                  <span className="text-white/60 text-lg">›</span>
+                  <span className="text-white/60 text-fs-heading">›</span>
                 </button>
               )}
             <div ref={recentScrollRef} onScroll={updateRecentScroll}
@@ -402,18 +402,18 @@ export default function LibraryPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={item.coverUrl} alt={item.title} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-4xl"
+                      <div className="absolute inset-0 flex items-center justify-center text-fs-display"
                         style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
                         <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                       </div>
                     )}
                     <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
-                    <span className="absolute top-2 right-2 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+                    <span className="absolute top-2 right-2 text-fs-micro font-bold tracking-widest px-1.5 py-0.5 rounded-full"
                       style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
                       {item.duration}
                     </span>
                     <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
-                      <p className="text-white text-[10px] font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
+                      <p className="text-white text-fs-caption font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
                     </div>
                   </Link>
                 );
@@ -436,7 +436,7 @@ export default function LibraryPage() {
               <button
                 key={key}
                 onClick={() => { setActiveTab(key); sessionStorage.setItem("library-tab", key); }}
-                className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium tracking-wide transition-all"
+                className="flex-shrink-0 px-4 py-2 rounded-full text-fs-label font-medium tracking-wide transition-all"
                 style={active
                   ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
                   : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }
@@ -453,7 +453,7 @@ export default function LibraryPage() {
           <>
             <div className="relative mb-3" style={{ display: entries.length > 0 || search ? "block" : "none" }}>
               <span
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
                 style={{ color: "rgba(255,255,255,0.25)" }}
               >
                 <Icon name="search" size={14} />
@@ -463,7 +463,7 @@ export default function LibraryPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t("search")}
-                className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm text-white placeholder-white/20 outline-none"
+                className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-fs-body text-white placeholder-white/20 outline-none"
                 style={{
                   background: "rgba(255,255,255,0.05)",
                   border: "1px solid rgba(255,255,255,0.09)",
@@ -493,8 +493,8 @@ export default function LibraryPage() {
         {activeTab === "community" && (
           <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
             <span className="text-5xl" style={{ filter: "drop-shadow(0 0 24px rgba(167,139,250,0.5))" }}>🌍</span>
-            <p className="text-white/50 text-sm font-medium tracking-wide">Community Stories</p>
-            <p className="text-white/25 text-xs max-w-[220px] leading-relaxed">Stories created by families around the world will appear here soon.</p>
+            <p className="text-white/50 text-fs-body font-medium tracking-wide">Community Stories</p>
+            <p className="text-white/25 text-fs-label max-w-[220px] leading-relaxed">Stories created by families around the world will appear here soon.</p>
           </div>
         )}
 
@@ -509,16 +509,16 @@ export default function LibraryPage() {
           ) : entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
               <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>🌙</span>
-              <p className="text-white/40 text-sm font-light tracking-wide">{t("noStories")}</p>
-              <p className="text-white/20 text-xs">{t("createFirstStory")}</p>
+              <p className="text-white/40 text-fs-body font-light tracking-wide">{t("noStories")}</p>
+              <p className="text-white/20 text-fs-label">{t("createFirstStory")}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
-              <span className="text-4xl" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
-              <p className="text-white/40 text-sm">No stories match your filter</p>
+              <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
+              <p className="text-white/40 text-fs-body">No stories match your filter</p>
               <button
                 onClick={() => { setSearch(""); setDurationFilter("all"); }}
-                className="text-xs px-4 py-2 rounded-full transition-all"
+                className="text-fs-label px-4 py-2 rounded-full transition-all"
                 style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
               >
                 Clear filters
@@ -543,17 +543,17 @@ export default function LibraryPage() {
                       style={{ background: "rgba(236,72,153,0.06)", border: "1px solid rgba(236,72,153,0.35)" }}
                     >
                       <div className="flex flex-col gap-3 px-4 py-4">
-                        <p className="text-sm text-white/70">
+                        <p className="text-fs-body text-white/70">
                           {t("moveToTrash")} <span className="text-white font-medium">"{entry.title}"</span>?
                         </p>
-                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{t("keptFor30Days")}</p>
+                        <p className="text-fs-label" style={{ color: "rgba(255,255,255,0.3)" }}>{t("keptFor30Days")}</p>
                         <div className="flex gap-2">
-                          <button onClick={() => setConfirmingId(null)} className="flex-1 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
+                          <button onClick={() => setConfirmingId(null)} className="flex-1 py-2.5 rounded-xl text-fs-body transition-all active:scale-[0.98]"
                             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
                             {t("cancel")}
                           </button>
                           <button onClick={() => handleDeleteConfirm(entry.id)} disabled={isDeleting}
-                            className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
+                            className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
                             style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.4)", color: "#EC4899" }}>
                             {isDeleting ? "…" : t("moveToTrash")}
                           </button>
@@ -575,7 +575,7 @@ export default function LibraryPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-4xl"
+                        <div className="absolute inset-0 flex items-center justify-center text-fs-display"
                           style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
                           <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                         </div>
@@ -586,19 +586,19 @@ export default function LibraryPage() {
                     <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
                       <div className="flex-1 min-w-0">
                         <Link href={`/library/${entry.id}`}>
-                          <p className="text-white text-[12px] font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
+                          <p className="text-white text-fs-label font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
                         </Link>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
+                          <span className="text-fs-micro font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
                             style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}>
                             {durationLabel(entry.durationSeconds)}
                           </span>
                           {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
-                            <span className="text-[11px]" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
+                            <span className="text-fs-caption" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
                               {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
                             </span>
                           )}
-                          <span className="text-white/20 text-[9px]">{timeAgo(entry.createdAt)}</span>
+                          <span className="text-white/20 text-fs-micro">{timeAgo(entry.createdAt)}</span>
                         </div>
                       </div>
                       <button onClick={() => setConfirmingId(entry.id)}
@@ -620,7 +620,7 @@ export default function LibraryPage() {
       {activeTab === "my-stories" && (
         <Link
           href="/studio"
-          className="fixed w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-light z-40 active:scale-95 transition-transform"
+          className="fixed w-14 h-14 rounded-2xl flex items-center justify-center text-white text-fs-title font-light z-40 active:scale-95 transition-transform"
           style={{
             bottom: isMobile ? 96 : 32,
             right: isMobile ? 16 : 32,

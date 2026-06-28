@@ -13,7 +13,7 @@ function BuildTimestamp() {
     " " +
     d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   return (
-    <span className="text-white/15 text-[14px] font-mono tracking-wide">v {label}</span>
+    <span className="text-white/15 text-fs-body font-mono tracking-wide">v {label}</span>
   );
 }
 
@@ -30,14 +30,14 @@ export default function HeroSection() {
       {/* Top bar */}
       <div className={`flex items-center gap-2.5 mb-6 ${isRTL ? "flex-row-reverse" : ""}`}>
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-lg"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-fs-heading"
           style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
         >
           {MOCK_USER.avatarEmoji}
         </div>
         <div>
-          <p className="text-white/25 text-[10px] uppercase tracking-widest">Good Night</p>
-          <p className="text-white text-sm font-semibold">{MOCK_USER.displayName}</p>
+          <p className="text-white/25 text-fs-caption uppercase tracking-widest">Good Night</p>
+          <p className="text-white text-fs-body font-semibold">{MOCK_USER.displayName}</p>
         </div>
       </div>
 
@@ -48,27 +48,27 @@ export default function HeroSection() {
           style={{ background: "rgba(0,212,255,0.07)", border: "1px solid rgba(0,212,255,0.15)" }}
         >
           <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#00D4FF" }} />
-          <span className="text-xs font-medium tracking-wide" style={{ color: "rgba(0,212,255,0.8)" }}>
+          <span className="text-fs-label font-medium tracking-wide" style={{ color: "rgba(0,212,255,0.8)" }}>
             AI Story Generator
           </span>
         </div>
 
-        <h1 className="text-3xl font-bold text-white mb-1.5 leading-tight tracking-tight">
+        <h1 className="text-fs-display font-bold text-white mb-1.5 leading-tight tracking-tight">
           NightStory
         </h1>
-        <p className="text-white/35 text-sm max-w-xs mx-auto">{t("tagline")}</p>
+        <p className="text-white/35 text-fs-body max-w-xs mx-auto">{t("tagline")}</p>
 
         <div className="flex items-center justify-center gap-3 mt-5">
           <Link
             href="/create"
-            className="font-semibold text-sm px-5 py-2.5 rounded-xl inline-flex items-center gap-2 transition-all active:scale-95"
+            className="font-semibold text-fs-body px-5 py-2.5 rounded-xl inline-flex items-center gap-2 transition-all active:scale-95"
             style={{ background: "linear-gradient(135deg,#00D4FF,#00A8C8)", color: "#0A0C14", boxShadow: "0 4px 16px rgba(0,212,255,0.35)" }}
           >
             ✨ Create Story
           </Link>
           <Link
             href="/library"
-            className="font-semibold text-sm px-5 py-2.5 rounded-xl inline-flex items-center gap-2 transition-all"
+            className="font-semibold text-fs-body px-5 py-2.5 rounded-xl inline-flex items-center gap-2 transition-all"
             style={{ color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.1)" }}
           >
             📚 Browse
@@ -84,8 +84,8 @@ export default function HeroSection() {
           { value: "2",   label: "Languages" },
         ].map((s) => (
           <div key={s.label} className="text-center">
-            <p className="font-bold text-base leading-none" style={{ color: "#00D4FF" }}>{s.value}</p>
-            <p className="text-white/25 text-[10px] mt-0.5">{s.label}</p>
+            <p className="font-bold text-fs-heading leading-none" style={{ color: "#00D4FF" }}>{s.value}</p>
+            <p className="text-white/25 text-fs-caption mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>

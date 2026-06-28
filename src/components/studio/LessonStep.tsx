@@ -63,7 +63,7 @@ export default function LessonStep({
         {onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 mb-4 text-xs font-medium transition-opacity active:opacity-60"
+            className="flex items-center gap-1.5 mb-4 text-fs-label font-medium transition-opacity active:opacity-60"
             style={{ color: "rgba(255,255,255,0.3)" }}
           >
             <Icon name="back" size={14} />
@@ -74,13 +74,13 @@ export default function LessonStep({
           className="rounded-2xl px-4 py-4"
           style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(79,195,247,0.05) 100%)", border: "1px solid rgba(139,92,246,0.2)" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-1.5" style={{ color: "rgba(139,92,246,0.7)" }}>
+          <p className="text-fs-caption font-bold uppercase tracking-[0.18em] mb-1.5" style={{ color: "rgba(139,92,246,0.7)" }}>
             Optional · Step 2
           </p>
-          <h2 className="text-base font-bold text-white leading-snug mb-1">
+          <h2 className="text-fs-heading font-bold text-white leading-snug mb-1">
             Want today&apos;s story to teach something?
           </h2>
-          <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>
+          <p className="text-fs-label leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>
             Pick one or more values — they&apos;ll be woven in naturally, never stated out loud.
           </p>
         </div>
@@ -98,18 +98,18 @@ export default function LessonStep({
               style={isSelected ? selectedStyle : defaultCardStyle}
             >
               <div className="flex items-center justify-between">
-                <span className="text-2xl leading-none">{icon}</span>
+                <span className="text-fs-title leading-none">{icon}</span>
                 {isSelected && (
-                  <span className="text-[10px] font-bold" style={{ color: "#4fc3f7" }}>✓</span>
+                  <span className="text-fs-caption font-bold" style={{ color: "#4fc3f7" }}>✓</span>
                 )}
               </div>
               <span
-                className="text-xs font-bold leading-tight"
+                className="text-fs-label font-bold leading-tight"
                 style={{ color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.85)" }}
               >
                 {label}
               </span>
-              <span className="text-[10px] leading-snug" style={{ color: "rgba(255,255,255,0.38)" }}>
+              <span className="text-fs-caption leading-snug" style={{ color: "rgba(255,255,255,0.38)" }}>
                 {desc}
               </span>
             </button>
@@ -125,7 +125,7 @@ export default function LessonStep({
           : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)" }
         }
       >
-        <label className="text-[10px] font-bold uppercase tracking-widest block mb-2" style={{ color: "rgba(79,195,247,0.5)" }}>
+        <label className="text-fs-caption font-bold uppercase tracking-widest block mb-2" style={{ color: "rgba(79,195,247,0.5)" }}>
           Or describe your own
         </label>
         <textarea
@@ -140,7 +140,7 @@ export default function LessonStep({
           }}
           rows={2}
           placeholder="e.g. learning to ask for help…"
-          className="w-full bg-transparent outline-none resize-none text-sm leading-relaxed placeholder-white/20 text-white/80"
+          className="w-full bg-transparent outline-none resize-none text-fs-body leading-relaxed placeholder-white/20 text-white/80"
           style={{ caretColor: "#4fc3f7" }}
         />
       </div>
@@ -149,7 +149,7 @@ export default function LessonStep({
       {canConfirm && (
         <button
           onClick={() => onSelect(buildLessons())}
-          className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           style={{ background: "linear-gradient(90deg,#4fc3f7,#8B5CF6)", color: "#fff", boxShadow: "0 4px 28px rgba(79,195,247,0.25), 0 2px 8px rgba(139,92,246,0.25)" }}
         >
           <span>✨</span>
@@ -160,14 +160,14 @@ export default function LessonStep({
       {/* Skip option */}
       <button
         onClick={() => onSelect([])}
-        className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
+        className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
         style={{
           background: "rgba(255,255,255,0.04)",
           border: "1.5px solid rgba(255,255,255,0.12)",
           color: "rgba(255,255,255,0.5)",
         }}
       >
-        <span className="text-lg">🌙</span>
+        <span className="text-fs-heading">🌙</span>
         <span>Skip — just tell a fun story</span>
       </button>
 

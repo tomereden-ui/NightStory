@@ -69,7 +69,7 @@ function CalendarHeatmap({ days }: { days: number[] }) {
       {/* day-of-week labels */}
       <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP, marginBottom: 4 }}>
         {DAY_LABELS.map((d, i) => (
-          <div key={i} style={{ width: CELL, textAlign: "center", fontSize: 7, fontWeight: 700, color: "rgba(255,255,255,0.2)" }}>{d}</div>
+          <div key={i} style={{ width: CELL, textAlign: "center", fontSize: "var(--fs-micro)", fontWeight: 700, color: "rgba(255,255,255,0.2)" }}>{d}</div>
         ))}
       </div>
       {/* cells */}
@@ -86,15 +86,15 @@ function CalendarHeatmap({ days }: { days: number[] }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
           <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "rgba(255,255,255,0.06)" }} />
-          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.2)" }}>none</span>
+          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>none</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
           <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#4fc3f7,#a78bfa)" }} />
-          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.2)" }}>1 story</span>
+          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>1 story</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
           <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#fbbf24,#f472b6)" }} />
-          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.2)" }}>2+ stories</span>
+          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>2+ stories</span>
         </div>
       </div>
     </div>
@@ -124,10 +124,10 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         style={{ borderBottom: open ? "1px solid rgba(255,255,255,0.06)" : "none" }}
       >
         <div className="flex items-center gap-2">
-          <span className="text-2xl">{child.emoji}</span>
+          <span className="text-fs-title">{child.emoji}</span>
           <div className="text-left">
-            <p className="text-white text-sm font-bold">{child.name}&apos;s Story Journey</p>
-            <p className="text-white/30 text-[10px]">This month · tap to {open ? "close" : "expand"}</p>
+            <p className="text-white text-fs-body font-bold">{child.name}&apos;s Story Journey</p>
+            <p className="text-white/30 text-fs-caption">This month · tap to {open ? "close" : "expand"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -139,14 +139,14 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
               border: "1px solid rgba(251,191,36,0.3)",
             }}
           >
-            <span className="text-xs">🌙</span>
-            <span className="text-xs font-bold" style={{ color: "#fbbf24" }}>
+            <span className="text-fs-label">🌙</span>
+            <span className="text-fs-label font-bold" style={{ color: "#fbbf24" }}>
               {child.streak}
             </span>
           </div>
           {/* Chevron */}
           <span
-            className="text-white/25 text-xs transition-transform"
+            className="text-white/25 text-fs-label transition-transform"
             style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
           >
             ▾
@@ -167,8 +167,8 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
               className="rounded-2xl px-2 py-2.5 flex flex-col items-center gap-0.5"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
             >
-              <p className="text-sm font-bold" style={{ color: stat.color }}>{stat.value}</p>
-              <p className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <p className="text-fs-body font-bold" style={{ color: stat.color }}>{stat.value}</p>
+              <p className="text-fs-micro font-semibold tracking-wide uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
                 {stat.label}
               </p>
             </div>
@@ -177,14 +177,14 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 
         {/* Lessons */}
         <div>
-          <p className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="text-fs-micro font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
             Values heard this month
           </p>
           <div className="flex flex-wrap gap-1.5">
             {child.lessons.map((l) => (
               <span
                 key={l.label}
-                className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
+                className="text-fs-caption font-semibold px-2.5 py-1 rounded-full"
                 style={{
                   background: `${l.color}18`,
                   border: `1px solid ${l.color}44`,
@@ -199,7 +199,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 
         {/* Calendar */}
         <div>
-          <p className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="text-fs-micro font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
             Bedtime ritual — last 28 nights
           </p>
           <CalendarHeatmap days={child.calendar} />
@@ -207,14 +207,14 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 
         {/* Recent stories */}
         <div>
-          <p className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="text-fs-micro font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
             Recent stories
           </p>
           <div className="flex flex-col gap-1">
             {child.recentTitles.map((title, i) => (
               <div key={i} className="flex items-center gap-2">
                 <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: "rgba(79,195,247,0.5)" }} />
-                <p className="text-white/50 text-xs truncate">{title}</p>
+                <p className="text-white/50 text-fs-label truncate">{title}</p>
               </div>
             ))}
           </div>
@@ -222,7 +222,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 
         {/* Share CTA */}
         <button
-          className="w-full py-2.5 rounded-2xl text-xs font-semibold transition-all active:scale-[0.98]"
+          className="w-full py-2.5 rounded-2xl text-fs-label font-semibold transition-all active:scale-[0.98]"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.09)",
@@ -250,13 +250,13 @@ export default function StoryJourney() {
         className="w-full flex items-center justify-between mb-3"
       >
         <div>
-          <p className="text-white/55 text-[10px] font-bold tracking-widest uppercase text-left">
+          <p className="text-white/55 text-fs-caption font-bold tracking-widest uppercase text-left">
             Story Journey ✨
           </p>
-          <p className="text-white/25 text-[10px] mt-0.5 text-left">Monthly reflection for each child</p>
+          <p className="text-white/25 text-fs-caption mt-0.5 text-left">Monthly reflection for each child</p>
         </div>
         <span
-          className="text-white/30 text-xs transition-transform"
+          className="text-white/30 text-fs-label transition-transform"
           style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
         >
           ▾
@@ -270,8 +270,8 @@ export default function StoryJourney() {
             className="flex items-center gap-2 px-3 py-2 rounded-2xl mb-3"
             style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)" }}
           >
-            <span className="text-xs">🚧</span>
-            <p className="text-[10px]" style={{ color: "rgba(251,191,36,0.7)" }}>
+            <span className="text-fs-label">🚧</span>
+            <p className="text-fs-caption" style={{ color: "rgba(251,191,36,0.7)" }}>
               Preview — showing example data. Real tracking coming soon.
             </p>
           </div>

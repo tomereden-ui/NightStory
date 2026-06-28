@@ -185,17 +185,23 @@ body::before {
 }
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
+/* 8-level scale. JS (FontSizeContext) overrides these via setProperty.       */
+/* small×0.85  medium×1.0  large×1.2 — all values in this block are mediums. */
 :root {
-  --fs-title:    24px;
-  --fs-heading:  18px;
-  --fs-body:     14px;
-  --fs-caption:  11px;
-  --fs-label:    10px;
-  --fs-micro:     9px;
+  --fs-display:    32px;  /* hero greetings, massive single-line titles       */
+  --fs-title:      24px;  /* page/story titles                                */
+  --fs-subtitle:   20px;  /* section/modal titles, prominent card labels      */
+  --fs-heading:    17px;  /* sub-section headers, form labels                 */
+  --fs-body:       14px;  /* body text, chat messages, descriptions           */
+  --fs-label:      12px;  /* UI labels, tabs, small buttons                   */
+  --fs-caption:    10px;  /* captions, timestamps, metadata badges            */
+  --fs-micro:       9px;  /* avatar name chips, badge pills, status dots      */
 }
-.text-fs-title   { font-size: var(--fs-title); }
-.text-fs-heading { font-size: var(--fs-heading); }
-.text-fs-body    { font-size: var(--fs-body); }
-.text-fs-caption { font-size: var(--fs-caption); }
-.text-fs-label   { font-size: var(--fs-label); }
-.text-fs-micro   { font-size: var(--fs-micro); }
+.text-fs-display  { font-size: var(--fs-display); }
+.text-fs-title    { font-size: var(--fs-title); }
+.text-fs-subtitle { font-size: var(--fs-subtitle); }
+.text-fs-heading  { font-size: var(--fs-heading); }
+.text-fs-body     { font-size: var(--fs-body); }
+.text-fs-label    { font-size: var(--fs-label); }
+.text-fs-caption  { font-size: var(--fs-caption); }
+.text-fs-micro    { font-size: var(--fs-micro); }

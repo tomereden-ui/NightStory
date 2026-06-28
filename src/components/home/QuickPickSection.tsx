@@ -15,8 +15,8 @@ export default function QuickPickSection() {
   return (
     <section className="px-5 mb-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-white/80 font-semibold text-sm tracking-wide">{t("forYou")}</h2>
-        <Link href="/library" className="text-white/25 text-xs">
+        <h2 className="text-white/80 font-semibold text-fs-body tracking-wide">{t("forYou")}</h2>
+        <Link href="/library" className="text-white/25 text-fs-label">
           {t("seeAll")}
         </Link>
       </div>
@@ -35,19 +35,19 @@ export default function QuickPickSection() {
             >
               {/* Rectangular thumbnail */}
               <div
-                className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xl overflow-hidden"
+                className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-fs-subtitle overflow-hidden"
                 style={{ background: story.coverGradient ?? story.coverColor }}
               >
                 {story.coverEmoji}
               </div>
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-semibold truncate leading-snug">{title}</p>
-                <p className="text-white/30 text-xs truncate mt-0.5">{desc}</p>
+                <p className="text-white text-fs-body font-semibold truncate leading-snug">{title}</p>
+                <p className="text-white/30 text-fs-label truncate mt-0.5">{desc}</p>
               </div>
               {/* Duration pill — teal */}
               <span
-                className="flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                className="flex-shrink-0 px-2.5 py-1 rounded-full text-fs-caption font-bold"
                 style={{
                   background: "rgba(0,212,255,0.1)",
                   color: "#00D4FF",

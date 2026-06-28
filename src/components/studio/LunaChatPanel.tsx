@@ -105,7 +105,7 @@ function MessageBubble({
         {isLuna && onTogglePlay && (
           <button
             onClick={onTogglePlay}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-fs-caption font-semibold transition-all active:scale-95"
             style={{
               background: isPlaying || isSpeechLoading ? "rgba(167,139,250,0.15)" : "rgba(255,255,255,0.04)",
               border: isPlaying || isSpeechLoading ? "1px solid rgba(167,139,250,0.4)" : "1px solid rgba(255,255,255,0.1)",
@@ -115,7 +115,7 @@ function MessageBubble({
             {isSpeechLoading ? (
               <span className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
             ) : (
-              <span style={{ fontSize: 11 }}>{isPlaying ? "⏹" : "🔊"}</span>
+              <span style={{ fontSize: "var(--fs-caption)" }}>{isPlaying ? "⏹" : "🔊"}</span>
             )}
             <span>{isSpeechLoading ? "Loading…" : isPlaying ? "Stop" : "Listen"}</span>
           </button>
@@ -464,7 +464,7 @@ export default function LunaChatPanel({
             style={{ background: "#10D9A0", zIndex:10 }} />
         </div>
         <div>
-          <p className="text-sm font-bold text-white">Luna</p>
+          <p className="text-fs-body font-bold text-white">Luna</p>
           <p className="text-fs-caption" style={{ color: "rgba(167,139,250,0.8)" }}>Your magical story guide ✨</p>
         </div>
       </div>
@@ -492,12 +492,12 @@ export default function LunaChatPanel({
       {storyReady && (
         <div className="pt-1">
           {createError && (
-            <p className="text-center text-xs mb-2.5" style={{ color: "#f87171" }}>{createError}</p>
+            <p className="text-center text-fs-label mb-2.5" style={{ color: "#f87171" }}>{createError}</p>
           )}
           <button
             onClick={handleCreateStory}
             disabled={creating}
-            className="w-full py-4 rounded-2xl font-bold text-white text-base transition-all active:scale-[0.98] disabled:opacity-70"
+            className="w-full py-4 rounded-2xl font-bold text-white text-fs-heading transition-all active:scale-[0.98] disabled:opacity-70"
             style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)", boxShadow: "0 0 28px rgba(139,92,246,0.4), 0 0 14px rgba(79,195,247,0.3)" }}
           >
             {creating ? "✨ Writing your story…" : "🌟 Create my story!"}
@@ -546,7 +546,7 @@ export default function LunaChatPanel({
             placeholder={listening ? "Listening… 🎙️" : "Tell Luna your story idea… 🌟"}
             rows={1}
             className="flex-1 bg-transparent outline-none resize-none leading-relaxed"
-            style={{ fontSize: 15, color: "rgba(255,255,255,0.9)", caretColor: "#a78bfa", maxHeight: 120 }}
+            style={{ fontSize: "var(--fs-body)", color: "rgba(255,255,255,0.9)", caretColor: "#a78bfa", maxHeight: 120 }}
           />
 
           {/* Send button */}
@@ -565,7 +565,7 @@ export default function LunaChatPanel({
         </div>
 
         {micSupported && (
-          <p className="text-center mt-1.5" style={{ fontSize: 10, color: "rgba(255,255,255,0.13)" }}>
+          <p className="text-center mt-1.5" style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.13)" }}>
             {listening ? "🎙️ Tap mic to stop" : "🎙️ Tap mic to speak · Enter to send"}
           </p>
         )}
@@ -576,17 +576,17 @@ export default function LunaChatPanel({
         <div className="flex justify-center pb-1">
           {discardConfirm ? (
             <div className="flex items-center gap-3">
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
+              <span className="text-fs-label" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
               <button
                 onClick={handleDiscard}
-                className="text-xs px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+                className="text-fs-label px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
                 style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
               >
                 Yes, start over
               </button>
               <button
                 onClick={() => setDiscardConfirm(false)}
-                className="text-xs px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+                className="text-fs-label px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
               >
                 Keep going
@@ -595,7 +595,7 @@ export default function LunaChatPanel({
           ) : (
             <button
               onClick={() => setDiscardConfirm(true)}
-              className="text-[11px] transition-all active:scale-95"
+              className="text-fs-caption transition-all active:scale-95"
               style={{ color: "rgba(255,255,255,0.18)" }}
             >
               <Icon name="submit" size={12} className="inline-block align-middle mr-1" /> Start over

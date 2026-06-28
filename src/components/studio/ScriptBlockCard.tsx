@@ -48,7 +48,7 @@ function ValidatedBadge() {
         background: "rgba(34,197,94,0.14)",
         border: "1px solid rgba(34,197,94,0.38)",
         color: "rgba(34,197,94,0.9)",
-        fontSize: 8,
+        fontSize: "var(--fs-micro)",
         fontWeight: 800,
         lineHeight: 1,
         letterSpacing: "-0.5px",
@@ -164,14 +164,14 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
         className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
         style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}
       >
-        <span className="text-base">🔊</span>
+        <span className="text-fs-heading">🔊</span>
       </div>
 
       {/* Center col */}
       <div className="flex-1 flex flex-col gap-1 min-w-0">
         {/* Top row: SFX label + duration pill/stepper */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(245,158,11,0.7)" }}>
+          <span className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(245,158,11,0.7)" }}>
             SFX
           </span>
           {block.validated && <ValidatedBadge />}
@@ -180,25 +180,25 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
             <div className="flex items-center gap-1 ml-auto">
               <button
                 onClick={() => { const v = Math.max(0.5, dur - 0.5); setDur(v); commit(desc, v); }}
-                className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-fs-label"
                 style={{ background: "rgba(245,158,11,0.1)", color: "rgba(245,158,11,0.7)" }}
               >−</button>
-              <span className="text-[11px] min-w-[24px] text-center" style={{ color: "#F59E0B" }}>{dur}s</span>
+              <span className="text-fs-caption min-w-[24px] text-center" style={{ color: "#F59E0B" }}>{dur}s</span>
               <button
                 onClick={() => { const v = Math.min(22, dur + 0.5); setDur(v); commit(desc, v); }}
-                className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-fs-label"
                 style={{ background: "rgba(245,158,11,0.1)", color: "rgba(245,158,11,0.7)" }}
               >+</button>
               <button
                 onClick={() => setEditingDur(false)}
-                className="text-[9px] ml-1"
+                className="text-fs-micro ml-1"
                 style={{ color: "rgba(255,255,255,0.2)" }}
               >✓</button>
             </div>
           ) : (
             <button
               onClick={() => setEditingDur(true)}
-              className="text-[10px] px-2 py-0.5 rounded-full ml-auto"
+              className="text-fs-caption px-2 py-0.5 rounded-full ml-auto"
               style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "rgba(245,158,11,0.7)" }}
             >
               {dur}s
@@ -224,7 +224,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
 
         {/* Validation states */}
         {isValidating && (
-          <p className="text-[10px] flex items-center gap-1" style={{ color: "rgba(245,158,11,0.45)" }}>
+          <p className="text-fs-caption flex items-center gap-1" style={{ color: "rgba(245,158,11,0.45)" }}>
             <span className="w-2 h-2 border border-t-transparent rounded-full animate-spin inline-block" style={{ borderColor: "rgba(245,158,11,0.5)", borderTopColor: "transparent" }} />
             Checking…
           </p>
@@ -241,7 +241,7 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
         )}
 
         {audioError && !sfxWarning && (
-          <p className="text-[10px]" style={{ color: "rgba(245,158,11,0.6)" }}>⚠ {audioError}</p>
+          <p className="text-fs-caption" style={{ color: "rgba(245,158,11,0.6)" }}>⚠ {audioError}</p>
         )}
       </div>
 
@@ -365,7 +365,7 @@ function SpeechCard({
         {/* "change voice" tooltip */}
         {!showPicker && (
           <span
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-[8px] font-semibold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover/voice:opacity-100 transition-opacity pointer-events-none"
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-fs-micro font-semibold uppercase tracking-wider whitespace-nowrap opacity-0 group-hover/voice:opacity-100 transition-opacity pointer-events-none"
             style={{ color: "rgba(79,195,247,0.5)" }}
           >
             {t("changeVoice")}
@@ -392,7 +392,7 @@ function SpeechCard({
           {assignedVoice && (
             <span className="text-white/25 text-fs-caption">· {assignedVoice.name}</span>
           )}
-          <span className="ml-auto text-[10px] text-white/25 italic">{t("tapToEdit")}</span>
+          <span className="ml-auto text-fs-caption text-white/25 italic">{t("tapToEdit")}</span>
         </div>
         <textarea
           ref={textareaRef}
@@ -445,7 +445,7 @@ function SpeechCard({
             }
             title="Direct this line"
           >
-            <span className="text-[11px] leading-none">⋯</span>
+            <span className="text-fs-caption leading-none">⋯</span>
           </button>
         )}
 
@@ -474,7 +474,7 @@ function SpeechCard({
                 key={chip}
                 disabled={isRevising}
                 onClick={() => { onReviseBlock(block.id, chip); setShowDirectMenu(false); }}
-                className="text-[10px] px-2.5 py-1 rounded-full transition-all active:scale-95"
+                className="text-fs-caption px-2.5 py-1 rounded-full transition-all active:scale-95"
                 style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
               >
                 {chip}
@@ -493,13 +493,13 @@ function SpeechCard({
                 if (e.key === "Escape") setShowDirectMenu(false);
               }}
               placeholder="Type direction for this line…"
-              className="flex-1 rounded-lg px-2.5 py-1.5 text-[11px] outline-none text-white/80"
+              className="flex-1 rounded-lg px-2.5 py-1.5 text-fs-caption outline-none text-white/80"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.25)" }}
             />
             <button
               disabled={!directNote.trim() || isRevising}
               onClick={() => { if (directNote.trim()) { onReviseBlock(block.id, directNote.trim()); setShowDirectMenu(false); setDirectNote(""); } }}
-              className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all active:scale-95"
+              className="px-2.5 py-1.5 rounded-lg text-fs-caption font-semibold transition-all active:scale-95"
               style={directNote.trim() && !isRevising
                 ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#A78BFA" }
                 : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }

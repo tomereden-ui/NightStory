@@ -89,7 +89,7 @@ export default function ProductionProgress({ jobId, onDone, onError, coverUrl }:
                 style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
               <div className="absolute inset-1 rounded-full opacity-40 animate-pulse"
                 style={{ background: "radial-gradient(circle,#4fc3f7,#0088AA)" }} />
-              <span className="relative text-3xl">{icon}</span>
+              <span className="relative text-fs-display">{icon}</span>
             </div>
           </div>
         </div>
@@ -105,8 +105,8 @@ export default function ProductionProgress({ jobId, onDone, onError, coverUrl }:
 
       {/* Current step */}
       <div>
-        <p className="text-white font-semibold text-base mb-1">{step}</p>
-        <p className="text-white/35 text-xs">{t("producingSubtitle")}</p>
+        <p className="text-white font-semibold text-fs-heading mb-1">{step}</p>
+        <p className="text-white/35 text-fs-label">{t("producingSubtitle")}</p>
       </div>
 
       {/* Progress bar */}
@@ -122,7 +122,7 @@ export default function ProductionProgress({ jobId, onDone, onError, coverUrl }:
           }}
         />
       </div>
-      <p className="text-white/25 text-xs -mt-3">{progress}%</p>
+      <p className="text-white/25 text-fs-label -mt-3">{progress}%</p>
 
       {/* Step tracker */}
       <div className="flex flex-col gap-2 w-full max-w-xs">
@@ -146,11 +146,11 @@ export default function ProductionProgress({ jobId, onDone, onError, coverUrl }:
                   : "1px solid rgba(255,255,255,0.05)",
               }}
             >
-              <span className="text-lg w-7 flex-shrink-0">
+              <span className="text-fs-heading w-7 flex-shrink-0">
                 {isDone ? "✅" : isActive ? s.icon : "○"}
               </span>
               <span
-                className="text-xs font-medium"
+                className="text-fs-label font-medium"
                 style={{
                   color: isActive
                     ? "#4fc3f7"

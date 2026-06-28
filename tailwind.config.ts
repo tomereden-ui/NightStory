@@ -44,6 +44,18 @@ const config: Config = {
         sans: ["var(--font-inter)", "sans-serif"],
         hebrew: ["var(--font-rubik)", "sans-serif"],
       },
+      fontSize: {
+        // Dynamic tokens — values come from CSS vars set by FontSizeContext.
+        // Use these instead of hardcoded text-sm / text-[12px] etc.
+        "fs-display":  ["var(--fs-display)",  { lineHeight: "1.15" }],
+        "fs-title":    ["var(--fs-title)",    { lineHeight: "1.25" }],
+        "fs-subtitle": ["var(--fs-subtitle)", { lineHeight: "1.3"  }],
+        "fs-heading":  ["var(--fs-heading)",  { lineHeight: "1.35" }],
+        "fs-body":     ["var(--fs-body)",     { lineHeight: "1.55" }],
+        "fs-label":    ["var(--fs-label)",    { lineHeight: "1.4"  }],
+        "fs-caption":  ["var(--fs-caption)",  { lineHeight: "1.4"  }],
+        "fs-micro":    ["var(--fs-micro)",    { lineHeight: "1.3"  }],
+      },
       backgroundImage: {
         "app-gradient": "linear-gradient(160deg, #0D0F1E 0%, #080B18 60%, #0A0D1C 100%)",
         "card-gradient": "linear-gradient(135deg, #0E1225 0%, #080B18 100%)",

@@ -16,8 +16,8 @@ export default function FeaturedSection() {
   return (
     <section className="mb-4">
       <div className="flex items-center justify-between px-5 mb-3">
-        <h2 className="text-white/80 font-semibold text-sm tracking-wide">{t("featuredStories")}</h2>
-        <Link href="/library" className="text-white/25 text-xs">See all <Icon name="chevronRight" size={14} className="inline-block align-middle" /></Link>
+        <h2 className="text-white/80 font-semibold text-fs-body tracking-wide">{t("featuredStories")}</h2>
+        <Link href="/library" className="text-white/25 text-fs-label">See all <Icon name="chevronRight" size={14} className="inline-block align-middle" /></Link>
       </div>
 
       <div className="flex gap-3 overflow-x-auto hide-scrollbar px-5 pb-2">
@@ -45,12 +45,12 @@ export default function FeaturedSection() {
               </div>
               {/* Info */}
               <div className="px-3 py-2.5" style={{ background: "rgba(10,12,20,0.9)" }}>
-                <p className="text-white text-xs font-semibold leading-snug line-clamp-2 mb-1.5">{title}</p>
+                <p className="text-white text-fs-label font-semibold leading-snug line-clamp-2 mb-1.5">{title}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-white/35 text-[10px]">
+                  <span className="text-white/35 text-fs-caption">
                     {story.voice.avatarEmoji} {voiceName}
                   </span>
-                  <span className="text-[10px] font-bold" style={{ color: "#00D4FF" }}>
+                  <span className="text-fs-caption font-bold" style={{ color: "#00D4FF" }}>
                     {durationLabel(story.durationSeconds)}
                   </span>
                 </div>

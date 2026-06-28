@@ -144,9 +144,9 @@ function PlayerContent() {
     <div className="min-h-full flex flex-col" style={{ background: "#0A0C14" }} dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-12 pb-3">
-        <Link href="/library" className="w-8 h-8 flex items-center justify-center text-white/40 text-base">←</Link>
-        <p className="text-white text-sm font-semibold truncate max-w-[55%] text-center">{title}</p>
-        <button onClick={handleStop} className="w-8 h-8 flex items-center justify-center text-white/30 text-base hover:text-white/60 transition-colors">■</button>
+        <Link href="/library" className="w-8 h-8 flex items-center justify-center text-white/40 text-fs-heading">←</Link>
+        <p className="text-white text-fs-body font-semibold truncate max-w-[55%] text-center">{title}</p>
+        <button onClick={handleStop} className="w-8 h-8 flex items-center justify-center text-white/30 text-fs-heading hover:text-white/60 transition-colors">■</button>
       </div>
 
       {/* Preparing overlay */}
@@ -154,11 +154,11 @@ function PlayerContent() {
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
           <div className="relative w-20 h-20 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full animate-ping opacity-15" style={{ background: "radial-gradient(circle,#00D4FF,#0088AA)" }} />
-            <span className="relative text-4xl animate-pulse">🎙️</span>
+            <span className="relative text-fs-display animate-pulse">🎙️</span>
           </div>
           <div>
             <p className="text-white font-semibold mb-1">Preparing story voices…</p>
-            <p className="text-white/35 text-sm">Generating natural AI speech ({prepareProgress}%)</p>
+            <p className="text-white/35 text-fs-body">Generating natural AI speech ({prepareProgress}%)</p>
           </div>
           <div className="w-48 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
             <div className="h-full rounded-full transition-all duration-300" style={{ width: `${prepareProgress}%`, background: "linear-gradient(90deg,#00D4FF,#0088AA)" }} />
@@ -168,7 +168,7 @@ function PlayerContent() {
 
       {/* Error */}
       {error && phase === "idle" && (
-        <div className="mx-5 mt-4 px-4 py-3 rounded-2xl text-sm"
+        <div className="mx-5 mt-4 px-4 py-3 rounded-2xl text-fs-body"
           style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
           ⚠ {error}
         </div>
@@ -187,7 +187,7 @@ function PlayerContent() {
                   boxShadow: isActive ? "0 0 16px rgba(0,212,255,0.08)" : "none",
                 }}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest"
+                  <p className="text-fs-caption font-bold uppercase tracking-widest"
                     style={{ color: seg.type === "narrator" ? "rgba(255,255,255,0.35)" : "rgba(0,212,255,0.6)" }}>
                     {seg.speaker}
                   </p>
@@ -200,7 +200,7 @@ function PlayerContent() {
                     </span>
                   )}
                 </div>
-                <p className={`text-sm leading-relaxed ${seg.type === "character" ? "italic" : ""}`}
+                <p className={`text-fs-body leading-relaxed ${seg.type === "character" ? "italic" : ""}`}
                   style={{ color: isActive ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.55)" }}>
                   {seg.type === "character" ? `"${seg.text}"` : seg.text}
                 </p>
@@ -217,15 +217,15 @@ function PlayerContent() {
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
           {/* Story row */}
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 overflow-hidden"
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-fs-subtitle flex-shrink-0 overflow-hidden"
               style={{ background: story.coverGradient ?? story.coverColor }}>
               {story.coverEmoji}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold truncate">{title}</p>
-              <p className="text-white/30 text-xs">Gemini AI · Natural Voice</p>
+              <p className="text-white text-fs-body font-semibold truncate">{title}</p>
+              <p className="text-white/30 text-fs-label">Gemini AI · Natural Voice</p>
             </div>
-            <button className="text-white/25 text-lg hover:text-white/50 transition-colors">
+            <button className="text-white/25 text-fs-heading hover:text-white/50 transition-colors">
               {story.isFavorite ? "♥" : "♡"}
             </button>
           </div>
@@ -234,22 +234,22 @@ function PlayerContent() {
           <input type="range" min={0} max={100} value={progress}
             onChange={(e) => setProgress(+e.target.value)}
             className="w-full cursor-pointer mb-1" style={{ accentColor: "#00D4FF" }} />
-          <div className="flex justify-between text-white/20 text-[10px] mb-3">
+          <div className="flex justify-between text-white/20 text-fs-caption mb-3">
             <span>{formatTime(currentSec)}</span>
             <span>{formatTime(story.durationSeconds)}</span>
           </div>
 
           {/* Controls */}
           <div className="flex items-center justify-between">
-            <button onClick={handleStop} className="text-white/25 text-xl w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors">⏮</button>
-            <button className="text-white/25 text-lg w-9 h-9 flex items-center justify-center">«</button>
+            <button onClick={handleStop} className="text-white/25 text-fs-subtitle w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors">⏮</button>
+            <button className="text-white/25 text-fs-heading w-9 h-9 flex items-center justify-center">«</button>
             <button onClick={handlePlay}
-              className="w-14 h-14 rounded-full flex items-center justify-center text-xl active:scale-95 transition-transform font-bold"
+              className="w-14 h-14 rounded-full flex items-center justify-center text-fs-subtitle active:scale-95 transition-transform font-bold"
               style={{ background: "linear-gradient(135deg,#00D4FF,#00A8C8)", color: "#0A0C14", boxShadow: "0 4px 20px rgba(0,212,255,0.4)" }}>
               {phase === "preparing" ? "…" : phase === "playing" ? "⏸" : "▶"}
             </button>
-            <button className="text-white/25 text-lg w-9 h-9 flex items-center justify-center">»</button>
-            <button className="text-white/25 text-sm w-9 h-9 flex items-center justify-center rounded-xl"
+            <button className="text-white/25 text-fs-heading w-9 h-9 flex items-center justify-center">»</button>
+            <button className="text-white/25 text-fs-body w-9 h-9 flex items-center justify-center rounded-xl"
               style={{ border: "1px solid rgba(255,255,255,0.08)" }}>↗</button>
           </div>
         </div>
@@ -260,7 +260,7 @@ function PlayerContent() {
 
 export default function PlayerPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-[80vh]"><span className="text-4xl animate-pulse">✨</span></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[80vh]"><span className="text-fs-display animate-pulse">✨</span></div>}>
       <PlayerContent />
     </Suspense>
   );

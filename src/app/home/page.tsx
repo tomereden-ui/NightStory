@@ -86,7 +86,7 @@ function StoryCard({
 
       {/* Duration badge — top right */}
       <span
-        className="absolute top-2 right-2 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+        className="absolute top-2 right-2 text-fs-micro font-bold tracking-widest px-1.5 py-0.5 rounded-full"
         style={{
           background: "rgba(4,6,18,0.72)",
           backdropFilter: "blur(6px)",
@@ -99,7 +99,7 @@ function StoryCard({
 
       {/* Title — bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
-        <p className="text-white text-[11px] font-bold leading-tight line-clamp-2 tracking-wide">{title}</p>
+        <p className="text-white text-fs-caption font-bold leading-tight line-clamp-2 tracking-wide">{title}</p>
       </div>
     </Link>
   );
@@ -125,13 +125,13 @@ function Rail({
     <section className="mb-8">
       {/* Rail header */}
       <div className="flex items-center justify-between px-5 mb-3">
-        <h2 className="text-sm font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <h2 className="text-fs-body font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.55)" }}>
           {title}
         </h2>
         {action && (
           <Link
             href={action.href}
-            className="text-[10px] font-semibold tracking-wider uppercase transition-opacity hover:opacity-80"
+            className="text-fs-caption font-semibold tracking-wider uppercase transition-opacity hover:opacity-80"
             style={{ color: "rgba(255,255,255,0.28)" }}
           >
             {action.label} →
@@ -220,7 +220,7 @@ function TonightsPickCard({ item }: { item: PickItem }) {
 
       {/* Type tag — top left */}
       <span
-        className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+        className="absolute top-3 left-3 text-fs-micro font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
         style={{
           background: isOwn ? "rgba(192,132,252,0.28)" : "rgba(251,191,36,0.22)",
           border: isOwn ? "1px solid rgba(192,132,252,0.55)" : "1px solid rgba(251,191,36,0.45)",
@@ -234,7 +234,7 @@ function TonightsPickCard({ item }: { item: PickItem }) {
       {/* Duration badge — top right */}
       {item.durationSeconds > 0 && (
         <span
-          className="absolute top-3 right-3 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full"
+          className="absolute top-3 right-3 text-fs-micro font-bold tracking-widest px-1.5 py-0.5 rounded-full"
           style={{
             background: "rgba(4,6,18,0.7)",
             backdropFilter: "blur(6px)",
@@ -249,7 +249,7 @@ function TonightsPickCard({ item }: { item: PickItem }) {
       {/* Title + accent — bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-4 pt-8">
         <div className="w-7 h-[2px] rounded-full mb-2" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
-        <p className="text-white text-sm font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
+        <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
       </div>
     </Link>
   );
@@ -260,7 +260,7 @@ function TonightsPicksRail({ picks }: { picks: PickItem[] }) {
   return (
     <section className="mb-8">
       <div className="flex items-center justify-between px-5 mb-3">
-        <h2 className="text-sm font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <h2 className="text-fs-body font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.55)" }}>
           Tonight&apos;s Picks ✨
         </h2>
       </div>
@@ -330,13 +330,13 @@ function ChildPill({
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
-            <span style={{ fontSize: 28, lineHeight: 1 }}>{child.avatar_emoji || "🧒"}</span>
+            <span style={{ fontSize: "var(--fs-display)", lineHeight: 1 }}>{child.avatar_emoji || "🧒"}</span>
           )}
         </div>
       </div>
       {/* Name */}
       <span
-        className="text-xs font-semibold tracking-wide truncate w-full text-center"
+        className="text-fs-label font-semibold tracking-wide truncate w-full text-center"
         style={{
           color: active ? "#fff" : "rgba(255,255,255,0.45)",
           transition: "color 0.2s ease",
@@ -359,10 +359,10 @@ function SharedEmptyState() {
         border: "1px dashed rgba(255,255,255,0.1)",
       }}
     >
-      <span className="text-3xl" style={{ filter: "drop-shadow(0 0 12px rgba(167,139,250,0.5))" }}>💌</span>
+      <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 12px rgba(167,139,250,0.5))" }}>💌</span>
       <div>
-        <p className="text-white/50 text-sm font-medium">No stories shared yet</p>
-        <p className="text-white/25 text-xs mt-1">Stories your family shares will appear here</p>
+        <p className="text-white/50 text-fs-body font-medium">No stories shared yet</p>
+        <p className="text-white/25 text-fs-label mt-1">Stories your family shares will appear here</p>
       </div>
     </div>
   );
@@ -394,11 +394,11 @@ function CreateCTA({ childName }: { childName?: string }) {
         }}
       >
         <div>
-          <p className="text-white font-bold text-base tracking-wide">Create a Story ✦</p>
-          <p className="text-white/40 text-xs mt-0.5">{subtitle}</p>
+          <p className="text-white font-bold text-fs-heading tracking-wide">Create a Story ✦</p>
+          <p className="text-white/40 text-fs-label mt-0.5">{subtitle}</p>
         </div>
         <span
-          className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0"
+          className="w-11 h-11 rounded-2xl flex items-center justify-center text-fs-heading flex-shrink-0"
           style={{
             background: "rgba(192,132,252,0.2)",
             border: "1px solid rgba(192,132,252,0.4)",
@@ -432,12 +432,12 @@ function JourneySnippet({ childName }: { childName?: string }) {
     >
       {/* streak */}
       <div className="flex items-center gap-1 flex-shrink-0">
-        <span style={{ fontSize: 13 }}>🌙</span>
-        <span className="text-xs font-bold" style={{ color: "#fbbf24" }}>{data.streak} nights</span>
+        <span style={{ fontSize: "var(--fs-label)" }}>🌙</span>
+        <span className="text-fs-label font-bold" style={{ color: "#fbbf24" }}>{data.streak} nights</span>
       </div>
       <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
       {/* stats */}
-      <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+      <span className="text-fs-caption" style={{ color: "rgba(255,255,255,0.3)" }}>
         {data.storiesThisMonth} stories · {timeLabel} this month
       </span>
       {/* spacer */}
@@ -460,7 +460,7 @@ function JourneySnippet({ childName }: { childName?: string }) {
           />
         ))}
       </div>
-      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>›</span>
+      <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.2)" }}>›</span>
     </Link>
   );
 }
@@ -548,7 +548,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1 min-w-0">
             <h1
-              className="text-2xl font-bold tracking-tight"
+              className="text-fs-title font-bold tracking-tight"
               style={{
                 background: "linear-gradient(135deg, #fff 0%, #4fc3f7 50%, #a78bfa 100%)",
                 WebkitBackgroundClip: "text",
@@ -558,7 +558,7 @@ export default function HomePage() {
             >
               {greetingText}{greetingName} 🌙
             </h1>
-            <p className="text-white/30 text-xs mt-1 tracking-wide">
+            <p className="text-white/30 text-fs-label mt-1 tracking-wide">
               {stories.length > 0
                 ? `${stories.length} ${stories.length === 1 ? "story" : "stories"} in your library`
                 : "Ready to create your first story?"}
@@ -628,8 +628,8 @@ export default function HomePage() {
                 }}
               >
                 <p className="text-5xl mb-4" style={{ filter: "drop-shadow(0 0 20px rgba(192,132,252,0.6))" }}>✨</p>
-                <p className="text-white font-bold text-lg">Create your first story</p>
-                <p className="text-white/40 text-sm mt-2">A magical adventure awaits</p>
+                <p className="text-white font-bold text-fs-heading">Create your first story</p>
+                <p className="text-white/40 text-fs-body mt-2">A magical adventure awaits</p>
               </Link>
             </div>
           )}

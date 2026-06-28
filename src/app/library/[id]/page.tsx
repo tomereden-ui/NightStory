@@ -47,7 +47,7 @@ function ReadOnlyCastPanel({ blocks }: { blocks: ScriptBlock[] }) {
 
   return (
     <div className="mb-1">
-      <p className="text-[10px] font-bold uppercase tracking-widest mb-3 px-5" style={{ color: "rgba(79,195,247,0.45)" }}>
+      <p className="text-fs-caption font-bold uppercase tracking-widest mb-3 px-5" style={{ color: "rgba(79,195,247,0.45)" }}>
         Cast
       </p>
       <div
@@ -79,11 +79,11 @@ function ReadOnlyCharacterCard({ characterName, avatarUrl }: { characterName: st
         ) : (
           <div className="w-full h-full flex items-center justify-center"
             style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>
-            <span className="text-lg font-bold" style={{ color: accentColor }}>{characterName.charAt(0).toUpperCase()}</span>
+            <span className="text-fs-heading font-bold" style={{ color: accentColor }}>{characterName.charAt(0).toUpperCase()}</span>
           </div>
         )}
       </div>
-      <p className="text-center text-[10px] font-medium leading-tight" style={{ color: "rgba(255,255,255,0.5)", maxWidth: 68 }}>
+      <p className="text-center text-fs-caption font-medium leading-tight" style={{ color: "rgba(255,255,255,0.5)", maxWidth: 68 }}>
         {characterName}
       </p>
     </div>
@@ -221,7 +221,7 @@ export default function StoryDetailPage() {
   if (loading) {
     return (
       <div className="cosmic-page min-h-full flex items-center justify-center">
-        <span className="text-white/30 text-sm animate-pulse">Loading…</span>
+        <span className="text-white/30 text-fs-body animate-pulse">Loading…</span>
       </div>
     );
   }
@@ -229,9 +229,9 @@ export default function StoryDetailPage() {
   if (!entry) {
     return (
       <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
-        <span className="text-4xl">🌙</span>
-        <p className="text-white/30 text-sm">Story not found.</p>
-        <button onClick={() => router.back()} className="text-xs" style={{ color: "rgba(79,195,247,0.5)" }}>Go back</button>
+        <span className="text-fs-display">🌙</span>
+        <p className="text-white/30 text-fs-body">Story not found.</p>
+        <button onClick={() => router.back()} className="text-fs-label" style={{ color: "rgba(79,195,247,0.5)" }}>Go back</button>
       </div>
     );
   }
@@ -297,7 +297,7 @@ export default function StoryDetailPage() {
           />
           {/* Now playing label */}
           <div className="absolute bottom-6 left-5">
-            <span className="text-[9px] tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.7)" }}>
+            <span className="text-fs-micro tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.7)" }}>
               Now Playing
             </span>
           </div>
@@ -314,7 +314,7 @@ export default function StoryDetailPage() {
         {/* Title — big, prominent */}
         <div className="px-5 mt-4 mb-1">
           <h1
-            className="text-2xl text-fs-title font-bold tracking-tight leading-tight mb-1"
+            className="text-fs-title text-fs-title font-bold tracking-tight leading-tight mb-1"
             style={{
               background: "linear-gradient(135deg, #ffffff 0%, #4fc3f7 55%, #a78bfa 100%)",
               WebkitBackgroundClip: "text",
@@ -334,11 +334,11 @@ export default function StoryDetailPage() {
         {entry.summary && (
           <div className="mx-5 mt-3 mb-1 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center justify-between mb-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
+              <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
               <button
                 onClick={toggleSummaryPlay}
                 disabled={summaryLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-label font-semibold transition-all active:scale-95"
                 style={summaryPlaying
                   ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7", boxShadow: "0 0 10px rgba(79,195,247,0.2)" }
                   : summaryLoading
@@ -358,7 +358,7 @@ export default function StoryDetailPage() {
                 <p className="text-fs-body" style={{ lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
                   {shown}
                   {long && !summaryExpanded && (
-                    <button onClick={() => setSummaryExpanded(true)} className="ml-1 font-semibold" style={{ color: "#4fc3f7", fontSize: "12px" }}>
+                    <button onClick={() => setSummaryExpanded(true)} className="ml-1 font-semibold" style={{ color: "#4fc3f7", fontSize: "var(--fs-label)" }}>
                       … more
                     </button>
                   )}
@@ -382,7 +382,7 @@ export default function StoryDetailPage() {
         <div className="px-5 mb-3">
           <button
             onClick={() => setScriptExpanded((v) => !v)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-caption font-medium transition-all active:scale-[0.98]"
             style={{
               background: scriptExpanded ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
               border: scriptExpanded ? "1px solid rgba(79,195,247,0.2)" : "1px solid rgba(255,255,255,0.07)",
@@ -437,7 +437,7 @@ export default function StoryDetailPage() {
         <div className="px-5 mt-8 mb-4">
           <button
             onClick={handleEdit}
-            className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
             style={{
               background: "rgba(79,195,247,0.1)",
               border: "1px solid rgba(79,195,247,0.3)",
@@ -467,7 +467,7 @@ export default function StoryDetailPage() {
             <div className="flex items-center gap-3 mb-3">
               <button
                 onClick={handlePlayPause}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-lg flex-shrink-0 active:scale-95 transition-transform"
+                className="w-11 h-11 rounded-full flex items-center justify-center text-fs-heading flex-shrink-0 active:scale-95 transition-transform"
                 style={{
                   background: "rgba(79,195,247,0.14)",
                   border: "1.5px solid rgba(79,195,247,0.45)",
@@ -477,9 +477,9 @@ export default function StoryDetailPage() {
                 {playing ? <Icon name="pause" size={20} /> : <Icon name="play" size={20} />}
               </button>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate leading-snug">{entry.title}</p>
+                <p className="text-white text-fs-body font-medium truncate leading-snug">{entry.title}</p>
                 {entry.summary && (
-                  <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-label truncate" style={{ color: "rgba(255,255,255,0.3)" }}>
                     {entry.summary.split(" ").slice(0, 6).join(" ")}…
                   </p>
                 )}
@@ -487,7 +487,7 @@ export default function StoryDetailPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[10px] w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span className="text-fs-caption w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                 {formatTime(currentTime)}
               </span>
               <input
@@ -500,7 +500,7 @@ export default function StoryDetailPage() {
                 className="flex-1 cursor-pointer"
                 style={{ accentColor: "#4fc3f7" }}
               />
-              <span className="text-[10px] w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span className="text-fs-caption w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                 {formatTime(duration || entry.durationSeconds)}
               </span>
             </div>

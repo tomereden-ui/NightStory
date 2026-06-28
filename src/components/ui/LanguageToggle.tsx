@@ -43,8 +43,8 @@ export default function LanguageToggle() {
         aria-label="Change language"
       >
         <FlagImg countryCode={current.countryCode} label={current.label} />
-        <span className="text-white/70 text-xs font-semibold">{current.nativeName}</span>
-        <span className="text-white/25 text-[9px]">{open ? "▲" : "▼"}</span>
+        <span className="text-white/70 text-fs-label font-semibold">{current.nativeName}</span>
+        <span className="text-white/25 text-fs-micro">{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
@@ -57,7 +57,7 @@ export default function LanguageToggle() {
           }}
         >
           <div className="px-3 py-2 border-b border-white/5">
-            <p className="text-white/30 text-[10px] uppercase tracking-widest">Language</p>
+            <p className="text-white/30 text-fs-caption uppercase tracking-widest">Language</p>
           </div>
           <ul className="py-1 max-h-80 overflow-y-auto">
             {SUPPORTED_LANGUAGES.map((lang: Language) => {
@@ -73,12 +73,12 @@ export default function LanguageToggle() {
                   >
                     <FlagImg countryCode={meta.countryCode} label={meta.label} />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-semibold ${isSelected ? "text-purple-bright" : "text-white/80"}`}>
+                      <p className={`text-fs-label font-semibold ${isSelected ? "text-purple-bright" : "text-white/80"}`}>
                         {meta.nativeName}
                       </p>
-                      <p className="text-[10px] text-white/25">{meta.label}</p>
+                      <p className="text-fs-caption text-white/25">{meta.label}</p>
                     </div>
-                    {isSelected && <span className="text-purple-bright text-xs flex-shrink-0">✓</span>}
+                    {isSelected && <span className="text-purple-bright text-fs-label flex-shrink-0">✓</span>}
                   </button>
                 </li>
               );

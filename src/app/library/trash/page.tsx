@@ -76,7 +76,7 @@ export default function TrashPage() {
         <Link href="/library" className="w-8 h-8 flex items-center justify-center text-white/40">
           <Icon name="back" size={18} />
         </Link>
-        <h1 className="flex-1 text-center text-base font-semibold text-white tracking-wide">{t("trash")}</h1>
+        <h1 className="flex-1 text-center text-fs-heading font-semibold text-white tracking-wide">{t("trash")}</h1>
         <div className="w-8" />
       </div>
 
@@ -89,13 +89,13 @@ export default function TrashPage() {
                 className="rounded-2xl px-4 py-4 flex flex-col gap-3"
                 style={{ background: "rgba(236,72,153,0.08)", border: "1px solid rgba(236,72,153,0.3)" }}
               >
-                <p className="text-sm text-white/70">
+                <p className="text-fs-body text-white/70">
                   Permanently delete all {entries.length} {entries.length === 1 ? "story" : "stories"} in trash? This cannot be undone.
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setConfirmEmpty(false)}
-                    className="flex-1 py-2.5 rounded-xl text-sm transition-all"
+                    className="flex-1 py-2.5 rounded-xl text-fs-body transition-all"
                     style={{
                       background: "rgba(255,255,255,0.05)",
                       border: "1px solid rgba(255,255,255,0.1)",
@@ -107,7 +107,7 @@ export default function TrashPage() {
                   <button
                     onClick={handleEmptyTrash}
                     disabled={busyEmpty}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all"
                     style={{
                       background: "rgba(236,72,153,0.18)",
                       border: "1px solid rgba(236,72,153,0.45)",
@@ -121,7 +121,7 @@ export default function TrashPage() {
             ) : (
               <button
                 onClick={() => setConfirmEmpty(true)}
-                className="w-full py-3 rounded-2xl text-sm transition-all active:scale-[0.98]"
+                className="w-full py-3 rounded-2xl text-fs-body transition-all active:scale-[0.98]"
                 style={{
                   background: "rgba(236,72,153,0.07)",
                   border: "1px solid rgba(236,72,153,0.25)",
@@ -136,7 +136,7 @@ export default function TrashPage() {
 
         {/* Info blurb */}
         {entries.length > 0 && (
-          <p className="text-xs text-center mb-5" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-fs-label text-center mb-5" style={{ color: "rgba(255,255,255,0.25)" }}>
             {t("keptFor30Days")}
           </p>
         )}
@@ -144,12 +144,12 @@ export default function TrashPage() {
         {/* Content */}
         {loading ? (
           <div className="flex justify-center pt-24">
-            <span className="text-white/30 text-sm animate-pulse">Loading…</span>
+            <span className="text-white/30 text-fs-body animate-pulse">Loading…</span>
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
             <span className="text-5xl opacity-30">🗑</span>
-            <p className="text-white/30 text-sm font-light">{t("trashEmpty")}</p>
+            <p className="text-white/30 text-fs-body font-light">{t("trashEmpty")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -170,7 +170,7 @@ export default function TrashPage() {
                   <div className="flex items-center gap-3 p-3">
                     {/* Cover */}
                     <div
-                      className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center text-xl"
+                      className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center text-fs-subtitle"
                       style={{
                         background: entry.coverUrl
                           ? undefined
@@ -189,13 +189,13 @@ export default function TrashPage() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-white/60 text-sm font-medium truncate leading-snug">
+                      <p className="text-white/60 text-fs-body font-medium truncate leading-snug">
                         {entry.title}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-white/25 text-[10px]">{durationLabel(entry.durationSeconds)}</span>
+                        <span className="text-white/25 text-fs-caption">{durationLabel(entry.durationSeconds)}</span>
                         <span
-                          className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                          className="text-fs-micro px-1.5 py-0.5 rounded-full font-semibold"
                           style={
                             days <= 3
                               ? { background: "rgba(236,72,153,0.12)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.3)" }
@@ -216,7 +216,7 @@ export default function TrashPage() {
                     <button
                       onClick={() => handleRestore(entry.id)}
                       disabled={isBusy}
-                      className="flex-1 py-2.5 text-xs font-medium transition-all active:opacity-60"
+                      className="flex-1 py-2.5 text-fs-label font-medium transition-all active:opacity-60"
                       style={{ color: "rgba(79,195,247,0.7)" }}
                     >
                       <Icon name="restore" size={14} className="inline-block align-middle mr-1" /> {t("restore")}
@@ -225,7 +225,7 @@ export default function TrashPage() {
                     <button
                       onClick={() => handleDeleteForever(entry.id)}
                       disabled={isBusy}
-                      className="flex-1 py-2.5 text-xs font-medium transition-all active:opacity-60"
+                      className="flex-1 py-2.5 text-fs-label font-medium transition-all active:opacity-60"
                       style={{ color: "rgba(236,72,153,0.6)" }}
                     >
                       {t("deleteForever")}

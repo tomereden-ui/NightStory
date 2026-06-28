@@ -86,7 +86,7 @@ function AvatarGallerySheet({
       <div className="fixed inset-0 z-[200]" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} onClick={onClose} />
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-[201] rounded-t-3xl overflow-hidden flex flex-col" style={{ width: "100%", maxWidth: sheetMaxWidth, maxHeight: "65vh", background: "#0D1120", border: "1px solid rgba(255,255,255,0.09)" }}>
         <div className="flex items-center justify-between px-5 py-4">
-          <p className="text-sm font-semibold text-white">Choose Avatar</p>
+          <p className="text-fs-body font-semibold text-white">Choose Avatar</p>
           <button onClick={onClose} style={{ color: "rgba(255,255,255,0.4)" }}><Icon name="close" size={18} /></button>
         </div>
         {/* Colour swatches */}
@@ -98,7 +98,7 @@ function AvatarGallerySheet({
         <div className="w-full h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
         {/* Bank avatars */}
         <div className="overflow-y-auto flex-1 px-5 py-3">
-          {loading ? <p className="text-white/30 text-xs text-center py-6">Loading…</p> : (
+          {loading ? <p className="text-white/30 text-fs-label text-center py-6">Loading…</p> : (
             <div className="grid grid-cols-5 gap-2">
               {avatars.map((a) => (
                 <button key={a.id} onClick={() => onSelect(a.image_url)} className="relative rounded-2xl overflow-hidden aspect-square transition-all active:scale-90" style={{ border: currentValue === a.image_url ? "2px solid #4fc3f7" : "2px solid transparent", boxShadow: currentValue === a.image_url ? "0 0 0 2px rgba(79,195,247,0.3)" : "none" }}>
@@ -140,11 +140,11 @@ function VoiceCard({
       <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
         <div className="relative flex-shrink-0">
           <VoiceAvatar avatarUrl={avatarIsUrl ? voice.avatar_emoji : undefined} emoji={avatarIsUrl ? undefined : voice.avatar_emoji} name={voice.name} size={44} borderColor={galleryOpen ? "rgba(79,195,247,0.6)" : "rgba(79,195,247,0.25)"} onClick={() => setGalleryOpen((o) => !o)} />
-          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(8,12,24,0.9)", border: "1px solid rgba(79,195,247,0.4)", fontSize: 8, color: "#4fc3f7" }}>✎</span>
+          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(8,12,24,0.9)", border: "1px solid rgba(79,195,247,0.4)", fontSize: "var(--fs-micro)", color: "#4fc3f7" }}>✎</span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-white text-sm font-semibold truncate">{voice.name}</p>
-          <p className="text-white/45 text-xs truncate mt-0.5">{voice.description ?? voice.gemini_voice_name ?? (voice.type === "recorded" ? "Cloned voice" : "AI voice")}</p>
+          <p className="text-white text-fs-body font-semibold truncate">{voice.name}</p>
+          <p className="text-white/45 text-fs-label truncate mt-0.5">{voice.description ?? voice.gemini_voice_name ?? (voice.type === "recorded" ? "Cloned voice" : "AI voice")}</p>
         </div>
         <button disabled={!voice.sample_url} onClick={() => onPlay(voice)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: isPlaying ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)", color: isPlaying ? "#4fc3f7" : voice.sample_url ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.15)", border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)", cursor: voice.sample_url ? "pointer" : "not-allowed" }}>
           {isPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
@@ -318,8 +318,8 @@ function AddVoiceSheet({
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <div>
-              <p className="text-white font-semibold text-base">Add a Family Voice</p>
-              <p className="text-white/35 text-xs mt-0.5">Record or describe someone's voice to clone it</p>
+              <p className="text-white font-semibold text-fs-heading">Add a Family Voice</p>
+              <p className="text-white/35 text-fs-label mt-0.5">Record or describe someone's voice to clone it</p>
             </div>
             <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}><Icon name="close" size={16} /></button>
           </div>
@@ -328,15 +328,15 @@ function AddVoiceSheet({
           <div className="flex items-center gap-3 mb-5">
             <VoiceAvatar avatarUrl={isAvatarUrl(avatarValue) ? avatarValue : undefined} emoji={isAvatarUrl(avatarValue) ? undefined : avatarValue} name={name || "?"} size={52} borderColor="rgba(79,195,247,0.4)" onClick={() => setAvatarPickerOpen(true)} />
             <div className="flex-1">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Dad, Grandma…)" maxLength={32} className="w-full bg-transparent text-white text-sm font-medium outline-none placeholder:text-white/20 border-b pb-1" style={{ borderColor: "rgba(255,255,255,0.12)" }} />
-              <p className="text-white/25 text-[10px] mt-1">Tap the avatar to change it</p>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Dad, Grandma…)" maxLength={32} className="w-full bg-transparent text-white text-fs-body font-medium outline-none placeholder:text-white/20 border-b pb-1" style={{ borderColor: "rgba(255,255,255,0.12)" }} />
+              <p className="text-white/25 text-fs-caption mt-1">Tap the avatar to change it</p>
             </div>
           </div>
 
           {/* Method toggle */}
           <div className="flex p-1 rounded-2xl gap-1 mb-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             {(["text", "record"] as AddMethod[]).map((m) => (
-              <button key={m} onClick={() => setMethod(m)} className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all" style={{ background: method === m ? "rgba(79,195,247,0.12)" : "transparent", color: method === m ? "#4fc3f7" : "rgba(255,255,255,0.35)", border: method === m ? "1px solid rgba(79,195,247,0.25)" : "1px solid transparent" }}>
+              <button key={m} onClick={() => setMethod(m)} className="flex-1 py-2 rounded-xl text-fs-label font-semibold transition-all" style={{ background: method === m ? "rgba(79,195,247,0.12)" : "transparent", color: method === m ? "#4fc3f7" : "rgba(255,255,255,0.35)", border: method === m ? "1px solid rgba(79,195,247,0.25)" : "1px solid transparent" }}>
                 {m === "text" ? "📝 Describe" : "🎙 Record"}
               </button>
             ))}
@@ -345,39 +345,39 @@ function AddVoiceSheet({
           {/* Text method */}
           {method === "text" && (
             <div className="mb-4">
-              <p className="text-white/50 text-xs mb-2">Describe the voice (age, tone, accent, character)</p>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Warm grandfather voice, deep and slow, with a slight Israeli accent…" rows={3} className="w-full rounded-2xl px-4 py-3 text-sm text-white outline-none resize-none placeholder:text-white/20" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }} />
+              <p className="text-white/50 text-fs-label mb-2">Describe the voice (age, tone, accent, character)</p>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Warm grandfather voice, deep and slow, with a slight Israeli accent…" rows={3} className="w-full rounded-2xl px-4 py-3 text-fs-body text-white outline-none resize-none placeholder:text-white/20" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }} />
             </div>
           )}
 
           {/* Record method */}
           {method === "record" && (
             <div className="mb-4">
-              <div className="rounded-2xl px-4 py-3 mb-3 text-xs" style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)", color: "rgba(255,255,255,0.55)" }}>
+              <div className="rounded-2xl px-4 py-3 mb-3 text-fs-label" style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)", color: "rgba(255,255,255,0.55)" }}>
                 Read this aloud: <span className="text-white/80 italic">&ldquo;{sampleText}&rdquo;</span>
               </div>
               {recordState === "idle" && (
-                <button onClick={handleStartRecording} className="w-full py-3 rounded-2xl text-sm font-semibold" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>🎙 Start Recording</button>
+                <button onClick={handleStartRecording} className="w-full py-3 rounded-2xl text-fs-body font-semibold" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>🎙 Start Recording</button>
               )}
               {recordState === "recording" && (
-                <button onClick={handleStopRecording} className="w-full py-3 rounded-2xl text-sm font-semibold" style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.4)" }}>⏹ Stop ({recordingSeconds}s)</button>
+                <button onClick={handleStopRecording} className="w-full py-3 rounded-2xl text-fs-body font-semibold" style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.4)" }}>⏹ Stop ({recordingSeconds}s)</button>
               )}
               {recordState === "done" && (
                 <div className="flex items-center gap-3 px-4 py-3 rounded-2xl" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
                   <span style={{ color: "#10B981" }}>✓</span>
-                  <p className="text-white/60 text-xs flex-1">Recording captured</p>
-                  <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setPreviewState("idle"); }} className="text-[10px] px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>Redo</button>
+                  <p className="text-white/60 text-fs-label flex-1">Recording captured</p>
+                  <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setPreviewState("idle"); }} className="text-fs-caption px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>Redo</button>
                 </div>
               )}
             </div>
           )}
 
           {/* Preview */}
-          <button onClick={handleGeneratePreview} disabled={!canPreview || previewState === "loading"} className="w-full py-3 rounded-2xl text-sm font-semibold mb-3 transition-all" style={{ background: canPreview ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", color: canPreview ? "#a78bfa" : "rgba(255,255,255,0.2)", border: canPreview ? "1px solid rgba(139,92,246,0.3)" : "1px solid rgba(255,255,255,0.07)", cursor: canPreview ? "pointer" : "not-allowed" }}>
+          <button onClick={handleGeneratePreview} disabled={!canPreview || previewState === "loading"} className="w-full py-3 rounded-2xl text-fs-body font-semibold mb-3 transition-all" style={{ background: canPreview ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", color: canPreview ? "#a78bfa" : "rgba(255,255,255,0.2)", border: canPreview ? "1px solid rgba(139,92,246,0.3)" : "1px solid rgba(255,255,255,0.07)", cursor: canPreview ? "pointer" : "not-allowed" }}>
             {previewState === "loading" ? "Generating preview…" : "🔊 Preview Voice"}
           </button>
 
-          {previewError && <p className="text-xs mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.08)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.2)" }}>⚠ {previewError}</p>}
+          {previewError && <p className="text-fs-label mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.08)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.2)" }}>⚠ {previewError}</p>}
 
           {previewState === "ready" && (
             <div className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-3" style={{ background: "rgba(79,195,247,0.07)", border: "1px solid rgba(79,195,247,0.2)" }}>
@@ -385,15 +385,15 @@ function AddVoiceSheet({
                 {previewPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
               </button>
               <div className="flex-1 min-w-0">
-                <p className="text-[#4fc3f7] text-xs font-medium">Preview ready</p>
-                {previewGeminiVoiceName && <p className="text-white/30 text-[10px]">Voice: {previewGeminiVoiceName}</p>}
+                <p className="text-[#4fc3f7] text-fs-label font-medium">Preview ready</p>
+                {previewGeminiVoiceName && <p className="text-white/30 text-fs-caption">Voice: {previewGeminiVoiceName}</p>}
               </div>
             </div>
           )}
 
-          {saveError && <p className="text-xs mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
+          {saveError && <p className="text-fs-label mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
 
-          <button onClick={handleSave} disabled={previewState !== "ready" || saving || !name.trim()} className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98]" style={{ background: previewState === "ready" && !saving && name.trim() ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)", color: previewState === "ready" && !saving && name.trim() ? "#fff" : "rgba(255,255,255,0.25)", cursor: previewState === "ready" && !saving && name.trim() ? "pointer" : "not-allowed" }}>
+          <button onClick={handleSave} disabled={previewState !== "ready" || saving || !name.trim()} className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]" style={{ background: previewState === "ready" && !saving && name.trim() ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)", color: previewState === "ready" && !saving && name.trim() ? "#fff" : "rgba(255,255,255,0.25)", cursor: previewState === "ready" && !saving && name.trim() ? "pointer" : "not-allowed" }}>
             {saving ? "Saving…" : "Save Voice"}
           </button>
         </div>
@@ -466,15 +466,15 @@ export default function FamilyVoicesPanel() {
         className="w-full flex items-center justify-between mb-3"
       >
         <div className="text-left">
-          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
+          <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>
             Family Voices
           </p>
-          <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <p className="text-fs-caption mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
             {open ? "Hear your stories in voices you love" : `${voices.length > 0 ? `${voices.length} voice${voices.length > 1 ? "s" : ""} saved` : "Tap to add voices"}`}
           </p>
         </div>
         <span
-          className="text-white/30 text-xs transition-transform"
+          className="text-white/30 text-fs-label transition-transform"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
@@ -490,12 +490,12 @@ export default function FamilyVoicesPanel() {
               className="w-full rounded-2xl flex flex-col items-center justify-center gap-3 py-8 transition-all active:scale-[0.98]"
               style={{ background: "rgba(167,139,250,0.05)", border: "1.5px dashed rgba(167,139,250,0.2)" }}
             >
-              <span className="text-3xl">🎙</span>
+              <span className="text-fs-display">🎙</span>
               <div className="text-center">
-                <p className="text-white/50 text-sm font-medium">Add your family&apos;s voices</p>
-                <p className="text-white/25 text-xs mt-1">Dad, Mom, Grandma — anyone can narrate</p>
+                <p className="text-white/50 text-fs-body font-medium">Add your family&apos;s voices</p>
+                <p className="text-white/25 text-fs-label mt-1">Dad, Mom, Grandma — anyone can narrate</p>
               </div>
-              <span className="px-4 py-1.5 rounded-full text-xs font-semibold" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.3)" }}>
+              <span className="px-4 py-1.5 rounded-full text-fs-label font-semibold" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.3)" }}>
                 Get started →
               </span>
             </button>
@@ -516,7 +516,7 @@ export default function FamilyVoicesPanel() {
               ))}
               <button
                 onClick={() => setShowAdd(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 self-start mt-1"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-fs-label font-semibold transition-all active:scale-95 self-start mt-1"
                 style={{ background: "rgba(167,139,250,0.1)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.22)" }}
               >
                 ＋ Add voice

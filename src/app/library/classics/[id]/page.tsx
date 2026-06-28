@@ -243,7 +243,7 @@ export default function ClassicDetailPage() {
   if (loading) {
     return (
       <div className="cosmic-page min-h-full flex items-center justify-center">
-        <span className="text-white/30 text-sm animate-pulse">Loading…</span>
+        <span className="text-white/30 text-fs-body animate-pulse">Loading…</span>
       </div>
     );
   }
@@ -251,9 +251,9 @@ export default function ClassicDetailPage() {
   if (!meta) {
     return (
       <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
-        <span className="text-4xl">✨</span>
-        <p className="text-white/30 text-sm">Classic not found.</p>
-        <button onClick={() => router.back()} className="text-xs" style={{ color: "rgba(79,195,247,0.5)" }}>
+        <span className="text-fs-display">✨</span>
+        <p className="text-white/30 text-fs-body">Classic not found.</p>
+        <button onClick={() => router.back()} className="text-fs-label" style={{ color: "rgba(79,195,247,0.5)" }}>
           Go back
         </button>
       </div>
@@ -330,7 +330,7 @@ export default function ClassicDetailPage() {
             {!uploadingCover ? (
               <button
                 onClick={handleUploadCover}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-medium transition-all active:scale-95"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-fs-caption font-medium transition-all active:scale-95"
                 style={{
                   background: "rgba(5,8,20,0.6)",
                   backdropFilter: "blur(8px)",
@@ -342,7 +342,7 @@ export default function ClassicDetailPage() {
               </button>
             ) : (
               <div
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px]"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-fs-caption"
                 style={{ background: "rgba(5,8,20,0.6)", color: "rgba(255,255,255,0.3)" }}
               >
               <div
@@ -361,7 +361,7 @@ export default function ClassicDetailPage() {
           <div className="flex items-center gap-2 mb-3">
             <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${c1}55, transparent)` }} />
             <span
-              className="text-[9px] font-bold tracking-[0.2em] uppercase px-2.5 py-0.5 rounded-full"
+              className="text-fs-micro font-bold tracking-[0.2em] uppercase px-2.5 py-0.5 rounded-full"
               style={{
                 background: `linear-gradient(135deg, ${c1}18, ${c2}18)`,
                 border: `1px solid ${c1}44`,
@@ -375,7 +375,7 @@ export default function ClassicDetailPage() {
 
           {/* Title with gradient */}
           <h1
-            className="text-3xl font-bold tracking-tight leading-tight mb-2"
+            className="text-fs-display font-bold tracking-tight leading-tight mb-2"
             style={{
               background: `linear-gradient(135deg, #ffffff 0%, ${c1} 55%, ${c2} 100%)`,
               WebkitBackgroundClip: "text",
@@ -387,13 +387,13 @@ export default function ClassicDetailPage() {
             {meta.title}
           </h1>
 
-          <p className="text-sm leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <p className="text-fs-body leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.5)" }}>
             {meta.tagline}
           </p>
 
           {meta.durationSeconds && (
             <span
-              className="inline-block text-[9px] font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full"
+              className="inline-block text-fs-micro font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full"
               style={{
                 background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
                 border: `1px solid ${c1}44`,
@@ -425,7 +425,7 @@ export default function ClassicDetailPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <p
-                  className="text-[9px] font-bold tracking-[0.18em] uppercase"
+                  className="text-fs-micro font-bold tracking-[0.18em] uppercase"
                   style={{ color: `${c1}bb` }}
                 >
                   Story
@@ -433,7 +433,7 @@ export default function ClassicDetailPage() {
                 <button
                   onClick={toggleSummaryPlay}
                   disabled={summaryLoading}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all active:scale-95"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-fs-caption font-medium transition-all active:scale-95"
                   style={summaryPlaying
                     ? { background: `${c1}28`, border: `1px solid ${c1}55`, color: c1 }
                     : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
@@ -443,13 +443,13 @@ export default function ClassicDetailPage() {
                   <span>{summaryPlaying ? "Stop" : summaryLoading ? "Loading" : "Play"}</span>
                 </button>
               </div>
-              <p style={{ fontSize: "13.5px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
+              <p style={{ fontSize: "var(--fs-body)", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
                 {shown}
                 {long && !summaryExpanded && (
                   <button
                     onClick={() => setSummaryExpanded(true)}
                     className="ml-1 font-semibold"
-                    style={{ color: "#4fc3f7", fontSize: "12px" }}
+                    style={{ color: "#4fc3f7", fontSize: "var(--fs-label)" }}
                   >
                     … more
                   </button>
@@ -464,7 +464,7 @@ export default function ClassicDetailPage() {
           <div className="px-5 mb-3">
             <button
               onClick={() => setScriptExpanded((v) => !v)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-caption font-medium transition-all active:scale-[0.98]"
               style={{
                 background: scriptExpanded ? `${c1}10` : "rgba(255,255,255,0.04)",
                 border: scriptExpanded ? `1px solid ${c1}33` : "1px solid rgba(255,255,255,0.07)",
@@ -488,7 +488,7 @@ export default function ClassicDetailPage() {
                 return (
                   <div key={block.id}>
                     <p
-                      className="text-[9px] font-semibold uppercase tracking-widest mb-1 ml-3"
+                      className="text-fs-micro font-semibold uppercase tracking-widest mb-1 ml-3"
                       style={{ color: isNarrator ? "rgba(255,255,255,0.25)" : "rgba(79,195,247,0.72)" }}
                     >
                       {isNarrator ? "Narrator" : block.characterName}
@@ -498,14 +498,14 @@ export default function ClassicDetailPage() {
                       style={isNarrator ? {
                         color: "rgba(255,255,255,0.45)",
                         fontStyle: "italic",
-                        fontSize: "11px",
+                        fontSize: "var(--fs-caption)",
                         lineHeight: "1.6",
                       } : {
                         background: "rgba(255,255,255,0.04)",
                         border: "1px solid rgba(255,255,255,0.08)",
                         borderLeft: `2px solid ${c1}4d`,
                         color: "rgba(255,255,255,0.82)",
-                        fontSize: "11.5px",
+                        fontSize: "var(--fs-caption)",
                         lineHeight: "1.6",
                       }}
                     >
@@ -524,12 +524,12 @@ export default function ClassicDetailPage() {
                   className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
                   style={{ borderColor: `${c1} transparent transparent transparent` }}
                 />
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>
                   {meta.status === "generating" ? "Generating script…" : "Preparing this classic…"}
                 </p>
               </>
             ) : (
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>Script unavailable.</p>
+              <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>Script unavailable.</p>
             )}
           </div>
         )}
@@ -539,7 +539,7 @@ export default function ClassicDetailPage() {
           <button
             onClick={handleOpenInStudio}
             disabled={!isReady || openingInStudio}
-            className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
             style={isReady && !openingInStudio ? {
               background: `linear-gradient(135deg, ${c1}18, ${c2}18)`,
               border: `1px solid ${c1}44`,
@@ -570,18 +570,18 @@ export default function ClassicDetailPage() {
               <div className="flex items-center gap-3 mb-3">
                 <button
                   onClick={handlePlayPause}
-                  className="w-11 h-11 rounded-full flex items-center justify-center text-lg flex-shrink-0 active:scale-95 transition-transform"
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-fs-heading flex-shrink-0 active:scale-95 transition-transform"
                   style={{ background: "rgba(79,195,247,0.14)", border: "1.5px solid rgba(79,195,247,0.45)", boxShadow: "0 0 14px rgba(79,195,247,0.3)" }}
                 >
                   {playing ? <Icon name="pause" size={20} /> : <Icon name="play" size={20} />}
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-medium truncate leading-snug">{meta.title}</p>
-                  <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.3)" }}>✨ Classic story</p>
+                  <p className="text-white text-fs-body font-medium truncate leading-snug">{meta.title}</p>
+                  <p className="text-fs-label truncate" style={{ color: "rgba(255,255,255,0.3)" }}>✨ Classic story</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <span className="text-fs-caption w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                   {formatTime(currentTime)}
                 </span>
                 <input
@@ -594,7 +594,7 @@ export default function ClassicDetailPage() {
                   className="flex-1 cursor-pointer"
                   style={{ accentColor: "#4fc3f7" }}
                 />
-                <span className="text-[10px] w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <span className="text-fs-caption w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                   {formatTime(audioDuration || (meta.durationSeconds ?? 180))}
                 </span>
               </div>
@@ -610,8 +610,8 @@ export default function ClassicDetailPage() {
                   style={{ border: `1.5px solid ${c1}44`, borderTopColor: c1 }}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-medium truncate">{produceStep}</p>
-                  <p className="text-xs truncate" style={{ color: `${c1}88` }}>Producing "{meta.title}"…</p>
+                  <p className="text-white text-fs-body font-medium truncate">{produceStep}</p>
+                  <p className="text-fs-label truncate" style={{ color: `${c1}88` }}>Producing "{meta.title}"…</p>
                 </div>
               </div>
               <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -624,7 +624,7 @@ export default function ClassicDetailPage() {
           ) : isReady ? (
             <button
               onClick={handleProduceAudio}
-              className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               style={{
                 background: `linear-gradient(135deg, ${c1}22, ${c2}22)`,
                 border: `1px solid ${c1}55`,

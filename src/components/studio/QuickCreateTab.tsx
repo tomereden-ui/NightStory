@@ -158,7 +158,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
     return (
       <div className="flex flex-col">
         <StepDots step={1} />
-        <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest text-center mb-5">
+        <p className="text-white/40 text-fs-caption font-bold uppercase tracking-widest text-center mb-5">
           {t("pickWorld")}
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -193,7 +193,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
                 <circle cx="90" cy="20" r="0.6" fill="rgba(255,255,255,0.4)"/>
                 <circle cx="15" cy="25" r="0.5" fill="rgba(255,255,255,0.4)"/>
               </svg>
-              <span className="relative text-4xl mb-1.5" style={{ filter: "drop-shadow(0 0 10px rgba(255,255,255,0.3))" }}>
+              <span className="relative text-fs-display mb-1.5" style={{ filter: "drop-shadow(0 0 10px rgba(255,255,255,0.3))" }}>
                 {world.emoji}
               </span>
               {/* Label overlay */}
@@ -201,7 +201,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
                 className="absolute bottom-0 left-0 right-0 px-2 py-2.5"
                 style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)" }}
               >
-                <span className="text-white text-[10.5px] font-medium leading-tight block text-center tracking-wide">
+                <span className="text-white text-fs-caption font-medium leading-tight block text-center tracking-wide">
                   {world.label}
                 </span>
               </div>
@@ -220,11 +220,11 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
         <div className="flex items-center mb-4">
           <button
             onClick={() => setStep(1)}
-            className="w-8 h-8 flex items-center justify-center text-white/50 text-base"
+            className="w-8 h-8 flex items-center justify-center text-white/50 text-fs-heading"
           >
             ←
           </button>
-          <p className="flex-1 text-center text-white/40 text-[11px] font-bold uppercase tracking-widest">
+          <p className="flex-1 text-center text-white/40 text-fs-caption font-bold uppercase tracking-widest">
             {t("pickMood")}
           </p>
           <div className="w-8" />
@@ -232,8 +232,8 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
 
         {selectedWorld && (
           <div className="flex items-center justify-center gap-2 mb-5">
-            <span className="text-2xl">{selectedWorld.emoji}</span>
-            <span className="text-white/60 text-sm">{selectedWorld.label}</span>
+            <span className="text-fs-title">{selectedWorld.emoji}</span>
+            <span className="text-white/60 text-fs-body">{selectedWorld.label}</span>
           </div>
         )}
 
@@ -251,10 +251,10 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
                 border: `1px solid ${mood.accent}33`,
               }}
             >
-              <span className="text-3xl">{mood.emoji}</span>
+              <span className="text-fs-display">{mood.emoji}</span>
               <div className="flex flex-col flex-1">
-                <span className="text-white font-semibold text-sm">{mood.label}</span>
-                <span className="text-white/40 text-xs mt-0.5">{mood.desc}</span>
+                <span className="text-white font-semibold text-fs-body">{mood.label}</span>
+                <span className="text-white/40 text-fs-label mt-0.5">{mood.desc}</span>
               </div>
               <div
                 className="w-2 h-2 rounded-full opacity-60"
@@ -279,11 +279,11 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
             setPersonalStamp("");
             setStep(2);
           }}
-          className="w-8 h-8 flex items-center justify-center text-white/50 text-base"
+          className="w-8 h-8 flex items-center justify-center text-white/50 text-fs-heading"
         >
           ←
         </button>
-        <p className="flex-1 text-center text-white/40 text-[11px] font-bold uppercase tracking-widest">
+        <p className="flex-1 text-center text-white/40 text-fs-caption font-bold uppercase tracking-widest">
           {t("addYourStamp")}
         </p>
         <div className="w-8" />
@@ -301,7 +301,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
           <span className="text-5xl">{selectedWorld.emoji}</span>
         )}
 
-        <p className="text-white/80 text-sm text-center leading-relaxed font-medium">
+        <p className="text-white/80 text-fs-body text-center leading-relaxed font-medium">
           {selectedWorld?.question}
         </p>
 
@@ -312,7 +312,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
               onPointerDown={startRecording}
               onPointerUp={stopRecording}
               onPointerLeave={stopRecording}
-              className="w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all active:scale-95"
+              className="w-14 h-14 rounded-full flex items-center justify-center text-fs-title transition-all active:scale-95"
               style={
                 isRecording
                   ? {
@@ -328,7 +328,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
             >
               {isRecording ? "🔴" : "🎙️"}
             </button>
-            <span className="text-white/30 text-[10px]">
+            <span className="text-white/30 text-fs-caption">
               {t("holdToSpeak")}
             </span>
           </div>
@@ -340,7 +340,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
           placeholder={t("typeAnswer")}
           value={personalStamp}
           onChange={(e) => setPersonalStamp(e.target.value)}
-          className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none text-center transition-colors"
+          className="w-full rounded-xl px-4 py-3 text-fs-body text-white placeholder-white/25 outline-none text-center transition-colors"
           style={{
             background: "rgba(255,255,255,0.06)",
             border: personalStamp.trim()
@@ -360,7 +360,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
       <button
         onClick={handleCreate}
         disabled={!canCreate || generating}
-        className="w-full py-4 rounded-2xl font-semibold text-sm transition-all active:scale-[0.98]"
+        className="w-full py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
         style={
           canCreate && !generating
             ? {

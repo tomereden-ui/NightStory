@@ -97,7 +97,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
     <div className="flex flex-col gap-4">
       {job.libraryError && (
         <div
-          className="px-4 py-3 rounded-2xl text-xs"
+          className="px-4 py-3 rounded-2xl text-fs-label"
           style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", color: "#F59E0B" }}
         >
           ⚠️ Your drama was produced successfully, but saving it to your Library failed. Download it now so you don't lose it — try producing again later to retry the save.
@@ -109,8 +109,8 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={job.coverUrl} alt={job.title ?? "Cover"} className="w-full object-cover" style={{ maxHeight: 280 }} />
           <div className="absolute inset-x-0 bottom-0 px-4 py-3" style={{ background: "linear-gradient(to top, rgba(5,8,15,0.92) 0%, transparent 100%)" }}>
-            <p className="text-white font-bold text-base truncate">{job.title ?? "Your Audio Drama"}</p>
-            <p className="text-white/45 text-xs mt-0.5">
+            <p className="text-white font-bold text-fs-heading truncate">{job.title ?? "Your Audio Drama"}</p>
+            <p className="text-white/45 text-fs-label mt-0.5">
               {dialogueTracks.length} lines · {sfxTracks.length} SFX ·{" "}
               {formatTime(job.scriptJson ? (job.scriptJson as DramaScript).duration_estimate_seconds : 0)}
             </p>
@@ -121,20 +121,20 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           className="px-5 py-4 rounded-2xl flex items-center gap-3"
           style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
         >
-          <span className="text-3xl">🎭</span>
+          <span className="text-fs-display">🎭</span>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-sm truncate">{job.title ?? "Your Audio Drama"}</p>
-            <p className="text-white/35 text-xs mt-0.5">
+            <p className="text-white font-bold text-fs-body truncate">{job.title ?? "Your Audio Drama"}</p>
+            <p className="text-white/35 text-fs-label mt-0.5">
               {dialogueTracks.length} lines · {sfxTracks.length} SFX ·{" "}
               {formatTime(job.scriptJson ? (job.scriptJson as DramaScript).duration_estimate_seconds : 0)}
             </p>
           </div>
           {job.skippedLines?.length ? (
-            <span className="text-[9px] text-yellow-400/70 bg-yellow-400/10 px-2 py-0.5 rounded-full">
+            <span className="text-fs-micro text-yellow-400/70 bg-yellow-400/10 px-2 py-0.5 rounded-full">
               {job.skippedLines.length} skipped
             </span>
           ) : (
-            <span className="text-[9px] text-teal bg-teal/10 px-2 py-0.5 rounded-full">Full mix</span>
+            <span className="text-fs-micro text-teal bg-teal/10 px-2 py-0.5 rounded-full">Full mix</span>
           )}
         </div>
       )}
@@ -155,7 +155,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           className="w-full cursor-pointer mb-1"
           style={{ accentColor: "#4fc3f7" }}
         />
-        <div className="flex justify-between text-white/20 text-[10px] mb-4">
+        <div className="flex justify-between text-white/20 text-fs-caption mb-4">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
@@ -178,7 +178,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <a
             href={job.audioUrl}
             download={`${job.title ?? "drama"}.mp3`}
-            className="text-white/25 text-xl w-10 h-10 flex items-center justify-center hover:text-white/60 transition-colors"
+            className="text-white/25 text-fs-subtitle w-10 h-10 flex items-center justify-center hover:text-white/60 transition-colors"
           >
             ↓
           </a>
@@ -191,10 +191,10 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           className="px-4 py-3 rounded-2xl"
           style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.25)" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#4fc3f7" }}>
+          <p className="text-fs-caption font-bold uppercase tracking-widest mb-1" style={{ color: "#4fc3f7" }}>
             {activeTrack.character}
           </p>
-          <p className="text-white/75 text-sm leading-relaxed">{activeTrack.line}</p>
+          <p className="text-white/75 text-fs-body leading-relaxed">{activeTrack.line}</p>
         </div>
       )}
 
@@ -204,13 +204,13 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           className="px-4 py-4 rounded-2xl"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-3">Cast</p>
+          <p className="text-fs-caption font-bold uppercase tracking-widest text-white/25 mb-3">Cast</p>
           <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
             {castMembers.map(({ name, color, initial }) => (
               <div key={name} className="flex flex-col items-center gap-2 flex-shrink-0" style={{ minWidth: 64 }}>
                 {/* Avatar */}
                 <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold relative overflow-hidden"
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-fs-subtitle font-bold relative overflow-hidden"
                   style={{ background: color.bg, border: `1.5px solid ${color.border}`, boxShadow: `0 4px 16px ${color.glow}` }}
                 >
                   <span style={{ color: color.text }}>{initial}</span>
@@ -218,7 +218,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
                   <div className="absolute inset-0 opacity-30" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 60%)" }} />
                 </div>
                 {/* Name */}
-                <p className="text-white/70 text-[11px] font-semibold text-center leading-tight" style={{ maxWidth: 64 }}>
+                <p className="text-white/70 text-fs-caption font-semibold text-center leading-tight" style={{ maxWidth: 64 }}>
                   {name}
                 </p>
               </div>
@@ -233,7 +233,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           className="px-4 py-3 rounded-2xl"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-3">Timeline</p>
+          <p className="text-fs-caption font-bold uppercase tracking-widest text-white/25 mb-3">Timeline</p>
           <div className="relative h-8 rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
             {tracks.map((t) => {
               const left = (t.start_ms / 1000 / duration) * 100;
@@ -283,7 +283,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
             ].map((l) => (
               <div key={l.label} className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ background: l.color }} />
-                <span className="text-[9px] text-white/30">{l.label}</span>
+                <span className="text-fs-micro text-white/30">{l.label}</span>
               </div>
             ))}
           </div>
@@ -297,7 +297,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
       >
         <button
           onClick={() => setScriptOpen((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 text-xs text-white/40"
+          className="w-full flex items-center justify-between px-4 py-3 text-fs-label text-white/40"
           style={{ background: "rgba(255,255,255,0.02)" }}
         >
           <span className="font-bold uppercase tracking-widest">View Script</span>
@@ -307,10 +307,10 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <div className="px-4 pb-4 flex flex-col gap-2 max-h-64 overflow-y-auto">
             {dialogueTracks.map((t) => (
               <div key={t.id} className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#4fc3f7" }}>
+                <span className="text-fs-micro font-bold uppercase tracking-widest" style={{ color: "#4fc3f7" }}>
                   {t.character}
                 </span>
-                <span className="text-xs text-white/55 leading-relaxed">{t.line}</span>
+                <span className="text-fs-label text-white/55 leading-relaxed">{t.line}</span>
               </div>
             ))}
           </div>
@@ -322,14 +322,14 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
         <a
           href={job.audioUrl}
           download
-          className="flex-1 py-3 rounded-2xl text-sm font-semibold text-center active:scale-95 transition-transform"
+          className="flex-1 py-3 rounded-2xl text-fs-body font-semibold text-center active:scale-95 transition-transform"
           style={{ background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F" }}
         >
           ↓ Download MP3
         </a>
         <button
           onClick={onGenerateAnother}
-          className="flex-1 py-3 rounded-2xl text-sm font-semibold text-white/60"
+          className="flex-1 py-3 rounded-2xl text-fs-body font-semibold text-white/60"
           style={{ border: "1px solid rgba(255,255,255,0.1)" }}
         >
           Create Another

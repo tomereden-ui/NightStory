@@ -85,7 +85,7 @@ function AddProfileModal({
         <div className="h-0.5 flex-shrink-0" style={{ background: "linear-gradient(90deg,#4fc3f7,#8B5CF6)" }} />
 
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
-          <p className="text-white font-bold text-sm">Add child profile</p>
+          <p className="text-white font-bold text-fs-body">Add child profile</p>
           <button onClick={onClose} className="w-7 h-7 rounded-full flex items-center justify-center text-white/40 hover:text-white/70"
             style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="close" size={12} /></button>
         </div>
@@ -98,7 +98,7 @@ function AddProfileModal({
                 <button
                   key={em}
                   onClick={() => setAvatar(em)}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-xl transition-all"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-fs-subtitle transition-all"
                   style={{
                     background: avatar === em ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
                     border: avatar === em ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.07)",
@@ -110,11 +110,11 @@ function AddProfileModal({
 
           {/* Name */}
           <div>
-            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold block mb-1.5">Name</label>
+            <label className="text-white/40 text-fs-caption uppercase tracking-widest font-bold block mb-1.5">Name</label>
             <input
               type="text" value={name} onChange={(e) => setName(e.target.value)}
               placeholder="Child's name" maxLength={30}
-              className="w-full px-4 py-3 rounded-2xl text-white text-sm outline-none"
+              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
             />
           </div>
@@ -122,22 +122,22 @@ function AddProfileModal({
           {/* Age + Gender row */}
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold block mb-1.5">Age</label>
+              <label className="text-white/40 text-fs-caption uppercase tracking-widest font-bold block mb-1.5">Age</label>
               <input
                 type="number" value={age} onChange={(e) => setAge(e.target.value)}
                 placeholder="1–16" min={1} max={16}
-                className="w-full px-4 py-3 rounded-2xl text-white text-sm outline-none"
+                className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
               />
             </div>
             <div className="flex-1">
-              <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold block mb-1.5">Gender</label>
+              <label className="text-white/40 text-fs-caption uppercase tracking-widest font-bold block mb-1.5">Gender</label>
               <div className="flex gap-1.5">
                 {(["boy","girl","other"] as const).map((g) => (
                   <button
                     key={g}
                     onClick={() => setGender(g)}
-                    className="flex-1 py-3 rounded-2xl text-xs font-semibold capitalize transition-all"
+                    className="flex-1 py-3 rounded-2xl text-fs-label font-semibold capitalize transition-all"
                     style={{
                       background: gender === g ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)",
                       border: gender === g ? "1.5px solid rgba(79,195,247,0.45)" : "1px solid rgba(255,255,255,0.08)",
@@ -151,7 +151,7 @@ function AddProfileModal({
 
           {/* Favourite themes */}
           <div>
-            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold block mb-2">Favourite story themes</label>
+            <label className="text-white/40 text-fs-caption uppercase tracking-widest font-bold block mb-2">Favourite story themes</label>
             <div className="flex flex-wrap gap-1.5">
               {THEME_OPTIONS.map((t) => {
                 const active = themes.includes(t.id);
@@ -159,7 +159,7 @@ function AddProfileModal({
                   <button
                     key={t.id}
                     onClick={() => toggleTheme(t.id)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-fs-label font-medium transition-all"
                     style={{
                       background: active ? "rgba(139,92,246,0.18)" : "rgba(255,255,255,0.04)",
                       border: active ? "1.5px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.08)",
@@ -175,27 +175,27 @@ function AddProfileModal({
 
           {/* Interests */}
           <div>
-            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold block mb-1.5">Interests <span className="normal-case opacity-60">(optional)</span></label>
+            <label className="text-white/40 text-fs-caption uppercase tracking-widest font-bold block mb-1.5">Interests <span className="normal-case opacity-60">(optional)</span></label>
             <input
               type="text" value={interests} onChange={(e) => setInterests(e.target.value)}
               placeholder="e.g. dinosaurs, robots, soccer, unicorns"
-              className="w-full px-4 py-3 rounded-2xl text-white text-sm outline-none"
+              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
             />
           </div>
 
           {/* Things to avoid */}
           <div>
-            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold block mb-1.5">
+            <label className="text-white/40 text-fs-caption uppercase tracking-widest font-bold block mb-1.5">
               Things to avoid <span className="normal-case opacity-60">(fears, sensitivities)</span>
             </label>
             <input
               type="text" value={avoid} onChange={(e) => setAvoid(e.target.value)}
               placeholder="e.g. spiders, loud monsters, darkness, being lost"
-              className="w-full px-4 py-3 rounded-2xl text-white text-sm outline-none"
+              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(236,72,153,0.2)" }}
             />
-            <p className="text-white/20 text-[10px] mt-1.5 leading-snug">
+            <p className="text-white/20 text-fs-caption mt-1.5 leading-snug">
               Gemini will never include these in any story
             </p>
           </div>
@@ -203,7 +203,7 @@ function AddProfileModal({
           <button
             onClick={handleSave}
             disabled={!name.trim() || !age || saving}
-            className="w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all active:scale-[0.98] disabled:opacity-30"
+            className="w-full py-3.5 rounded-2xl text-fs-body font-bold text-white transition-all active:scale-[0.98] disabled:opacity-30"
             style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)" }}
           >
             {saving ? "Saving…" : "Save profile"}
@@ -327,7 +327,7 @@ export default function ChildProfilePicker({
   return (
     <>
       <div className="mb-5">
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
+        <p className="text-fs-caption font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
           Creating for
         </p>
         <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
@@ -362,12 +362,12 @@ export default function ChildProfilePicker({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={avatarUrl} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                     ) : (
-                      <span style={{ fontSize: 28 }}>{p.avatar_emoji || "⭐"}</span>
+                      <span style={{ fontSize: "var(--fs-display)" }}>{p.avatar_emoji || "⭐"}</span>
                     )}
                   </div>
                 </div>
                 <span
-                  className="text-[11px] font-bold text-center truncate w-full leading-tight"
+                  className="text-fs-caption font-bold text-center truncate w-full leading-tight"
                   style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.55)" }}
                 >
                   {p.name}

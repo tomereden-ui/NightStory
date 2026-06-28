@@ -3,13 +3,16 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 export type FontScale = "small" | "medium" | "large";
 
+// Medium (1.0×) base values in px — scaled by multiplier for small/large
 const BASE = {
-  title:   24,   // story titles, hero headings
-  heading: 18,   // card titles, modal headers
-  body:    14,   // script lines, chat messages, summaries
-  caption: 11,   // character labels, timestamps, metadata
-  label:   10,   // nav labels, tab names, section markers (uppercase)
-  micro:    9,   // badges, SFX pill, status dots
+  display:  32,  // hero greeting, massive single-line title
+  title:    24,  // page/story titles
+  subtitle: 20,  // section/modal titles, prominent card labels
+  heading:  17,  // sub-section headers, form labels
+  body:     14,  // body text, chat messages, descriptions
+  label:    12,  // UI labels, tabs, small buttons
+  caption:  10,  // captions, timestamps, metadata badges
+  micro:     9,  // avatar name chips, badge pills, status dots
 } as const;
 
 const MULTIPLIERS: Record<FontScale, number> = { small: 0.85, medium: 1.0, large: 1.2 };
@@ -23,19 +26,30 @@ function compute(scale: FontScale): FontSizes {
   return Object.fromEntries(Object.entries(BASE).map(([k, v]) => [k, Math.round(v * m)])) as FontSizes;
 }
 
+function applyCssVars(sizes: FontSizes) {
+  const root = document.documentElement;
+  (Object.entries(sizes) as [string, number][]).forEach(([k, v]) =>
+    root.style.setProperty(`--fs-${k}`, `${v}px`)
+  );
+}
+
 export function FontSizeProvider({ children }: { children: React.ReactNode }) {
   const [scale, setScaleState] = useState<FontScale>("medium");
   const [fs, setFs] = useState<FontSizes>({ ...BASE });
 
   useEffect(() => {
     const stored = localStorage.getItem("ns_font_scale") as FontScale | null;
-    if (stored && stored in MULTIPLIERS) { setScaleState(stored); setFs(compute(stored)); }
+    if (stored && stored in MULTIPLIERS) {
+      const sizes = compute(stored);
+      setScaleState(stored);
+      setFs(sizes);
+      applyCssVars(sizes);
+    }
   }, []);
 
   useEffect(() => {
     const sizes = compute(scale);
-    const root = document.documentElement;
-    (Object.entries(sizes) as [string, number][]).forEach(([k, v]) => root.style.setProperty(`--fs-${k}`, `${v}px`));
+    applyCssVars(sizes);
     setFs(sizes);
   }, [scale]);
 
