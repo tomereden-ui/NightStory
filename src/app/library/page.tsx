@@ -234,7 +234,7 @@ function ClassicsTab() {
 
 // ── Main Library page ─────────────────────────────────────────────────────────
 
-type LibraryTab = "my-stories" | "classics";
+type LibraryTab = "my-stories" | "classics" | "community";
 
 export default function LibraryPage() {
   const { t } = useLanguage();
@@ -245,7 +245,7 @@ export default function LibraryPage() {
 
   useEffect(() => {
     const saved = sessionStorage.getItem("library-tab");
-    if (saved === "classics") setActiveTab("classics");
+    if (saved === "classics" || saved === "community") setActiveTab(saved);
   }, []);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [recentClassics, setRecentClassics] = useState<ClassicMeta[]>([]);
@@ -389,29 +389,25 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {/* Tab switcher */}
-        <div className="flex gap-1.5 mb-4 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)" }}>
-          {(["my-stories", "classics"] as LibraryTab[]).map((tab) => {
-            const active = activeTab === tab;
+        {/* Tab switcher — scrollable pills */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+          {([
+            { key: "my-stories", label: t("myLibrary") },
+            { key: "classics",   label: "✨ Classics" },
+            { key: "community",  label: "🌍 Community" },
+          ] as { key: LibraryTab; label: string }[]).map(({ key, label }) => {
+            const active = activeTab === key;
             return (
               <button
-                key={tab}
-                onClick={() => { setActiveTab(tab); sessionStorage.setItem("library-tab", tab); }}
-                className="flex-1 py-2 rounded-xl text-xs font-medium tracking-wide transition-all"
+                key={key}
+                onClick={() => { setActiveTab(key); sessionStorage.setItem("library-tab", key); }}
+                className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium tracking-wide transition-all"
                 style={active
-                  ? {
-                      background: "rgba(79,195,247,0.15)",
-                      border: "1px solid rgba(79,195,247,0.35)",
-                      color: "#4fc3f7",
-                    }
-                  : {
-                      background: "transparent",
-                      border: "1px solid transparent",
-                      color: "rgba(255,255,255,0.28)",
-                    }
+                  ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
+                  : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }
                 }
               >
-                {tab === "my-stories" ? t("myLibrary") : "✨ Classics"}
+                {label}
               </button>
             );
           })}
@@ -457,6 +453,15 @@ export default function LibraryPage() {
         <div style={{ display: activeTab === "classics" ? undefined : "none" }}>
           <ClassicsTab />
         </div>
+
+        {/* ── Community tab ── */}
+        {activeTab === "community" && (
+          <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
+            <span className="text-5xl" style={{ filter: "drop-shadow(0 0 24px rgba(167,139,250,0.5))" }}>🌍</span>
+            <p className="text-white/50 text-sm font-medium tracking-wide">Community Stories</p>
+            <p className="text-white/25 text-xs max-w-[220px] leading-relaxed">Stories created by families around the world will appear here soon.</p>
+          </div>
+        )}
 
         {/* ── My Stories tab ── */}
         {activeTab === "my-stories" && (
