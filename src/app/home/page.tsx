@@ -47,6 +47,7 @@ function StoryCard({
   durationSeconds,
   href,
   showDuration = false,
+  progressPercent,
 }: {
   title: string;
   summary?: string;
@@ -54,6 +55,7 @@ function StoryCard({
   durationSeconds: number;
   href: string;
   showDuration?: boolean;
+  progressPercent?: number;
 }) {
   const [c1, c2] = cardPalette(title);
   return (
@@ -105,7 +107,115 @@ function StoryCard({
       <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
         <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{title}</p>
       </div>
+
+      {/* Progress bar — bottom edge (Continue Listening) */}
+      {progressPercent !== undefined && (
+        <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "rgba(255,255,255,0.12)" }}>
+          <div
+            className="h-full"
+            style={{
+              width: `${Math.max(4, Math.min(100, progressPercent))}%`,
+              background: `linear-gradient(90deg, ${c1}, ${c2})`,
+              borderRadius: "0 2px 2px 0",
+            }}
+          />
+        </div>
+      )}
     </Link>
+  );
+}
+
+// ── Hero banner (Netflix-style featured story) ────────────────────────────────
+
+function HeroBanner({ story, progressPercent = 42 }: { story: LibraryEntry; progressPercent?: number }) {
+  const [c1, c2] = cardPalette(story.title);
+  const remaining = story.durationSeconds > 0
+    ? durationLabel(Math.round(story.durationSeconds * (1 - progressPercent / 100)))
+    : null;
+
+  return (
+    <div
+      className="relative overflow-hidden mx-5 mb-6 rounded-3xl select-none"
+      style={{
+        height: 260,
+        boxShadow: `0 16px 48px rgba(0,0,0,0.7), 0 0 64px ${c1}18`,
+        border: `1px solid ${c1}22`,
+      }}
+    >
+      {/* Cover art */}
+      {story.coverUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={story.coverUrl}
+          alt={story.title}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: "brightness(0.75)" }}
+        />
+      ) : (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ background: `linear-gradient(145deg, ${c1}44, ${c2}88)` }}
+        >
+          <span style={{ fontSize: 80, filter: `drop-shadow(0 0 32px ${c1}aa)` }}>🌙</span>
+        </div>
+      )}
+
+      {/* Gradient overlays */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(4,6,18,0.97) 0%, rgba(4,6,18,0.3) 55%, transparent 100%)" }} />
+      <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(4,6,18,0.6) 0%, transparent 60%)" }} />
+
+      {/* Content */}
+      <div className="absolute bottom-0 left-0 right-0 px-5 pb-5">
+        {/* Label */}
+        <span
+          className="inline-block text-fs-body font-bold tracking-widest uppercase mb-2 px-2 py-0.5 rounded-full"
+          style={{ background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
+        >
+          Continue Listening
+        </span>
+
+        {/* Title */}
+        <h2
+          className="text-white font-bold leading-tight mb-3 line-clamp-2"
+          style={{ fontSize: "var(--fs-title)", letterSpacing: "-0.01em" }}
+        >
+          {story.title}
+        </h2>
+
+        {/* Progress bar */}
+        <div className="rounded-full overflow-hidden mb-3" style={{ height: 3, background: "rgba(255,255,255,0.18)" }}>
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${progressPercent}%`,
+              background: `linear-gradient(90deg, ${c1}, ${c2})`,
+              boxShadow: `0 0 8px ${c1}88`,
+            }}
+          />
+        </div>
+
+        {/* CTA row */}
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/library/${story.id}`}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold transition-all active:scale-95"
+            style={{
+              background: `linear-gradient(135deg, ${c1}, ${c2})`,
+              color: "#fff",
+              fontSize: "var(--fs-body)",
+              boxShadow: `0 4px 16px ${c1}55`,
+            }}
+          >
+            ▶ Continue
+          </Link>
+          {remaining && (
+            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
+              {remaining} left
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -631,16 +741,21 @@ export default function HomePage() {
             {null}
           </Rail>
 
+          {/* ── Hero banner — featured Continue Listening story ── */}
+          {continueStories.length > 0 && (
+            <HeroBanner story={continueStories[0]} progressPercent={42} />
+          )}
+
           {/* ── Tonight's Picks ── */}
           <TonightsPicksRail picks={tonightsPicks} />
 
-          {/* ── Continue Listening ── */}
-          {continueStories.length > 0 && (
+          {/* ── Continue Listening rail (remaining stories) ── */}
+          {continueStories.length > 1 && (
             <Rail
               title="Continue Listening"
               action={{ label: "All Stories", href: "/library" }}
             >
-              {continueStories.map((s) => (
+              {continueStories.slice(1).map((s, idx) => (
                 <StoryCard
                   key={s.id}
                   title={s.title}
@@ -649,6 +764,7 @@ export default function HomePage() {
                   durationSeconds={s.durationSeconds}
                   href={`/library/${s.id}`}
                   showDuration
+                  progressPercent={idx === 0 ? 68 : 23}
                 />
               ))}
             </Rail>
