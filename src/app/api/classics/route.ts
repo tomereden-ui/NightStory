@@ -4,6 +4,7 @@ import { CLASSIC_STORIES, type ClassicMeta } from "@/lib/classicStories";
 import type { ScriptBlock } from "@/types";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
 import { fetchPollinationsImage } from "@/lib/services/pollinationsClient";
+import { addEntry } from "@/lib/libraryStore";
 
 export const dynamic = "force-dynamic";
 
@@ -24,16 +25,36 @@ function publicUrl(path: string): string {
   return `${url}/storage/v1/object/public/${BUCKET}/${path}`;
 }
 
-// GET — list all classics with status + cached metadata
+// GET — list all classics: DB rows take priority, Storage used for pending fallback
 export async function GET() {
   await ensureClassicsBucket();
 
+  // Load DB rows for classics that have been generated
+  const { data: dbRows } = await supabase
+    .from("stories")
+    .select("id, title, emoji, summary, cover_url, duration_seconds")
+    .eq("is_public", true);
+
+  const dbById = new Map((dbRows ?? []).map((r) => [r.id, r]));
+
   const metas: ClassicMeta[] = await Promise.all(
     CLASSIC_STORIES.map(async (def) => {
-      // List the story's folder once — covers both script and cover checks
+      const row = dbById.get(def.id);
+      if (row) {
+        return {
+          id: def.id,
+          title: def.title,
+          emoji: def.emoji,
+          tagline: row.summary ?? def.tagline,
+          coverUrl: row.cover_url ?? undefined,
+          durationSeconds: row.duration_seconds ?? undefined,
+          status: "ready",
+        } satisfies ClassicMeta;
+      }
+
+      // Not in DB yet — check Storage (legacy / pending)
       const { data: files } = await supabase.storage.from(BUCKET).list(def.id);
       const fileNames = new Set((files ?? []).map((f) => f.name));
-
       const hasScript = fileNames.has("script.json");
       const hasCover = fileNames.has("cover.jpg") || fileNames.has("cover.png");
       const coverExt = fileNames.has("cover.png") ? "png" : "jpg";
@@ -41,9 +62,7 @@ export async function GET() {
       let durationSeconds: number | undefined;
       if (hasScript) {
         try {
-          const { data: scriptData } = await supabase.storage
-            .from(BUCKET)
-            .download(scriptPath(def.id));
+          const { data: scriptData } = await supabase.storage.from(BUCKET).download(scriptPath(def.id));
           if (scriptData) {
             const text = await scriptData.text();
             const parsed = JSON.parse(text) as { blocks?: ScriptBlock[]; durationSeconds?: number };
@@ -161,15 +180,30 @@ RULES:
     return NextResponse.json({ error: "Storage upload failed" }, { status: 500 });
   }
 
+  const coverUrl = coverUploaded ? publicUrl(coverPath(def.id)) : undefined;
+
   const meta: ClassicMeta = {
     id: def.id,
     title: def.title,
     emoji: def.emoji,
     tagline: def.tagline,
-    coverUrl: coverUploaded ? publicUrl(coverPath(def.id)) : undefined,
+    coverUrl,
     durationSeconds,
     status: "ready",
   };
+
+  // Persist to stories table as a public (is_public) entry
+  await addEntry({
+    id: def.id,
+    title: def.title,
+    summary: def.tagline,
+    coverUrl,
+    durationSeconds,
+    createdAt: Date.now(),
+    blocks,
+    emoji: def.emoji,
+    isPublic: true,
+  });
 
   return NextResponse.json({ ok: true, meta, blockCount: blocks.length });
 }

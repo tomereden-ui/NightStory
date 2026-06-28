@@ -63,11 +63,15 @@ CREATE TABLE IF NOT EXISTS public.family_members (
 CREATE INDEX IF NOT EXISTS idx_family_members_user ON public.family_members(user_id);
 
 
--- ─── 3. Add family_id + is_public to existing tables ─────────────────────────
+-- ─── 3. Add family_id + is_public + emoji to existing tables ─────────────────
 
 ALTER TABLE public.stories
   ADD COLUMN IF NOT EXISTS family_id uuid REFERENCES public.families(id),
-  ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS is_public boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS emoji text;             -- used by classic stories
+
+-- audio_url is nullable for script-only classics (no merged audio yet)
+ALTER TABLE public.stories ALTER COLUMN audio_url DROP NOT NULL;
 
 ALTER TABLE public.trash
   ADD COLUMN IF NOT EXISTS family_id uuid REFERENCES public.families(id);

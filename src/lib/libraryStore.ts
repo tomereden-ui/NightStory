@@ -5,12 +5,14 @@ export interface LibraryEntry {
   id: string;
   title: string;
   summary: string;
-  audioUrl: string;
+  audioUrl?: string;   // nullable — classics may have script only, no merged audio yet
   coverUrl?: string;
   durationSeconds: number;
   createdAt: number;
   blocks: ScriptBlock[];
   language?: string;
+  emoji?: string;      // classic stories only
+  isPublic?: boolean;
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -24,12 +26,14 @@ function toEntry(row: any): LibraryEntry { // eslint-disable-line
     id: row.id,
     title: row.title,
     summary: row.summary ?? "",
-    audioUrl: row.audio_url,
+    audioUrl: row.audio_url ?? undefined,
     coverUrl: row.cover_url ?? undefined,
-    durationSeconds: row.duration_seconds,
+    durationSeconds: row.duration_seconds ?? 0,
     createdAt: row.created_at,
     blocks: row.blocks ?? [],
     language: row.language ?? undefined,
+    emoji: row.emoji ?? undefined,
+    isPublic: row.is_public ?? false,
   };
 }
 
@@ -45,22 +49,37 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
     id: entry.id,
     title: entry.title,
     summary: entry.summary,
-    audio_url: entry.audioUrl,
+    audio_url: entry.audioUrl ?? null,
     cover_url: entry.coverUrl ?? null,
     duration_seconds: entry.durationSeconds,
     created_at: entry.createdAt,
     blocks: entry.blocks,
     language: entry.language ?? null,
+    emoji: entry.emoji ?? null,
+    is_public: entry.isPublic ?? false,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
 }
 
+// User's private stories only (excludes public/classic stories)
 export async function getEntries(): Promise<LibraryEntry[]> {
   const { data, error } = await supabase
     .from("stories")
     .select("*")
+    .eq("is_public", false)
     .order("created_at", { ascending: false });
   if (error) throw new Error(`getEntries: ${error.message}`);
+  return (data ?? []).map(toEntry);
+}
+
+// Public (classic) stories from the DB
+export async function getPublicEntries(): Promise<LibraryEntry[]> {
+  const { data, error } = await supabase
+    .from("stories")
+    .select("*")
+    .eq("is_public", true)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`getPublicEntries: ${error.message}`);
   return (data ?? []).map(toEntry);
 }
 
