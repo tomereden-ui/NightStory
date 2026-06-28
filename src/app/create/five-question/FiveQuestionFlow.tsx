@@ -929,8 +929,8 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     return () => { cancelled = true; };
   }, [language]);
 
-  // Browser-side image seeder: generates option card images via Pollinations and caches
-  // them in Supabase (story-options bucket). Images load progressively as they're cached.
+  // Image seeder: generates option card images via Gemini (server-side) and caches in Supabase.
+  // Calls GET to find missing keys, then POST per key to generate + store. Images load progressively.
   useEffect(() => {
     let cancelled = false;
     async function seedImages() {
@@ -952,15 +952,10 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
           if (cancelled) return;
           if (!prompt) continue;
           try {
-            const encoded = encodeURIComponent(prompt.slice(0, 1500));
-            const seed = Math.floor(Math.random() * 999999);
-            const url = `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=512&height=384&seed=${seed}`;
-            const imgRes = await fetch(url);
-            if (!imgRes.ok || !imgRes.headers.get("content-type")?.startsWith("image/")) continue;
-            if (cancelled) return;
-            const blob = await imgRes.blob();
             const cacheRes = await fetch(`/api/admin/seed-create-images?key=${encodeURIComponent(key)}`, {
-              method: "POST", body: blob, headers: { "Content-Type": blob.type },
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt }),
             });
             if (cacheRes.ok) {
               const { imageKey, url: cachedUrl } = await cacheRes.json() as { ok: boolean; imageKey: string; url: string };

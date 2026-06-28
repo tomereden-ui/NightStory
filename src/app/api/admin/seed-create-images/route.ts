@@ -5,6 +5,11 @@ import { getAllCreateOptionSpecs, optionStorageKey } from "@/config/createFlowIm
 export const dynamic = "force-dynamic";
 
 const BUCKET = "story-options";
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const IMAGE_MODEL = "gemini-2.5-flash-image";
+
+const STYLE_SUFFIX =
+  "3D animated movie still, Pixar style, high-fidelity render, vibrant colors, cinematic lighting, magical atmosphere, no text or letters.";
 
 async function ensureBucket() {
   const { error } = await supabase.storage.createBucket(BUCKET, { public: true });
@@ -15,7 +20,7 @@ async function ensureBucket() {
 
 export async function GET() {
   await ensureBucket();
-  const { data: existingFiles } = await supabase.storage.from(BUCKET).list("", { limit: 100 });
+  const { data: existingFiles } = await supabase.storage.from(BUCKET).list("", { limit: 200 });
   const existingNames = new Set((existingFiles ?? []).map((f) => f.name));
 
   const allSpecs = getAllCreateOptionSpecs();
@@ -35,19 +40,68 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return NextResponse.json({ error: "No Gemini API key" }, { status: 500 });
+
   const key = req.nextUrl.searchParams.get("key");
-  if (!key) return NextResponse.json({ error: "Missing key" }, { status: 400 });
+  if (!key) return NextResponse.json({ error: "Missing key param" }, { status: 400 });
+
+  let prompt: string;
+  try {
+    ({ prompt } = await req.json());
+  } catch {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  }
+  if (!prompt) return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
   await ensureBucket();
-  const blob = await req.blob();
-  const buf = Buffer.from(await blob.arrayBuffer());
-  const mimeType = blob.type || "image/jpeg";
 
-  const { error } = await supabase.storage.from(BUCKET).upload(key, buf, { contentType: mimeType, upsert: true });
+  // Generate image via Gemini
+  const fullPrompt = `${prompt} ${STYLE_SUFFIX}`;
+  let imageData: string;
+  let mimeType: string;
+
+  try {
+    const res = await fetch(`${GEMINI_BASE}/${IMAGE_MODEL}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+        generationConfig: { responseModalities: ["IMAGE"] },
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
+          { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
+        ],
+      }),
+    });
+
+    const raw = await res.json();
+    type Part = { inlineData?: { mimeType?: string; data?: string } };
+    const parts: Part[] = raw?.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = parts.find((p) => p.inlineData?.data);
+
+    if (!imagePart?.inlineData?.data) {
+      console.error("[seed-create-images] No image returned for key:", key, "reason:", raw?.candidates?.[0]?.finishReason);
+      return NextResponse.json({ error: "No image returned", finishReason: raw?.candidates?.[0]?.finishReason }, { status: 502 });
+    }
+
+    imageData = imagePart.inlineData.data;
+    mimeType = imagePart.inlineData.mimeType ?? "image/png";
+  } catch (err) {
+    console.error("[seed-create-images] Gemini error:", err);
+    return NextResponse.json({ error: "Gemini request failed" }, { status: 500 });
+  }
+
+  // Upload to Supabase
+  const buf = Buffer.from(imageData, "base64");
+  const storageKey = key.endsWith(".jpg") || key.endsWith(".png") ? key : `${key}.png`;
+  const { error } = await supabase.storage.from(BUCKET).upload(storageKey, buf, { contentType: mimeType, upsert: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Return the image key without extension so the client can index into optionImages
-  const imageKey = key.replace(/\.jpg$/, "");
-  const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(key).data.publicUrl;
+  const imageKey = storageKey.replace(/\.(jpg|png)$/, "");
+  const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(storageKey).data.publicUrl;
+  console.log("[seed-create-images] Generated + cached:", storageKey);
   return NextResponse.json({ ok: true, imageKey, url: publicUrl });
 }
