@@ -392,8 +392,8 @@ function ChildPill({
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 flex flex-col items-center gap-2 transition-all active:scale-95"
-      style={{ width: 72 }}
+      className="flex-shrink-0 flex flex-col items-center gap-2 active:scale-95"
+      style={{ width: 72, transform: active ? "scale(1.3)" : "scale(1)", transition: "transform 0.2s ease" }}
     >
       {/* Avatar with selection ring */}
       <div
@@ -700,7 +700,7 @@ export default function HomePage() {
 
         {/* Child switcher — HBO Max style */}
         {children.length > 0 && (
-          <div className="flex gap-4 overflow-x-auto pb-1 pt-1" style={{ scrollbarWidth: "none" }}>
+          <div className="flex gap-4 overflow-x-auto pb-4 pt-4" style={{ scrollbarWidth: "none" }}>
             {children.map((child) => (
               <ChildPill
                 key={child.id}
