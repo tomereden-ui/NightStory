@@ -8,6 +8,7 @@ import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import { LANGUAGE_META } from "@/lib/i18n";
 import Icon from "@/components/ui/Icon";
+import type { DBChildProfile } from "@/app/api/child-profiles/route";
 
 function timeAgo(ts: number, tFn: (key: string) => string): string {
   const diff = Date.now() - ts;
@@ -228,6 +229,131 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
 
 type LibraryTab = "my-stories" | "family" | "classics" | "community";
 
+// ── Family Stories grid with per-card child assignment ────────────────────────
+
+function FamilyStoriesGrid({
+  entries,
+  children,
+  effective,
+  onAssigned,
+}: {
+  entries: LibraryEntry[];
+  children: DBChildProfile[];
+  effective: string;
+  onAssigned: (storyId: string, childId: string | null) => void;
+}) {
+  const [pickerOpenId, setPickerOpenId] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState<string | null>(null);
+
+  const handleAssign = async (storyId: string, childId: string | null) => {
+    setAssigning(storyId);
+    try {
+      await fetch(`/api/library/${storyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId }),
+      });
+      onAssigned(storyId, childId);
+    } finally {
+      setAssigning(null);
+      setPickerOpenId(null);
+    }
+  };
+
+  return (
+    <div
+      className="grid gap-3 pt-2"
+      style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}
+    >
+      {entries.map((entry) => {
+        const [c1, c2] = cardPalette(entry.title);
+        const assignedChild = children.find((c) => c.id === entry.childId);
+        const isPickerOpen = pickerOpenId === entry.id;
+        const isAssigning = assigning === entry.id;
+
+        return (
+          <div key={entry.id} className="relative" style={{ aspectRatio: "2/3" }}>
+            <Link
+              href={`/library/${entry.id}`}
+              className="absolute inset-0 rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none block"
+              style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.45)" }}
+            >
+              {entry.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
+                  <span className="text-fs-display" style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
+                </div>
+              )}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
+              <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
+                <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
+                {entry.durationSeconds > 0 && (
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{durationLabel(entry.durationSeconds)}</p>
+                )}
+              </div>
+            </Link>
+
+            {/* Assign button — bottom strip */}
+            {children.length > 0 && (
+              <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1.5">
+                <button
+                  onClick={(e) => { e.preventDefault(); setPickerOpenId(isPickerOpen ? null : entry.id); }}
+                  className="w-full py-1 rounded-lg text-fs-body font-medium truncate transition-all active:scale-95"
+                  style={{
+                    background: assignedChild ? "rgba(79,195,247,0.18)" : "rgba(0,0,0,0.55)",
+                    backdropFilter: "blur(6px)",
+                    color: assignedChild ? "#4fc3f7" : "rgba(255,255,255,0.45)",
+                    border: assignedChild ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.1)",
+                    fontSize: "var(--fs-micro)",
+                  }}
+                >
+                  {isAssigning ? "…" : assignedChild ? assignedChild.name : "+ Assign"}
+                </button>
+
+                {/* Child picker dropdown */}
+                {isPickerOpen && (
+                  <div
+                    className="absolute bottom-full left-0 right-0 mb-1 rounded-xl overflow-hidden z-20"
+                    style={{ background: "#0D1120", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 8px 32px rgba(0,0,0,0.7)" }}
+                  >
+                    {assignedChild && (
+                      <button
+                        onClick={() => handleAssign(entry.id, null)}
+                        className="w-full px-3 py-2 text-left text-fs-body transition-all"
+                        style={{ color: "rgba(236,72,153,0.8)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+                      >
+                        Remove assignment
+                      </button>
+                    )}
+                    {children.map((child) => (
+                      <button
+                        key={child.id}
+                        onClick={() => handleAssign(entry.id, child.id)}
+                        className="w-full px-3 py-2 text-left text-fs-body flex items-center gap-2 transition-all"
+                        style={{
+                          background: child.id === entry.childId ? "rgba(79,195,247,0.08)" : "transparent",
+                          color: child.id === entry.childId ? "#4fc3f7" : "#fff",
+                        }}
+                      >
+                        <span style={{ fontSize: 16 }}>{child.avatar_emoji?.startsWith("http") ? "🧒" : (child.avatar_emoji || "🧒")}</span>
+                        <span className="flex-1 truncate">{child.name}</span>
+                        {child.id === entry.childId && <span style={{ color: "#4fc3f7" }}>✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function LibraryPage() {
   const { t } = useLanguage();
   const { effective } = useViewMode();
@@ -243,6 +369,7 @@ export default function LibraryPage() {
     setActiveChildId(childId);
   }, []);
 
+  const [children, setChildren] = useState<DBChildProfile[]>([]);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [familyEntries, setFamilyEntries] = useState<LibraryEntry[]>([]);
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
@@ -275,19 +402,21 @@ export default function LibraryPage() {
     setRecentClassics(cls.filter((c) => c.status === "ready").slice(0, 5));
   };
 
-  // On mount: load classics, trash, and all-family stories
+  // On mount: load classics, trash, all-family stories, and child profiles
   useEffect(() => {
     Promise.all([
       fetch("/api/library/trash", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/child-profiles", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([trash, cls, allLib]) => {
+      .then(([trash, cls, allLib, kids]) => {
         setTrashCount(Array.isArray(trash) ? (trash as unknown[]).length : 0);
         applyClassics(Array.isArray(cls) ? cls as ClassicMeta[] : []);
         const allArr = Array.isArray(allLib) ? allLib as LibraryEntry[] : [];
         setFamilyEntries(allArr);
         allArr.slice(0, 12).forEach((e) => { if (e.coverUrl) { new Image().src = e.coverUrl; } });
+        setChildren(Array.isArray(kids) ? kids as DBChildProfile[] : []);
       })
       .catch(() => {})
       .finally(() => { setLoading(false); setTimeout(updateRecentScroll, 50); });
@@ -532,39 +661,16 @@ export default function LibraryPage() {
               <p className="text-white/20 text-fs-body">Stories created for any child will appear here</p>
             </div>
           ) : (
-            <div
-              className="grid gap-3 pt-2"
-              style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}
-            >
-              {familyEntries.map((entry) => {
-                const [c1, c2] = cardPalette(entry.title);
-                return (
-                  <Link
-                    key={entry.id}
-                    href={`/library/${entry.id}`}
-                    className="relative rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none block"
-                    style={{ aspectRatio: "2/3", boxShadow: "0 8px 24px rgba(0,0,0,0.45)" }}
-                  >
-                    {entry.coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center"
-                        style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
-                        <span className="text-fs-display" style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
-                    <div className="absolute bottom-0 left-0 right-0 px-2 pb-2 pt-4">
-                      <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
-                      {entry.durationSeconds > 0 && (
-                        <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{durationLabel(entry.durationSeconds)}</p>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+            <FamilyStoriesGrid
+              entries={familyEntries}
+              children={children}
+              effective={effective}
+              onAssigned={(storyId, childId) =>
+                setFamilyEntries((prev) =>
+                  prev.map((e) => e.id === storyId ? { ...e, childId: childId ?? undefined } : e)
+                )
+              }
+            />
           )
         )}
 
