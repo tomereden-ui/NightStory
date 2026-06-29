@@ -661,7 +661,7 @@ export default function FamilyVoicesPanel() {
                   {voices.slice(0, 4).map((v) => (
                     <div
                       key={v.id}
-                      className="flex items-center justify-center rounded-full flex-shrink-0"
+                      className="flex items-center justify-center rounded-full flex-shrink-0 overflow-hidden"
                       style={{
                         width: 22, height: 22,
                         background: "rgba(167,139,250,0.2)",
