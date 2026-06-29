@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
+import type { TranslationKey } from "@/lib/i18n";
 
 // ── Mock data — replace with real Supabase queries once story_plays table exists ──
 
@@ -61,6 +63,26 @@ function cellStyle(count: number): React.CSSProperties {
   };
 }
 
+function CalendarLegend() {
+  const { t } = useLanguage();
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+        <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "rgba(255,255,255,0.06)" }} />
+        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("calNone" as TranslationKey)}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+        <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#4fc3f7,#a78bfa)" }} />
+        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("cal1Story" as TranslationKey)}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+        <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#fbbf24,#f472b6)" }} />
+        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("cal2Plus" as TranslationKey)}</span>
+      </div>
+    </div>
+  );
+}
+
 function CalendarHeatmap({ days }: { days: number[] }) {
   const DAY_LABELS = ["S","M","T","W","T","F","S"];
   const totalW = 7 * CELL + 6 * GAP;
@@ -83,20 +105,7 @@ function CalendarHeatmap({ days }: { days: number[] }) {
         ))}
       </div>
       {/* legend */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-          <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "rgba(255,255,255,0.06)" }} />
-          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>none</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-          <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#4fc3f7,#a78bfa)" }} />
-          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>1 story</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-          <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#fbbf24,#f472b6)" }} />
-          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>2+ stories</span>
-        </div>
-      </div>
+      <CalendarLegend />
     </div>
   );
 }
@@ -105,6 +114,7 @@ function CalendarHeatmap({ days }: { days: number[] }) {
 
 function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
   const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
   const hours = Math.floor(child.totalMinutes / 60);
   const mins  = child.totalMinutes % 60;
   const timeLabel = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
@@ -126,8 +136,8 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         <div className="flex items-center gap-2">
           <span className="text-fs-title">{child.emoji}</span>
           <div className="text-left">
-            <p className="text-white text-fs-body font-bold">{child.name}&apos;s Story Journey</p>
-            <p className="text-white/30 text-fs-body">This month · tap to {open ? "close" : "expand"}</p>
+            <p className="text-white text-fs-body font-bold">{child.name}&apos;s {t("storyJourneyTitle" as TranslationKey).replace(" ✨", "")}</p>
+            <p className="text-white/30 text-fs-body">{t(open ? ("thisMonthClose" as TranslationKey) : ("thisMonthExpand" as TranslationKey))}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
