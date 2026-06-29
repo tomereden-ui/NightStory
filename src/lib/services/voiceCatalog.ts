@@ -20,14 +20,21 @@ export const PRESET_VOICE_POOL: Voice[] = PRESET_VOICES.map((p) => ({
   geminiVoiceName: p.geminiVoiceName,
 }));
 
+function isUrl(s: string) {
+  return s.startsWith("http://") || s.startsWith("https://");
+}
+
 function familyVoiceToVoice(row: FamilyVoiceRow): Voice {
+  const avatarRaw = row.avatar_emoji ?? "🎙";
+  const avatarIsUrl = isUrl(avatarRaw);
   return {
     id: row.id,
     name: row.name,
     gender: "neutral",
     style: "warm",
     language: "en",
-    avatarEmoji: row.avatar_emoji ?? "🎙",
+    avatarEmoji: avatarIsUrl ? "🎙" : avatarRaw,
+    avatarUrl: avatarIsUrl ? avatarRaw : undefined,
     elevenLabsId: row.el_voice_id ?? undefined,
     geminiVoiceName: row.gemini_voice_name ?? undefined,
   };
@@ -41,7 +48,9 @@ export async function fetchVoicePool(): Promise<Voice[]> {
     const res = await fetch("/api/voices", { cache: "no-store" });
     if (!res.ok) return PRESET_VOICE_POOL;
     const rows = (await res.json()) as FamilyVoiceRow[];
-    return [...PRESET_VOICE_POOL, ...rows.map(familyVoiceToVoice)];
+    // Filter out corrupted rows where the name field contains a URL
+    const valid = rows.filter((r) => r.name?.trim() && !isUrl(r.name));
+    return [...PRESET_VOICE_POOL, ...valid.map(familyVoiceToVoice)];
   } catch {
     return PRESET_VOICE_POOL;
   }
