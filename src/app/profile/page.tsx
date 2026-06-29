@@ -59,60 +59,82 @@ function ChildCard({
 }) {
   const { t } = useLanguage();
   const [c1, c2] = CHILD_PALETTES[childHash(child.name) % CHILD_PALETTES.length];
-  const ageLabel = child.age != null
-    ? `${t("age")} ${child.age}`
-    : `${child.ageGroup} ${t("yrs")}`;
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl p-4 flex flex-col items-center gap-2.5"
+      className="relative overflow-hidden rounded-3xl transition-all active:scale-[0.97]"
       style={{
-        background: `linear-gradient(145deg, ${c1}10, ${c2}18)`,
-        border: `1px solid ${c1}25`,
+        aspectRatio: "3/4",
+        background: `linear-gradient(160deg, ${c1}18, ${c2}28)`,
+        border: `1.5px solid ${c1}35`,
+        boxShadow: `0 8px 28px ${c1}20, 0 2px 10px rgba(0,0,0,0.45)`,
       }}
     >
+      {/* Ambient radial glow */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: `radial-gradient(ellipse at 50% 20%, ${c1}1c 0%, transparent 65%)`,
+      }} />
+
+      {/* Sparkle accents */}
+      <span className="absolute top-3 left-3 pointer-events-none select-none" style={{ fontSize: 10, color: c1, opacity: 0.6 }}>✦</span>
+      <span className="absolute top-4 right-4 pointer-events-none select-none" style={{ fontSize: 7, color: c2, opacity: 0.4 }}>★</span>
+      <span className="absolute bottom-14 right-3 pointer-events-none select-none" style={{ fontSize: 7, color: c1, opacity: 0.28 }}>✧</span>
+
       {/* Delete button */}
       <button
         onClick={onDelete}
-        className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
-        style={{ background: "rgba(0,0,0,0.4)", color: "#fff" }}
-        title="Remove child"
+        className="absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all opacity-35 hover:opacity-85"
+        style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}
+        title={t("removeChild" as never)}
       >
-        <Icon name="close" size={12} />
+        <Icon name="close" size={10} />
       </button>
 
+      {/* Avatar — tap to edit */}
       <button
         onClick={onChangeAvatar}
-        className="relative group"
-        title="Change avatar"
+        className="absolute inset-0 flex items-center justify-center group"
+        title={t("changeAvatar" as never)}
+        style={{ paddingBottom: 44 }}
       >
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center text-fs-title transition-all group-hover:scale-105"
-          style={{
-            background: `linear-gradient(135deg, ${c1}30, ${c2}50)`,
-            border: `1.5px solid ${c1}50`,
-          }}
-        >
-          {child.avatarEmoji?.startsWith("http") ? (
-            <img src={child.avatarEmoji} alt={child.name} className="w-full h-full rounded-full object-cover" />
-          ) : (
-            child.avatarEmoji
-          )}
+        {/* Glowing gradient ring */}
+        <div style={{
+          width: "66%", aspectRatio: "1", borderRadius: "50%",
+          padding: 3,
+          background: `linear-gradient(135deg, ${c1}, ${c2} 50%, ${c1})`,
+          boxShadow: `0 0 26px ${c1}50, 0 0 52px ${c2}1e`,
+        }}>
+          <div style={{
+            width: "100%", height: "100%", borderRadius: "50%",
+            overflow: "hidden", background: "#07091a",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {child.avatarEmoji?.startsWith("http") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={child.avatarEmoji} alt={child.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <span style={{ fontSize: 36 }}>{child.avatarEmoji || "⭐"}</span>
+            )}
+          </div>
         </div>
-        <span
-          className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-fs-body font-semibold"
-          style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
-        >
-          ✏️
-        </span>
+
+        {/* Edit hover overlay */}
+        <div className="absolute inset-0 flex items-center justify-center rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: "rgba(0,0,0,0.35)", paddingBottom: 44 }}>
+          <span style={{ fontSize: 22 }}>✏️</span>
+        </div>
       </button>
-      <span className="text-white text-fs-body font-semibold">{child.name}</span>
-      <span
-        className="text-fs-body px-2.5 py-0.5 rounded-full font-bold tracking-widest uppercase"
-        style={{ background: `${c1}14`, border: `1px solid ${c1}30`, color: c1 }}
-      >
-        {ageLabel}
-      </span>
+
+      {/* Name bar — frosted gradient at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 px-3 pt-7 pb-3.5 pointer-events-none" style={{
+        background: `linear-gradient(to bottom, transparent, ${c1}14 25%, rgba(4,6,18,0.9))`,
+      }}>
+        <p className="text-center font-bold text-white text-fs-body truncate" style={{
+          textShadow: `0 0 16px ${c1}bb, 0 1px 4px rgba(0,0,0,0.7)`,
+        }}>
+          {child.name}
+        </p>
+      </div>
     </div>
   );
 }
@@ -342,10 +364,10 @@ const D_TABLET  = "M3 1h10a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 01
 const D_DESKTOP = "M1 2h14a1 1 0 011 1v9a1 1 0 01-1 1H1a1 1 0 01-1-1V3a1 1 0 011-1zM5 15h6M8 13v2";
 
 const VIEW_MODES: { mode: ViewMode; labelKey: string; iconD: string }[] = [
-  { mode: "auto",    labelKey: "Auto",    iconD: D_AUTO    },
-  { mode: "mobile",  labelKey: "Mobile",  iconD: D_MOBILE  },
-  { mode: "tablet",  labelKey: "Tablet",  iconD: D_TABLET  },
-  { mode: "desktop", labelKey: "Desktop", iconD: D_DESKTOP },
+  { mode: "auto",    labelKey: "viewAuto",    iconD: D_AUTO    },
+  { mode: "mobile",  labelKey: "viewMobile",  iconD: D_MOBILE  },
+  { mode: "tablet",  labelKey: "viewTablet",  iconD: D_TABLET  },
+  { mode: "desktop", labelKey: "viewDesktop", iconD: D_DESKTOP },
 ];
 
 function ViewModeBtn({
@@ -577,14 +599,22 @@ function NarratorVoicePicker({ selected, onPick }: { selected: string; onPick: (
 
 // ─── Text size picker ─────────────────────────────────────────────────────────
 
-const FONT_SCALE_OPTIONS: { scale: FontScale; label: string; sampleSize: number }[] = [
-  { scale: "small",  label: "Small",  sampleSize: 18 },
-  { scale: "medium", label: "Medium", sampleSize: 24 },
-  { scale: "large",  label: "Large",  sampleSize: 29 },
+const FONT_SCALE_OPTIONS: { scale: FontScale; sampleSize: number }[] = [
+  { scale: "small",  sampleSize: 18 },
+  { scale: "medium", sampleSize: 24 },
+  { scale: "large",  sampleSize: 29 },
 ];
 
 function TextSizePicker() {
   const { scale, setScale, fs } = useFontSize();
+  const { t } = useLanguage();
+
+  const scaleLabel: Record<FontScale, string> = {
+    small:  t("fontSmall" as never),
+    medium: t("fontMedium" as never),
+    large:  t("fontLarge" as never),
+  };
+
   return (
     <div>
       <div className="grid grid-cols-3 gap-2.5">
@@ -614,7 +644,7 @@ function TextSizePicker() {
                 className="text-fs-body font-semibold"
                 style={{ color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.35)" }}
               >
-                {opt.label}
+                {scaleLabel[opt.scale]}
               </span>
             </button>
           );
@@ -624,7 +654,7 @@ function TextSizePicker() {
         className="mt-3 leading-relaxed"
         style={{ fontSize: fs.body, color: "rgba(255,255,255,0.5)" }}
       >
-        Once upon a time…
+        {t("fontPreview" as never)}
       </p>
     </div>
   );
@@ -813,13 +843,13 @@ export default function ProfilePage() {
           {/* ── Child profiles ──────────────────────────────────────── */}
           <div className="mb-7">
             <SectionHeader label={t("childProfiles")} />
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-3">
               {!childrenLoaded
                 ? [0, 1].map((i) => (
                     <div
                       key={i}
-                      className="rounded-2xl animate-pulse"
-                      style={{ minHeight: 130, background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.1}s` }}
+                      className="rounded-3xl animate-pulse"
+                      style={{ aspectRatio: "3/4", background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.1}s` }}
                     />
                   ))
                 : children.map((child) => (
@@ -833,14 +863,19 @@ export default function ProfilePage() {
               }
               <button
                 onClick={() => setShowAddChild(true)}
-                className="rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.97] hover:border-white/20"
+                className="rounded-3xl flex flex-col items-center justify-center gap-3 transition-all active:scale-[0.97]"
                 style={{
-                  minHeight: 130,
+                  aspectRatio: "3/4",
                   background: "rgba(255,255,255,0.02)",
                   border: "1.5px dashed rgba(255,255,255,0.1)",
                 }}
               >
-                <span className="text-fs-subtitle font-light" style={{ color: "rgba(255,255,255,0.18)" }}>＋</span>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1.5px dashed rgba(255,255,255,0.14)",
+                }}>
+                  <span style={{ fontSize: 22, color: "rgba(255,255,255,0.22)", lineHeight: 1 }}>+</span>
+                </div>
                 <span className="text-fs-body font-medium" style={{ color: "rgba(255,255,255,0.22)" }}>{t("addChild")}</span>
               </button>
             </div>
@@ -877,7 +912,7 @@ export default function ProfilePage() {
                       <p className="text-fs-body font-medium" style={{ color: "#e2e8f0" }}>
                         {m.user_id === user?.id ? t("you") : t("familyMember")}
                       </p>
-                      <p className="text-fs-label" style={{ color: "rgba(148,163,184,0.5)" }}>{m.role}</p>
+                      <p className="text-fs-label" style={{ color: "rgba(148,163,184,0.5)" }}>{m.role === "owner" ? t("roleOwner" as never) : t("roleMember" as never)}</p>
                     </div>
                   </div>
                 </div>
@@ -906,7 +941,7 @@ export default function ProfilePage() {
                 style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
                 <p className="flex-1 text-fs-label truncate" style={{ color: "rgba(148,163,184,0.7)" }}>{inviteLink}</p>
                 <button onClick={() => { navigator.clipboard.writeText(inviteLink); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); }}
-                  style={{ color: "#4fc3f7", fontSize: 12, whiteSpace: "nowrap" }}>Copy</button>
+                  style={{ color: "#4fc3f7", fontSize: 12, whiteSpace: "nowrap" }}>{t("copyLink" as never)}</button>
               </div>
             )}
           </div>
@@ -928,13 +963,19 @@ export default function ProfilePage() {
           </div>
 
           {/* ── Privacy & Delete account ──────────────────────────────── */}
-          <div className="mb-7 flex items-center justify-between px-1">
-            <a href="/privacy" style={{ fontSize: 12, color: "rgba(148,163,184,0.4)", textDecoration: "underline" }}>
+          <div className="mb-7 flex items-center justify-between gap-3">
+            <a href="/privacy" style={{ fontSize: 12, color: "rgba(148,163,184,0.35)", textDecoration: "underline", flexShrink: 0 }}>
               {t("privacyPolicy")}
             </a>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              style={{ fontSize: 12, color: "rgba(239,68,68,0.45)" }}
+              className="px-4 py-2 rounded-xl font-medium transition-all active:scale-[0.97]"
+              style={{
+                background: "rgba(239,68,68,0.07)",
+                border: "1px solid rgba(239,68,68,0.16)",
+                color: "rgba(239,68,68,0.5)",
+                fontSize: 12,
+              }}
             >
               {t("deleteAccount")}
             </button>
@@ -947,7 +988,7 @@ export default function ProfilePage() {
               {VIEW_MODES.map((opt) => (
                 <ViewModeBtn
                   key={opt.mode}
-                  label={opt.labelKey}
+                  label={t(opt.labelKey as never)}
                   iconD={opt.iconD}
                   selected={mode === opt.mode}
                   onClick={() => setMode(opt.mode)}
@@ -955,7 +996,7 @@ export default function ProfilePage() {
               ))}
             </div>
             <p className="text-white/18 text-fs-body mt-2 leading-relaxed">
-              Forces the layout to a specific screen size regardless of your device.
+              {t("viewModeDescription" as never)}
             </p>
           </div>
 
@@ -996,8 +1037,8 @@ export default function ProfilePage() {
                   style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
                 >
                   <div>
-                    <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Estimated spend</p>
-                    <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>Rough estimate · verify in each provider dashboard</p>
+                    <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>{t("estimatedSpend" as never)}</p>
+                    <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>{t("estimatedSpendNote" as never)}</p>
                   </div>
                   <p className="text-fs-subtitle font-bold" style={{ color: "#4fc3f7" }}>{costs.total}</p>
                 </div>
