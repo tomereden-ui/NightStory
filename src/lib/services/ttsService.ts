@@ -82,7 +82,18 @@ async function synthesizeEL(
       throw new Error(`EL TTS ${res.status}: ${body.slice(0, 200)}`);
     }
 
+    // Check content-type — if EL returned JSON (e.g. an error body with 200 status), reject it
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`EL TTS returned JSON instead of audio: ${body.slice(0, 200)}`);
+    }
+
     const mp3 = Buffer.from(await res.arrayBuffer());
+    console.log(`[${ts()}][EL TTS] received ${mp3.length} bytes, content-type: ${contentType}`);
+    if (mp3.length < 1000) {
+      console.warn(`[${ts()}][EL TTS] suspiciously small audio (${mp3.length} bytes) — first bytes: ${mp3.slice(0, 16).toString("hex")}`);
+    }
     fs.writeFileSync(outputPath.replace(/\.wav$/, ".mp3"), mp3);
     trackELTts(text.length).catch(() => {});
     return;
