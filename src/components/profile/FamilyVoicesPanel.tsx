@@ -410,6 +410,8 @@ function AddVoiceSheet({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const lastGeneratedTextRef = useRef<string | null>(null);
+  const pendingPlayRef = useRef<string | null>(null);
 
   const [sampleText, setSampleText] = useState(SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en);
   const detectedLang = detectLangFromText(sampleText, language);
@@ -436,6 +438,7 @@ function AddVoiceSheet({
   }, []);
 
   const generateAllPresets = useCallback((elVoiceId: string, lang: string, text?: string) => {
+    lastGeneratedTextRef.current = text ?? "";
     VOICE_PRESETS.forEach((preset, idx) => {
       setPresetAudios((prev) => ({ ...prev, [preset.key]: "loading" }));
       setTimeout(() => {
@@ -459,7 +462,34 @@ function AddVoiceSheet({
     });
   }, []);
 
+  // Auto-play the pending preset once it finishes loading after a text-change regen
+  useEffect(() => {
+    const pending = pendingPlayRef.current;
+    if (!pending) return;
+    const audio = presetAudios[pending];
+    if (!audio || audio === "loading" || audio === "error") return;
+    pendingPlayRef.current = null;
+    stopAllPresetAudio();
+    const el = new Audio(audio.url);
+    presetAudioRefs.current[pending] = el;
+    el.onended = () => { delete presetAudioRefs.current[pending]; setPlayingPreset(null); };
+    el.onerror = () => { delete presetAudioRefs.current[pending]; setPlayingPreset(null); };
+    el.play().catch(() => setPlayingPreset(null));
+    setPlayingPreset(pending);
+  }, [presetAudios, stopAllPresetAudio]);
+
   const handlePlayPreset = useCallback((presetKey: string) => {
+    // If the sample text changed since presets were generated, regenerate all and auto-play this one
+    const textChanged = lastGeneratedTextRef.current !== null && sampleText !== lastGeneratedTextRef.current;
+    if (textChanged) {
+      if (!previewElVoiceId) return;
+      stopAllPresetAudio();
+      setPresetAudios({});
+      pendingPlayRef.current = presetKey;
+      generateAllPresets(previewElVoiceId, detectedLang, sampleText);
+      return;
+    }
+
     const audio = presetAudios[presetKey];
     if (!audio || audio === "loading" || audio === "error") return;
 
@@ -478,7 +508,7 @@ function AddVoiceSheet({
     el.onerror = () => { delete presetAudioRefs.current[presetKey]; setPlayingPreset(null); };
     el.play().catch(() => setPlayingPreset(null));
     setPlayingPreset(presetKey);
-  }, [presetAudios, playingPreset, stopAllPresetAudio]);
+  }, [sampleText, detectedLang, previewElVoiceId, presetAudios, playingPreset, stopAllPresetAudio, generateAllPresets]);
 
   const handleStartRecording = async () => {
     try {
@@ -705,8 +735,9 @@ function AddVoiceSheet({
                   const audioState = presetAudios[preset.key];
                   const isSelected = selectedPresetKey === preset.key;
                   const isPlaying = playingPreset === preset.key;
-                  const isLoading = audioState === "loading";
+                  const isLoading = audioState === "loading" || pendingPlayRef.current === preset.key;
                   const isError = audioState === "error";
+                  const isStale = lastGeneratedTextRef.current !== null && sampleText !== lastGeneratedTextRef.current;
 
                   return (
                     <button
@@ -731,9 +762,9 @@ function AddVoiceSheet({
                         disabled={isLoading || isError}
                         className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
                         style={{
-                          background: isPlaying ? "rgba(79,195,247,0.2)" : "rgba(255,255,255,0.06)",
-                          color: isLoading || isError ? "rgba(255,255,255,0.2)" : isPlaying ? "#4fc3f7" : "rgba(255,255,255,0.5)",
-                          border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                          background: isPlaying ? "rgba(79,195,247,0.2)" : isStale ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.06)",
+                          color: isLoading ? "rgba(255,255,255,0.2)" : isError ? "rgba(255,255,255,0.2)" : isPlaying ? "#4fc3f7" : isStale ? "#a78bfa" : "rgba(255,255,255,0.5)",
+                          border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : isStale ? "1px solid rgba(167,139,250,0.3)" : "1px solid rgba(255,255,255,0.08)",
                           cursor: isLoading || isError ? "not-allowed" : "pointer",
                         }}
                       >
@@ -743,6 +774,8 @@ function AddVoiceSheet({
                           <span style={{ fontSize: 10 }}>⚠</span>
                         ) : isPlaying ? (
                           <Icon name="stop" size={12} />
+                        ) : isStale ? (
+                          <span style={{ fontSize: 11 }}>↺</span>
                         ) : (
                           <Icon name="play" size={12} />
                         )}
