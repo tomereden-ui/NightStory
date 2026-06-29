@@ -38,8 +38,10 @@ async function synthesizeEL(
   apiKey: string,
   outputPath: string,
   stability = 0.5,
-  _style = 0.0,
+  style = 0.0,
   _language?: string,
+  similarityBoost = 0.75,
+  useSpeakerBoost = true,
 ): Promise<void> {
   for (let attempt = 1; attempt <= 5; attempt++) {
     const controller = new AbortController();
@@ -55,7 +57,7 @@ async function synthesizeEL(
           body: JSON.stringify({
             text,
             model_id: "eleven_multilingual_v2",
-            voice_settings: { stability, similarity_boost: 0.75 },
+            voice_settings: { stability, similarity_boost: similarityBoost, style, use_speaker_boost: useSpeakerBoost },
           }),
           signal: controller.signal,
         },
@@ -218,12 +220,14 @@ export async function synthesizeLine(
   style?: number,
   language?: string,
   geminiOpts?: GeminiTTSOptions,
+  similarityBoost?: number,
+  useSpeakerBoost?: boolean,
 ): Promise<{ mimeType?: string }> {
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
   if (useElevenLabs) {
     console.log(`[${ts()}][EL TTS] text →`, JSON.stringify(spokenText || line));
-    await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language);
+    await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language, similarityBoost, useSpeakerBoost);
     return {};
   }
 

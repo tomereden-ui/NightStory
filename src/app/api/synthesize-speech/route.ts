@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
   let elVoiceId: string | undefined;
   let geminiVoiceName: string | undefined;
 
+  let savedVoiceSettings: { stability: number; similarity_boost: number; style: number; use_speaker_boost: boolean } | undefined;
+
   if (assignedVoiceId && !PRESET_VOICE_NAMES.has(assignedVoiceId)) {
     // Try DB lookup first — covers voice-TIMESTAMP-RANDOM and UUID formats
     if (UUID_RE.test(assignedVoiceId) || assignedVoiceId.startsWith("voice-")) {
@@ -56,11 +58,14 @@ export async function POST(req: NextRequest) {
         const { supabase } = await import("@/lib/supabase");
         const { data } = await supabase
           .from("voices")
-          .select("el_voice_id, gemini_voice_name")
+          .select("el_voice_id, gemini_voice_name, voice_settings")
           .eq("id", assignedVoiceId)
           .single();
         elVoiceId = data?.el_voice_id ?? undefined;
         geminiVoiceName = data?.gemini_voice_name ?? undefined;
+        // Use the preset voice_settings the user chose during setup so playback
+        // sounds identical to the style preview they approved.
+        savedVoiceSettings = (data?.voice_settings as typeof savedVoiceSettings) ?? undefined;
       } catch {
         // If DB lookup fails, fall through to character-name heuristics
       }
@@ -83,7 +88,7 @@ export async function POST(req: NextRequest) {
   const apiKey = useEL ? elKey! : gemKey;
   const ext = useEL ? "mp3" : "wav";
 
-  console.log(`[synthesize-speech] assignedVoiceId=${assignedVoiceId} → useEL=${useEL} voice=${voice} lang=${language}`);
+  console.log(`[synthesize-speech] assignedVoiceId=${assignedVoiceId} → useEL=${useEL} voice=${voice} lang=${language} savedSettings=${JSON.stringify(savedVoiceSettings ?? null)}`);
 
   const tmpBase = path.join(os.tmpdir(), `speech-${crypto.randomUUID().slice(0, 8)}`);
   const tmpPath = `${tmpBase}.${ext}`;
@@ -98,8 +103,15 @@ export async function POST(req: NextRequest) {
   try {
     // Interactive endpoint: fail fast rather than retrying for minutes.
     // 22 s per attempt covers long narrator blocks (short lines finish in ~6 s).
-    const result = await synthesizeLine(text, voice, apiKey, tmpPath, undefined, useEL, undefined, undefined, language,
-      useEL ? undefined : { maxAttempts: 2, perAttemptTimeoutMs: 22_000 });
+    const result = await synthesizeLine(
+      text, voice, apiKey, tmpPath, undefined, useEL,
+      savedVoiceSettings?.stability,
+      savedVoiceSettings?.style,
+      language,
+      useEL ? undefined : { maxAttempts: 2, perAttemptTimeoutMs: 22_000 },
+      savedVoiceSettings?.similarity_boost,
+      savedVoiceSettings?.use_speaker_boost,
+    );
 
     // Gemini may write to a different extension (.mp3/.ogg) than requested (.wav).
     // Detect which file was actually written.
