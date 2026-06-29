@@ -295,6 +295,10 @@ export default function LibraryPage() {
         const clsArr = Array.isArray(cls) ? cls as ClassicMeta[] : [];
         applyData(libArr, trashArr, clsArr);
         try { sessionStorage.setItem("library-cache", JSON.stringify({ lib: libArr, trash: trashArr, cls: clsArr })); } catch {}
+        // Prefetch classics cover images in the background so the Classics tab feels instant
+        clsArr.forEach((c) => { if (c.coverUrl) { new Image().src = c.coverUrl; } });
+        // Prefetch user story covers (first 12 — above-the-fold on the My Stories grid)
+        libArr.slice(0, 12).forEach((e) => { if (e.coverUrl) { new Image().src = e.coverUrl; } });
       })
       .catch(() => {})
       .finally(() => { setLoading(false); setTimeout(updateRecentScroll, 50); });
