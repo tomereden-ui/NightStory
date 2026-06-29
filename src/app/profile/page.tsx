@@ -62,47 +62,45 @@ function ChildCard({
 
   return (
     <div
-      className="relative overflow-hidden rounded-3xl transition-all active:scale-[0.97]"
+      className="relative overflow-hidden rounded-2xl flex flex-col items-center justify-center gap-2.5 transition-all active:scale-[0.97]"
       style={{
-        aspectRatio: "3/4",
-        background: `linear-gradient(160deg, ${c1}18, ${c2}28)`,
-        border: `1.5px solid ${c1}35`,
-        boxShadow: `0 8px 28px ${c1}20, 0 2px 10px rgba(0,0,0,0.45)`,
+        height: 148,
+        background: `linear-gradient(160deg, ${c1}14, ${c2}20)`,
+        border: `1px solid ${c1}30`,
+        boxShadow: `0 4px 18px ${c1}18, 0 1px 6px rgba(0,0,0,0.4)`,
       }}
     >
-      {/* Ambient radial glow */}
+      {/* Ambient glow */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        background: `radial-gradient(ellipse at 50% 20%, ${c1}1c 0%, transparent 65%)`,
+        background: `radial-gradient(ellipse at 50% 10%, ${c1}18 0%, transparent 60%)`,
       }} />
 
       {/* Sparkle accents */}
-      <span className="absolute top-3 left-3 pointer-events-none select-none" style={{ fontSize: 10, color: c1, opacity: 0.6 }}>✦</span>
-      <span className="absolute top-4 right-4 pointer-events-none select-none" style={{ fontSize: 7, color: c2, opacity: 0.4 }}>★</span>
-      <span className="absolute bottom-14 right-3 pointer-events-none select-none" style={{ fontSize: 7, color: c1, opacity: 0.28 }}>✧</span>
+      <span className="absolute top-2.5 left-2.5 pointer-events-none select-none" style={{ fontSize: 8, color: c1, opacity: 0.55 }}>✦</span>
+      <span className="absolute top-3 right-3 pointer-events-none select-none" style={{ fontSize: 6, color: c2, opacity: 0.38 }}>★</span>
 
       {/* Delete button */}
       <button
         onClick={onDelete}
-        className="absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all opacity-35 hover:opacity-85"
-        style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}
+        className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full flex items-center justify-center transition-all opacity-30 hover:opacity-80"
+        style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
         title={t("removeChild" as never)}
       >
-        <Icon name="close" size={10} />
+        <Icon name="close" size={9} />
       </button>
 
       {/* Avatar — tap to edit */}
       <button
         onClick={onChangeAvatar}
-        className="absolute inset-0 flex items-center justify-center group"
+        className="relative group flex-shrink-0"
         title={t("changeAvatar" as never)}
-        style={{ paddingBottom: 44 }}
       >
         {/* Glowing gradient ring */}
         <div style={{
-          width: "66%", aspectRatio: "1", borderRadius: "50%",
-          padding: 3,
+          width: 72, height: 72, borderRadius: "50%",
+          padding: 2.5,
           background: `linear-gradient(135deg, ${c1}, ${c2} 50%, ${c1})`,
-          boxShadow: `0 0 26px ${c1}50, 0 0 52px ${c2}1e`,
+          boxShadow: `0 0 18px ${c1}45, 0 0 36px ${c2}18`,
         }}>
           <div style={{
             width: "100%", height: "100%", borderRadius: "50%",
@@ -113,28 +111,23 @@ function ChildCard({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={child.avatarEmoji} alt={child.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <span style={{ fontSize: 36 }}>{child.avatarEmoji || "⭐"}</span>
+              <span style={{ fontSize: 30 }}>{child.avatarEmoji || "⭐"}</span>
             )}
           </div>
         </div>
-
-        {/* Edit hover overlay */}
-        <div className="absolute inset-0 flex items-center justify-center rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: "rgba(0,0,0,0.35)", paddingBottom: 44 }}>
-          <span style={{ fontSize: 22 }}>✏️</span>
+        {/* Edit overlay */}
+        <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: "rgba(0,0,0,0.45)" }}>
+          <span style={{ fontSize: 16 }}>✏️</span>
         </div>
       </button>
 
-      {/* Name bar — frosted gradient at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 pt-7 pb-3.5 pointer-events-none" style={{
-        background: `linear-gradient(to bottom, transparent, ${c1}14 25%, rgba(4,6,18,0.9))`,
+      {/* Name */}
+      <p className="font-bold text-white text-fs-body truncate px-3 w-full text-center" style={{
+        textShadow: `0 0 12px ${c1}99`,
       }}>
-        <p className="text-center font-bold text-white text-fs-body truncate" style={{
-          textShadow: `0 0 16px ${c1}bb, 0 1px 4px rgba(0,0,0,0.7)`,
-        }}>
-          {child.name}
-        </p>
-      </div>
+        {child.name}
+      </p>
     </div>
   );
 }
@@ -848,8 +841,8 @@ export default function ProfilePage() {
                 ? [0, 1].map((i) => (
                     <div
                       key={i}
-                      className="rounded-3xl animate-pulse"
-                      style={{ aspectRatio: "3/4", background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.1}s` }}
+                      className="rounded-2xl animate-pulse"
+                      style={{ height: 148, background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.1}s` }}
                     />
                   ))
                 : children.map((child) => (
@@ -863,18 +856,18 @@ export default function ProfilePage() {
               }
               <button
                 onClick={() => setShowAddChild(true)}
-                className="rounded-3xl flex flex-col items-center justify-center gap-3 transition-all active:scale-[0.97]"
+                className="rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.97]"
                 style={{
-                  aspectRatio: "3/4",
+                  height: 148,
                   background: "rgba(255,255,255,0.02)",
-                  border: "1.5px dashed rgba(255,255,255,0.1)",
+                  border: "1.5px dashed rgba(255,255,255,0.09)",
                 }}
               >
-                <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{
                   background: "rgba(255,255,255,0.04)",
-                  border: "1.5px dashed rgba(255,255,255,0.14)",
+                  border: "1px dashed rgba(255,255,255,0.13)",
                 }}>
-                  <span style={{ fontSize: 22, color: "rgba(255,255,255,0.22)", lineHeight: 1 }}>+</span>
+                  <span style={{ fontSize: 18, color: "rgba(255,255,255,0.22)", lineHeight: 1 }}>+</span>
                 </div>
                 <span className="text-fs-body font-medium" style={{ color: "rgba(255,255,255,0.22)" }}>{t("addChild")}</span>
               </button>
