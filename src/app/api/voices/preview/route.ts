@@ -121,13 +121,29 @@ async function pickGeminiVoice(apiKey: string, description: string): Promise<str
 
 Voices:
 - Aoede: warm, melodic, enchanting feminine
-- Charon: deep, gravelly, authoritative
-- Fenrir: strong, dynamic, expressive masculine
+- Altair: firm, direct, composed masculine
+- Autonoe: bright, lively, energetic feminine
+- Callirrhoe: easy-going, flowing, relaxed feminine
+- Charon: deep, gravelly, authoritative masculine
+- Despina: smooth, refined, polished feminine
+- Erinome: clear, expressive, vivid feminine
+- Fenrir: strong, excitable, dynamic masculine
+- Gacrux: mature, gravelly, seasoned masculine
+- Isonoe: smooth, delicate, soft feminine
 - Kore: soft, warm, gentle feminine
-- Leda: clear, bright, lively feminine
+- Laomedeia: upbeat, melodic, cheerful feminine
+- Leda: clear, bright, youthful feminine
 - Orus: steady, rich, deep masculine
-- Puck: playful, energetic, youthful
-- Zephyr: bright, airy, gentle neutral
+- Puck: playful, upbeat, energetic neutral
+- Rasalgethi: informational, articulate, measured masculine
+- Sadachbia: lively, spirited, animated neutral
+- Sadaltager: knowledgeable, thoughtful, calm masculine
+- Schedar: even, steady, balanced neutral
+- Sulafat: warm, inviting, nurturing feminine
+- Umbriel: easy-going, mellow, unhurried masculine
+- Vindemiatrix: gentle, nurturing, soft feminine
+- Zephyr: bright, airy, light neutral
+- Zubenelgenubi: casual, relaxed, conversational neutral
 
 Return ONLY the voice name. Nothing else.`;
 
@@ -151,7 +167,12 @@ Return ONLY the voice name. Nothing else.`;
   const raw: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   const cleaned = raw.trim().split(/\s/)[0];
 
-  const valid = ["Aoede", "Charon", "Fenrir", "Kore", "Leda", "Orus", "Puck", "Zephyr"];
+  const valid = [
+    "Aoede", "Altair", "Autonoe", "Callirrhoe", "Charon", "Despina", "Erinome",
+    "Fenrir", "Gacrux", "Isonoe", "Kore", "Laomedeia", "Leda", "Orus", "Puck",
+    "Rasalgethi", "Sadachbia", "Sadaltager", "Schedar", "Sulafat", "Umbriel",
+    "Vindemiatrix", "Zephyr", "Zubenelgenubi",
+  ];
   return valid.includes(cleaned) ? cleaned : "Aoede";
 }
 
