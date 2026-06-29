@@ -168,8 +168,8 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: "Stories", value: child.storiesThisMonth, color: "#4fc3f7" },
-            { label: "Listened", value: timeLabel, color: "#a78bfa" },
+            { label: t("statsStories" as TranslationKey), value: child.storiesThisMonth, color: "#4fc3f7" },
+            { label: t("statsListened" as TranslationKey), value: timeLabel, color: "#a78bfa" },
             { label: child.topTheme, value: `${child.topThemeCount}×`, color: "#10b981" },
           ].map((stat) => (
             <div
@@ -188,7 +188,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         {/* Lessons */}
         <div>
           <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-            Values heard this month
+            {t("valuesHeard" as TranslationKey)}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {child.lessons.map((l) => (
@@ -210,7 +210,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         {/* Calendar */}
         <div>
           <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-            Bedtime ritual — last 28 nights
+            {t("bedtimeRitual" as TranslationKey)}
           </p>
           <CalendarHeatmap days={child.calendar} />
         </div>
@@ -218,7 +218,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         {/* Recent stories */}
         <div>
           <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-            Recent stories
+            {t("recentStoriesLabel" as TranslationKey)}
           </p>
           <div className="flex flex-col gap-1">
             {child.recentTitles.map((title, i) => (
@@ -251,6 +251,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 
 export default function StoryJourney() {
   const [expanded, setExpanded] = useState(true);
+  const { t } = useLanguage();
 
   return (
     <div className="mb-7">
@@ -261,9 +262,9 @@ export default function StoryJourney() {
       >
         <div>
           <p className="text-white/55 text-fs-body font-bold tracking-widest uppercase text-left">
-            Story Journey ✨
+            {t("storyJourneyTitle" as TranslationKey)}
           </p>
-          <p className="text-white/25 text-fs-body mt-0.5 text-left">Monthly reflection for each child</p>
+          <p className="text-white/25 text-fs-body mt-0.5 text-left">{t("monthlyReflection" as TranslationKey)}</p>
         </div>
         <span
           className="text-white/30 text-fs-body transition-transform"
@@ -282,7 +283,7 @@ export default function StoryJourney() {
           >
             <span className="text-fs-body">🚧</span>
             <p className="text-fs-body" style={{ color: "rgba(251,191,36,0.7)" }}>
-              Preview — showing example data. Real tracking coming soon.
+              {t("previewMockData" as TranslationKey)}
             </p>
           </div>
 

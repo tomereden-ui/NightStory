@@ -409,9 +409,9 @@ const CHAR_CHIPS = [
 // ─── Avatar picker gallery ────────────────────────────────────────────────────
 
 const AVATAR_TABS = [
-  { key: "child",  label: "Kids",    emoji: "🧒" },
-  { key: "adult",  label: "Adults",  emoji: "🧑" },
-  { key: "animal", label: "Animals", emoji: "🐾" },
+  { key: "child",  labelKey: "kidsTab" as const,    emoji: "🧒" },
+  { key: "adult",  labelKey: "adultsTab" as const,  emoji: "🧑" },
+  { key: "animal", labelKey: "animalsTab" as const, emoji: "🐾" },
 ];
 
 function AvatarGallery({
@@ -423,6 +423,7 @@ function AvatarGallery({
   characterType: CharacterType;
   onSelect: (url: string, type: CharacterType) => void;
 }) {
+  const { language } = useLanguage();
   const [bank, setBank] = useState<BankAvatar[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>(
@@ -440,7 +441,7 @@ function AvatarGallery({
       style={{ background: "rgba(5,7,18,0.97)", border: "1px solid rgba(139,92,246,0.2)" }}>
       {/* Tabs */}
       <div className="flex p-1.5 gap-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        {AVATAR_TABS.map(({ key, label, emoji }) => (
+        {AVATAR_TABS.map(({ key, labelKey, emoji }) => (
           <button key={key} onClick={() => setActiveTab(key)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-bold transition-all active:scale-95"
             style={activeTab === key
@@ -449,7 +450,7 @@ function AvatarGallery({
             }
           >
             <span style={{ fontSize: "var(--fs-label)" }}>{emoji}</span>
-            <span>{label}</span>
+            <span>{i18nT(language, labelKey)}</span>
           </button>
         ))}
       </div>
@@ -461,7 +462,7 @@ function AvatarGallery({
               style={{ borderColor: "rgba(167,139,250,0.15)", borderTopColor: "#A78BFA" }} />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center py-6 text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>No avatars yet</p>
+          <p className="text-center py-6 text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>{i18nT(language, "noAvatarsYet")}</p>
         ) : (
           <div className="grid grid-cols-5 gap-2">
             {filtered.map((avatar) => {
@@ -516,6 +517,7 @@ function DirectionSheet({
   onVoiceChange: (voiceId: string) => void;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
   const [note, setNote] = useState("");
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker]   = useState(false);
@@ -628,9 +630,9 @@ function DirectionSheet({
                 <span style={{ fontSize: "var(--fs-body)" }}>🎭</span>
               </div>
               <div className="flex-1 text-left">
-                <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: avatarAccent }}>Avatar</p>
+                <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: avatarAccent }}>{i18nT(language, "avatarLabel")}</p>
                 <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                  {showAvatarPicker ? "Tap an image to select" : "Choose how this character looks"}
+                  {showAvatarPicker ? i18nT(language, "tapImageToSelect") : i18nT(language, "chooseCharacterLook")}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -669,9 +671,9 @@ function DirectionSheet({
                 <span style={{ fontSize: "var(--fs-body)" }}>🎙️</span>
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: voiceAccent }}>Voice</p>
+                <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: voiceAccent }}>{i18nT(language, "voiceLabel")}</p>
                 <p className="text-fs-body mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
-                  {voice?.name ?? "No voice selected"}
+                  {voice?.name ?? i18nT(language, "noVoiceSelected")}
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -709,7 +711,7 @@ function DirectionSheet({
                 </div>
                 <div>
                   <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: directAccent }}>
-                    Direct this character
+                    {i18nT(language, "directThisCharacter")}
                   </p>
                   <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
                     Shape how they perform in this story
@@ -739,7 +741,7 @@ function DirectionSheet({
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") onClose(); }}
-                  placeholder={`Custom direction, e.g. "speak slower"`}
+                  placeholder={i18nT(language, "customDirection")}
                   className="flex-1 bg-transparent outline-none text-fs-body text-white/80 placeholder-white/20"
                 />
                 <button onClick={() => submit(note)} disabled={!note.trim()}
@@ -1700,7 +1702,7 @@ export default function Studio2Page() {
         <div className="px-5 pt-12 pb-8">
           <div className="flex items-center mb-7">
             <button onClick={() => setActiveTab("script")} className="w-8 h-8 flex items-center justify-center text-white/50"><Icon name="back" size={18} /></button>
-            <h1 className="flex-1 text-center text-fs-heading font-semibold text-white tracking-wide">Drama Ready</h1>
+            <h1 className="flex-1 text-center text-fs-heading font-semibold text-white tracking-wide">{i18nT(language, "dramaReady")}</h1>
             <div className="w-8" />
           </div>
           <DramaPlayer job={completedJob} onGenerateAnother={() => { setActiveTab("script"); setCompletedJob(null); }} />
@@ -1756,7 +1758,7 @@ export default function Studio2Page() {
             >
               <span className="flex items-center justify-center gap-1.5">
                 <span>✨</span>
-                <span>Create</span>
+                <span>{i18nT(language, "createTab" as never)}</span>
               </span>
               {isOnCreateTab && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />}
             </button>
@@ -1768,7 +1770,7 @@ export default function Studio2Page() {
             >
               <span className="flex items-center justify-center gap-1.5">
                 <span>📜</span>
-                <span>Script</span>
+                <span>{i18nT(language, "scriptTab")}</span>
                 {hasScript && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#4fc3f7" }} />}
               </span>
               {activeTab === "script" && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />}
@@ -1788,7 +1790,7 @@ export default function Studio2Page() {
               }
             >
               <span>💬</span>
-              <span>Chat with Luna</span>
+              <span>{i18nT(language, "chatWithLuna" as never)}</span>
             </button>
             <button
               onClick={() => { setCreateMode("step-by-step"); setActiveTab("step-by-step"); }}
@@ -1799,7 +1801,7 @@ export default function Studio2Page() {
               }
             >
               <span>🧚</span>
-              <span>Step-by-step</span>
+              <span>{i18nT(language, "stepByStep" as never)}</span>
             </button>
           </div>
         )}
@@ -1958,7 +1960,7 @@ export default function Studio2Page() {
                 style={{ color: "rgba(79,195,247,0.65)" }}
               >
                 <Icon name="back" size={13} />
-                <span>Revise story</span>
+                <span>{i18nT(language, "reviseStory" as never)}</span>
               </button>
             )}
 
@@ -1982,7 +1984,7 @@ export default function Studio2Page() {
                     <span className="text-fs-title relative z-10">✨</span>
                   </div>
                   {/* Text */}
-                  <p className="text-fs-body font-bold text-white/80 tracking-wide">Crafting your story…</p>
+                  <p className="text-fs-body font-bold text-white/80 tracking-wide">{i18nT(language, "craftingStory")}</p>
                   {lessons.length > 0 && (
                     <p className="text-fs-body mt-1.5" style={{ color: "rgba(139,92,246,0.75)" }}>
                       Weaving in {lessons.join(" · ")}
@@ -2064,12 +2066,12 @@ export default function Studio2Page() {
                 <div className="flex items-center gap-2">
                   <span className="text-fs-body opacity-60">🎬</span>
                   <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    Director&apos;s Note
+                    {i18nT(language, "directorsNote" as never)}
                   </span>
                   {isRevising && (
                     <span className="ml-auto flex items-center gap-1.5 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>
                       <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.5)" }} />
-                      Revising…
+                      {i18nT(language, "revisingLabel" as never)}
                     </span>
                   )}
                   {hasPending && !isRevising && (
@@ -2078,22 +2080,22 @@ export default function Studio2Page() {
                       className="ml-auto text-fs-body font-medium transition-colors"
                       style={{ color: "rgba(255,255,255,0.25)" }}
                     >
-                      <Icon name="restore" size={14} className="inline-block align-middle" /> Discard
+                      <Icon name="restore" size={14} className="inline-block align-middle" /> {i18nT(language, "discardChanges" as never)}
                     </button>
                   )}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { label: "😴 More sleepy",   instruction: "Make the whole story more sleepy and calming — softer language, slower pace, perfect for drifting off" },
-                    { label: "✨ More magical",   instruction: "Add more magic, wonder and enchantment throughout" },
-                    { label: "😂 Funnier",        instruction: "Add playful humor and lightness throughout — make it fun and giggly for young children" },
-                    { label: "✂️ Shorter",        instruction: "Shorten the story — condense each scene to its essential moment while keeping the emotional arc" },
-                    { label: "💫 More dramatic",  instruction: "Add more dramatic tension and emotional peaks" },
-                    { label: "🌙 Cozier",         instruction: "Make the story feel warmer, cozier and more comforting — like being tucked in on a cold night" },
-                  ].map(({ label, instruction }) => (
+                    { labelKey: "moreSleepy" as const,   instruction: "Make the whole story more sleepy and calming — softer language, slower pace, perfect for drifting off" },
+                    { labelKey: "moreMagical" as const,   instruction: "Add more magic, wonder and enchantment throughout" },
+                    { labelKey: "funnier" as const,        instruction: "Add playful humor and lightness throughout — make it fun and giggly for young children" },
+                    { labelKey: "shorter" as const,        instruction: "Shorten the story — condense each scene to its essential moment while keeping the emotional arc" },
+                    { labelKey: "moreDramatic" as const,  instruction: "Add more dramatic tension and emotional peaks" },
+                    { labelKey: "cozier" as const,         instruction: "Make the story feel warmer, cozier and more comforting — like being tucked in on a cold night" },
+                  ].map(({ labelKey, instruction }) => (
                     <button
-                      key={label}
+                      key={labelKey}
                       disabled={isRevising}
                       onClick={() => handleRevise(instruction)}
                       className="text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
@@ -2103,7 +2105,7 @@ export default function Studio2Page() {
                         color: isRevising ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.55)",
                       }}
                     >
-                      {label}
+                      {i18nT(language, labelKey)}
                     </button>
                   ))}
                 </div>
@@ -2121,7 +2123,7 @@ export default function Studio2Page() {
                     }}
                     rows={2}
                     disabled={isRevising}
-                    placeholder={'e.g. "make the ending happier", "add more tension in the middle"'}
+                    placeholder={i18nT(language, "directorsNotePlaceholder")}
                     className="flex-1 rounded-xl px-3 py-2.5 text-fs-body leading-relaxed outline-none resize-none text-white/70 placeholder-white/15 transition-colors"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                     onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)")}
@@ -2169,7 +2171,7 @@ export default function Studio2Page() {
                   {isRevising ? (
                     <>
                       <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(165,243,252,0.2)", borderTopColor: "#a5f3fc" }} />
-                      Updating script…
+                      {i18nT(language, "updatingScript")}
                     </>
                   ) : hasPending && dirCount > 0 ? (
                     <span className="flex items-center gap-2">
@@ -2215,7 +2217,7 @@ export default function Studio2Page() {
                   {isProducing ? (
                     <>
                       <span className="animate-pulse-slow text-fs-heading leading-none">🎙️</span>
-                      <span>Mixing audio tracks…</span>
+                      <span>{i18nT(language, "mixingAudio")}</span>
                     </>
                   ) : isValidating ? (
                     <>
@@ -2262,10 +2264,10 @@ export default function Studio2Page() {
                   {saveLabel === "saving" ? (
                     <>
                       <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(216,180,254,0.2)", borderTopColor: "#d8b4fe" }} />
-                      Saving…
+                      {i18nT(language, "savingVersion")}
                     </>
                   ) : saveLabel === "saved" ? (
-                    <><span className="text-fs-heading leading-none">✓</span> Saved!</>
+                    <><span className="text-fs-heading leading-none">✓</span> {i18nT(language, "savedVersion")}</>
                   ) : (
                     <><Icon name="save" size={14} /> Save version</>
                   )}
@@ -2286,7 +2288,7 @@ export default function Studio2Page() {
                 className="px-4 py-2.5 rounded-2xl text-fs-body font-semibold whitespace-nowrap"
                 style={{ background: "rgba(139,92,246,0.92)", color: "#fff", boxShadow: "0 4px 20px rgba(139,92,246,0.45)", backdropFilter: "blur(8px)" }}
               >
-                ✏️ Tap &quot;Update Script&quot; to apply your direction
+                ✏️ {i18nT(language, "updateScriptToast")}
               </div>
             </div>
           </>) /* end !generating */}

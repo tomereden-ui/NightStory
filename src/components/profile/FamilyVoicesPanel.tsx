@@ -69,6 +69,7 @@ function AvatarGallerySheet({
   onSelect: (value: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const { effective } = useViewMode();
   const sheetMaxWidth = effective === "mobile" ? 448 : 512;
   const [avatars, setAvatars] = useState<BankAvatar[]>([]);
@@ -86,7 +87,7 @@ function AvatarGallerySheet({
       <div className="fixed inset-0 z-[200]" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }} onClick={onClose} />
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-[201] rounded-t-3xl overflow-hidden flex flex-col" style={{ width: "100%", maxWidth: sheetMaxWidth, maxHeight: "65vh", background: "#0D1120", border: "1px solid rgba(255,255,255,0.09)" }}>
         <div className="flex items-center justify-between px-5 py-4">
-          <p className="text-fs-body font-semibold text-white">Choose Avatar</p>
+          <p className="text-fs-body font-semibold text-white">{t("chooseAvatar")}</p>
           <button onClick={onClose} style={{ color: "rgba(255,255,255,0.4)" }}><Icon name="close" size={18} /></button>
         </div>
         {/* Colour swatches */}
@@ -410,7 +411,7 @@ function AddVoiceSheet({
 // ─── Main Panel ───────────────────────────────────────────────────────────────
 
 export default function FamilyVoicesPanel() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [voices, setVoices] = useState<VoiceRecord[]>([]);
   const [showAdd, setShowAdd] = useState(false);
@@ -489,7 +490,7 @@ export default function FamilyVoicesPanel() {
                 backgroundClip: "text",
               }}
             >
-              Family Voices
+              {t("familyVoicesTitle")}
             </p>
 
             {/* Collapsed: avatar stack + count; Expanded: subtitle */}
@@ -516,12 +517,12 @@ export default function FamilyVoicesPanel() {
                   ))}
                 </div>
                 <span className="text-fs-body" style={{ color: "rgba(167,139,250,0.7)" }}>
-                  {voices.length} voice{voices.length > 1 ? "s" : ""} ready
+                  {voices.length} {voices.length > 1 ? t("voiceReadyPlural") : t("voiceReadySingle")}
                 </span>
               </div>
             ) : (
               <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
-                {open ? "Hear your stories in voices you love" : "Tap to add family voices"}
+                {open ? t("hearStoriesVoices") : t("tapToAddVoices")}
               </p>
             )}
           </div>
@@ -546,11 +547,11 @@ export default function FamilyVoicesPanel() {
             >
               <span className="text-fs-display">🎙</span>
               <div className="text-center">
-                <p className="text-white/50 text-fs-body font-medium">Add your family&apos;s voices</p>
-                <p className="text-white/25 text-fs-body mt-1">Dad, Mom, Grandma — anyone can narrate</p>
+                <p className="text-white/50 text-fs-body font-medium">{t("addFamilyVoicesEmpty")}</p>
+                <p className="text-white/25 text-fs-body mt-1">{t("dadMomGrandma")}</p>
               </div>
               <span className="px-4 py-1.5 rounded-full text-fs-body font-semibold" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.3)" }}>
-                Get started →
+                {t("getStarted")}
               </span>
             </button>
           )}
@@ -573,7 +574,7 @@ export default function FamilyVoicesPanel() {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95 self-start mt-1"
                 style={{ background: "rgba(167,139,250,0.1)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.22)" }}
               >
-                ＋ Add voice
+                {t("addVoice")}
               </button>
             </div>
           )}

@@ -742,7 +742,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                   }}
                 >
                   <Icon name="restore" size={13} />
-                  <span>New cover</span>
+                  <span>{t("newCover")}</span>
                 </button>
               )}
               {isFetchingCover && (
@@ -1042,12 +1042,12 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           <div className="flex items-center gap-2">
             <span className="text-fs-body">🎬</span>
             <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.7)" }}>
-              Director&apos;s Note
+              {t("directorsNote")}
             </span>
             {isRevising && (
               <span className="ml-auto flex items-center gap-1 text-fs-body" style={{ color: "rgba(139,92,246,0.6)" }}>
                 <span className="w-2.5 h-2.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(139,92,246,0.3)", borderTopColor: "#A78BFA" }} />
-                Revising…
+                {t("revisingLabel")}
               </span>
             )}
           </div>
@@ -1055,13 +1055,13 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           {/* Quick chips */}
           <div className="flex flex-wrap gap-1.5">
             {[
-              { label: "😴 More sleepy", instruction: "Make the whole story more sleepy and calming, perfect for bedtime" },
-              { label: "✨ More magical", instruction: "Add more magic and wonder to the story — make it feel enchanted and dreamy" },
-              { label: "😂 Funnier", instruction: "Make the story funnier and more playful with light humor for children" },
-              { label: "✂️ Shorter", instruction: "Shorten the story — condense each block to be more concise while keeping the key moments" },
-            ].map(({ label, instruction }) => (
+              { labelKey: "moreSleepy" as const, instruction: "Make the whole story more sleepy and calming, perfect for bedtime" },
+              { labelKey: "moreMagical" as const, instruction: "Add more magic and wonder to the story — make it feel enchanted and dreamy" },
+              { labelKey: "funnier" as const, instruction: "Make the story funnier and more playful with light humor for children" },
+              { labelKey: "shorter" as const, instruction: "Shorten the story — condense each block to be more concise while keeping the key moments" },
+            ].map(({ labelKey, instruction }) => (
               <button
-                key={label}
+                key={labelKey}
                 disabled={isRevising}
                 onClick={() => handleRevise(instruction)}
                 className="text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
@@ -1071,7 +1071,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                   color: isRevising ? "rgba(255,255,255,0.2)" : "#C4B5FD",
                 }}
               >
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </div>
@@ -1088,7 +1088,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 }
               }}
               rows={2}
-              placeholder="Tell the story what to change… (e.g. make the ending happier, add more tension in the middle)"
+              placeholder={t("directorsNotePlaceholder")}
               disabled={isRevising}
               className="flex-1 rounded-xl px-3 py-2 text-fs-body leading-relaxed outline-none resize-none text-white/80 placeholder-white/20 transition-colors"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)" }}

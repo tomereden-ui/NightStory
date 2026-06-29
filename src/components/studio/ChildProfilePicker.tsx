@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { MOCK_USER } from "@/lib/mockData";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import Icon from "@/components/ui/Icon";
+import { useLanguage } from "@/context/LanguageContext";
 
 export type { DBChildProfile };
 
@@ -265,6 +266,7 @@ export default function ChildProfilePicker({
   onChange: (profile: DBChildProfile | null) => void;
   disabled?: boolean;
 }) {
+  const { t } = useLanguage();
   const [profiles, setProfiles] = useState<DBChildProfile[]>([]);
   const [showAdd, setShowAdd]   = useState(false);
   const [loaded, setLoaded]     = useState(false);
@@ -328,7 +330,7 @@ export default function ChildProfilePicker({
     <>
       <div className="mb-5">
         <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
-          Creating for
+          {t("creatingFor")}
         </p>
         <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
           {profiles.map((p) => {
