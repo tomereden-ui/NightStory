@@ -29,49 +29,61 @@ export default function VoicePicker({
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
 
+  const presetVoices = voices.filter((v) => !v.elevenLabsId);
+  const familyVoices = voices.filter((v) => v.elevenLabsId);
+
+  function renderVoiceItem(voice: Voice) {
+    const isSelected = voice.id === selectedVoiceId;
+    return (
+      <li key={voice.id}>
+        <button
+          onClick={() => onSelect(voice.id)}
+          className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors text-left ${
+            isSelected ? "bg-teal/10" : "hover:bg-white/5"
+          }`}
+        >
+          <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.avatarEmoji} size={28} borderColor="rgba(79,195,247,0.2)" />
+          <div className="flex-1 min-w-0">
+            <p className={`text-fs-body font-semibold ${isSelected ? "text-teal" : "text-white/80"}`}>
+              {voice.name}
+            </p>
+            <p className="text-fs-body text-white/25 capitalize">{voice.style}</p>
+          </div>
+          {isSelected && (
+            <span className="text-teal text-fs-body flex-shrink-0">✓</span>
+          )}
+        </button>
+      </li>
+    );
+  }
+
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-11 z-50 w-48 rounded-2xl overflow-hidden shadow-card animate-float-up"
+      className="absolute left-0 top-11 z-50 w-48 rounded-2xl shadow-card animate-float-up flex flex-col"
       style={{
         background: "#111526",
         border: "1px solid rgba(0,212,255,0.2)",
         boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 24px rgba(0,212,255,0.08)",
+        maxHeight: "60vh",
+        overflow: "hidden",
       }}
     >
-      <div className="px-3 py-2 border-b border-white/5">
+      <div className="px-3 py-2 border-b border-white/5 flex-shrink-0">
         <p className="text-white/30 text-fs-body uppercase tracking-widest">Assign Voice</p>
       </div>
 
-      <ul className="py-1">
-        {voices.map((voice) => {
-          const isSelected = voice.id === selectedVoiceId;
-          return (
-            <li key={voice.id}>
-              <button
-                onClick={() => onSelect(voice.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors text-left ${
-                  isSelected ? "bg-teal/10" : "hover:bg-white/5"
-                }`}
-              >
-                <VoiceAvatar avatarUrl={voice.avatarUrl} emoji={voice.avatarEmoji} size={28} borderColor="rgba(79,195,247,0.2)" />
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={`text-fs-body font-semibold ${
-                      isSelected ? "text-teal" : "text-white/80"
-                    }`}
-                  >
-                    {voice.name}
-                  </p>
-                  <p className="text-fs-body text-white/25 capitalize">{voice.style}</p>
-                </div>
-                {isSelected && (
-                  <span className="text-teal text-fs-body flex-shrink-0">✓</span>
-                )}
-              </button>
+      <ul className="py-1 overflow-y-auto flex-1">
+        {presetVoices.map(renderVoiceItem)}
+
+        {familyVoices.length > 0 && (
+          <>
+            <li className="px-3 pt-3 pb-1">
+              <p className="text-white/20 text-fs-body uppercase tracking-widest">Family Voices</p>
             </li>
-          );
-        })}
+            {familyVoices.map(renderVoiceItem)}
+          </>
+        )}
       </ul>
     </div>
   );
