@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
 
   if (!res.ok) {
     const err = await res.text();
+    console.error(`[preset-previews] EL error for preset=${presetKey} voice=${elVoiceId}: ${err.slice(0, 400)}`);
     return NextResponse.json({ error: `ElevenLabs error: ${err.slice(0, 200)}` }, { status: 500 });
   }
 

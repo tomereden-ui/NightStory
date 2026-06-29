@@ -235,24 +235,29 @@ function AddVoiceSheet({
   }, []);
 
   const generateAllPresets = useCallback((elVoiceId: string, lang: string) => {
-    for (const preset of VOICE_PRESETS) {
+    VOICE_PRESETS.forEach((preset, idx) => {
       setPresetAudios((prev) => ({ ...prev, [preset.key]: "loading" }));
-      fetch("/api/voices/preset-previews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ elVoiceId, presetKey: preset.key, language: lang }),
-      })
-        .then((r) => r.json())
-        .then((data: { audioBase64?: string; mimeType?: string; error?: string }) => {
-          if (data.audioBase64) {
-            const url = base64ToObjectUrl(data.audioBase64, data.mimeType ?? "audio/mpeg");
-            setPresetAudios((prev) => ({ ...prev, [preset.key]: { url, base64: data.audioBase64! } }));
-          } else {
-            setPresetAudios((prev) => ({ ...prev, [preset.key]: "error" }));
-          }
+      // Stagger requests by 400ms each to avoid EL concurrency limits and give
+      // the newly cloned voice time to become available on EL's side.
+      setTimeout(() => {
+        fetch("/api/voices/preset-previews", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ elVoiceId, presetKey: preset.key, language: lang }),
         })
-        .catch(() => setPresetAudios((prev) => ({ ...prev, [preset.key]: "error" })));
-    }
+          .then((r) => r.json())
+          .then((data: { audioBase64?: string; mimeType?: string; error?: string }) => {
+            if (data.audioBase64) {
+              const url = base64ToObjectUrl(data.audioBase64, data.mimeType ?? "audio/mpeg");
+              setPresetAudios((prev) => ({ ...prev, [preset.key]: { url, base64: data.audioBase64! } }));
+            } else {
+              console.warn(`[preset] ${preset.key} error:`, data.error);
+              setPresetAudios((prev) => ({ ...prev, [preset.key]: "error" }));
+            }
+          })
+          .catch(() => setPresetAudios((prev) => ({ ...prev, [preset.key]: "error" })));
+      }, idx * 400);
+    });
   }, []);
 
   const handlePlayPreset = useCallback((presetKey: string) => {
