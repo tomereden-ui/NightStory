@@ -493,7 +493,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
       setSpeechError(err instanceof Error ? err.message : "Failed to generate audio");
       setIsLoading(false);
     }
-  }, [stopAudio]);
+  }, [stopAudio, language]);
 
   const handleOpenPlayer = useCallback((id: string) => {
     const block = blocks.find((b) => b.id === id);

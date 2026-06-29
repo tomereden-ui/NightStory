@@ -77,18 +77,45 @@ export async function POST(req: NextRequest) {
   const apiKey = useEL ? elKey! : gemKey;
   const ext = useEL ? "mp3" : "wav";
 
-  const tmpPath = path.join(os.tmpdir(), `speech-${crypto.randomUUID().slice(0, 8)}.${ext}`);
+  console.log(`[synthesize-speech] assignedVoiceId=${assignedVoiceId} → useEL=${useEL} voice=${voice} lang=${language}`);
+
+  const tmpBase = path.join(os.tmpdir(), `speech-${crypto.randomUUID().slice(0, 8)}`);
+  const tmpPath = `${tmpBase}.${ext}`;
+
+  // Cleanup helper — removes all candidate extensions in case Gemini wrote to a different one
+  function cleanup() {
+    for (const e of ["wav", "mp3", "ogg", "bin"]) {
+      try { fs.unlinkSync(`${tmpBase}.${e}`); } catch { /* ignore */ }
+    }
+  }
+
   try {
     // Interactive endpoint: fail fast rather than retrying for minutes.
     // 22 s per attempt covers long narrator blocks (short lines finish in ~6 s).
-    await synthesizeLine(text, voice, apiKey, tmpPath, undefined, useEL, undefined, undefined, language,
+    const result = await synthesizeLine(text, voice, apiKey, tmpPath, undefined, useEL, undefined, undefined, language,
       useEL ? undefined : { maxAttempts: 2, perAttemptTimeoutMs: 22_000 });
-    const audio = fs.readFileSync(tmpPath);
-    const mimeType = useEL ? "audio/mpeg" : "audio/wav";
+
+    // Gemini may write to a different extension (.mp3/.ogg) than requested (.wav).
+    // Detect which file was actually written.
+    let actualPath = tmpPath;
+    let mimeType = useEL ? "audio/mpeg" : "audio/wav";
+    if (!useEL) {
+      const mime = (result as { mimeType?: string }).mimeType ?? "";
+      if (mime.includes("mp3") || mime.includes("mpeg")) {
+        actualPath = `${tmpBase}.mp3`;
+        mimeType = "audio/mpeg";
+      } else if (mime.includes("ogg") || mime.includes("opus")) {
+        actualPath = `${tmpBase}.ogg`;
+        mimeType = "audio/ogg";
+      }
+    }
+
+    const audio = fs.readFileSync(actualPath);
     return NextResponse.json({ audioData: audio.toString("base64"), mimeType, voiceName: voice });
   } catch (err) {
+    console.error(`[synthesize-speech] error:`, err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   } finally {
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    cleanup();
   }
 }
