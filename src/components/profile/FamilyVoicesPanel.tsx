@@ -11,6 +11,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import VoiceAvatar, { AVATAR_STYLES } from "@/components/ui/VoiceAvatar";
 import Icon from "@/components/ui/Icon";
+import { VOICE_PRESETS } from "@/config/voicePresets";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,11 +26,15 @@ interface VoiceRecord {
   sample_url?: string;
   avatar_emoji: string;
   created_at: number;
+  preset_key?: string;
+  voice_settings?: { stability: number; similarity_boost: number; style: number; use_speaker_boost: boolean };
 }
 
 type AddMethod = "text" | "record";
 type RecordState = "idle" | "recording" | "done";
 type PreviewState = "idle" | "loading" | "ready";
+type AddStep = "setup" | "style-picker";
+type PresetAudioState = { url: string; base64: string } | "loading" | "error" | null;
 
 const SAMPLE_TEXTS: Record<string, string> = {
   en: "This is me and I will be happy to join your story",
@@ -145,7 +150,7 @@ function VoiceCard({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white text-fs-body font-semibold truncate">{voice.name}</p>
-          <p className="text-white/45 text-fs-body truncate mt-0.5">{voice.description ?? voice.gemini_voice_name ?? (voice.type === "recorded" ? "Cloned voice" : "AI voice")}</p>
+          <p className="text-white/45 text-fs-body truncate mt-0.5">{(() => { const presetLabel = VOICE_PRESETS.find(p => p.key === voice.preset_key)?.label; return presetLabel ?? (voice.description ?? voice.gemini_voice_name ?? (voice.type === "recorded" ? "Cloned voice" : "AI voice")); })()}</p>
         </div>
         <button disabled={!voice.sample_url} onClick={() => onPlay(voice)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: isPlaying ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)", color: isPlaying ? "#4fc3f7" : voice.sample_url ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.15)", border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)", cursor: voice.sample_url ? "pointer" : "not-allowed" }}>
           {isPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
@@ -194,6 +199,13 @@ function AddVoiceSheet({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Style picker step (for recorded/cloned voices)
+  const [addStep, setAddStep] = useState<AddStep>("setup");
+  const [selectedPresetKey, setSelectedPresetKey] = useState<string>("calm_narrator");
+  const [presetAudios, setPresetAudios] = useState<Record<string, PresetAudioState>>({});
+  const [playingPreset, setPlayingPreset] = useState<string | null>(null);
+  const presetAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -207,6 +219,7 @@ function AddVoiceSheet({
       if (timerRef.current) clearInterval(timerRef.current);
       if (previewAudioRef.current) { previewAudioRef.current.pause(); previewAudioRef.current = null; }
       if (previewUrlRef.current) { URL.revokeObjectURL(previewUrlRef.current); previewUrlRef.current = null; }
+      Object.values(presetAudioRefs.current).forEach((a) => { try { a.pause(); } catch { /* ignore */ } });
     };
   }, []);
 
@@ -214,6 +227,56 @@ function AddVoiceSheet({
     if (previewAudioRef.current) { previewAudioRef.current.pause(); previewAudioRef.current = null; }
     setPreviewPlaying(false);
   }, []);
+
+  const stopAllPresetAudio = useCallback(() => {
+    Object.values(presetAudioRefs.current).forEach((a) => { try { a.pause(); } catch { /* ignore */ } });
+    presetAudioRefs.current = {};
+    setPlayingPreset(null);
+  }, []);
+
+  const generateAllPresets = useCallback((elVoiceId: string, lang: string) => {
+    for (const preset of VOICE_PRESETS) {
+      setPresetAudios((prev) => ({ ...prev, [preset.key]: "loading" }));
+      fetch("/api/voices/preset-previews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ elVoiceId, presetKey: preset.key, language: lang }),
+      })
+        .then((r) => r.json())
+        .then((data: { audioBase64?: string; mimeType?: string; error?: string }) => {
+          if (data.audioBase64) {
+            const url = base64ToObjectUrl(data.audioBase64, data.mimeType ?? "audio/mpeg");
+            setPresetAudios((prev) => ({ ...prev, [preset.key]: { url, base64: data.audioBase64! } }));
+          } else {
+            setPresetAudios((prev) => ({ ...prev, [preset.key]: "error" }));
+          }
+        })
+        .catch(() => setPresetAudios((prev) => ({ ...prev, [preset.key]: "error" })));
+    }
+  }, []);
+
+  const handlePlayPreset = useCallback((presetKey: string) => {
+    const audio = presetAudios[presetKey];
+    if (!audio || audio === "loading" || audio === "error") return;
+
+    if (playingPreset === presetKey) {
+      // Stop
+      const existing = presetAudioRefs.current[presetKey];
+      if (existing) { existing.pause(); delete presetAudioRefs.current[presetKey]; }
+      setPlayingPreset(null);
+      return;
+    }
+
+    // Stop any currently playing
+    stopAllPresetAudio();
+
+    const el = new Audio(audio.url);
+    presetAudioRefs.current[presetKey] = el;
+    el.onended = () => { delete presetAudioRefs.current[presetKey]; setPlayingPreset(null); };
+    el.onerror = () => { delete presetAudioRefs.current[presetKey]; setPlayingPreset(null); };
+    el.play().catch(() => setPlayingPreset(null));
+    setPlayingPreset(presetKey);
+  }, [presetAudios, playingPreset, stopAllPresetAudio]);
 
   const handleStartRecording = async () => {
     try {
@@ -266,6 +329,11 @@ function AddVoiceSheet({
       previewUrlRef.current = url;
       setPreviewAudioUrl(url);
       setPreviewState("ready");
+      // For recorded (cloned) voices, transition to style picker
+      if (method === "record" && rd.elVoiceId) {
+        setAddStep("style-picker");
+        generateAllPresets(rd.elVoiceId, language);
+      }
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : "Preview failed");
       setPreviewState("idle");
@@ -289,12 +357,36 @@ function AddVoiceSheet({
     setSaving(true);
     setSaveError(null);
     try {
-      const body: Record<string, string> = { name: name.trim(), category: "family", type: method === "record" ? "recorded" : "text", avatarEmoji: avatarValue };
-      if (description) body.description = description;
-      if (previewGeminiVoiceName) body.geminiVoiceName = previewGeminiVoiceName;
-      if (previewElVoiceId) body.elVoiceId = previewElVoiceId;
-      if (previewBase64) { body.audioBase64 = previewBase64; body.mimeType = previewMimeType; }
-      const res = await fetch("/api/voices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const bodyObj: Record<string, unknown> = { name: name.trim(), category: "family", type: method === "record" ? "recorded" : "text", avatarEmoji: avatarValue };
+      if (description) bodyObj.description = description;
+      if (previewGeminiVoiceName) bodyObj.geminiVoiceName = previewGeminiVoiceName;
+      if (previewElVoiceId) bodyObj.elVoiceId = previewElVoiceId;
+
+      // For recorded voices in style-picker step, use the selected preset's audio as the sample
+      if (method === "record" && addStep === "style-picker") {
+        const selectedPresetAudio = presetAudios[selectedPresetKey];
+        const preset = VOICE_PRESETS.find((p) => p.key === selectedPresetKey);
+        bodyObj.presetKey = selectedPresetKey;
+        if (preset) {
+          bodyObj.voiceSettings = {
+            stability: preset.stability,
+            similarity_boost: preset.similarity_boost,
+            style: preset.style,
+            use_speaker_boost: preset.use_speaker_boost,
+          };
+        }
+        if (selectedPresetAudio && selectedPresetAudio !== "loading" && selectedPresetAudio !== "error") {
+          bodyObj.audioBase64 = selectedPresetAudio.base64;
+          bodyObj.mimeType = "audio/mpeg";
+        } else if (previewBase64) {
+          bodyObj.audioBase64 = previewBase64;
+          bodyObj.mimeType = previewMimeType;
+        }
+      } else {
+        if (previewBase64) { bodyObj.audioBase64 = previewBase64; bodyObj.mimeType = previewMimeType; }
+      }
+
+      const res = await fetch("/api/voices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bodyObj) });
       const saved = await res.json();
       if (!res.ok) throw new Error((saved as { error?: string }).error ?? `Save error ${res.status}`);
       onSaved(saved as VoiceRecord);
@@ -307,6 +399,7 @@ function AddVoiceSheet({
   };
 
   const canPreview = method === "text" ? description.trim().length > 5 : recordState === "done";
+  const selectedPreset = VOICE_PRESETS.find((p) => p.key === selectedPresetKey);
 
   return createPortal(
     <>
@@ -373,30 +466,126 @@ function AddVoiceSheet({
             </div>
           )}
 
-          {/* Preview */}
-          <button onClick={handleGeneratePreview} disabled={!canPreview || previewState === "loading"} className="w-full py-3 rounded-2xl text-fs-body font-semibold mb-3 transition-all" style={{ background: canPreview ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", color: canPreview ? "#a78bfa" : "rgba(255,255,255,0.2)", border: canPreview ? "1px solid rgba(139,92,246,0.3)" : "1px solid rgba(255,255,255,0.07)", cursor: canPreview ? "pointer" : "not-allowed" }}>
-            {previewState === "loading" ? "Generating preview…" : "🔊 Preview Voice"}
-          </button>
-
-          {previewError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.08)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.2)" }}>⚠ {previewError}</p>}
-
-          {previewState === "ready" && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-3" style={{ background: "rgba(79,195,247,0.07)", border: "1px solid rgba(79,195,247,0.2)" }}>
-              <button onClick={handlePlayPreview} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: previewPlaying ? "rgba(79,195,247,0.2)" : "rgba(79,195,247,0.1)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.35)" }}>
-                {previewPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
+          {/* Style picker step (recorded/cloned voices only) */}
+          {addStep === "style-picker" ? (
+            <>
+              {/* Back button */}
+              <button onClick={() => { setAddStep("setup"); stopAllPresetAudio(); setPreviewState("idle"); }} className="flex items-center gap-1.5 mb-4 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>
+                ← Back
               </button>
-              <div className="flex-1 min-w-0">
-                <p className="text-[#4fc3f7] text-fs-body font-medium">Preview ready</p>
-                {previewGeminiVoiceName && <p className="text-white/30 text-fs-body">Voice: {previewGeminiVoiceName}</p>}
+
+              {/* Style picker header */}
+              <div className="mb-4">
+                <p className="text-white font-semibold text-fs-heading">{name.trim() ? `Choose how ${name.trim()} sounds in stories` : "Choose a voice style"}</p>
+                <p className="text-white/40 text-fs-body mt-0.5">Play each style and pick the one that feels right</p>
               </div>
-            </div>
+
+              {/* Preset cards */}
+              <div className="flex flex-col gap-2 mb-5">
+                {VOICE_PRESETS.map((preset) => {
+                  const audioState = presetAudios[preset.key];
+                  const isSelected = selectedPresetKey === preset.key;
+                  const isPlaying = playingPreset === preset.key;
+                  const isLoading = audioState === "loading";
+                  const isError = audioState === "error";
+
+                  return (
+                    <button
+                      key={preset.key}
+                      onClick={() => setSelectedPresetKey(preset.key)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all active:scale-[0.99]"
+                      style={{
+                        background: isSelected ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.03)",
+                        border: isSelected ? "1.5px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.07)",
+                      }}
+                    >
+                      {/* Emoji */}
+                      <span style={{ fontSize: 22, flexShrink: 0 }}>{preset.emoji}</span>
+
+                      {/* Label + description */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-fs-body font-semibold">{preset.label}</p>
+                        <p className="text-white/40 text-fs-body mt-0.5 leading-snug">{preset.description}</p>
+                      </div>
+
+                      {/* Selected checkmark */}
+                      {isSelected && (
+                        <span style={{ color: "#4fc3f7", fontSize: 16, flexShrink: 0 }}>✓</span>
+                      )}
+
+                      {/* Play button */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handlePlayPreset(preset.key); }}
+                        disabled={isLoading || isError}
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+                        style={{
+                          background: isPlaying ? "rgba(79,195,247,0.2)" : "rgba(255,255,255,0.06)",
+                          color: isLoading || isError ? "rgba(255,255,255,0.2)" : isPlaying ? "#4fc3f7" : "rgba(255,255,255,0.5)",
+                          border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                          cursor: isLoading || isError ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {isLoading ? (
+                          <span style={{ fontSize: 10 }}>⏳</span>
+                        ) : isError ? (
+                          <span style={{ fontSize: 10 }}>⚠</span>
+                        ) : isPlaying ? (
+                          <Icon name="stop" size={12} />
+                        ) : (
+                          <Icon name="play" size={12} />
+                        )}
+                      </button>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
+
+              <button
+                onClick={handleSave}
+                disabled={saving || !name.trim()}
+                className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]"
+                style={{
+                  background: !saving && name.trim() ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)",
+                  color: !saving && name.trim() ? "#fff" : "rgba(255,255,255,0.25)",
+                  cursor: !saving && name.trim() ? "pointer" : "not-allowed",
+                }}
+              >
+                {saving ? "Saving…" : `Save as ${selectedPreset?.label ?? "Voice"}`}
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Preview */}
+              <button onClick={handleGeneratePreview} disabled={!canPreview || previewState === "loading"} className="w-full py-3 rounded-2xl text-fs-body font-semibold mb-3 transition-all" style={{ background: canPreview ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", color: canPreview ? "#a78bfa" : "rgba(255,255,255,0.2)", border: canPreview ? "1px solid rgba(139,92,246,0.3)" : "1px solid rgba(255,255,255,0.07)", cursor: canPreview ? "pointer" : "not-allowed" }}>
+                {previewState === "loading" ? (method === "record" ? "Cloning voice…" : "Generating preview…") : (method === "record" ? "🎨 Generate Style Options" : "🔊 Preview Voice")}
+              </button>
+
+              {previewError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.08)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.2)" }}>⚠ {previewError}</p>}
+
+              {previewState === "ready" && method === "text" && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-3" style={{ background: "rgba(79,195,247,0.07)", border: "1px solid rgba(79,195,247,0.2)" }}>
+                  <button onClick={handlePlayPreview} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: previewPlaying ? "rgba(79,195,247,0.2)" : "rgba(79,195,247,0.1)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.35)" }}>
+                    {previewPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[#4fc3f7] text-fs-body font-medium">Preview ready</p>
+                    {previewGeminiVoiceName && <p className="text-white/30 text-fs-body">Voice: {previewGeminiVoiceName}</p>}
+                  </div>
+                </div>
+              )}
+
+              {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
+
+              {/* Save button only shown for text method (record goes to style picker) */}
+              {method === "text" && (
+                <button onClick={handleSave} disabled={previewState !== "ready" || saving || !name.trim()} className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]" style={{ background: previewState === "ready" && !saving && name.trim() ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)", color: previewState === "ready" && !saving && name.trim() ? "#fff" : "rgba(255,255,255,0.25)", cursor: previewState === "ready" && !saving && name.trim() ? "pointer" : "not-allowed" }}>
+                  {saving ? "Saving…" : "Save Voice"}
+                </button>
+              )}
+            </>
           )}
-
-          {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
-
-          <button onClick={handleSave} disabled={previewState !== "ready" || saving || !name.trim()} className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]" style={{ background: previewState === "ready" && !saving && name.trim() ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)", color: previewState === "ready" && !saving && name.trim() ? "#fff" : "rgba(255,255,255,0.25)", cursor: previewState === "ready" && !saving && name.trim() ? "pointer" : "not-allowed" }}>
-            {saving ? "Saving…" : "Save Voice"}
-          </button>
         </div>
 
         {avatarPickerOpen && (

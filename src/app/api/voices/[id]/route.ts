@@ -8,15 +8,17 @@ export async function PATCH(
   const { id } = await params;
   if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
 
-  let body: { avatarEmoji?: string };
+  let body: { avatarEmoji?: string; presetKey?: string; voiceSettings?: object };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid body." }, { status: 400 });
   }
 
-  const updates: Record<string, string> = {};
+  const updates: Record<string, unknown> = {};
   if (body.avatarEmoji !== undefined) updates.avatar_emoji = body.avatarEmoji;
+  if (body.presetKey !== undefined) updates.preset_key = body.presetKey;
+  if (body.voiceSettings !== undefined) updates.voice_settings = body.voiceSettings;
   if (!Object.keys(updates).length) return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
 
   const { error } = await supabase.from("voices").update(updates).eq("id", id);

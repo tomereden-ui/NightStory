@@ -34,6 +34,8 @@ interface CreateVoiceBody {
   audioBase64?: string;
   mimeType?: string;
   avatarEmoji?: string;
+  presetKey?: string;
+  voiceSettings?: { stability: number; similarity_boost: number; style: number; use_speaker_boost: boolean };
 }
 
 export async function POST(req: NextRequest) {
@@ -89,6 +91,8 @@ export async function POST(req: NextRequest) {
     sample_url: sampleUrl,
     avatar_emoji: body.avatarEmoji ?? "🎙",
     created_at: Date.now(),
+    preset_key: body.presetKey ?? null,
+    voice_settings: body.voiceSettings ?? null,
   };
 
   const { data, error } = await supabase.from("voices").insert(row).select().single();
