@@ -790,21 +790,26 @@ export default function FamilyVoicesPanel() {
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex -space-x-2">
                   {voices.slice(0, 4).map((v) => (
-                    <div
-                      key={v.id}
-                      className="flex items-center justify-center rounded-full flex-shrink-0 overflow-hidden"
-                      style={{
-                        width: 22, height: 22,
-                        background: "rgba(167,139,250,0.2)",
-                        border: "1.5px solid rgba(167,139,250,0.5)",
-                        fontSize: 13,
-                      }}
-                    >
-                      {isAvatarUrl(v.avatar_emoji)
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={v.avatar_emoji} alt={v.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                        : v.avatar_emoji}
-                    </div>
+                    {(() => {
+                      const styleEntry = AVATAR_STYLES.find((s) => s.key === v.avatar_emoji);
+                      return (
+                        <div
+                          key={v.id}
+                          className="flex items-center justify-center rounded-full flex-shrink-0 overflow-hidden"
+                          style={{
+                            width: 22, height: 22,
+                            background: styleEntry ? styleEntry.gradient : "rgba(167,139,250,0.2)",
+                            border: "1.5px solid rgba(167,139,250,0.5)",
+                            fontSize: 13,
+                          }}
+                        >
+                          {isAvatarUrl(v.avatar_emoji)
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={v.avatar_emoji} alt={v.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            : styleEntry ? null : v.avatar_emoji}
+                        </div>
+                      );
+                    })()}
                   ))}
                 </div>
                 <span className="text-fs-body" style={{ color: "rgba(167,139,250,0.7)" }}>
