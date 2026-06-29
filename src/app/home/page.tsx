@@ -578,20 +578,23 @@ export default function HomePage() {
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [children, setChildren] = useState<DBChildProfile[]>([]);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
+  const [familyStories, setFamilyStories] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [hour, setHour] = useState(20);
 
-  // Load children + classics once on mount
+  // Load children + classics + all-family stories once on mount
   useEffect(() => {
     setHour(new Date().getHours());
     Promise.all([
       fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/child-profiles", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([cls, kids]) => {
+      .then(([cls, kids, allLib]) => {
         setClassics(Array.isArray(cls) ? cls : []);
         const kidList: DBChildProfile[] = Array.isArray(kids) ? kids : [];
         setChildren(kidList);
+        setFamilyStories(Array.isArray(allLib) ? allLib : []);
         const savedId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
         const firstId = savedId && kidList.find((k) => k.id === savedId) ? savedId : kidList[0]?.id ?? null;
         setActiveChildId(firstId);
@@ -784,6 +787,25 @@ export default function HomePage() {
               action={{ label: t("viewAll"), href: "/library" }}
             >
               {recentStories.map((s) => (
+                <StoryCard
+                  key={s.id}
+                  title={s.title}
+                  summary={s.summary}
+                  coverUrl={s.coverUrl}
+                  durationSeconds={s.durationSeconds}
+                  href={`/library/${s.id}`}
+                />
+              ))}
+            </Rail>
+          )}
+
+          {/* ── Family Stories ── */}
+          {familyStories.length > 0 && (
+            <Rail
+              title="Family Stories"
+              action={{ label: t("viewAll"), href: "/library" }}
+            >
+              {familyStories.slice(0, 8).map((s) => (
                 <StoryCard
                   key={s.id}
                   title={s.title}
