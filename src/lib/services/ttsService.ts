@@ -47,10 +47,10 @@ async function synthesizeEL(
   voiceId: string,
   apiKey: string,
   outputPath: string,
-  stability = 0.5,
-  style = 0.0,
+  stability = 0.35,
+  style = 0.35,
   language?: string,
-  similarityBoost = 0.75,
+  similarityBoost = 0.80,
   useSpeakerBoost = true,
 ): Promise<void> {
   const langCode = detectLanguageCode(text, language);
