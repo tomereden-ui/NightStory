@@ -581,24 +581,39 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [hour, setHour] = useState(20);
 
+  // Load children + classics once on mount
   useEffect(() => {
     setHour(new Date().getHours());
-
     Promise.all([
-      fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/child-profiles", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([lib, cls, kids]) => {
-        setStories(Array.isArray(lib) ? lib : []);
+      .then(([cls, kids]) => {
         setClassics(Array.isArray(cls) ? cls : []);
         const kidList: DBChildProfile[] = Array.isArray(kids) ? kids : [];
         setChildren(kidList);
-        if (kidList.length > 0) setActiveChildId(kidList[0].id);
+        const savedId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
+        const firstId = savedId && kidList.find((k) => k.id === savedId) ? savedId : kidList[0]?.id ?? null;
+        setActiveChildId(firstId);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Re-fetch stories whenever the active child changes
+  useEffect(() => {
+    if (activeChildId === null) return;
+    fetch(`/api/library?childId=${encodeURIComponent(activeChildId)}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((lib) => setStories(Array.isArray(lib) ? lib : []))
+      .catch(() => {});
+  }, [activeChildId]);
+
+  // Persist active child selection across sessions
+  const handleChildSwitch = (id: string) => {
+    setActiveChildId(id);
+    localStorage.setItem("ns-active-child-id", id);
+  };
 
   const activeChild = children.find((c) => c.id === activeChildId) ?? null;
 
@@ -688,7 +703,7 @@ export default function HomePage() {
                 key={child.id}
                 child={child}
                 active={child.id === activeChildId}
-                onClick={() => setActiveChildId(child.id)}
+                onClick={() => handleChildSwitch(child.id)}
               />
             ))}
           </div>

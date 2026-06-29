@@ -1623,7 +1623,8 @@ export default function Studio2Page() {
     setProduceError(null);
     setActiveTab("producing");
     try {
-      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes };
+      const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
+      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes, ...(activeChildId ? { childId: activeChildId } : {}) };
       if (editingStoryId) {
         body.editingStoryId = editingStoryId;
         // Always force re-production when editing an existing story — the server-side
