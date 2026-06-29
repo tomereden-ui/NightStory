@@ -395,7 +395,7 @@ function AddVoiceSheet({
     }
   };
 
-  const canPreview = recordState === "done" && name.trim().length > 0;
+  const canPreview = recordState === "done";
   const selectedPreset = VOICE_PRESETS.find((p) => p.key === selectedPresetKey);
 
   return createPortal(
@@ -417,10 +417,15 @@ function AddVoiceSheet({
 
           {/* Avatar + Name */}
           <div className="flex items-center gap-3 mb-5">
-            <VoiceAvatar avatarUrl={isAvatarUrl(avatarValue) ? avatarValue : undefined} emoji={isAvatarUrl(avatarValue) ? undefined : avatarValue} name={name || "?"} size={52} borderColor="rgba(79,195,247,0.4)" onClick={() => setAvatarPickerOpen(true)} />
+            <div className="relative flex-shrink-0">
+              <VoiceAvatar avatarUrl={isAvatarUrl(avatarValue) ? avatarValue : undefined} emoji={isAvatarUrl(avatarValue) ? undefined : avatarValue} name={name || "?"} size={52} borderColor="rgba(79,195,247,0.4)" onClick={() => setAvatarPickerOpen(true)} />
+              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center pointer-events-none"
+                style={{ background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7", fontSize: 11, fontWeight: 700 }}>
+                +
+              </div>
+            </div>
             <div className="flex-1">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Dad, Grandma…)" maxLength={32} className="w-full bg-transparent text-white text-fs-body font-medium outline-none placeholder:text-white/20 border-b pb-1" style={{ borderColor: "rgba(255,255,255,0.12)" }} />
-              <p className="text-white/25 text-fs-body mt-1">Tap the avatar to change it</p>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Dad, Grandma…)" maxLength={32} className="w-full bg-transparent text-white font-medium outline-none placeholder:text-white/20 border-b pb-1" style={{ borderColor: "rgba(255,255,255,0.12)", fontSize: "var(--fs-heading)" }} />
             </div>
           </div>
 
