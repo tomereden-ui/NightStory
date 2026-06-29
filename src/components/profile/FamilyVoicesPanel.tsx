@@ -398,7 +398,9 @@ function AddVoiceSheet({
     }
   };
 
-  const canPreview = method === "text" ? description.trim().length > 5 : recordState === "done";
+  const canPreview = method === "text"
+    ? description.trim().length > 5
+    : recordState === "done" && name.trim().length > 0;
   const selectedPreset = VOICE_PRESETS.find((p) => p.key === selectedPresetKey);
 
   return createPortal(
