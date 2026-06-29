@@ -134,7 +134,16 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         style={{ borderBottom: open ? "1px solid rgba(255,255,255,0.06)" : "none" }}
       >
         <div className="flex items-center gap-2">
-          <span className="text-fs-title">{child.emoji}</span>
+          {/* Child initial bubble */}
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+            background: "linear-gradient(135deg,rgba(79,195,247,0.18),rgba(167,139,250,0.22))",
+            border: "1px solid rgba(167,139,250,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "var(--fs-body)", fontWeight: 700, color: "#a78bfa",
+          }}>
+            {child.name.charAt(0).toUpperCase()}
+          </div>
           <div className="text-left">
             <p className="text-white text-fs-body font-bold">{child.name}&apos;s {t("storyJourneyTitle" as TranslationKey).replace(" ✨", "")}</p>
             <p className="text-white/30 text-fs-body">{t(open ? ("thisMonthClose" as TranslationKey) : ("thisMonthExpand" as TranslationKey))}</p>

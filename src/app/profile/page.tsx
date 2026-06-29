@@ -870,9 +870,18 @@ export default function ProfilePage() {
                 <div key={m.user_id} className="flex items-center justify-between px-4 py-3 rounded-2xl"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                      style={{ background: m.role === "owner" ? "linear-gradient(135deg,#f59e0b,#fbbf24)" : "linear-gradient(135deg,#a78bfa,#4fc3f7)", color: "#fff" }}>
-                      {m.role === "owner" ? "👑" : "👤"}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold"
+                      style={{
+                        background: m.role === "owner"
+                          ? "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.15))"
+                          : "rgba(255,255,255,0.05)",
+                        border: m.role === "owner"
+                          ? "1px solid rgba(167,139,250,0.4)"
+                          : "1px solid rgba(255,255,255,0.1)",
+                        fontSize: "var(--fs-body)",
+                        color: m.role === "owner" ? "#a78bfa" : "rgba(255,255,255,0.35)",
+                      }}>
+                      {m.role === "owner" ? "✦" : "·"}
                     </div>
                     <div>
                       <p className="text-fs-body font-medium" style={{ color: "#e2e8f0" }}>
