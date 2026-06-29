@@ -336,12 +336,14 @@ export default function ChildProfilePicker({
           {profiles.map((p) => {
             const isActive = selected?.id === p.id;
             const avatarUrl = bankAvatars[p.id];
+            const avatarSize = isActive ? 83 : 64;
+            const buttonWidth = isActive ? 94 : 72;
             return (
               <button
                 key={p.id}
                 onClick={() => { if (!disabled) onChange(isActive ? null : p); }}
-                className="flex flex-col items-center gap-2 flex-shrink-0 transition-all active:scale-95"
-                style={{ width: 72, opacity: disabled && !isActive ? 0.35 : 1, cursor: disabled ? "default" : "pointer" }}
+                className="flex flex-col items-center gap-2 flex-shrink-0 active:scale-95"
+                style={{ width: buttonWidth, opacity: disabled && !isActive ? 0.35 : 1, cursor: disabled ? "default" : "pointer", transition: "width 0.2s ease" }}
               >
                 {/* gradient ring wrapper */}
                 <div style={{
@@ -356,9 +358,10 @@ export default function ChildProfilePicker({
                   transition: "all 0.2s ease",
                 }}>
                   <div style={{
-                    width: 64, height: 64, borderRadius: "50%",
+                    width: avatarSize, height: avatarSize, borderRadius: "50%",
                     overflow: "hidden", background: "#07091a",
                     display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "width 0.2s ease, height 0.2s ease",
                   }}>
                     {avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
