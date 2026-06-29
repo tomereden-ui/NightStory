@@ -389,17 +389,20 @@ function ChildPill({
   active: boolean;
   onClick: () => void;
 }) {
+  const avatarSize = active ? 83 : 64;
+  const buttonWidth = active ? 94 : 72;
+
   return (
     <button
       onClick={onClick}
       className="flex-shrink-0 flex flex-col items-center gap-2 active:scale-95"
-      style={{ width: 72, transform: active ? "scale(1.3)" : "scale(1)", transition: "transform 0.2s ease" }}
+      style={{ width: buttonWidth, transition: "width 0.2s ease" }}
     >
       {/* Avatar with selection ring */}
       <div
         style={{
-          width: 64,
-          height: 64,
+          width: avatarSize,
+          height: avatarSize,
           borderRadius: "50%",
           padding: 3,
           background: active
