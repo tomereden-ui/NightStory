@@ -643,6 +643,7 @@ export default function ProfilePage() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
   const [narratorOpen, setNarratorOpen] = useState(false);
+  const [apiExpanded, setApiExpanded] = useState(false);
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -974,22 +975,6 @@ export default function ProfilePage() {
             <TextSizePicker />
           </div>
 
-          {/* ── Settings ─────────────────────────────────────────────── */}
-          <div className="mb-7">
-            <SectionHeader label={t("settings")} />
-            <div className="flex flex-col gap-2">
-              {SETTINGS_ROWS.map((s) => (
-                <SettingRow
-                  key={s.id}
-                  label={s.label}
-                  iconName={s.iconName}
-                  accent={s.accent}
-                  value={s.value}
-                />
-              ))}
-            </div>
-          </div>
-
           {/* ── API Usage ─────────────────────────────────────────────── */}
           <div>
             <SectionHeader label={t("apiUsage")} />
@@ -997,44 +982,50 @@ export default function ProfilePage() {
             {usage && (() => {
               const costs = estimateCosts(usage);
               return (
-                <div
-                  className="mb-3 px-4 py-3 rounded-2xl flex items-center justify-between"
+                <button
+                  onClick={() => setApiExpanded((v) => !v)}
+                  className="w-full mb-3 px-4 py-3 rounded-2xl flex items-center justify-between transition-all active:scale-[0.99]"
                   style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
                 >
-                  <div>
+                  <div className="text-start">
                     <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>{t("estimatedSpend" as never)}</p>
                     <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>{t("estimatedSpendNote" as never)}</p>
                   </div>
-                  <p className="text-fs-subtitle font-bold" style={{ color: "#4fc3f7" }}>{costs.total}</p>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-fs-subtitle font-bold" style={{ color: "#4fc3f7" }}>{costs.total}</p>
+                    <span style={{ color: "rgba(79,195,247,0.4)", fontSize: 10, transform: apiExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+                  </div>
+                </button>
               );
             })()}
 
-            <div className="flex flex-col gap-2">
-              <UsageRow iconName="sparkles" accent="#4fc3f7" label="Gemini · Text"
-                sub={usage ? `${fmt(usage.gemini_calls)} request${usage.gemini_calls !== 1 ? "s" : ""}` : "—"}
-                value={usage ? fmt(usage.gemini_tokens) : "—"} unit="tokens"
-                cost={usage ? estimateCosts(usage).geminiText : undefined} />
-              <UsageRow iconName="mic" accent="#38bdf8" label="Gemini · TTS"
-                sub={usage ? `${fmt(usage.gemini_tts_calls)} synthesis call${usage.gemini_tts_calls !== 1 ? "s" : ""}` : "—"}
-                value={usage ? fmt(usage.gemini_tts_chars) : "—"} unit="chars"
-                cost={usage ? estimateCosts(usage).geminiTts : undefined} />
-              <UsageRow iconName="sparkles" accent="#34d399" label="Gemini · Images"
-                sub={usage ? `${fmt(usage.gemini_image_calls ?? 0)} image${(usage.gemini_image_calls ?? 0) !== 1 ? "s" : ""} generated` : "—"}
-                value={usage ? fmt(usage.gemini_image_calls ?? 0) : "—"} unit="images"
-                cost={usage ? estimateCosts(usage).geminiImage : undefined} />
-              <UsageRow iconName="sparkles" accent="#6ee7b7" label="Pollinations · Images"
-                sub={usage ? `${fmt(usage.pollinations_calls ?? 0)} image${(usage.pollinations_calls ?? 0) !== 1 ? "s" : ""} generated` : "—"}
-                value={usage ? fmt(usage.pollinations_calls ?? 0) : "—"} unit="images" />
-              <UsageRow iconName="waveform" accent="#F59E0B" label="ElevenLabs · TTS"
-                sub={usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
-                value={usage ? fmt(usage.el_tts_chars) : "—"} unit="chars"
-                cost={usage ? estimateCosts(usage).elTts : undefined} />
-              <UsageRow iconName="music" accent="#A78BFA" label="ElevenLabs · SFX"
-                sub={usage ? `${fmt(usage.el_sfx_calls)} generation${usage.el_sfx_calls !== 1 ? "s" : ""}` : "—"}
-                value={usage ? fmt(usage.el_sfx_chars) : "—"} unit="prompt chars"
-                cost={usage ? estimateCosts(usage).elSfx : undefined} />
-            </div>
+            {apiExpanded && (
+              <div className="flex flex-col gap-2">
+                <UsageRow iconName="sparkles" accent="#4fc3f7" label="Gemini · Text"
+                  sub={usage ? `${fmt(usage.gemini_calls)} request${usage.gemini_calls !== 1 ? "s" : ""}` : "—"}
+                  value={usage ? fmt(usage.gemini_tokens) : "—"} unit="tokens"
+                  cost={usage ? estimateCosts(usage).geminiText : undefined} />
+                <UsageRow iconName="mic" accent="#38bdf8" label="Gemini · TTS"
+                  sub={usage ? `${fmt(usage.gemini_tts_calls)} synthesis call${usage.gemini_tts_calls !== 1 ? "s" : ""}` : "—"}
+                  value={usage ? fmt(usage.gemini_tts_chars) : "—"} unit="chars"
+                  cost={usage ? estimateCosts(usage).geminiTts : undefined} />
+                <UsageRow iconName="sparkles" accent="#34d399" label="Gemini · Images"
+                  sub={usage ? `${fmt(usage.gemini_image_calls ?? 0)} image${(usage.gemini_image_calls ?? 0) !== 1 ? "s" : ""} generated` : "—"}
+                  value={usage ? fmt(usage.gemini_image_calls ?? 0) : "—"} unit="images"
+                  cost={usage ? estimateCosts(usage).geminiImage : undefined} />
+                <UsageRow iconName="sparkles" accent="#6ee7b7" label="Pollinations · Images"
+                  sub={usage ? `${fmt(usage.pollinations_calls ?? 0)} image${(usage.pollinations_calls ?? 0) !== 1 ? "s" : ""} generated` : "—"}
+                  value={usage ? fmt(usage.pollinations_calls ?? 0) : "—"} unit="images" />
+                <UsageRow iconName="waveform" accent="#F59E0B" label="ElevenLabs · TTS"
+                  sub={usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
+                  value={usage ? fmt(usage.el_tts_chars) : "—"} unit="chars"
+                  cost={usage ? estimateCosts(usage).elTts : undefined} />
+                <UsageRow iconName="music" accent="#A78BFA" label="ElevenLabs · SFX"
+                  sub={usage ? `${fmt(usage.el_sfx_calls)} generation${usage.el_sfx_calls !== 1 ? "s" : ""}` : "—"}
+                  value={usage ? fmt(usage.el_sfx_chars) : "—"} unit="prompt chars"
+                  cost={usage ? estimateCosts(usage).elSfx : undefined} />
+              </div>
+            )}
           </div>
 
         </div>
