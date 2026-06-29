@@ -70,6 +70,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // If this is a cloned EL voice but the key is missing, fail clearly rather
+  // than silently falling back to a random Gemini voice that sounds wrong.
+  if (elVoiceId && !elKey) {
+    return NextResponse.json({ error: "ELEVENLABS_API_KEY is not configured — cannot play cloned voice." }, { status: 500 });
+  }
+
   const useEL = !!(elVoiceId && elKey);
   const voice = useEL
     ? elVoiceId!
