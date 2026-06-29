@@ -96,15 +96,6 @@ function ChildCard({
           </div>
         </button>
 
-        {/* Delete badge */}
-        <button
-          onClick={onDelete}
-          className="absolute -top-0.5 -right-0.5 z-10 w-5 h-5 rounded-full flex items-center justify-center transition-all"
-          style={{ background: "rgba(15,18,38,0.92)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.45)" }}
-          title={t("removeChild" as never)}
-        >
-          <Icon name="close" size={9} />
-        </button>
       </div>
 
       {/* Name */}
@@ -839,21 +830,18 @@ export default function ProfilePage() {
                     />
                   ))
               }
-              {/* Add child button */}
+              {/* Add child — small + pill */}
               <button
                 onClick={() => setShowAddChild(true)}
-                className="flex flex-col items-center gap-2.5 flex-shrink-0 transition-all active:scale-[0.97]"
-                style={{ width: 84 }}
+                className="flex-shrink-0 self-center flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px dashed rgba(255,255,255,0.18)",
+                  color: "rgba(255,255,255,0.4)",
+                }}
               >
-                <div style={{
-                  width: 80, height: 80, borderRadius: "50%",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1.5px dashed rgba(255,255,255,0.12)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <span style={{ fontSize: 24, color: "rgba(255,255,255,0.25)", lineHeight: 1 }}>+</span>
-                </div>
-                <span className="text-fs-body font-medium text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{t("addChild")}</span>
+                <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+                <span className="text-fs-label font-medium">{t("addChild")}</span>
               </button>
             </div>
           </div>
