@@ -226,7 +226,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
 
 // ── Main Library page ─────────────────────────────────────────────────────────
 
-type LibraryTab = "my-stories" | "classics" | "community";
+type LibraryTab = "my-stories" | "family" | "classics" | "community";
 
 export default function LibraryPage() {
   const { t } = useLanguage();
@@ -234,12 +234,17 @@ export default function LibraryPage() {
   const isMobile = effective === "mobile";
 
   const [activeTab, setActiveTab] = useState<LibraryTab>("my-stories");
+  const [activeChildId, setActiveChildId] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("library-tab");
-    if (saved === "classics" || saved === "community") setActiveTab(saved);
+    if (saved === "classics" || saved === "community" || saved === "family") setActiveTab(saved as LibraryTab);
+    const childId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
+    setActiveChildId(childId);
   }, []);
+
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
+  const [familyEntries, setFamilyEntries] = useState<LibraryEntry[]>([]);
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [recentClassics, setRecentClassics] = useState<ClassicMeta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,44 +270,46 @@ export default function LibraryPage() {
     el.scrollBy({ left: dir === "left" ? -240 : 240, behavior: "smooth" });
   };
 
-  const applyData = (lib: LibraryEntry[], trash: unknown[], cls: ClassicMeta[]) => {
-    setEntries(lib);
-    setTrashCount(trash.length);
+  const applyClassics = (cls: ClassicMeta[]) => {
     setClassics(cls);
-    const ready = cls.filter((c) => c.status === "ready");
-    setRecentClassics(ready.slice(0, 5));
+    setRecentClassics(cls.filter((c) => c.status === "ready").slice(0, 5));
   };
 
+  // On mount: load classics, trash, and all-family stories
   useEffect(() => {
-    // Show cached data instantly, then refresh in background
-    try {
-      const cached = sessionStorage.getItem("library-cache");
-      if (cached) {
-        const { lib, trash, cls } = JSON.parse(cached);
-        applyData(lib, trash, cls);
-        setLoading(false);
-      }
-    } catch {}
-
     Promise.all([
-      fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/library/trash", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([lib, trash, cls]) => {
-        const libArr = Array.isArray(lib) ? lib as LibraryEntry[] : [];
-        const trashArr = Array.isArray(trash) ? trash as unknown[] : [];
-        const clsArr = Array.isArray(cls) ? cls as ClassicMeta[] : [];
-        applyData(libArr, trashArr, clsArr);
-        try { sessionStorage.setItem("library-cache", JSON.stringify({ lib: libArr, trash: trashArr, cls: clsArr })); } catch {}
-        // Prefetch classics cover images in the background so the Classics tab feels instant
-        clsArr.forEach((c) => { if (c.coverUrl) { new Image().src = c.coverUrl; } });
-        // Prefetch user story covers (first 12 — above-the-fold on the My Stories grid)
-        libArr.slice(0, 12).forEach((e) => { if (e.coverUrl) { new Image().src = e.coverUrl; } });
+      .then(([trash, cls, allLib]) => {
+        setTrashCount(Array.isArray(trash) ? (trash as unknown[]).length : 0);
+        applyClassics(Array.isArray(cls) ? cls as ClassicMeta[] : []);
+        const allArr = Array.isArray(allLib) ? allLib as LibraryEntry[] : [];
+        setFamilyEntries(allArr);
+        allArr.slice(0, 12).forEach((e) => { if (e.coverUrl) { new Image().src = e.coverUrl; } });
       })
       .catch(() => {})
       .finally(() => { setLoading(false); setTimeout(updateRecentScroll, 50); });
   }, []);
+
+  // Re-fetch child-scoped stories whenever activeChildId changes
+  useEffect(() => {
+    if (activeChildId === null) return;
+    const cacheKey = `library-cache-${activeChildId}`;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) { setEntries(JSON.parse(cached) as LibraryEntry[]); }
+    } catch {}
+    fetch(`/api/library?childId=${encodeURIComponent(activeChildId)}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((lib) => {
+        const arr = Array.isArray(lib) ? lib as LibraryEntry[] : [];
+        setEntries(arr);
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(arr)); } catch {}
+      })
+      .catch(() => {});
+  }, [activeChildId]);
 
   const q = search.toLowerCase().trim();
   const filtered = entries.filter((e) => {
@@ -444,6 +451,7 @@ export default function LibraryPage() {
         <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
           {([
             { key: "my-stories", label: t("myLibraryTab") },
+            { key: "family",     label: "Family Stories" },
             { key: "classics",   label: t("classicsTab") },
             { key: "community",  label: t("communityTab") },
           ] as { key: LibraryTab; label: string }[]).map(({ key, label }) => {
@@ -508,6 +516,57 @@ export default function LibraryPage() {
             onClassicUpdated={(updated) => setClassics((prev) => prev.map((c) => c.id === updated.id ? updated : c))}
           />
         </div>
+
+        {/* ── Family Stories tab ── */}
+        {activeTab === "family" && (
+          loading ? (
+            <div className="grid gap-3 pt-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)", aspectRatio: "2/3", animationDelay: `${i * 0.08}s` }} />
+              ))}
+            </div>
+          ) : familyEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
+              <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(167,139,250,0.4))" }}>👨‍👩‍👧‍👦</span>
+              <p className="text-white/40 text-fs-body font-light tracking-wide">No family stories yet</p>
+              <p className="text-white/20 text-fs-body">Stories created for any child will appear here</p>
+            </div>
+          ) : (
+            <div
+              className="grid gap-3 pt-2"
+              style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}
+            >
+              {familyEntries.map((entry) => {
+                const [c1, c2] = cardPalette(entry.title);
+                return (
+                  <Link
+                    key={entry.id}
+                    href={`/library/${entry.id}`}
+                    className="relative rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none block"
+                    style={{ aspectRatio: "2/3", boxShadow: "0 8px 24px rgba(0,0,0,0.45)" }}
+                  >
+                    {entry.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center"
+                        style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
+                        <span className="text-fs-display" style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
+                    <div className="absolute bottom-0 left-0 right-0 px-2 pb-2 pt-4">
+                      <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
+                      {entry.durationSeconds > 0 && (
+                        <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{durationLabel(entry.durationSeconds)}</p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )
+        )}
 
         {/* ── Community tab ── */}
         {activeTab === "community" && (
