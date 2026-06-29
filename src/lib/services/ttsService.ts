@@ -32,6 +32,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ── ElevenLabs TTS ────────────────────────────────────────────────────────────
 
+// Detect script/language from text content for EL language_code hint
+function detectLanguageCode(text: string, hint?: string): string | undefined {
+  if (/[֐-׿יִ-ﭏ]/.test(text)) return "he";
+  if (/[؀-ۿ]/.test(text)) return "ar";
+  if (/[一-鿿぀-ヿ]/.test(text)) return hint === "ja" ? "ja" : "zh";
+  if (/[ऀ-ॿ]/.test(text)) return "hi";
+  if (hint && hint !== "en") return hint;
+  return undefined;
+}
+
 async function synthesizeEL(
   text: string,
   voiceId: string,
@@ -39,10 +49,11 @@ async function synthesizeEL(
   outputPath: string,
   stability = 0.5,
   style = 0.0,
-  _language?: string,
+  language?: string,
   similarityBoost = 0.75,
   useSpeakerBoost = true,
 ): Promise<void> {
+  const langCode = detectLanguageCode(text, language);
   for (let attempt = 1; attempt <= 5; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30_000);
@@ -57,6 +68,7 @@ async function synthesizeEL(
           body: JSON.stringify({
             text,
             model_id: "eleven_multilingual_v2",
+            ...(langCode ? { language_code: langCode } : {}),
             voice_settings: { stability, similarity_boost: similarityBoost, style, use_speaker_boost: useSpeakerBoost },
           }),
           signal: controller.signal,
