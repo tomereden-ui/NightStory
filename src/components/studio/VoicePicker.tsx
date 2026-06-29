@@ -9,6 +9,8 @@ interface VoicePickerProps {
   selectedVoiceId: string;
   onSelect: (voiceId: string) => void;
   onClose: () => void;
+  /** Render as a static inline block (e.g. inside an expandable section) instead of a floating dropdown */
+  inline?: boolean;
 }
 
 export default function VoicePicker({
@@ -16,18 +18,18 @@ export default function VoicePicker({
   selectedVoiceId,
   onSelect,
   onClose,
+  inline = false,
 }: VoicePickerProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (inline) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
+  }, [onClose, inline]);
 
   const presetVoices = voices.filter((v) => !v.elevenLabsId);
   const familyVoices = voices.filter((v) => v.elevenLabsId);
@@ -57,34 +59,50 @@ export default function VoicePicker({
     );
   }
 
+  const listContent = (
+    <ul className="py-1 overflow-y-auto" style={{ maxHeight: inline ? 280 : "60vh" }}>
+      {presetVoices.map(renderVoiceItem)}
+      {familyVoices.length > 0 && (
+        <>
+          <li className="px-3 pt-3 pb-1">
+            <p className="text-white/20 text-fs-body uppercase tracking-widest">Family Voices</p>
+          </li>
+          {familyVoices.map(renderVoiceItem)}
+        </>
+      )}
+    </ul>
+  );
+
+  if (inline) {
+    return (
+      <div
+        ref={ref}
+        className="w-full rounded-2xl overflow-hidden"
+        style={{
+          background: "#0d1120",
+          border: "1px solid rgba(79,195,247,0.15)",
+        }}
+      >
+        {listContent}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={ref}
-      className="absolute left-0 top-11 z-50 w-48 rounded-2xl shadow-card animate-float-up flex flex-col"
+      className="absolute left-0 top-11 z-50 w-48 rounded-2xl flex flex-col shadow-card animate-float-up overflow-hidden"
       style={{
         background: "#111526",
         border: "1px solid rgba(0,212,255,0.2)",
         boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 24px rgba(0,212,255,0.08)",
         maxHeight: "60vh",
-        overflow: "hidden",
       }}
     >
       <div className="px-3 py-2 border-b border-white/5 flex-shrink-0">
         <p className="text-white/30 text-fs-body uppercase tracking-widest">Assign Voice</p>
       </div>
-
-      <ul className="py-1 overflow-y-auto flex-1">
-        {presetVoices.map(renderVoiceItem)}
-
-        {familyVoices.length > 0 && (
-          <>
-            <li className="px-3 pt-3 pb-1">
-              <p className="text-white/20 text-fs-body uppercase tracking-widest">Family Voices</p>
-            </li>
-            {familyVoices.map(renderVoiceItem)}
-          </>
-        )}
-      </ul>
+      {listContent}
     </div>
   );
 }

@@ -691,6 +691,7 @@ function DirectionSheet({
             {showVoicePicker && (
               <div className="px-3 pb-3">
                 <VoicePicker
+                  inline
                   voices={voicePool}
                   selectedVoiceId={voice?.id ?? ""}
                   onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
