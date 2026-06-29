@@ -258,7 +258,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { type, language = "en" } = body;
-  const sampleText = body.sampleText?.trim() || SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en;
+  const sampleText = body.sampleText?.trim() || (SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en);
 
   // ── type: "text" — AI picks voice from description, then TTS ────────────────
   if (type === "text") {
