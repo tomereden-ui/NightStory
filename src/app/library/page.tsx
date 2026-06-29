@@ -320,7 +320,7 @@ function FamilyStoriesGrid({
                 )}
               </div>
 
-              {/* Assigned child avatars — overlapping chips on bottom-left of image */}
+              {/* Assigned child avatars — overlapping chips on top-left of image */}
               {assignedChildren.length > 0 && (
                 <div className="absolute top-2 left-2 flex" style={{ gap: -4 }}>
                   {assignedChildren.slice(0, 3).map((child, i) => (
@@ -328,27 +328,27 @@ function FamilyStoriesGrid({
                       key={child.id}
                       className="flex items-center justify-center rounded-full overflow-hidden"
                       style={{
-                        width: 24, height: 24,
+                        width: 36, height: 36,
                         background: "#0D1120",
-                        border: "2px solid rgba(79,195,247,0.5)",
-                        marginLeft: i > 0 ? -6 : 0,
+                        border: "2.5px solid rgba(79,195,247,0.55)",
+                        marginLeft: i > 0 ? -10 : 0,
                         zIndex: assignedChildren.length - i,
                         flexShrink: 0,
                       }}
                     >
-                      <ChildAvatar child={child} size={20} />
+                      <ChildAvatar child={child} size={32} />
                     </div>
                   ))}
                   {assignedChildren.length > 3 && (
                     <div
                       className="flex items-center justify-center rounded-full"
                       style={{
-                        width: 24, height: 24,
+                        width: 36, height: 36,
                         background: "rgba(79,195,247,0.2)",
-                        border: "2px solid rgba(79,195,247,0.4)",
-                        marginLeft: -6,
+                        border: "2.5px solid rgba(79,195,247,0.4)",
+                        marginLeft: -10,
                         color: "#4fc3f7",
-                        fontSize: 9,
+                        fontSize: 11,
                         fontWeight: 700,
                         flexShrink: 0,
                       }}
