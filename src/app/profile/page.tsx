@@ -61,70 +61,56 @@ function ChildCard({
   const [c1, c2] = CHILD_PALETTES[childHash(child.name) % CHILD_PALETTES.length];
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl flex flex-col items-center justify-center gap-2.5 transition-all active:scale-[0.97]"
-      style={{
-        height: 148,
-        background: `linear-gradient(160deg, ${c1}14, ${c2}20)`,
-        border: `1px solid ${c1}30`,
-        boxShadow: `0 4px 18px ${c1}18, 0 1px 6px rgba(0,0,0,0.4)`,
-      }}
-    >
-      {/* Ambient glow */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        background: `radial-gradient(ellipse at 50% 10%, ${c1}18 0%, transparent 60%)`,
-      }} />
-
-      {/* Sparkle accents */}
-      <span className="absolute top-2.5 left-2.5 pointer-events-none select-none" style={{ fontSize: 8, color: c1, opacity: 0.55 }}>✦</span>
-      <span className="absolute top-3 right-3 pointer-events-none select-none" style={{ fontSize: 6, color: c2, opacity: 0.38 }}>★</span>
-
-      {/* Delete button */}
-      <button
-        onClick={onDelete}
-        className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full flex items-center justify-center transition-all opacity-30 hover:opacity-80"
-        style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
-        title={t("removeChild" as never)}
-      >
-        <Icon name="close" size={9} />
-      </button>
-
-      {/* Avatar — tap to edit */}
-      <button
-        onClick={onChangeAvatar}
-        className="relative group flex-shrink-0"
-        title={t("changeAvatar" as never)}
-      >
+    <div className="flex flex-col items-center gap-2.5 flex-shrink-0 transition-all active:scale-[0.97]" style={{ width: 84 }}>
+      {/* Avatar circle + delete badge */}
+      <div className="relative">
         {/* Glowing gradient ring */}
-        <div style={{
-          width: 72, height: 72, borderRadius: "50%",
-          padding: 2.5,
-          background: `linear-gradient(135deg, ${c1}, ${c2} 50%, ${c1})`,
-          boxShadow: `0 0 18px ${c1}45, 0 0 36px ${c2}18`,
-        }}>
+        <button
+          onClick={onChangeAvatar}
+          className="group block"
+          title={t("changeAvatar" as never)}
+        >
           <div style={{
-            width: "100%", height: "100%", borderRadius: "50%",
-            overflow: "hidden", background: "#07091a",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            width: 80, height: 80, borderRadius: "50%",
+            padding: 2.5,
+            background: `linear-gradient(135deg, ${c1}, ${c2} 55%, ${c1})`,
+            boxShadow: `0 0 20px ${c1}50, 0 0 40px ${c2}1a`,
           }}>
-            {child.avatarEmoji?.startsWith("http") ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={child.avatarEmoji} alt={child.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <span style={{ fontSize: 30 }}>{child.avatarEmoji || "⭐"}</span>
-            )}
+            <div style={{
+              width: "100%", height: "100%", borderRadius: "50%",
+              overflow: "hidden", background: "#07091a",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {child.avatarEmoji?.startsWith("http") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={child.avatarEmoji} alt={child.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: 32 }}>{child.avatarEmoji || "⭐"}</span>
+              )}
+            </div>
           </div>
-        </div>
-        {/* Edit overlay */}
-        <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: "rgba(0,0,0,0.45)" }}>
-          <span style={{ fontSize: 16 }}>✏️</span>
-        </div>
-      </button>
+          {/* Edit overlay */}
+          <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ background: "rgba(0,0,0,0.45)" }}>
+            <span style={{ fontSize: 18 }}>✏️</span>
+          </div>
+        </button>
+
+        {/* Delete badge */}
+        <button
+          onClick={onDelete}
+          className="absolute -top-0.5 -right-0.5 z-10 w-5 h-5 rounded-full flex items-center justify-center transition-all"
+          style={{ background: "rgba(15,18,38,0.92)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.45)" }}
+          title={t("removeChild" as never)}
+        >
+          <Icon name="close" size={9} />
+        </button>
+      </div>
 
       {/* Name */}
-      <p className="font-bold text-white text-fs-body truncate px-3 w-full text-center" style={{
-        textShadow: `0 0 12px ${c1}99`,
+      <p className="font-semibold text-fs-body truncate w-full text-center leading-tight" style={{
+        color: "rgba(255,255,255,0.85)",
+        textShadow: `0 0 14px ${c1}88`,
       }}>
         {child.name}
       </p>
@@ -836,14 +822,13 @@ export default function ProfilePage() {
           {/* ── Child profiles ──────────────────────────────────────── */}
           <div className="mb-7">
             <SectionHeader label={t("childProfiles")} />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-wrap gap-5">
               {!childrenLoaded
                 ? [0, 1].map((i) => (
-                    <div
-                      key={i}
-                      className="rounded-2xl animate-pulse"
-                      style={{ height: 148, background: "rgba(255,255,255,0.04)", animationDelay: `${i * 0.1}s` }}
-                    />
+                    <div key={i} className="flex flex-col items-center gap-2.5 animate-pulse" style={{ width: 84 }}>
+                      <div style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.06)", animationDelay: `${i * 0.1}s` }} />
+                      <div style={{ width: 52, height: 10, borderRadius: 6, background: "rgba(255,255,255,0.05)" }} />
+                    </div>
                   ))
                 : children.map((child) => (
                     <ChildCard
@@ -854,22 +839,21 @@ export default function ProfilePage() {
                     />
                   ))
               }
+              {/* Add child button */}
               <button
                 onClick={() => setShowAddChild(true)}
-                className="rounded-2xl flex flex-col items-center justify-center gap-2 transition-all active:scale-[0.97]"
-                style={{
-                  height: 148,
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1.5px dashed rgba(255,255,255,0.09)",
-                }}
+                className="flex flex-col items-center gap-2.5 flex-shrink-0 transition-all active:scale-[0.97]"
+                style={{ width: 84 }}
               >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px dashed rgba(255,255,255,0.13)",
+                <div style={{
+                  width: 80, height: 80, borderRadius: "50%",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1.5px dashed rgba(255,255,255,0.12)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <span style={{ fontSize: 18, color: "rgba(255,255,255,0.22)", lineHeight: 1 }}>+</span>
+                  <span style={{ fontSize: 24, color: "rgba(255,255,255,0.25)", lineHeight: 1 }}>+</span>
                 </div>
-                <span className="text-fs-body font-medium" style={{ color: "rgba(255,255,255,0.22)" }}>{t("addChild")}</span>
+                <span className="text-fs-body font-medium text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{t("addChild")}</span>
               </button>
             </div>
           </div>
