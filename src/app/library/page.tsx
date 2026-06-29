@@ -319,63 +319,73 @@ function FamilyStoriesGrid({
                   <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{durationLabel(entry.durationSeconds)}</p>
                 )}
               </div>
-
-              {/* Assigned child avatars — overlapping chips on top-left of image */}
-              {assignedChildren.length > 0 && (
-                <div className="absolute top-2 left-2 flex" style={{ gap: -4 }}>
-                  {assignedChildren.slice(0, 3).map((child, i) => (
-                    <div
-                      key={child.id}
-                      className="flex items-center justify-center rounded-full overflow-hidden"
-                      style={{
-                        width: 36, height: 36,
-                        background: "#0D1120",
-                        border: "2.5px solid rgba(79,195,247,0.55)",
-                        marginLeft: i > 0 ? -10 : 0,
-                        zIndex: assignedChildren.length - i,
-                        flexShrink: 0,
-                      }}
-                    >
-                      <ChildAvatar child={child} size={32} />
-                    </div>
-                  ))}
-                  {assignedChildren.length > 3 && (
-                    <div
-                      className="flex items-center justify-center rounded-full"
-                      style={{
-                        width: 36, height: 36,
-                        background: "rgba(79,195,247,0.2)",
-                        border: "2.5px solid rgba(79,195,247,0.4)",
-                        marginLeft: -10,
-                        color: "#4fc3f7",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        flexShrink: 0,
-                      }}
-                    >
-                      +{assignedChildren.length - 3}
-                    </div>
-                  )}
-                </div>
-              )}
             </Link>
 
-            {/* Assign button — bottom strip */}
+            {/* Bottom strip — avatars when assigned, "+Assign" button when not */}
             {children.length > 0 && (
               <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1.5">
-                <button
-                  onClick={(e) => { e.preventDefault(); isPickerOpen ? setPickerOpenId(null) : openPicker(entry.id, assignedChildIds); }}
-                  className="w-full py-1.5 rounded-lg font-medium truncate transition-all active:scale-95"
-                  style={{
-                    background: assignedChildren.length > 0 ? "rgba(79,195,247,0.18)" : "rgba(0,0,0,0.55)",
-                    backdropFilter: "blur(6px)",
-                    color: assignedChildren.length > 0 ? "#4fc3f7" : "rgba(255,255,255,0.45)",
-                    border: assignedChildren.length > 0 ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.1)",
-                    fontSize: "var(--fs-body)",
-                  }}
-                >
-                  {isAssigning ? "…" : assignedChildren.length > 0 ? "Assigned ✓" : "+ Assign"}
-                </button>
+                {assignedChildren.length > 0 ? (
+                  /* Clickable avatar row replaces the button once assigned */
+                  <button
+                    onClick={(e) => { e.preventDefault(); isPickerOpen ? setPickerOpenId(null) : openPicker(entry.id, assignedChildIds); }}
+                    className="w-full flex items-center justify-center py-1 transition-all active:scale-95"
+                    style={{ background: "transparent" }}
+                  >
+                    {isAssigning ? (
+                      <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>…</span>
+                    ) : (
+                      <div className="flex" style={{ gap: 0 }}>
+                        {assignedChildren.slice(0, 3).map((child, i) => (
+                          <div
+                            key={child.id}
+                            className="flex items-center justify-center rounded-full overflow-hidden"
+                            style={{
+                              width: 36, height: 36,
+                              background: "#0D1120",
+                              border: "2.5px solid rgba(79,195,247,0.55)",
+                              marginLeft: i > 0 ? -10 : 0,
+                              zIndex: assignedChildren.length - i,
+                              flexShrink: 0,
+                            }}
+                          >
+                            <ChildAvatar child={child} size={32} />
+                          </div>
+                        ))}
+                        {assignedChildren.length > 3 && (
+                          <div
+                            className="flex items-center justify-center rounded-full"
+                            style={{
+                              width: 36, height: 36,
+                              background: "rgba(79,195,247,0.2)",
+                              border: "2.5px solid rgba(79,195,247,0.4)",
+                              marginLeft: -10,
+                              color: "#4fc3f7",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            +{assignedChildren.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => { e.preventDefault(); isPickerOpen ? setPickerOpenId(null) : openPicker(entry.id, assignedChildIds); }}
+                    className="w-full py-1.5 rounded-lg font-medium truncate transition-all active:scale-95"
+                    style={{
+                      background: "rgba(0,0,0,0.55)",
+                      backdropFilter: "blur(6px)",
+                      color: "rgba(255,255,255,0.45)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      fontSize: "var(--fs-body)",
+                    }}
+                  >
+                    {isAssigning ? "…" : "+ Assign"}
+                  </button>
+                )}
 
                 {/* Multi-select child picker */}
                 {isPickerOpen && (
