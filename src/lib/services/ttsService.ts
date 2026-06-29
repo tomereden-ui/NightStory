@@ -53,6 +53,7 @@ async function synthesizeEL(
   similarityBoost = 0.75,
   useSpeakerBoost = true,
 ): Promise<void> {
+  const langCode = detectLanguageCode(text, language);
   for (let attempt = 1; attempt <= 5; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30_000);
@@ -66,7 +67,8 @@ async function synthesizeEL(
           headers: { "Content-Type": "application/json", "xi-api-key": apiKey },
           body: JSON.stringify({
             text,
-            model_id: "eleven_multilingual_v2",
+            model_id: "eleven_v3",
+            ...(langCode ? { language_code: langCode } : {}),
             voice_settings: { stability, similarity_boost: similarityBoost, style, use_speaker_boost: useSpeakerBoost },
           }),
           signal: controller.signal,
