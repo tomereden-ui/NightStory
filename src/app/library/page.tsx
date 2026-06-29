@@ -62,26 +62,17 @@ function cardPalette(title: string): [string, string] {
 
 // ── Classics tab ─────────────────────────────────────────────────────────────
 
-function ClassicsTab() {
+function ClassicsTab({ classics, loading, onClassicUpdated }: {
+  classics: ClassicMeta[];
+  loading: boolean;
+  onClassicUpdated: (updated: ClassicMeta) => void;
+}) {
   const { effective } = useViewMode();
   const { t } = useLanguage();
-  const isMobile = effective === "mobile";
 
-  const [classics, setClassics] = useState<ClassicMeta[]>([]);
-  const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const seedingRef = useRef(false);
-
-  useEffect(() => {
-    fetch("/api/classics", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setClassics(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   // Background: generate missing classics one by one
   useEffect(() => {
@@ -102,9 +93,7 @@ function ClassicsTab() {
           });
           if (res.ok) {
             const { meta } = await res.json() as { meta: ClassicMeta };
-            setClassics((prev) =>
-              prev.map((item) => (item.id === c.id ? meta : item))
-            );
+            onClassicUpdated(meta);
           }
         } catch {
           // keep as pending, retry on next load
@@ -113,7 +102,7 @@ function ClassicsTab() {
       setGeneratingId(null);
       seedingRef.current = false;
     })();
-  }, [loading, classics]);
+  }, [loading, classics, onClassicUpdated]);
 
   if (loading) {
     return (
@@ -251,6 +240,7 @@ export default function LibraryPage() {
     if (saved === "classics" || saved === "community") setActiveTab(saved);
   }, []);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
+  const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [recentClassics, setRecentClassics] = useState<ClassicMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [trashCount, setTrashCount] = useState(0);
@@ -275,17 +265,36 @@ export default function LibraryPage() {
     el.scrollBy({ left: dir === "left" ? -240 : 240, behavior: "smooth" });
   };
 
+  const applyData = (lib: LibraryEntry[], trash: unknown[], cls: ClassicMeta[]) => {
+    setEntries(lib);
+    setTrashCount(trash.length);
+    setClassics(cls);
+    const ready = cls.filter((c) => c.status === "ready");
+    setRecentClassics(ready.slice(0, 5));
+  };
+
   useEffect(() => {
+    // Show cached data instantly, then refresh in background
+    try {
+      const cached = sessionStorage.getItem("library-cache");
+      if (cached) {
+        const { lib, trash, cls } = JSON.parse(cached);
+        applyData(lib, trash, cls);
+        setLoading(false);
+      }
+    } catch {}
+
     Promise.all([
       fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/library/trash", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
     ])
       .then(([lib, trash, cls]) => {
-        setEntries(Array.isArray(lib) ? lib : []);
-        setTrashCount(Array.isArray(trash) ? trash.length : 0);
-        const ready = (Array.isArray(cls) ? cls as ClassicMeta[] : []).filter((c) => c.status === "ready");
-        setRecentClassics(ready.slice(0, 5));
+        const libArr = Array.isArray(lib) ? lib as LibraryEntry[] : [];
+        const trashArr = Array.isArray(trash) ? trash as unknown[] : [];
+        const clsArr = Array.isArray(cls) ? cls as ClassicMeta[] : [];
+        applyData(libArr, trashArr, clsArr);
+        try { sessionStorage.setItem("library-cache", JSON.stringify({ lib: libArr, trash: trashArr, cls: clsArr })); } catch {}
       })
       .catch(() => {})
       .finally(() => { setLoading(false); setTimeout(updateRecentScroll, 50); });
@@ -489,7 +498,11 @@ export default function LibraryPage() {
       <div className="px-4 pb-32">
         {/* ── Classics tab — keep mounted to avoid re-fetching on every tab switch ── */}
         <div style={{ display: activeTab === "classics" ? undefined : "none" }}>
-          <ClassicsTab />
+          <ClassicsTab
+            classics={classics}
+            loading={loading}
+            onClassicUpdated={(updated) => setClassics((prev) => prev.map((c) => c.id === updated.id ? updated : c))}
+          />
         </div>
 
         {/* ── Community tab ── */}
