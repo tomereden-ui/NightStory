@@ -338,7 +338,12 @@ function FamilyStoriesGrid({
                           color: child.id === entry.childId ? "#4fc3f7" : "#fff",
                         }}
                       >
-                        <span style={{ fontSize: 16 }}>{child.avatar_emoji?.startsWith("http") ? "🧒" : (child.avatar_emoji || "🧒")}</span>
+                        {child.avatar_emoji?.startsWith("http") ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={child.avatar_emoji} alt={child.name} style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                        ) : (
+                          <span style={{ fontSize: 16, flexShrink: 0 }}>{child.avatar_emoji || "🧒"}</span>
+                        )}
                         <span className="flex-1 truncate">{child.name}</span>
                         {child.id === entry.childId && <span style={{ color: "#4fc3f7" }}>✓</span>}
                       </button>
