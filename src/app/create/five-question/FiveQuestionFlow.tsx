@@ -861,7 +861,7 @@ export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string;
 
 export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string } = {}) {
   const router = useRouter();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const [step, setStep]                   = useState<Step>("q1");
   const [answers, setAnswers]             = useState<Answers>(INITIAL_ANSWERS);
@@ -1111,7 +1111,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const GeneratingBadge = imagesGenerating ? (
     <div className="flex items-center justify-center gap-2 py-1.5 mb-2">
       <span className="w-1.5 h-1.5 rounded-full bg-purple-bright animate-pulse" />
-      <span className="text-fs-body animate-pulse" style={{ color: "rgba(167,139,250,0.6)" }}>Painting images…</span>
+      <span className="text-fs-body animate-pulse" style={{ color: "rgba(167,139,250,0.6)" }}>{t("paintingImages")}</span>
     </div>
   ) : null;
 
@@ -1193,5 +1193,5 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     );
   }
 
-  return <div className="flex items-center justify-center min-h-full"><button onClick={handleReset} className="text-white/50">Start over</button></div>;
+  return <div className="flex items-center justify-center min-h-full"><button onClick={handleReset} className="text-white/50">{t("startOver")}</button></div>;
 }

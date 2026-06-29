@@ -223,7 +223,7 @@ function ClassicsTab() {
                     {durationLabel(meta.durationSeconds)}
                   </span>
                 ) : meta.status === "pending" ? (
-                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>Pending</span>
+                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>{t("pending")}</span>
                 ) : null}
               </div>
             </div>
@@ -356,7 +356,7 @@ export default function LibraryPage() {
         {!loading && (entries.length > 0 || recentClassics.length > 0) && (
           <div className="mb-4">
             <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
-              Recently Played
+              {t("recentlyPlayedSection")}
             </p>
             <div className="relative">
               {/* Left arrow */}
@@ -430,9 +430,9 @@ export default function LibraryPage() {
         {/* Tab switcher — scrollable pills */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
           {([
-            { key: "my-stories", label: t("myLibrary") },
-            { key: "classics",   label: "✨ Classics" },
-            { key: "community",  label: "🌍 Community" },
+            { key: "my-stories", label: t("myLibraryTab") },
+            { key: "classics",   label: t("classicsTab") },
+            { key: "community",  label: t("communityTab") },
           ] as { key: LibraryTab; label: string }[]).map(({ key, label }) => {
             const active = activeTab === key;
             return (
@@ -496,8 +496,8 @@ export default function LibraryPage() {
         {activeTab === "community" && (
           <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
             <span className="text-5xl" style={{ filter: "drop-shadow(0 0 24px rgba(167,139,250,0.5))" }}>🌍</span>
-            <p className="text-white/50 text-fs-body font-medium tracking-wide">Community Stories</p>
-            <p className="text-white/25 text-fs-body max-w-[220px] leading-relaxed">Stories created by families around the world will appear here soon.</p>
+            <p className="text-white/50 text-fs-body font-medium tracking-wide">{t("communityStories")}</p>
+            <p className="text-white/25 text-fs-body max-w-[220px] leading-relaxed">{t("communityStoriesSoon")}</p>
           </div>
         )}
 
@@ -518,13 +518,13 @@ export default function LibraryPage() {
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
               <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
-              <p className="text-white/40 text-fs-body">No stories match your filter</p>
+              <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
               <button
                 onClick={() => { setSearch(""); setDurationFilter("all"); }}
                 className="text-fs-body px-4 py-2 rounded-full transition-all"
                 style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
               >
-                Clear filters
+                {t("clearFilters")}
               </button>
             </div>
           ) : (
@@ -602,7 +602,7 @@ export default function LibraryPage() {
                               {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
                             </span>
                           )}
-                          <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt)}</span>
+                          <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt, t)}</span>
                         </div>
                       </div>
                       <button onClick={() => setConfirmingId(entry.id)}

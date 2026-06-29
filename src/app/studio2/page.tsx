@@ -52,6 +52,7 @@ function ScriptBrowser({
   onCount?: (n: number) => void;
   onClose?: () => void;
 }) {
+  const { language } = useLanguage();
   const [saves, setSaves] = useState<ScriptSaveMeta[]>([]);
   const [expanded, setExpanded] = useState(forceExpanded);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -106,7 +107,7 @@ function ScriptBrowser({
   };
 
   const handleClearAll = async () => {
-    if (!confirm("Delete all saved versions? This cannot be undone.")) return;
+    if (!confirm(i18nT(language, "deleteAllVersionsConfirm" as Parameters<typeof i18nT>[1]))) return;
     setClearing(true);
     await Promise.allSettled(saves.map((s) => fetch(`/api/script-saves/${s.id}`, { method: "DELETE" })));
     setSaves([]);
@@ -123,7 +124,7 @@ function ScriptBrowser({
         <button onClick={() => setExpanded((p) => !p)} className="w-full flex items-center justify-between px-4 py-3 text-left">
           <div className="flex items-center gap-2.5">
             <Icon name="folder" size={14} />
-            <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>Saved versions</span>
+            <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.7)" }}>{i18nT(language, "savedVersions" as Parameters<typeof i18nT>[1])}</span>
             <span className="min-w-[18px] h-4 px-1.5 rounded-full text-fs-body font-bold flex items-center justify-center"
               style={{ background: "rgba(79,195,247,0.15)", color: "rgba(79,195,247,0.85)", border: "1px solid rgba(79,195,247,0.3)" }}>{saves.length}</span>
           </div>
@@ -158,6 +159,7 @@ function VersionList({
   onClearAll?: () => void;
   clearing?: boolean;
 }) {
+  const { language } = useLanguage();
   return (
     <div className="flex flex-col gap-2 pb-2">
       {saves.map((s) => {
@@ -248,7 +250,7 @@ function VersionList({
           <button onClick={onClearAll} disabled={clearing}
             className="text-fs-body font-medium px-4 py-1.5 rounded-xl transition-all active:scale-95"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }}>
-            {clearing ? "Deleting…" : "Delete all saved versions"}
+            {clearing ? i18nT(language, "deleting" as Parameters<typeof i18nT>[1]) : i18nT(language, "deleteAllVersions" as Parameters<typeof i18nT>[1])}
           </button>
         </div>
       )}
@@ -946,7 +948,7 @@ function PromptTabContent({
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
-            Your story idea
+            {i18nT(language as Parameters<typeof i18nT>[0], "yourStoryIdea" as Parameters<typeof i18nT>[1])}
           </label>
           {wordCount > 0 && (
             <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>{wordCount} words</span>
@@ -973,7 +975,7 @@ function PromptTabContent({
       {!promptText && (
         <div>
           <p className="text-fs-body font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.2)" }}>
-            Or try an idea
+            {i18nT(language as Parameters<typeof i18nT>[0], "orTryIdea" as Parameters<typeof i18nT>[1])}
           </p>
           <div className="flex flex-col gap-1.5">
             {STORY_SEEDS.map((seed) => (
@@ -993,7 +995,7 @@ function PromptTabContent({
 
       <div className="rounded-2xl px-4 py-3.5" style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Story length</span>
+          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>{i18nT(language as Parameters<typeof i18nT>[0], "storyLength" as Parameters<typeof i18nT>[1])}</span>
           <span className="text-fs-body font-bold tabular-nums" style={{ color: "#4fc3f7" }}>{durationMinutes} min</span>
         </div>
         <div className="flex gap-2">

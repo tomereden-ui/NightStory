@@ -130,6 +130,7 @@ function AvatarPicker({
   onSelect: (url: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [avatars, setAvatars] = useState<BankAvatar[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -160,8 +161,8 @@ function AvatarPicker({
 
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
-            <p className="text-white font-bold text-fs-body">Choose Avatar</p>
-            <p className="text-white/30 text-fs-body mt-0.5">{loading ? "Loading…" : `${avatars.length} characters`}</p>
+            <p className="text-white font-bold text-fs-body">{t("chooseAvatar")}</p>
+            <p className="text-white/30 text-fs-body mt-0.5">{loading ? t("loading") : `${avatars.length} characters`}</p>
           </div>
           <button
             onClick={onClose}
@@ -286,7 +287,7 @@ function AddChildModal({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Child's name"
+              placeholder={t("childsName")}
               maxLength={30}
               className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all"
               style={{
@@ -804,7 +805,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-fs-heading font-semibold text-white tracking-wide mb-0.5">{t("profile")}</h1>
-              <p className="text-white/30 text-fs-body">Manage your account & preferences</p>
+              <p className="text-white/30 text-fs-body">{t("manageAccount")}</p>
             </div>
             <LanguageToggle />
           </div>
@@ -856,7 +857,7 @@ export default function ProfilePage() {
           {/* ── Family Members ───────────────────────────────────────── */}
           <div className="mb-7">
             <div className="flex items-center justify-between mb-3">
-              <p className="font-bold text-fs-heading" style={{ color: "#e2e8f0" }}>Family Members</p>
+              <p className="font-bold text-fs-heading" style={{ color: "#e2e8f0" }}>{t("familyMembers")}</p>
               <span className="text-fs-label px-2 py-0.5 rounded-full" style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa" }}>
                 {familyMembers.length} member{familyMembers.length !== 1 ? "s" : ""}
               </span>
@@ -874,7 +875,7 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <p className="text-fs-body font-medium" style={{ color: "#e2e8f0" }}>
-                        {m.user_id === user?.id ? "You" : "Family member"}
+                        {m.user_id === user?.id ? t("you") : t("familyMember")}
                       </p>
                       <p className="text-fs-label" style={{ color: "rgba(148,163,184,0.5)" }}>{m.role}</p>
                     </div>
@@ -897,7 +898,7 @@ export default function ProfilePage() {
               }}
             >
               <span style={{ fontSize: 16 }}>🔗</span>
-              {inviteLoading ? "Generating link…" : inviteCopied ? "✓ Link copied!" : "Invite family member"}
+              {inviteLoading ? t("generatingLink") : inviteCopied ? `✓ ${t("linkCopied")}` : t("inviteFamilyMember")}
             </button>
 
             {inviteLink && (
@@ -922,20 +923,20 @@ export default function ProfilePage() {
                 fontSize: 14,
               }}
             >
-              Sign out
+              {t("signOut")}
             </button>
           </div>
 
           {/* ── Privacy & Delete account ──────────────────────────────── */}
           <div className="mb-7 flex items-center justify-between px-1">
             <a href="/privacy" style={{ fontSize: 12, color: "rgba(148,163,184,0.4)", textDecoration: "underline" }}>
-              Privacy Policy
+              {t("privacyPolicy")}
             </a>
             <button
               onClick={() => setShowDeleteConfirm(true)}
               style={{ fontSize: 12, color: "rgba(239,68,68,0.45)" }}
             >
-              Delete account
+              {t("deleteAccount")}
             </button>
           </div>
 
@@ -963,7 +964,7 @@ export default function ProfilePage() {
 
           {/* ── Text Size ───────────────────────────────────────────── */}
           <div className="mb-7">
-            <SectionHeader label="Text Size" />
+            <SectionHeader label={t("textSize")} />
             <TextSizePicker />
           </div>
 
@@ -1063,9 +1064,9 @@ export default function ProfilePage() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}>
           <div className="w-full rounded-2xl p-6" style={{ maxWidth: 360, background: "#0d0f22", border: "1px solid rgba(239,68,68,0.3)" }}>
-            <h2 className="font-bold mb-2" style={{ fontSize: 18, color: "#e2e8f0" }}>Delete account?</h2>
+            <h2 className="font-bold mb-2" style={{ fontSize: 18, color: "#e2e8f0" }}>{t("deleteAccountTitle")}</h2>
             <p className="mb-6" style={{ fontSize: 14, color: "rgba(148,163,184,0.8)", lineHeight: 1.6 }}>
-              This will permanently delete your account, all stories, child profiles, and voice clones. This cannot be undone.
+              {t("deleteAccountWarning")}
             </p>
             <div className="flex gap-3">
               <button
@@ -1074,7 +1075,7 @@ export default function ProfilePage() {
                 className="flex-1 rounded-xl py-3 font-semibold"
                 style={{ background: "rgba(255,255,255,0.06)", color: "#e2e8f0", fontSize: 14 }}
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={handleDeleteAccount}
@@ -1082,7 +1083,7 @@ export default function ProfilePage() {
                 className="flex-1 rounded-xl py-3 font-semibold"
                 style={{ background: "rgba(239,68,68,0.15)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.3)", fontSize: 14, opacity: deleting ? 0.6 : 1 }}
               >
-                {deleting ? "Deleting…" : "Yes, delete"}
+                {deleting ? t("deleting") : t("yesDelete")}
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useViewMode } from "@/context/ViewModeContext";
+import { useLanguage } from "@/context/LanguageContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
@@ -31,12 +32,12 @@ function durationLabel(seconds: number): string {
   return m <= 1 ? "1 min" : `${m} min`;
 }
 
-function greeting(hour: number): string {
-  if (hour < 5) return "Sweet dreams";
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  if (hour < 21) return "Good evening";
-  return "Good night";
+function greeting(hour: number, tFn: (key: string) => string): string {
+  if (hour < 5) return tFn("sweetDreams");
+  if (hour < 12) return tFn("goodMorning");
+  if (hour < 17) return tFn("goodAfternoon");
+  if (hour < 21) return tFn("goodEvening");
+  return tFn("goodNightGreeting");
 }
 
 // ── Story card (portrait, Netflix/HBO style) ──────────────────────────────────
@@ -127,7 +128,7 @@ function StoryCard({
 
 // ── Hero banner (Netflix-style featured story) ────────────────────────────────
 
-function HeroBanner({ story, progressPercent = 42 }: { story: LibraryEntry; progressPercent?: number }) {
+function HeroBanner({ story, progressPercent = 42, tFn }: { story: LibraryEntry; progressPercent?: number; tFn: (key: string) => string }) {
   const [c1, c2] = cardPalette(story.title);
   const remaining = story.durationSeconds > 0
     ? durationLabel(Math.round(story.durationSeconds * (1 - progressPercent / 100)))
@@ -171,7 +172,7 @@ function HeroBanner({ story, progressPercent = 42 }: { story: LibraryEntry; prog
           className="inline-block text-fs-body font-bold tracking-widest uppercase mb-2 px-2 py-0.5 rounded-full"
           style={{ background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
         >
-          Continue Listening
+          {tFn("continueListening")}
         </span>
 
         {/* Title */}
@@ -206,11 +207,11 @@ function HeroBanner({ story, progressPercent = 42 }: { story: LibraryEntry; prog
               boxShadow: `0 4px 16px ${c1}55`,
             }}
           >
-            ▶ Continue
+            {tFn("continueButton")}
           </Link>
           {remaining && (
             <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
-              {remaining} left
+              {remaining} {tFn("timeLeft")}
             </span>
           )}
         </div>
@@ -356,13 +357,13 @@ function TonightsPickCard({ item }: { item: PickItem }) {
   );
 }
 
-function TonightsPicksRail({ picks }: { picks: PickItem[] }) {
+function TonightsPicksRail({ picks, tFn }: { picks: PickItem[]; tFn: (key: string) => string }) {
   if (picks.length === 0) return null;
   return (
     <section className="mb-8">
       <div className="flex items-center justify-between px-5 mb-3">
         <h2 className="text-fs-body font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.55)" }}>
-          Tonight&apos;s Picks ✨
+          {tFn("tonightsPicks")}
         </h2>
       </div>
       <div
@@ -570,6 +571,7 @@ function JourneySnippet({ childName }: { childName?: string }) {
 
 export default function HomePage() {
   const { effective } = useViewMode();
+  const { t } = useLanguage();
   const isMobile = effective === "mobile";
 
   const [stories, setStories] = useState<LibraryEntry[]>([]);
@@ -628,7 +630,7 @@ export default function HomePage() {
   // "Continue" — last 3 stories (simulate resume; no real progress tracking yet)
   const continueStories = stories.slice(0, 3);
 
-  const greetingText = greeting(hour);
+  const greetingText = greeting(hour, t);
   const greetingName = activeChild ? `, ${activeChild.name}` : "";
 
   return (
@@ -657,8 +659,8 @@ export default function HomePage() {
             </h1>
             <p className="text-white/30 text-fs-body mt-1 tracking-wide">
               {stories.length > 0
-                ? `${stories.length} ${stories.length === 1 ? "story" : "stories"} in your library`
-                : "Ready to create your first story?"}
+                ? `${stories.length} ${stories.length === 1 ? "story" : "stories"} ${t("inYourLibrary")}`
+                : t("readyToCreate")}
             </p>
           </div>
 
@@ -726,24 +728,24 @@ export default function HomePage() {
               >
                 <p className="text-5xl mb-4" style={{ filter: "drop-shadow(0 0 20px rgba(192,132,252,0.6))" }}>✨</p>
                 <p className="text-white font-bold text-fs-heading">Create your first story</p>
-                <p className="text-white/40 text-fs-body mt-2">A magical adventure awaits</p>
+                <p className="text-white/40 text-fs-body mt-2">{t("magicalAdventure")}</p>
               </Link>
             </div>
           )}
 
           {/* ── Hero banner — featured Continue Listening story ── */}
           {continueStories.length > 0 && (
-            <HeroBanner story={continueStories[0]} progressPercent={42} />
+            <HeroBanner story={continueStories[0]} progressPercent={42} tFn={t} />
           )}
 
           {/* ── Tonight's Picks ── */}
-          <TonightsPicksRail picks={tonightsPicks} />
+          <TonightsPicksRail picks={tonightsPicks} tFn={t} />
 
           {/* ── Continue Listening rail (all in-progress stories) ── */}
           {continueStories.length > 0 && (
             <Rail
-              title="Continue Listening"
-              action={{ label: "All Stories", href: "/library" }}
+              title={t("continueListening")}
+              action={{ label: t("allClassics"), href: "/library" }}
             >
               {continueStories.map((s, idx) => (
                 <StoryCard
@@ -763,8 +765,8 @@ export default function HomePage() {
           {/* ── Your Stories ── */}
           {recentStories.length > 0 && (
             <Rail
-              title="Your Stories"
-              action={{ label: "View All", href: "/library" }}
+              title={t("yourStories")}
+              action={{ label: t("viewAll"), href: "/library" }}
             >
               {recentStories.map((s) => (
                 <StoryCard
@@ -781,7 +783,7 @@ export default function HomePage() {
 
           {/* ── Shared with Me ── */}
           <Rail
-            title="Shared with Me 💌"
+            title={t("sharedWithMe")}
             empty={<SharedEmptyState />}
           >
             {null}
@@ -790,8 +792,8 @@ export default function HomePage() {
           {/* ── Classics ── */}
           {classics.length > 0 && (
             <Rail
-              title="Classics ✨"
-              action={{ label: "All Classics", href: "/library" }}
+              title={t("classicsSection")}
+              action={{ label: t("allClassics"), href: "/library" }}
             >
               {classics.slice(0, 8).map((c) => (
                 <StoryCard
