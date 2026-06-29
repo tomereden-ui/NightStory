@@ -48,14 +48,14 @@ async function synthesizeEL(
     let res: Response;
     try {
       res = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-dialogue/stream`,
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "xi-api-key": apiKey },
           body: JSON.stringify({
-            inputs: [{ text, voice_id: voiceId }],
-            model_id: "eleven_v3",
-            settings: { stability },
+            text,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability, similarity_boost: 0.75 },
           }),
           signal: controller.signal,
         },
