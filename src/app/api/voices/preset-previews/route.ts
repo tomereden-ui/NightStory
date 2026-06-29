@@ -15,12 +15,21 @@ const SAMPLE_TEXTS: Record<string, string> = {
   hi: "एक बार की बात है, तारों और चाँदनी से भरी एक भूमि में, एक छोटा बच्चा शांति से सो गया।",
 };
 
+function detectLangFromText(text: string, fallback: string): string | undefined {
+  if (/[֐-׿יִ-פֿ]/.test(text)) return "he";
+  if (/[؀-ۿ]/.test(text)) return "ar";
+  if (/[一-鿿　-ヿ]/.test(text)) return "zh";
+  if (/[ऀ-ॿ]/.test(text)) return "hi";
+  if (fallback && fallback !== "en") return fallback;
+  return undefined;
+}
+
 export async function POST(req: NextRequest) {
   const elKey = process.env.ELEVENLABS_API_KEY;
   if (!elKey) return NextResponse.json({ error: "ELEVENLABS_API_KEY not configured." }, { status: 500 });
 
-  const body = await req.json() as { elVoiceId?: string; presetKey?: string; language?: string };
-  const { elVoiceId, presetKey, language = "en" } = body;
+  const body = await req.json() as { elVoiceId?: string; presetKey?: string; language?: string; sampleText?: string };
+  const { elVoiceId, presetKey, language = "en", sampleText: clientText } = body;
 
   if (!elVoiceId) return NextResponse.json({ error: "elVoiceId is required." }, { status: 400 });
   if (!presetKey) return NextResponse.json({ error: "presetKey is required." }, { status: 400 });
@@ -28,14 +37,16 @@ export async function POST(req: NextRequest) {
   const preset = VOICE_PRESETS.find((p) => p.key === presetKey);
   if (!preset) return NextResponse.json({ error: "Unknown presetKey." }, { status: 400 });
 
-  const text = SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en;
+  const text = clientText?.trim() || SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en;
+  const langCode = detectLangFromText(text, language);
 
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elVoiceId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "xi-api-key": elKey },
     body: JSON.stringify({
       text,
-      model_id: "eleven_multilingual_v2",
+      model_id: "eleven_v3",
+      ...(langCode ? { language_code: langCode } : {}),
       voice_settings: {
         stability: preset.stability,
         similarity_boost: preset.similarity_boost,

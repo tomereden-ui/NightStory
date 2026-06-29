@@ -435,14 +435,14 @@ function AddVoiceSheet({
     setPlayingPreset(null);
   }, []);
 
-  const generateAllPresets = useCallback((elVoiceId: string, lang: string) => {
+  const generateAllPresets = useCallback((elVoiceId: string, lang: string, text?: string) => {
     VOICE_PRESETS.forEach((preset, idx) => {
       setPresetAudios((prev) => ({ ...prev, [preset.key]: "loading" }));
       setTimeout(() => {
         fetch("/api/voices/preset-previews", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ elVoiceId, presetKey: preset.key, language: lang }),
+          body: JSON.stringify({ elVoiceId, presetKey: preset.key, language: lang, sampleText: text }),
         })
           .then((r) => r.json())
           .then((data: { audioBase64?: string; mimeType?: string; error?: string }) => {
@@ -515,7 +515,7 @@ function AddVoiceSheet({
     setPreviewError(null);
     stopPreviewAudio();
     try {
-      const body = { type: "recorded", audioBase64: recordedAudioBase64!, audioMimeType: recordedMimeType, name: name.trim() || "My Voice", language: detectedLang };
+      const body = { type: "recorded", audioBase64: recordedAudioBase64!, audioMimeType: recordedMimeType, name: name.trim() || "My Voice", language: detectedLang, sampleText };
       const res = await fetch("/api/voices/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error((data as { error?: string }).error ?? `Server error ${res.status}`);
@@ -531,7 +531,7 @@ function AddVoiceSheet({
       setPreviewState("ready");
       if (rd.elVoiceId) {
         setAddStep("style-picker");
-        generateAllPresets(rd.elVoiceId, detectedLang);
+        generateAllPresets(rd.elVoiceId, detectedLang, sampleText);
       }
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : "Preview failed");

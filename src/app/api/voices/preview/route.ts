@@ -198,7 +198,17 @@ async function cloneVoiceEL(
   return json.voice_id as string;
 }
 
-async function ttsEL(apiKey: string, voiceId: string, text: string): Promise<string> {
+function detectLangFromText(text: string, fallback: string): string | undefined {
+  if (/[֐-׿יִ-פֿ]/.test(text)) return "he";
+  if (/[؀-ۿ]/.test(text)) return "ar";
+  if (/[一-鿿　-ヿ]/.test(text)) return "zh";
+  if (/[ऀ-ॿ]/.test(text)) return "hi";
+  if (fallback && fallback !== "en") return fallback;
+  return undefined;
+}
+
+async function ttsEL(apiKey: string, voiceId: string, text: string, language?: string): Promise<string> {
+  const langCode = detectLangFromText(text, language ?? "en");
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: "POST",
     headers: {
@@ -207,8 +217,9 @@ async function ttsEL(apiKey: string, voiceId: string, text: string): Promise<str
     },
     body: JSON.stringify({
       text,
-      model_id: "eleven_multilingual_v2",
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      model_id: "eleven_v3",
+      ...(langCode ? { language_code: langCode } : {}),
+      voice_settings: { stability: 0.35, similarity_boost: 0.80, style: 0.35, use_speaker_boost: true },
     }),
   });
 
@@ -231,6 +242,7 @@ interface PreviewRequestBody {
   audioMimeType?: string;
   name?: string;
   language?: string;
+  sampleText?: string;
   geminiVoiceName?: string;
 }
 
@@ -246,7 +258,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { type, language = "en" } = body;
-  const sampleText = SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en;
+  const sampleText = body.sampleText?.trim() || SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en;
 
   // ── type: "text" — AI picks voice from description, then TTS ────────────────
   if (type === "text") {
@@ -321,7 +333,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const elVoiceId = await cloneVoiceEL(elKey, voiceName, body.audioBase64, audioMimeType);
-      const audioBase64 = await ttsEL(elKey, elVoiceId, sampleText);
+      const audioBase64 = await ttsEL(elKey, elVoiceId, sampleText, language);
 
       return NextResponse.json({ audioBase64, mimeType: "audio/mpeg", elVoiceId });
     } catch (err) {
