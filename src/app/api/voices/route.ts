@@ -95,7 +95,14 @@ export async function POST(req: NextRequest) {
     voice_settings: body.voiceSettings ?? null,
   };
 
-  const { data, error } = await supabase.from("voices").insert(row).select().single();
+  let { data, error } = await supabase.from("voices").insert(row).select().single();
+
+  // If the new columns don't exist yet (migration not run), retry without them
+  if (error && (error.message.includes("preset_key") || error.message.includes("voice_settings"))) {
+    console.warn("[voices POST] New columns missing — retrying without preset_key/voice_settings");
+    const { preset_key: _pk, voice_settings: _vs, ...rowWithoutNewCols } = row;
+    ({ data, error } = await supabase.from("voices").insert(rowWithoutNewCols).select().single());
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
