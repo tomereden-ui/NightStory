@@ -231,6 +231,14 @@ type LibraryTab = "my-stories" | "family" | "classics" | "community";
 
 // ── Family Stories grid with per-card child assignment ────────────────────────
 
+function ChildAvatar({ child, size = 22 }: { child: DBChildProfile; size?: number }) {
+  if (child.avatar_emoji?.startsWith("http")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={child.avatar_emoji} alt={child.name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
+  }
+  return <span style={{ fontSize: size * 0.75, flexShrink: 0, lineHeight: 1 }}>{child.avatar_emoji || "🧒"}</span>;
+}
+
 function FamilyStoriesGrid({
   entries,
   children,
@@ -240,20 +248,35 @@ function FamilyStoriesGrid({
   entries: LibraryEntry[];
   children: DBChildProfile[];
   effective: string;
-  onAssigned: (storyId: string, childId: string | null) => void;
+  onAssigned: (storyId: string, childIds: string[]) => void;
 }) {
   const [pickerOpenId, setPickerOpenId] = useState<string | null>(null);
+  const [pickerSelections, setPickerSelections] = useState<Record<string, string[]>>({});
   const [assigning, setAssigning] = useState<string | null>(null);
 
-  const handleAssign = async (storyId: string, childId: string | null) => {
+  const openPicker = (storyId: string, currentChildIds: string[]) => {
+    setPickerSelections((prev) => ({ ...prev, [storyId]: [...currentChildIds] }));
+    setPickerOpenId(storyId);
+  };
+
+  const toggleChild = (storyId: string, childId: string) => {
+    setPickerSelections((prev) => {
+      const cur = prev[storyId] ?? [];
+      const next = cur.includes(childId) ? cur.filter((id) => id !== childId) : [...cur, childId];
+      return { ...prev, [storyId]: next };
+    });
+  };
+
+  const saveAssignment = async (storyId: string) => {
+    const childIds = pickerSelections[storyId] ?? [];
     setAssigning(storyId);
     try {
       await fetch(`/api/library/${storyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childId }),
+        body: JSON.stringify({ childIds }),
       });
-      onAssigned(storyId, childId);
+      onAssigned(storyId, childIds);
     } finally {
       setAssigning(null);
       setPickerOpenId(null);
@@ -267,9 +290,11 @@ function FamilyStoriesGrid({
     >
       {entries.map((entry) => {
         const [c1, c2] = cardPalette(entry.title);
-        const assignedChild = children.find((c) => c.id === entry.childId);
+        const assignedChildIds = entry.childIds ?? [];
+        const assignedChildren = children.filter((c) => assignedChildIds.includes(c.id));
         const isPickerOpen = pickerOpenId === entry.id;
         const isAssigning = assigning === entry.id;
+        const pendingSelections = pickerSelections[entry.id] ?? assignedChildIds;
 
         return (
           <div key={entry.id} className="relative" style={{ aspectRatio: "2/3" }}>
@@ -294,60 +319,121 @@ function FamilyStoriesGrid({
                   <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{durationLabel(entry.durationSeconds)}</p>
                 )}
               </div>
+
+              {/* Assigned child avatars — overlapping chips on bottom-left of image */}
+              {assignedChildren.length > 0 && (
+                <div className="absolute top-2 left-2 flex" style={{ gap: -4 }}>
+                  {assignedChildren.slice(0, 3).map((child, i) => (
+                    <div
+                      key={child.id}
+                      className="flex items-center justify-center rounded-full overflow-hidden"
+                      style={{
+                        width: 24, height: 24,
+                        background: "#0D1120",
+                        border: "2px solid rgba(79,195,247,0.5)",
+                        marginLeft: i > 0 ? -6 : 0,
+                        zIndex: assignedChildren.length - i,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ChildAvatar child={child} size={20} />
+                    </div>
+                  ))}
+                  {assignedChildren.length > 3 && (
+                    <div
+                      className="flex items-center justify-center rounded-full"
+                      style={{
+                        width: 24, height: 24,
+                        background: "rgba(79,195,247,0.2)",
+                        border: "2px solid rgba(79,195,247,0.4)",
+                        marginLeft: -6,
+                        color: "#4fc3f7",
+                        fontSize: 9,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      +{assignedChildren.length - 3}
+                    </div>
+                  )}
+                </div>
+              )}
             </Link>
 
             {/* Assign button — bottom strip */}
             {children.length > 0 && (
               <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1.5">
                 <button
-                  onClick={(e) => { e.preventDefault(); setPickerOpenId(isPickerOpen ? null : entry.id); }}
-                  className="w-full py-1 rounded-lg text-fs-body font-medium truncate transition-all active:scale-95"
+                  onClick={(e) => { e.preventDefault(); isPickerOpen ? setPickerOpenId(null) : openPicker(entry.id, assignedChildIds); }}
+                  className="w-full py-1.5 rounded-lg font-medium truncate transition-all active:scale-95"
                   style={{
-                    background: assignedChild ? "rgba(79,195,247,0.18)" : "rgba(0,0,0,0.55)",
+                    background: assignedChildren.length > 0 ? "rgba(79,195,247,0.18)" : "rgba(0,0,0,0.55)",
                     backdropFilter: "blur(6px)",
-                    color: assignedChild ? "#4fc3f7" : "rgba(255,255,255,0.45)",
-                    border: assignedChild ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.1)",
-                    fontSize: "var(--fs-label)",
+                    color: assignedChildren.length > 0 ? "#4fc3f7" : "rgba(255,255,255,0.45)",
+                    border: assignedChildren.length > 0 ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.1)",
+                    fontSize: "var(--fs-body)",
                   }}
                 >
-                  {isAssigning ? "…" : assignedChild ? assignedChild.name : "+ Assign"}
+                  {isAssigning ? "…" : assignedChildren.length > 0 ? "Assigned ✓" : "+ Assign"}
                 </button>
 
-                {/* Child picker dropdown */}
+                {/* Multi-select child picker */}
                 {isPickerOpen && (
                   <div
                     className="absolute bottom-full left-0 right-0 mb-1 rounded-xl overflow-hidden z-20"
                     style={{ background: "#0D1120", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 8px 32px rgba(0,0,0,0.7)" }}
                   >
-                    {assignedChild && (
+                    {children.map((child, i) => {
+                      const selected = pendingSelections.includes(child.id);
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => toggleChild(entry.id, child.id)}
+                          className="w-full px-3 py-2.5 text-left flex items-center gap-2.5 transition-all"
+                          style={{
+                            background: selected ? "rgba(79,195,247,0.1)" : "transparent",
+                            borderBottom: i < children.length - 1 ? "1px solid rgba(255,255,255,0.06)" : undefined,
+                          }}
+                        >
+                          <div
+                            className="flex items-center justify-center rounded-full overflow-hidden flex-shrink-0"
+                            style={{ width: 28, height: 28 }}
+                          >
+                            <ChildAvatar child={child} size={28} />
+                          </div>
+                          <span className="flex-1 truncate text-fs-body" style={{ color: selected ? "#4fc3f7" : "#fff" }}>{child.name}</span>
+                          <div
+                            className="flex-shrink-0 rounded flex items-center justify-center transition-all"
+                            style={{
+                              width: 18, height: 18,
+                              background: selected ? "#4fc3f7" : "transparent",
+                              border: selected ? "none" : "1.5px solid rgba(255,255,255,0.25)",
+                            }}
+                          >
+                            {selected && <span style={{ color: "#040612", fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {/* Save / Clear row */}
+                    <div className="flex gap-1.5 px-2 py-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                      {pendingSelections.length > 0 && (
+                        <button
+                          onClick={() => setPickerSelections((prev) => ({ ...prev, [entry.id]: [] }))}
+                          className="px-3 py-1.5 rounded-lg text-fs-body transition-all"
+                          style={{ background: "rgba(236,72,153,0.1)", color: "rgba(236,72,153,0.8)", border: "1px solid rgba(236,72,153,0.2)" }}
+                        >
+                          Clear
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleAssign(entry.id, null)}
-                        className="w-full px-3 py-2 text-left text-fs-body transition-all"
-                        style={{ color: "rgba(236,72,153,0.8)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+                        onClick={() => saveAssignment(entry.id)}
+                        className="flex-1 py-1.5 rounded-lg text-fs-body font-semibold transition-all active:scale-95"
+                        style={{ background: "rgba(79,195,247,0.2)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.35)" }}
                       >
-                        Remove assignment
+                        Save
                       </button>
-                    )}
-                    {children.map((child) => (
-                      <button
-                        key={child.id}
-                        onClick={() => handleAssign(entry.id, child.id)}
-                        className="w-full px-3 py-2 text-left text-fs-body flex items-center gap-2 transition-all"
-                        style={{
-                          background: child.id === entry.childId ? "rgba(79,195,247,0.08)" : "transparent",
-                          color: child.id === entry.childId ? "#4fc3f7" : "#fff",
-                        }}
-                      >
-                        {child.avatar_emoji?.startsWith("http") ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={child.avatar_emoji} alt={child.name} style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                        ) : (
-                          <span style={{ fontSize: 16, flexShrink: 0 }}>{child.avatar_emoji || "🧒"}</span>
-                        )}
-                        <span className="flex-1 truncate">{child.name}</span>
-                        {child.id === entry.childId && <span style={{ color: "#4fc3f7" }}>✓</span>}
-                      </button>
-                    ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -670,9 +756,9 @@ export default function LibraryPage() {
               entries={familyEntries}
               children={children}
               effective={effective}
-              onAssigned={(storyId, childId) =>
+              onAssigned={(storyId, childIds) =>
                 setFamilyEntries((prev) =>
-                  prev.map((e) => e.id === storyId ? { ...e, childId: childId ?? undefined } : e)
+                  prev.map((e) => e.id === storyId ? { ...e, childIds: childIds.length ? childIds : undefined } : e)
                 )
               }
             />

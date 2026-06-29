@@ -13,7 +13,7 @@ export interface LibraryEntry {
   language?: string;
   emoji?: string;      // classic stories only
   isPublic?: boolean;
-  childId?: string;    // which child this story belongs to (null = unscoped / pre-migration)
+  childIds?: string[]; // which children this story belongs to (null = unscoped / pre-migration)
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -35,7 +35,9 @@ function toEntry(row: any): LibraryEntry { // eslint-disable-line
     language: row.language ?? undefined,
     emoji: row.emoji ?? undefined,
     isPublic: row.is_public ?? false,
-    childId: row.child_id ?? undefined,
+    childIds: Array.isArray(row.child_ids) ? row.child_ids as string[]
+             : row.child_id ? [row.child_id as string]   // migrate legacy single value
+             : undefined,
   };
 }
 
@@ -59,7 +61,7 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
     language: entry.language ?? null,
     emoji: entry.emoji ?? null,
     is_public: entry.isPublic ?? false,
-    child_id: entry.childId ?? null,
+    child_ids: entry.childIds ?? null,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
 }
@@ -67,7 +69,7 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
 // User's private stories. Pass childId to scope to a specific child; omit for all.
 export async function getEntries(childId?: string): Promise<LibraryEntry[]> {
   let q = supabase.from("stories").select("*").eq("is_public", false);
-  if (childId) q = q.eq("child_id", childId);
+  if (childId) q = q.filter("child_ids", "cs", JSON.stringify([childId]));
   const { data, error } = await q.order("created_at", { ascending: false });
   if (error) throw new Error(`getEntries: ${error.message}`);
   return (data ?? []).map(toEntry);

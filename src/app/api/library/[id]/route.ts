@@ -19,7 +19,7 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   const { id } = params;
-  let body: { blocks?: ScriptBlock[]; title?: string; summary?: string; childId?: string | null };
+  let body: { blocks?: ScriptBlock[]; title?: string; summary?: string; childIds?: string[] | null };
   try {
     body = await req.json();
   } catch {
@@ -27,10 +27,10 @@ export async function PATCH(
   }
 
   const updates: Record<string, unknown> = {};
-  if (body.blocks   !== undefined) updates.blocks   = body.blocks;
-  if (body.title    !== undefined) updates.title    = body.title;
-  if (body.summary  !== undefined) updates.summary  = body.summary;
-  if (body.childId  !== undefined) updates.child_id = body.childId ?? null;
+  if (body.blocks   !== undefined) updates.blocks    = body.blocks;
+  if (body.title    !== undefined) updates.title     = body.title;
+  if (body.summary  !== undefined) updates.summary   = body.summary;
+  if (body.childIds !== undefined) updates.child_ids = body.childIds?.length ? body.childIds : null;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });

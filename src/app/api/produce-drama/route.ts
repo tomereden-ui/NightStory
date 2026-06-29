@@ -208,7 +208,7 @@ async function runProduction(
   existingCoverUrl?: string,
   characterDescriptions?: Record<string, string>,
   characterTypes?: Record<string, string>,
-  childId?: string,
+  childIds?: string[],
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -609,7 +609,7 @@ async function runProduction(
       createdAt: Date.now(),
       blocks,
       language: scriptLanguage,
-      childId,
+      childIds: childIds?.length ? childIds : undefined,
     };
     try {
       await addEntry(entry);
@@ -674,7 +674,7 @@ export async function POST(req: NextRequest) {
       narratorVoiceId?: string;
       characterDescriptions?: Record<string, string>;
       characterTypes?: Record<string, string>;
-      childId?: string;
+      childIds?: string[];
     };
     try {
       body = await req.json();
@@ -707,7 +707,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childId);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {
