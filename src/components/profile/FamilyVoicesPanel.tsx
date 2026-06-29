@@ -2,7 +2,8 @@
 
 /**
  * FamilyVoicesPanel — embeds the full family-voice management experience
- * (list, play, delete, add new) as a self-contained section inside Profile.
+ * (list, play, delete, add new, version switch, re-record) as a self-contained
+ * section inside Profile.
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -14,6 +15,20 @@ import Icon from "@/components/ui/Icon";
 import { VOICE_PRESETS } from "@/config/voicePresets";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface VoiceSettings {
+  stability: number;
+  similarity_boost: number;
+  style: number;
+  use_speaker_boost: boolean;
+}
+
+interface VoiceVersion {
+  preset_key: string;
+  label: string;
+  emoji: string;
+  voice_settings: VoiceSettings;
+}
 
 interface VoiceRecord {
   id: string;
@@ -27,7 +42,8 @@ interface VoiceRecord {
   avatar_emoji: string;
   created_at: number;
   preset_key?: string;
-  voice_settings?: { stability: number; similarity_boost: number; style: number; use_speaker_boost: boolean };
+  voice_settings?: VoiceSettings;
+  versions?: VoiceVersion[];
 }
 
 type AddMethod = "text" | "record";
@@ -35,6 +51,17 @@ type RecordState = "idle" | "recording" | "done";
 type PreviewState = "idle" | "loading" | "ready";
 type AddStep = "setup" | "style-picker";
 type PresetAudioState = { url: string; base64: string } | "loading" | "error" | null;
+
+// All VOICE_PRESETS mapped to VoiceVersion objects — used as fallback when
+// a voice row pre-dates the versions column.
+function allPresetsAsVersions(): VoiceVersion[] {
+  return VOICE_PRESETS.map((p) => ({
+    preset_key: p.key,
+    label: p.label,
+    emoji: p.emoji,
+    voice_settings: { stability: p.stability, similarity_boost: p.similarity_boost, style: p.style, use_speaker_boost: p.use_speaker_boost },
+  }));
+}
 
 const SAMPLE_TEXTS: Record<string, string> = {
   en: "This is me and I will be happy to join your story",
@@ -128,22 +155,43 @@ function VoiceCard({
   onPlay,
   onDelete,
   onAvatarChange,
+  onVersionChange,
+  onReRecord,
 }: {
   voice: VoiceRecord;
   playingId: string | null;
   onPlay: (v: VoiceRecord) => void;
   onDelete: (id: string) => void;
   onAvatarChange: (id: string, value: string) => void;
+  onVersionChange: (id: string, presetKey: string, voiceSettings: VoiceSettings) => void;
+  onReRecord: (voice: VoiceRecord) => void;
 }) {
   const isPlaying = playingId === voice.id;
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [switchingVersion, setSwitchingVersion] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const avatarIsUrl = isAvatarUrl(voice.avatar_emoji);
 
+  // Use versions from DB if available, otherwise derive from VOICE_PRESETS
+  const versions = voice.versions ?? allPresetsAsVersions();
+  const isELVoice = !!voice.el_voice_id;
+
+  const handleVersionSwitch = async (v: VoiceVersion) => {
+    if (v.preset_key === voice.preset_key) return;
+    setSwitchingVersion(v.preset_key);
+    try {
+      await onVersionChange(voice.id, v.preset_key, v.voice_settings);
+    } finally {
+      setSwitchingVersion(null);
+    }
+  };
+
   return (
-    <div className="relative">
-      <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: editOpen ? "1px solid rgba(79,195,247,0.25)" : "1px solid rgba(255,255,255,0.07)" }}>
+      {/* Main row */}
+      <div className="flex items-center gap-3 px-4 py-3.5">
         <div className="relative flex-shrink-0">
           <VoiceAvatar avatarUrl={avatarIsUrl ? voice.avatar_emoji : undefined} emoji={avatarIsUrl ? undefined : voice.avatar_emoji} name={voice.name} size={44} borderColor={galleryOpen ? "rgba(79,195,247,0.6)" : "rgba(79,195,247,0.25)"} onClick={() => setGalleryOpen((o) => !o)} />
           <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(8,12,24,0.9)", border: "1px solid rgba(79,195,247,0.4)", fontSize: "var(--fs-micro)", color: "#4fc3f7" }}>✎</span>
@@ -158,7 +206,53 @@ function VoiceCard({
         <button onClick={() => onDelete(voice.id)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.07)" }}>
           <Icon name="close" size={16} />
         </button>
+        {/* Expand/collapse toggle — shown for all EL voices */}
+        {isELVoice && (
+          <button onClick={() => setEditOpen((o) => !o)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: editOpen ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)", color: editOpen ? "#4fc3f7" : "rgba(255,255,255,0.35)", border: editOpen ? "1px solid rgba(79,195,247,0.35)" : "1px solid rgba(255,255,255,0.07)", fontSize: 11, transform: editOpen ? "rotate(180deg)" : "none" }}>
+            ▾
+          </button>
+        )}
       </div>
+
+      {/* Expanded edit panel — version picker + re-record */}
+      {editOpen && isELVoice && (
+        <div className="px-4 pb-4 pt-1">
+          <div className="w-full h-px mb-3" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <p className="text-fs-body font-semibold mb-2" style={{ color: "rgba(255,255,255,0.45)" }}>Voice Style</p>
+          <div className="flex flex-col gap-1.5 mb-3">
+            {versions.map((v) => {
+              const isActive = v.preset_key === voice.preset_key;
+              const isSwitching = switchingVersion === v.preset_key;
+              return (
+                <button
+                  key={v.preset_key}
+                  onClick={() => handleVersionSwitch(v)}
+                  disabled={isActive || isSwitching}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl w-full text-left transition-all active:scale-[0.99]"
+                  style={{
+                    background: isActive ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.03)",
+                    border: isActive ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                    cursor: isActive ? "default" : "pointer",
+                  }}
+                >
+                  <span style={{ fontSize: 17, flexShrink: 0 }}>{v.emoji}</span>
+                  <span className="text-fs-body flex-1" style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.65)", fontWeight: isActive ? 600 : 400 }}>{v.label}</span>
+                  {isSwitching && <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>…</span>}
+                  {isActive && !isSwitching && <span style={{ color: "#4fc3f7", fontSize: 14 }}>✓</span>}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => { setEditOpen(false); onReRecord(voice); }}
+            className="w-full py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98]"
+            style={{ background: "rgba(236,72,153,0.08)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.2)" }}
+          >
+            🎙 Re-record voice
+          </button>
+        </div>
+      )}
+
       {galleryOpen && mounted && (
         <AvatarGallerySheet currentValue={voice.avatar_emoji} onSelect={(v) => { onAvatarChange(voice.id, v); setGalleryOpen(false); }} onClose={() => setGalleryOpen(false)} />
       )}
@@ -166,21 +260,25 @@ function VoiceCard({
   );
 }
 
-// ─── Add Voice Sheet ──────────────────────────────────────────────────────────
+// ─── Add / Re-record Voice Sheet ──────────────────────────────────────────────
 
 function AddVoiceSheet({
   language,
   onClose,
   onSaved,
+  onUpdated,
+  editVoice,
 }: {
   language: string;
   onClose: () => void;
   onSaved: (voice: VoiceRecord) => void;
+  onUpdated?: (voice: VoiceRecord) => void;
+  editVoice?: VoiceRecord;
 }) {
   const { effective } = useViewMode();
   const sheetMaxWidth = effective === "mobile" ? 448 : 512;
-  const [name, setName] = useState("");
-  const [avatarValue, setAvatarValue] = useState("azure");
+  const [name, setName] = useState(editVoice?.name ?? "");
+  const [avatarValue, setAvatarValue] = useState(editVoice?.avatar_emoji ?? "azure");
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const method: AddMethod = "record";
   const description = "";
@@ -199,9 +297,8 @@ function AddVoiceSheet({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Style picker step (for recorded/cloned voices)
   const [addStep, setAddStep] = useState<AddStep>("setup");
-  const [selectedPresetKey, setSelectedPresetKey] = useState<string>("calm_narrator");
+  const [selectedPresetKey, setSelectedPresetKey] = useState<string>(editVoice?.preset_key ?? "calm_narrator");
   const [presetAudios, setPresetAudios] = useState<Record<string, PresetAudioState>>({});
   const [playingPreset, setPlayingPreset] = useState<string | null>(null);
   const presetAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
@@ -213,6 +310,7 @@ function AddVoiceSheet({
   const previewUrlRef = useRef<string | null>(null);
 
   const sampleText = SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en;
+  const isEditMode = !!editVoice;
 
   useEffect(() => {
     return () => {
@@ -237,8 +335,6 @@ function AddVoiceSheet({
   const generateAllPresets = useCallback((elVoiceId: string, lang: string) => {
     VOICE_PRESETS.forEach((preset, idx) => {
       setPresetAudios((prev) => ({ ...prev, [preset.key]: "loading" }));
-      // Stagger requests by 400ms each to avoid EL concurrency limits and give
-      // the newly cloned voice time to become available on EL's side.
       setTimeout(() => {
         fetch("/api/voices/preset-previews", {
           method: "POST",
@@ -265,14 +361,12 @@ function AddVoiceSheet({
     if (!audio || audio === "loading" || audio === "error") return;
 
     if (playingPreset === presetKey) {
-      // Stop
       const existing = presetAudioRefs.current[presetKey];
       if (existing) { existing.pause(); delete presetAudioRefs.current[presetKey]; }
       setPlayingPreset(null);
       return;
     }
 
-    // Stop any currently playing
     stopAllPresetAudio();
 
     const el = new Audio(audio.url);
@@ -332,7 +426,6 @@ function AddVoiceSheet({
       previewUrlRef.current = url;
       setPreviewAudioUrl(url);
       setPreviewState("ready");
-      // For recorded (cloned) voices, transition to style picker
       if (rd.elVoiceId) {
         setAddStep("style-picker");
         generateAllPresets(rd.elVoiceId, language);
@@ -360,11 +453,19 @@ function AddVoiceSheet({
     setSaving(true);
     setSaveError(null);
     try {
-      const bodyObj: Record<string, unknown> = { name: name.trim(), category: "family", type: "recorded", avatarEmoji: avatarValue };
+      // Build all-versions array from preset configs
+      const allVersions: VoiceVersion[] = allPresetsAsVersions();
+
+      const bodyObj: Record<string, unknown> = {
+        name: name.trim(),
+        category: "family",
+        type: "recorded",
+        avatarEmoji: avatarValue,
+        versions: allVersions,
+      };
       if (previewGeminiVoiceName) bodyObj.geminiVoiceName = previewGeminiVoiceName;
       if (previewElVoiceId) bodyObj.elVoiceId = previewElVoiceId;
 
-      // For recorded voices in style-picker step, use the selected preset's audio as the sample
       if (addStep === "style-picker") {
         const selectedPresetAudio = presetAudios[selectedPresetKey];
         const preset = VOICE_PRESETS.find((p) => p.key === selectedPresetKey);
@@ -388,11 +489,25 @@ function AddVoiceSheet({
         if (previewBase64) { bodyObj.audioBase64 = previewBase64; bodyObj.mimeType = previewMimeType; }
       }
 
-      const res = await fetch("/api/voices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bodyObj) });
-      const saved = await res.json();
-      if (!res.ok) throw new Error((saved as { error?: string }).error ?? `Save error ${res.status}`);
-      onSaved(saved as VoiceRecord);
-      onClose();
+      if (isEditMode && editVoice) {
+        // Re-record: PATCH the existing voice row
+        const res = await fetch(`/api/voices/${editVoice.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bodyObj),
+        });
+        const updated = await res.json();
+        if (!res.ok) throw new Error((updated as { error?: string }).error ?? `Update error ${res.status}`);
+        onUpdated?.({ ...editVoice, ...(updated as Partial<VoiceRecord>), id: editVoice.id });
+        onClose();
+      } else {
+        // New voice: POST
+        const res = await fetch("/api/voices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bodyObj) });
+        const saved = await res.json();
+        if (!res.ok) throw new Error((saved as { error?: string }).error ?? `Save error ${res.status}`);
+        onSaved(saved as VoiceRecord);
+        onClose();
+      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -414,8 +529,12 @@ function AddVoiceSheet({
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <div>
-              <p className="text-white font-semibold text-fs-heading">Add a Family Voice</p>
-              <p className="text-white/35 text-fs-body mt-0.5">Record their voice to clone it into stories</p>
+              <p className="text-white font-semibold text-fs-heading">
+                {isEditMode ? `Re-record ${editVoice!.name}'s Voice` : "Add a Family Voice"}
+              </p>
+              <p className="text-white/35 text-fs-body mt-0.5">
+                {isEditMode ? "Record a new sample to update this voice" : "Record their voice to clone it into stories"}
+              </p>
             </div>
             <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}><Icon name="close" size={16} /></button>
           </div>
@@ -435,42 +554,37 @@ function AddVoiceSheet({
           </div>
 
           {/* Record */}
-          {(
-            <div className="mb-4">
-              <div className="rounded-2xl px-4 py-3 mb-3 text-fs-body" style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)", color: "rgba(255,255,255,0.55)" }}>
-                Read this aloud: <span className="text-white/80 italic">&ldquo;{sampleText}&rdquo;</span>
-              </div>
-              {recordState === "idle" && (
-                <button onClick={handleStartRecording} className="w-full py-3 rounded-2xl text-fs-body font-semibold" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>🎙 Start Recording</button>
-              )}
-              {recordState === "recording" && (
-                <button onClick={handleStopRecording} className="w-full py-3 rounded-2xl text-fs-body font-semibold" style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.4)" }}>⏹ Stop ({recordingSeconds}s)</button>
-              )}
-              {recordState === "done" && (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-2xl" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-                  <span style={{ color: "#10B981" }}>✓</span>
-                  <p className="text-white/60 text-fs-body flex-1">Recording captured</p>
-                  <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setPreviewState("idle"); }} className="text-fs-body px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>Redo</button>
-                </div>
-              )}
+          <div className="mb-4">
+            <div className="rounded-2xl px-4 py-3 mb-3 text-fs-body" style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)", color: "rgba(255,255,255,0.55)" }}>
+              Read this aloud: <span className="text-white/80 italic">&ldquo;{sampleText}&rdquo;</span>
             </div>
-          )}
+            {recordState === "idle" && (
+              <button onClick={handleStartRecording} className="w-full py-3 rounded-2xl text-fs-body font-semibold" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>🎙 Start Recording</button>
+            )}
+            {recordState === "recording" && (
+              <button onClick={handleStopRecording} className="w-full py-3 rounded-2xl text-fs-body font-semibold" style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.4)" }}>⏹ Stop ({recordingSeconds}s)</button>
+            )}
+            {recordState === "done" && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                <span style={{ color: "#10B981" }}>✓</span>
+                <p className="text-white/60 text-fs-body flex-1">Recording captured</p>
+                <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setPreviewState("idle"); }} className="text-fs-body px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>Redo</button>
+              </div>
+            )}
+          </div>
 
-          {/* Style picker step (recorded/cloned voices only) */}
+          {/* Style picker step */}
           {addStep === "style-picker" ? (
             <>
-              {/* Back button */}
               <button onClick={() => { setAddStep("setup"); stopAllPresetAudio(); setPreviewState("idle"); }} className="flex items-center gap-1.5 mb-4 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>
                 ← Back
               </button>
 
-              {/* Style picker header */}
               <div className="mb-4">
                 <p className="text-white font-semibold text-fs-heading">{name.trim() ? `Choose how ${name.trim()} sounds in stories` : "Choose a voice style"}</p>
                 <p className="text-white/40 text-fs-body mt-0.5">Play each style and pick the one that feels right</p>
               </div>
 
-              {/* Preset cards */}
               <div className="flex flex-col gap-2 mb-5">
                 {VOICE_PRESETS.map((preset) => {
                   const audioState = presetAudios[preset.key];
@@ -489,21 +603,14 @@ function AddVoiceSheet({
                         border: isSelected ? "1.5px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.07)",
                       }}
                     >
-                      {/* Emoji */}
                       <span style={{ fontSize: 22, flexShrink: 0 }}>{preset.emoji}</span>
-
-                      {/* Label + description */}
                       <div className="flex-1 min-w-0">
                         <p className="text-white text-fs-body font-semibold">{preset.label}</p>
                         <p className="text-white/40 text-fs-body mt-0.5 leading-snug">{preset.description}</p>
                       </div>
-
-                      {/* Selected checkmark */}
                       {isSelected && (
                         <span style={{ color: "#4fc3f7", fontSize: 16, flexShrink: 0 }}>✓</span>
                       )}
-
-                      {/* Play button */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handlePlayPreset(preset.key); }}
                         disabled={isLoading || isError}
@@ -542,19 +649,18 @@ function AddVoiceSheet({
                   cursor: !saving && name.trim() ? "pointer" : "not-allowed",
                 }}
               >
-                {saving ? "Saving…" : `Save as ${selectedPreset?.label ?? "Voice"}`}
+                {saving ? "Saving…" : isEditMode ? `Update as ${selectedPreset?.label ?? "Voice"}` : `Save as ${selectedPreset?.label ?? "Voice"}`}
               </button>
             </>
           ) : (
             <>
-              {/* Preview */}
               <button onClick={handleGeneratePreview} disabled={!canPreview || previewState === "loading"} className="w-full py-3 rounded-2xl text-fs-body font-semibold mb-3 transition-all" style={{ background: canPreview ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", color: canPreview ? "#a78bfa" : "rgba(255,255,255,0.2)", border: canPreview ? "1px solid rgba(139,92,246,0.3)" : "1px solid rgba(255,255,255,0.07)", cursor: canPreview ? "pointer" : "not-allowed" }}>
                 {previewState === "loading" ? "Cloning voice…" : "🎨 Generate Style Options"}
               </button>
 
               {previewError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.08)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.2)" }}>⚠ {previewError}</p>}
 
-              {saveError &&<p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
+              {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
             </>
           )}
         </div>
@@ -575,6 +681,7 @@ export default function FamilyVoicesPanel() {
   const [open, setOpen] = useState(false);
   const [voices, setVoices] = useState<VoiceRecord[]>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [reRecordVoice, setReRecordVoice] = useState<VoiceRecord | undefined>(undefined);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -619,6 +726,33 @@ export default function FamilyVoicesPanel() {
     await fetch(`/api/voices/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarEmoji: value }) });
   }, []);
 
+  const handleVersionChange = useCallback(async (id: string, presetKey: string, voiceSettings: VoiceSettings) => {
+    setVoices((prev) => prev.map((v) => v.id === id ? { ...v, preset_key: presetKey, voice_settings: voiceSettings } : v));
+    await fetch(`/api/voices/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ presetKey, voiceSettings }),
+    });
+  }, []);
+
+  const handleReRecord = useCallback((voice: VoiceRecord) => {
+    setReRecordVoice(voice);
+    setShowAdd(true);
+  }, []);
+
+  const handleCloseSheet = useCallback(() => {
+    setShowAdd(false);
+    setReRecordVoice(undefined);
+  }, []);
+
+  const handleVoiceSaved = useCallback((v: VoiceRecord) => {
+    setVoices((prev) => [v, ...prev]);
+  }, []);
+
+  const handleVoiceUpdated = useCallback((v: VoiceRecord) => {
+    setVoices((prev) => prev.map((existing) => existing.id === v.id ? v : existing));
+  }, []);
+
   return (
     <div className="mb-7">
       {/* Section header — tap to expand/collapse */}
@@ -631,7 +765,6 @@ export default function FamilyVoicesPanel() {
         }}
       >
         <div className="flex items-center gap-3">
-          {/* Mic icon in accent colour */}
           <div
             className="flex items-center justify-center rounded-xl flex-shrink-0"
             style={{ width: 38, height: 38, background: "rgba(167,139,250,0.18)", border: "1px solid rgba(167,139,250,0.3)" }}
@@ -653,10 +786,8 @@ export default function FamilyVoicesPanel() {
               {t("familyVoicesTitle")}
             </p>
 
-            {/* Collapsed: avatar stack + count; Expanded: subtitle */}
             {!open && voices.length > 0 ? (
               <div className="flex items-center gap-2 mt-1">
-                {/* Mini avatar stack */}
                 <div className="flex -space-x-2">
                   {voices.slice(0, 4).map((v) => (
                     <div
@@ -698,7 +829,6 @@ export default function FamilyVoicesPanel() {
 
       {open && (
         <>
-          {/* Empty state */}
           {voices.length === 0 && (
             <button
               onClick={() => setShowAdd(true)}
@@ -716,7 +846,6 @@ export default function FamilyVoicesPanel() {
             </button>
           )}
 
-          {/* Voice list */}
           {voices.length > 0 && (
             <div className="flex flex-col gap-2 mb-3">
               {voices.map((v) => (
@@ -727,6 +856,8 @@ export default function FamilyVoicesPanel() {
                   onPlay={handlePlay}
                   onDelete={handleDelete}
                   onAvatarChange={handleAvatarChange}
+                  onVersionChange={handleVersionChange}
+                  onReRecord={handleReRecord}
                 />
               ))}
               <button
@@ -741,12 +872,13 @@ export default function FamilyVoicesPanel() {
         </>
       )}
 
-      {/* Add sheet */}
       {showAdd && mounted && (
         <AddVoiceSheet
           language={language}
-          onClose={() => setShowAdd(false)}
-          onSaved={(v) => { setVoices((prev) => [v, ...prev]); }}
+          onClose={handleCloseSheet}
+          onSaved={handleVoiceSaved}
+          onUpdated={handleVoiceUpdated}
+          editVoice={reRecordVoice}
         />
       )}
     </div>

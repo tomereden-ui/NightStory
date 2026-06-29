@@ -36,6 +36,7 @@ interface CreateVoiceBody {
   avatarEmoji?: string;
   presetKey?: string;
   voiceSettings?: { stability: number; similarity_boost: number; style: number; use_speaker_boost: boolean };
+  versions?: object[];
 }
 
 export async function POST(req: NextRequest) {
@@ -93,14 +94,15 @@ export async function POST(req: NextRequest) {
     created_at: Date.now(),
     preset_key: body.presetKey ?? null,
     voice_settings: body.voiceSettings ?? null,
+    versions: body.versions ?? null,
   };
 
   let { data, error } = await supabase.from("voices").insert(row).select().single();
 
   // If the new columns don't exist yet (migration not run), retry without them
-  if (error && (error.message.includes("preset_key") || error.message.includes("voice_settings"))) {
-    console.warn("[voices POST] New columns missing — retrying without preset_key/voice_settings");
-    const { preset_key: _pk, voice_settings: _vs, ...rowWithoutNewCols } = row;
+  if (error && (error.message.includes("preset_key") || error.message.includes("voice_settings") || error.message.includes("versions"))) {
+    console.warn("[voices POST] New columns missing — retrying without preset_key/voice_settings/versions");
+    const { preset_key: _pk, voice_settings: _vs, versions: _v, ...rowWithoutNewCols } = row;
     ({ data, error } = await supabase.from("voices").insert(rowWithoutNewCols).select().single());
   }
 
