@@ -67,7 +67,7 @@ async function synthesizeEL(
           headers: { "Content-Type": "application/json", "xi-api-key": apiKey },
           body: JSON.stringify({
             text,
-            model_id: "eleven_multilingual_v2",
+            model_id: "eleven_multilingual_v3",
             ...(langCode ? { language_code: langCode } : {}),
             voice_settings: { stability, similarity_boost: similarityBoost, style, use_speaker_boost: useSpeakerBoost },
           }),
