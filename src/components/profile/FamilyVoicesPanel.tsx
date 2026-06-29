@@ -658,7 +658,7 @@ function AddVoiceSheet({
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} /></div>
 
-        <div className="overflow-y-auto flex-1 px-5 pt-2 pb-6">
+        <div className="overflow-y-auto flex-1 px-5 pt-2 pb-3">
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -785,20 +785,6 @@ function AddVoiceSheet({
                 })}
               </div>
 
-              {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
-
-              <button
-                onClick={handleSave}
-                disabled={saving || !name.trim()}
-                className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]"
-                style={{
-                  background: !saving && name.trim() ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)",
-                  color: !saving && name.trim() ? "#fff" : "rgba(255,255,255,0.25)",
-                  cursor: !saving && name.trim() ? "pointer" : "not-allowed",
-                }}
-              >
-                {saving ? "Saving…" : isEditMode ? `Update as ${selectedPreset?.label ?? "Voice"}` : `Save as ${selectedPreset?.label ?? "Voice"}`}
-              </button>
             </>
           ) : (
             <>
@@ -807,10 +793,25 @@ function AddVoiceSheet({
               </button>
 
               {previewError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.08)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.2)" }}>⚠ {previewError}</p>}
-
-              {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
             </>
           )}
+        </div>
+
+        {/* Sticky Save footer */}
+        <div className="flex-shrink-0 px-5 pb-6 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0D1120" }}>
+          {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
+          <button
+            onClick={handleSave}
+            disabled={saving || !name.trim() || addStep !== "style-picker"}
+            className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]"
+            style={{
+              background: !saving && name.trim() && addStep === "style-picker" ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)",
+              color: !saving && name.trim() && addStep === "style-picker" ? "#fff" : "rgba(255,255,255,0.2)",
+              cursor: !saving && name.trim() && addStep === "style-picker" ? "pointer" : "not-allowed",
+            }}
+          >
+            {saving ? "Saving…" : addStep !== "style-picker" ? "Record & choose a style to save" : isEditMode ? `Update as ${selectedPreset?.label ?? "Voice"}` : `Save as ${selectedPreset?.label ?? "Voice"}`}
+          </button>
         </div>
 
         {avatarPickerOpen && (
