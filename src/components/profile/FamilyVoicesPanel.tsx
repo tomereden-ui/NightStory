@@ -88,6 +88,16 @@ function isAvatarUrl(v: string) {
   return v.startsWith("https://") || v.startsWith("http://");
 }
 
+// Mirror of detectLanguageCode in ttsService — used client-side to detect
+// the language of the user's custom sample text before calling the preview API.
+function detectLangFromText(text: string, fallback: string): string {
+  if (/[֐-׿יִ-פֿ]/.test(text)) return "he";
+  if (/[؀-ۿ]/.test(text)) return "ar";
+  if (/[一-鿿　-ヿ]/.test(text)) return "zh";
+  if (/[ऀ-ॿ]/.test(text)) return "hi";
+  return fallback;
+}
+
 // ─── Avatar Gallery Sheet ─────────────────────────────────────────────────────
 
 type BankAvatar = { id: string; description: string; image_url: string };
@@ -401,7 +411,8 @@ function AddVoiceSheet({
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
-  const sampleText = SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en;
+  const [sampleText, setSampleText] = useState(SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en);
+  const detectedLang = detectLangFromText(sampleText, language);
   const isEditMode = !!editVoice;
 
   useEffect(() => {
@@ -504,7 +515,7 @@ function AddVoiceSheet({
     setPreviewError(null);
     stopPreviewAudio();
     try {
-      const body = { type: "recorded", audioBase64: recordedAudioBase64!, audioMimeType: recordedMimeType, name: name.trim() || "My Voice", language };
+      const body = { type: "recorded", audioBase64: recordedAudioBase64!, audioMimeType: recordedMimeType, name: name.trim() || "My Voice", language: detectedLang };
       const res = await fetch("/api/voices/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error((data as { error?: string }).error ?? `Server error ${res.status}`);
@@ -520,7 +531,7 @@ function AddVoiceSheet({
       setPreviewState("ready");
       if (rd.elVoiceId) {
         setAddStep("style-picker");
-        generateAllPresets(rd.elVoiceId, language);
+        generateAllPresets(rd.elVoiceId, detectedLang);
       }
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : "Preview failed");
@@ -647,8 +658,20 @@ function AddVoiceSheet({
 
           {/* Record */}
           <div className="mb-4">
-            <div className="rounded-2xl px-4 py-3 mb-3 text-fs-body" style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)", color: "rgba(255,255,255,0.55)" }}>
-              Read this aloud: <span className="text-white/80 italic">&ldquo;{sampleText}&rdquo;</span>
+            <div className="rounded-2xl px-4 pt-3 pb-2 mb-3" style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
+              <p className="text-fs-body mb-1.5" style={{ color: "rgba(255,255,255,0.45)" }}>Read this aloud — or write your own:</p>
+              <textarea
+                value={sampleText}
+                onChange={(e) => setSampleText(e.target.value)}
+                rows={2}
+                className="w-full bg-transparent text-white/90 italic text-fs-body resize-none outline-none leading-snug"
+                style={{ caretColor: "#4fc3f7" }}
+              />
+              {detectedLang !== language && (
+                <p className="text-fs-body mt-1" style={{ color: "#4fc3f7", opacity: 0.7 }}>
+                  Detected: {detectedLang.toUpperCase()}
+                </p>
+              )}
             </div>
             {recordState === "idle" && (
               <button onClick={handleStartRecording} className="w-full py-3 rounded-2xl text-fs-body font-semibold" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>🎙 Start Recording</button>
