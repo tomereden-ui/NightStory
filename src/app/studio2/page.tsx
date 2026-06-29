@@ -1953,17 +1953,6 @@ export default function Studio2Page() {
         {/* Script tab */}
         {activeTab === "script" && hasScript && (
           <>
-            {/* Back to Create — hidden while generating */}
-            {!generating && (
-              <button
-                onClick={() => setActiveTab(createMode)}
-                className="flex items-center gap-1.5 mb-4 text-fs-body font-semibold transition-all active:scale-95"
-                style={{ color: "rgba(79,195,247,0.65)" }}
-              >
-                <Icon name="back" size={13} />
-                <span>{i18nT(language, "reviseStory" as never)}</span>
-              </button>
-            )}
 
             {/* ── In-tab generating placeholder ────────────────────────────── */}
             {generating && (
