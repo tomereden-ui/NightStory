@@ -180,6 +180,7 @@ function VoiceCard({
   const isPlaying = playingId === voice.id;
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [switchingVersion, setSwitchingVersion] = useState<string | null>(null);
   const [playingVersion, setPlayingVersion] = useState<string | null>(null);
   const [loadingVersion, setLoadingVersion] = useState<string | null>(null);
@@ -279,9 +280,28 @@ function VoiceCard({
         <button disabled={!voice.sample_url} onClick={() => onPlay(voice)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: isPlaying ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.05)", color: isPlaying ? "#4fc3f7" : voice.sample_url ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.15)", border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)", cursor: voice.sample_url ? "pointer" : "not-allowed" }}>
           {isPlaying ? <Icon name="stop" size={14} /> : <Icon name="play" size={14} />}
         </button>
-        <button onClick={() => onDelete(voice.id)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <Icon name="close" size={16} />
-        </button>
+        {confirmDelete ? (
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => onDelete(voice.id)}
+              className="px-2.5 py-1 rounded-lg text-fs-body font-semibold transition-all active:scale-95"
+              style={{ background: "rgba(236,72,153,0.15)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.35)" }}
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-95"
+              style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <Icon name="close" size={13} />
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <Icon name="close" size={16} />
+          </button>
+        )}
         {/* Expand/collapse toggle — shown for all EL voices */}
         {isELVoice && (
           <button onClick={() => setEditOpen((o) => !o)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: editOpen ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)", color: editOpen ? "#4fc3f7" : "rgba(255,255,255,0.35)", border: editOpen ? "1px solid rgba(79,195,247,0.35)" : "1px solid rgba(255,255,255,0.07)", fontSize: 11, transform: editOpen ? "rotate(180deg)" : "none" }}>
