@@ -166,17 +166,30 @@ function VoiceCard({
   onVersionChange: (id: string, presetKey: string, voiceSettings: VoiceSettings) => void;
   onReRecord: (voice: VoiceRecord) => void;
 }) {
+  const { language } = useLanguage();
   const isPlaying = playingId === voice.id;
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [switchingVersion, setSwitchingVersion] = useState<string | null>(null);
+  const [playingVersion, setPlayingVersion] = useState<string | null>(null);
+  const [loadingVersion, setLoadingVersion] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  const versionAudioCache = useRef<Record<string, string>>({});
+  const versionAudioRef = useRef<HTMLAudioElement | null>(null);
   const avatarIsUrl = isAvatarUrl(voice.avatar_emoji);
 
-  // Use versions from DB if available, otherwise derive from VOICE_PRESETS
   const versions = voice.versions ?? allPresetsAsVersions();
   const isELVoice = !!voice.el_voice_id;
+
+  // Cleanup version audio when card collapses
+  useEffect(() => {
+    if (!editOpen) {
+      versionAudioRef.current?.pause();
+      versionAudioRef.current = null;
+      setPlayingVersion(null);
+    }
+  }, [editOpen]);
 
   const handleVersionSwitch = async (v: VoiceVersion) => {
     if (v.preset_key === voice.preset_key) return;
@@ -185,6 +198,59 @@ function VoiceCard({
       await onVersionChange(voice.id, v.preset_key, v.voice_settings);
     } finally {
       setSwitchingVersion(null);
+    }
+  };
+
+  const handlePlayVersion = async (presetKey: string) => {
+    if (!voice.el_voice_id) return;
+
+    // Stop if already playing this version
+    if (playingVersion === presetKey) {
+      versionAudioRef.current?.pause();
+      versionAudioRef.current = null;
+      setPlayingVersion(null);
+      return;
+    }
+
+    // Stop any currently playing version
+    versionAudioRef.current?.pause();
+    versionAudioRef.current = null;
+    setPlayingVersion(null);
+
+    // Use cached URL if available
+    const cached = versionAudioCache.current[presetKey];
+    if (cached) {
+      const audio = new Audio(cached);
+      versionAudioRef.current = audio;
+      audio.onended = () => { versionAudioRef.current = null; setPlayingVersion(null); };
+      audio.onerror = () => { versionAudioRef.current = null; setPlayingVersion(null); };
+      audio.play().catch(() => setPlayingVersion(null));
+      setPlayingVersion(presetKey);
+      return;
+    }
+
+    // Fetch from API
+    setLoadingVersion(presetKey);
+    try {
+      const res = await fetch("/api/voices/preset-previews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ elVoiceId: voice.el_voice_id, presetKey, language }),
+      });
+      const data = await res.json() as { audioBase64?: string; mimeType?: string; error?: string };
+      if (!data.audioBase64) return;
+      const url = base64ToObjectUrl(data.audioBase64, data.mimeType ?? "audio/mpeg");
+      versionAudioCache.current[presetKey] = url;
+      const audio = new Audio(url);
+      versionAudioRef.current = audio;
+      audio.onended = () => { versionAudioRef.current = null; setPlayingVersion(null); };
+      audio.onerror = () => { versionAudioRef.current = null; setPlayingVersion(null); };
+      audio.play().catch(() => setPlayingVersion(null));
+      setPlayingVersion(presetKey);
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingVersion(null);
     }
   };
 
@@ -223,23 +289,49 @@ function VoiceCard({
             {versions.map((v) => {
               const isActive = v.preset_key === voice.preset_key;
               const isSwitching = switchingVersion === v.preset_key;
+              const isVersionPlaying = playingVersion === v.preset_key;
+              const isVersionLoading = loadingVersion === v.preset_key;
               return (
-                <button
+                <div
                   key={v.preset_key}
-                  onClick={() => handleVersionSwitch(v)}
-                  disabled={isActive || isSwitching}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl w-full text-left transition-all active:scale-[0.99]"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all"
                   style={{
                     background: isActive ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.03)",
                     border: isActive ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.06)",
-                    cursor: isActive ? "default" : "pointer",
                   }}
                 >
-                  <span style={{ fontSize: 17, flexShrink: 0 }}>{v.emoji}</span>
-                  <span className="text-fs-body flex-1" style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.65)", fontWeight: isActive ? 600 : 400 }}>{v.label}</span>
-                  {isSwitching && <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>…</span>}
-                  {isActive && !isSwitching && <span style={{ color: "#4fc3f7", fontSize: 14 }}>✓</span>}
-                </button>
+                  {/* Play button */}
+                  <button
+                    onClick={() => handlePlayVersion(v.preset_key)}
+                    disabled={isVersionLoading}
+                    className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+                    style={{
+                      background: isVersionPlaying ? "rgba(79,195,247,0.2)" : "rgba(255,255,255,0.06)",
+                      color: isVersionLoading ? "rgba(255,255,255,0.25)" : isVersionPlaying ? "#4fc3f7" : "rgba(255,255,255,0.5)",
+                      border: isVersionPlaying ? "1px solid rgba(79,195,247,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    {isVersionLoading ? (
+                      <span style={{ fontSize: 9 }}>⏳</span>
+                    ) : isVersionPlaying ? (
+                      <Icon name="stop" size={11} />
+                    ) : (
+                      <Icon name="play" size={11} />
+                    )}
+                  </button>
+                  {/* Label — tap to switch active version */}
+                  <button
+                    onClick={() => handleVersionSwitch(v)}
+                    disabled={isActive || isSwitching}
+                    className="flex items-center gap-2 flex-1 text-left"
+                    style={{ cursor: isActive ? "default" : "pointer" }}
+                  >
+                    <span style={{ fontSize: 17, flexShrink: 0 }}>{v.emoji}</span>
+                    <span className="text-fs-body flex-1" style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.65)", fontWeight: isActive ? 600 : 400 }}>{v.label}</span>
+                    {isSwitching && <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>…</span>}
+                    {isActive && !isSwitching && <span style={{ color: "#4fc3f7", fontSize: 14 }}>✓</span>}
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -789,28 +881,26 @@ export default function FamilyVoicesPanel() {
             {!open && voices.length > 0 ? (
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex -space-x-2">
-                  {voices.slice(0, 4).map((v) => (
-                    {(() => {
-                      const styleEntry = AVATAR_STYLES.find((s) => s.key === v.avatar_emoji);
-                      return (
-                        <div
-                          key={v.id}
-                          className="flex items-center justify-center rounded-full flex-shrink-0 overflow-hidden"
-                          style={{
-                            width: 22, height: 22,
-                            background: styleEntry ? styleEntry.gradient : "rgba(167,139,250,0.2)",
-                            border: "1.5px solid rgba(167,139,250,0.5)",
-                            fontSize: 13,
-                          }}
-                        >
-                          {isAvatarUrl(v.avatar_emoji)
-                            // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={v.avatar_emoji} alt={v.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            : styleEntry ? null : v.avatar_emoji}
-                        </div>
-                      );
-                    })()}
-                  ))}
+                  {voices.slice(0, 4).map((v) => {
+                    const styleEntry = AVATAR_STYLES.find((s) => s.key === v.avatar_emoji);
+                    return (
+                      <div
+                        key={v.id}
+                        className="flex items-center justify-center rounded-full flex-shrink-0 overflow-hidden"
+                        style={{
+                          width: 22, height: 22,
+                          background: styleEntry ? styleEntry.gradient : "rgba(167,139,250,0.2)",
+                          border: "1.5px solid rgba(167,139,250,0.5)",
+                          fontSize: 13,
+                        }}
+                      >
+                        {isAvatarUrl(v.avatar_emoji)
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={v.avatar_emoji} alt={v.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : styleEntry ? null : v.avatar_emoji}
+                      </div>
+                    );
+                  })}
                 </div>
                 <span className="text-fs-body" style={{ color: "rgba(167,139,250,0.7)" }}>
                   {voices.length} {voices.length > 1 ? t("voiceReadyPlural") : t("voiceReadySingle")}
