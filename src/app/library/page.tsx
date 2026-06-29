@@ -307,7 +307,7 @@ function FamilyStoriesGrid({
                     backdropFilter: "blur(6px)",
                     color: assignedChild ? "#4fc3f7" : "rgba(255,255,255,0.45)",
                     border: assignedChild ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.1)",
-                    fontSize: "var(--fs-micro)",
+                    fontSize: "var(--fs-label)",
                   }}
                 >
                   {isAssigning ? "…" : assignedChild ? assignedChild.name : "+ Assign"}
