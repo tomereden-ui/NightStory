@@ -9,16 +9,16 @@ import type { ClassicMeta } from "@/lib/classicStories";
 import { LANGUAGE_META } from "@/lib/i18n";
 import Icon from "@/components/ui/Icon";
 
-function timeAgo(ts: number): string {
+function timeAgo(ts: number, tFn: (key: string) => string): string {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return tFn("justNow");
+  if (mins < 60) return `${mins}${tFn("minutesAgo")}`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours}${tFn("hoursAgo")}`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  return `${days}d ago`;
+  if (days === 1) return tFn("yesterday");
+  return `${days}${tFn("daysAgo")}`;
 }
 
 function durationLabel(seconds: number): string {
@@ -28,12 +28,14 @@ function durationLabel(seconds: number): string {
 
 type DurationFilter = "all" | "short" | "medium" | "long";
 
-const DURATION_FILTERS: { key: DurationFilter; label: string; icon: string }[] = [
-  { key: "all",    label: "All",    icon: "✦" },
-  { key: "short",  label: "Short",  icon: "⚡" },
-  { key: "medium", label: "Medium", icon: "🌙" },
-  { key: "long",   label: "Long",   icon: "📖" },
-];
+function getDurationFilters(tFn: (key: string) => string): { key: DurationFilter; label: string; icon: string }[] {
+  return [
+    { key: "all",    label: tFn("all"),    icon: "✦" },
+    { key: "short",  label: tFn("short"),  icon: "⚡" },
+    { key: "medium", label: tFn("medium"), icon: "🌙" },
+    { key: "long",   label: tFn("long"),   icon: "📖" },
+  ];
+}
 
 function matchesDuration(seconds: number, filter: DurationFilter): boolean {
   if (filter === "all") return true;
@@ -62,6 +64,7 @@ function cardPalette(title: string): [string, string] {
 
 function ClassicsTab() {
   const { effective } = useViewMode();
+  const { t } = useLanguage();
   const isMobile = effective === "mobile";
 
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
@@ -141,7 +144,7 @@ function ClassicsTab() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search classics…"
+          placeholder={t("searchClassics")}
           className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-fs-body text-white placeholder-white/20 outline-none"
           style={{
             background: "rgba(255,255,255,0.05)",
@@ -161,13 +164,13 @@ function ClassicsTab() {
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center pt-16 gap-3 text-center">
           <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
-          <p className="text-white/40 text-fs-body">No classics match your search</p>
+          <p className="text-white/40 text-fs-body">{t("noClassicsMatch")}</p>
           <button
             onClick={() => setSearch("")}
             className="text-fs-body px-4 py-2 rounded-full transition-all"
             style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
           >
-            Clear search
+            {t("clearSearch")}
           </button>
         </div>
       )}
