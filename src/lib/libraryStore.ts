@@ -1,5 +1,5 @@
 import { supabase, ensureBuckets } from "./supabase";
-import type { ScriptBlock } from "@/types";
+import type { ScriptBlock, StoryScene } from "@/types";
 
 export interface LibraryEntry {
   id: string;
@@ -18,6 +18,7 @@ export interface LibraryEntry {
   shareMessage?: string;
   viewCount?: number;
   shareCount?: number;
+  scenes?: StoryScene[];
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -46,6 +47,7 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
     shareMessage: row.share_message ?? undefined,
     viewCount: viewCounts?.[row.id] ?? 0,
     shareCount: shareCounts?.[row.id] ?? 0,
+    scenes: Array.isArray(row.scenes) ? (row.scenes as StoryScene[]) : undefined,
   };
 }
 
@@ -71,6 +73,7 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
     is_public: entry.isPublic ?? false,
     is_classic: entry.isClassic ?? false,
     child_ids: entry.childIds ?? null,
+    scenes: entry.scenes ?? null,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
 }

@@ -796,7 +796,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, onError }: {
   heroName: string; worldName: string;
   seeds: StorySeeds; durationMinutes: number;
-  onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>) => void;
+  onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => void;
   onError: (msg: string) => void;
 }) {
   const messages = BLUEBELL.generating(heroName, worldName);
@@ -821,7 +821,7 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Generation failed");
-        onDoneRef.current(data.blocks as ScriptBlock[], data.summary ?? "", data.coverPrompt ?? "", data.characters as Record<string, StoryCharacterInfo> | undefined);
+        onDoneRef.current(data.blocks as ScriptBlock[], data.summary ?? "", data.coverPrompt ?? "", data.characters as Record<string, StoryCharacterInfo> | undefined, data.scenes as import("@/types").StoryScene[] | undefined);
       })
       .catch((err) => {
         if ((err as { name?: string }).name === "AbortError") return;
@@ -857,7 +857,7 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
 const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", q4_engine: "", q5_mood: null };
 
 export interface StoryCharacterInfo { type: "child" | "adult" | "animal" | "narrator"; visualDescription: string; }
-export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo> };
+export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo>; scenes?: import("@/types").StoryScene[] };
 
 export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string } = {}) {
   const router = useRouter();
@@ -1043,14 +1043,14 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
 
   const handleLaunch = useCallback(() => { onGenerating?.(); setStep("generating"); setError(null); }, [onGenerating]);
 
-  const handleDone = useCallback((blocks: ScriptBlock[], incomingSummary: string, incomingCoverPrompt: string, characters?: Record<string, StoryCharacterInfo>) => {
+  const handleDone = useCallback((blocks: ScriptBlock[], incomingSummary: string, incomingCoverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => {
     setScriptBlocks(blocks);
     setSummary(incomingSummary);
     setCoverPrompt(incomingCoverPrompt);
     setCoverUrl("");
-    writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "" });
+    writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes });
     if (onComplete) {
-      onComplete({ blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, characters });
+      onComplete({ blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, characters, scenes });
     } else {
       if (incomingCoverPrompt) fetchCover(incomingCoverPrompt, incomingSummary);
       router.push("/studio");

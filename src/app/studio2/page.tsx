@@ -11,7 +11,7 @@ import LessonStep from "@/components/studio/LessonStep";
 import LessonEditor from "@/components/studio/LessonEditor";
 import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
-import type { ScriptBlock, Voice } from "@/types";
+import type { ScriptBlock, Voice, StoryScene } from "@/types";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
@@ -1087,6 +1087,7 @@ export default function Studio2Page() {
 
   // ─── Script state ───────────────────────────────────────────────────────────
   const [scriptBlocks, setScriptBlocks]     = useState<ScriptBlock[]>([]);
+  const [scenes, setScenes]                 = useState<StoryScene[]>([]);
   const [summary, setSummary]               = useState("");
   const [coverUrl, setCoverUrl]             = useState("");
   const [coverPrompt, setCoverPrompt]       = useState("");
@@ -1185,6 +1186,7 @@ export default function Studio2Page() {
       // Migrate: support both old string `lesson` and new array `lessons`
       setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
       setLessonImplementations(draft.lessonImplementations ?? []);
+      setScenes(draft.scenes ?? []);
       if (!startOnPrompt) setActiveTab("script");
     } else {
       setActiveTab(startOnPrompt ? "step-by-step" : "chat");
@@ -1195,8 +1197,8 @@ export default function Studio2Page() {
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations }, DRAFT_KEY);
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations, scenes }, DRAFT_KEY);
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations, scenes, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -1346,12 +1348,14 @@ export default function Studio2Page() {
       const title = (data.title as string | undefined) ?? "";
       const impls = (data.lessonImplementations ?? []) as { lesson: string; implemented: boolean; how: string }[];
       const storyChars = (data.characters ?? {}) as Record<string, { type: string; visualDescription: string }>;
+      const rawScenes = (data.scenes ?? []) as StoryScene[];
 
       // Story is ready — transition from "generating" to "validating"
       setSummary(sm);
       setCoverPrompt(cp);
       setStoryTitle(title);
       setLessonImplementations(impls);
+      setScenes(rawScenes);
       setHasScriptChanges(false);
       cleanLessonsRef.current = selectedLessons;
       setCharacterAvatars({});
@@ -1386,7 +1390,7 @@ export default function Studio2Page() {
           if (i === blocks.length - 1) {
             setIsValidating(false);
             setTotalExpectedBlocks(undefined);
-            writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, forkedFromTitle: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
+            writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, forkedFromTitle: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls, scenes: rawScenes }, DRAFT_KEY);
           }
         }, i * 65);
       }
@@ -1468,7 +1472,7 @@ export default function Studio2Page() {
           fetch(`/api/library/${editingStoryId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ blocks: scriptBlocks, title: storyTitle || undefined, summary: summary || undefined }),
+            body: JSON.stringify({ blocks: scriptBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined }),
           })
         );
 
@@ -1910,7 +1914,7 @@ export default function Studio2Page() {
                 setScriptBlocks([]);
                 setGenerating(true);
               }}
-              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars }) => {
+              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes }) => {
                 setGenerating(false);
                 setSummary(sm);
                 setCoverPrompt(cp);
@@ -1918,6 +1922,7 @@ export default function Studio2Page() {
                 setStoryTitle("");
                 setLessons([]);
                 setLessonImplementations([]);
+                setScenes(fqScenes ?? []);
                 setCharacterAvatars({});
                 setCharacterTypes({});
                 setCharacterDescriptions({});
@@ -1940,7 +1945,7 @@ export default function Studio2Page() {
                         if (i === blocks.length - 1) {
                           setIsValidating(false);
                           setTotalExpectedBlocks(undefined);
-                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [] }, DRAFT_KEY);
+                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
                         }
                       }, i * 65);
                     });
@@ -1953,7 +1958,7 @@ export default function Studio2Page() {
                         if (i === rawBlocks.length - 1) {
                           setIsValidating(false);
                           setTotalExpectedBlocks(undefined);
-                          writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [] }, DRAFT_KEY);
+                          writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
                         }
                       }, i * 65);
                     });
@@ -2037,6 +2042,7 @@ export default function Studio2Page() {
               studioMode
               characterAvatars={characterAvatars}
               totalExpectedBlocks={totalExpectedBlocks}
+              scenes={scenes}
               belowCover={
                 <>
                   <CharacterCards

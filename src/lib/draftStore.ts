@@ -1,4 +1,4 @@
-import type { ScriptBlock } from "@/types";
+import type { ScriptBlock, StoryScene } from "@/types";
 
 const KEY = "nightstory_draft_v1";
 
@@ -16,6 +16,7 @@ export interface DraftState {
   lesson?: string | null;
   lessons?: string[];
   lessonImplementations?: { lesson: string; implemented: boolean; how: string }[];
+  scenes?: StoryScene[];
 }
 
 export function readDraft(key = KEY): DraftState | null {

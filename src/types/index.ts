@@ -111,6 +111,18 @@ export interface ScriptBlock {
   validated?: boolean;
 }
 
+export interface StoryScene {
+  sceneNumber: number;
+  title: string;
+  summary: string;
+  primaryMood: string;
+  sfxTags: string[];
+  /** 0-based block indices, inclusive on both ends */
+  lineRange: { start: number; end: number };
+  /** Pre-computed from word count at 130 WPM */
+  estimatedDurationSeconds?: number;
+}
+
 export interface GeneratedScriptState {
   storyId: string;
   blocks: ScriptBlock[];
