@@ -9,6 +9,7 @@ import type { ClassicMeta } from "@/lib/classicStories";
 import { LANGUAGE_META } from "@/lib/i18n";
 import Icon from "@/components/ui/Icon";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
+import ShareSheet from "@/components/ShareSheet";
 
 function timeAgo(ts: number, tFn: (key: string) => string): string {
   const diff = Date.now() - ts;
@@ -253,6 +254,7 @@ function FamilyStoriesGrid({
   const [pickerOpenId, setPickerOpenId] = useState<string | null>(null);
   const [pickerSelections, setPickerSelections] = useState<Record<string, string[]>>({});
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [sharingEntry, setSharingEntry] = useState<LibraryEntry | null>(null);
 
   const openPicker = (storyId: string, currentChildIds: string[]) => {
     setPickerSelections((prev) => ({ ...prev, [storyId]: [...currentChildIds] }));
@@ -284,6 +286,7 @@ function FamilyStoriesGrid({
   };
 
   return (
+    <>
     <div
       className="grid gap-3 pt-2"
       style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}
@@ -320,6 +323,16 @@ function FamilyStoriesGrid({
                 )}
               </div>
             </Link>
+
+            {/* Share button — top right corner */}
+            <button
+              onClick={(e) => { e.preventDefault(); setSharingEntry(entry); }}
+              className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 z-10"
+              style={{ background: "rgba(5,8,20,0.7)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.12)" }}
+              aria-label="Share story"
+            >
+              <span style={{ fontSize: 13 }}>📤</span>
+            </button>
 
             {/* Bottom strip — avatars when assigned, "+Assign" button when not */}
             {children.length > 0 && (
@@ -452,6 +465,16 @@ function FamilyStoriesGrid({
         );
       })}
     </div>
+
+    {sharingEntry && (
+      <ShareSheet
+        story={sharingEntry}
+        children={children}
+        onClose={() => setSharingEntry(null)}
+        onMessageSaved={(msg) => setSharingEntry((e) => e ? { ...e, shareMessage: msg } : e)}
+      />
+    )}
+    </>
   );
 }
 

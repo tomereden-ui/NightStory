@@ -7,6 +7,8 @@ import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import Icon from "@/components/ui/Icon";
 import type { ScriptBlock } from "@/types";
+import ShareSheet from "@/components/ShareSheet";
+import type { DBChildProfile } from "@/app/api/child-profiles/route";
 
 type CharacterType = "child" | "adult" | "animal" | "narrator";
 
@@ -119,6 +121,8 @@ export default function StoryDetailPage() {
 
   const [entry, setEntry] = useState<LibraryEntry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [allChildren, setAllChildren] = useState<DBChildProfile[]>([]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -433,21 +437,41 @@ export default function StoryDetailPage() {
           </div>
         )}
 
-        {/* Open in Studio button */}
-        <div className="px-5 mt-8 mb-4">
+        {/* Actions row */}
+        <div className="px-5 mt-8 mb-4 flex gap-3">
           <button
             onClick={handleEdit}
-            className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-            style={{
-              background: "rgba(79,195,247,0.1)",
-              border: "1px solid rgba(79,195,247,0.3)",
-              color: "rgba(79,195,247,0.9)",
-            }}
+            className="flex-1 py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.3)", color: "rgba(79,195,247,0.9)" }}
           >
             <span>🎬</span>
             <span>Open in Studio</span>
           </button>
+          <button
+            onClick={() => {
+              if (allChildren.length === 0) {
+                fetch("/api/child-profiles").then((r) => r.json()).then((d) => {
+                  if (Array.isArray(d)) setAllChildren(d as DBChildProfile[]);
+                }).catch(() => {});
+              }
+              setShareOpen(true);
+            }}
+            className="py-3.5 px-4 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center gap-2 flex-shrink-0"
+            style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}
+          >
+            <span>📤</span>
+            <span>Share</span>
+          </button>
         </div>
+
+        {shareOpen && entry && (
+          <ShareSheet
+            story={entry}
+            children={allChildren}
+            onClose={() => setShareOpen(false)}
+            onMessageSaved={(msg) => setEntry((e) => e ? { ...e, shareMessage: msg } : e)}
+          />
+        )}
       </div>
 
       {/* Sticky player bar — constrained to app width */}

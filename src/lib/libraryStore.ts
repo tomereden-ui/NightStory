@@ -14,6 +14,7 @@ export interface LibraryEntry {
   emoji?: string;      // classic stories only
   isPublic?: boolean;
   childIds?: string[]; // which children this story belongs to (null = unscoped / pre-migration)
+  shareMessage?: string;
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -38,6 +39,7 @@ function toEntry(row: any): LibraryEntry { // eslint-disable-line
     childIds: Array.isArray(row.child_ids) ? row.child_ids as string[]
              : row.child_id ? [row.child_id as string]   // migrate legacy single value
              : undefined,
+    shareMessage: row.share_message ?? undefined,
   };
 }
 
