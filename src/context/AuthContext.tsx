@@ -35,9 +35,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { data, error } = await supabaseAuth.auth.exchangeCodeForSession(code);
         if (error) {
-          // PKCE verifier may be missing on mobile (different browser context).
-          // Fall back to checking if the session was established another way.
           console.warn("[Auth] exchangeCodeForSession failed:", error.message);
+          // If Supabase rejected the code (e.g. email already registered under a different
+          // provider), redirect to login with the error so the user sees what went wrong.
+          if (error.message && !error.message.toLowerCase().includes("verifier")) {
+            const url = new URL(window.location.href);
+            url.pathname = "/login";
+            url.searchParams.set("auth_error", error.message);
+            window.location.replace(url.toString());
+            return;
+          }
+          // PKCE verifier missing (different browser context) — check if session already set
           const { data: fallback } = await supabaseAuth.auth.getSession();
           setSession(fallback.session);
           setUser(fallback.session?.user ?? null);
