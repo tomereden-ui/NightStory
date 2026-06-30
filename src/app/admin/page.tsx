@@ -184,14 +184,25 @@ interface CostData {
     el_sfx_chars: number; el_sfx_calls: number;
     pollinations_calls: number;
   };
+  storyCount: number; publicCount: number; privateCount: number; totalDurationSec: number;
+}
+
+interface StoryCost {
+  id: string; title: string; isPublic: boolean;
+  durationSeconds: number; blockCount: number;
+  geminiChars: number; elChars: number;
+  estimatedSfx: number; estimatedTokens: number; hasCover: boolean;
+  costs: { geminiTextGen: number; geminiTts: number; geminiImage: number; elTts: number; elSfx: number; total: number };
+}
+interface LibraryCostData {
+  stories: StoryCost[];
+  totals: { durationSeconds: number; blockCount: number; geminiChars: number; elChars: number; estimatedSfx: number; estimatedTokens: number; coverCount: number; costs: StoryCost["costs"] };
   storyCount: number;
-  publicCount: number;
-  privateCount: number;
-  totalDurationSec: number;
 }
 
 function fmtCost(usd: number): string {
-  if (usd < 0.01) return `$${(usd * 100).toFixed(3)}¢`;
+  if (usd < 0.001) return `<$0.001`;
+  if (usd < 0.01)  return `$${usd.toFixed(4)}`;
   return `$${usd.toFixed(3)}`;
 }
 function fmtDuration(secs: number): string {
@@ -201,14 +212,28 @@ function fmtDuration(secs: number): string {
 }
 function fmtNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
+}
+
+function SummaryChips({ items }: { items: { label: string; value: string | number; sub: string }[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {items.map((item) => (
+        <div key={item.label} className="rounded-xl px-3 py-3"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>{item.label}</p>
+          <p className="text-white font-bold text-fs-subtitle">{item.value}</p>
+          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>{item.sub}</p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function CostRow({ label, usage, cost, sub }: { label: string; usage: string; cost: number; sub?: string }) {
   return (
-    <div className="flex items-center gap-3 py-2.5"
-      style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+    <div className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
       <div className="flex-1 min-w-0">
         <p className="text-white text-fs-body">{label}</p>
         {sub && <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>{sub}</p>}
@@ -219,29 +244,34 @@ function CostRow({ label, usage, cost, sub }: { label: string; usage: string; co
   );
 }
 
-function CostAnalysis({ data, onRefresh, loading }: { data: CostData | null; onRefresh: () => void; loading: boolean }) {
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-2">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
-        ))}
+function BreakdownTable({ rows, total }: { rows: { label: string; usage: string; cost: number; sub?: string }[]; total: number }) {
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div className="flex items-center gap-3 px-3 py-2"
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <span className="flex-1 text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>Service</span>
+        <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 80, textAlign: "right" }}>Usage</span>
+        <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 70, textAlign: "right" }}>Cost</span>
       </div>
-    );
-  }
-  if (!data) {
-    return (
-      <button onClick={onRefresh}
-        className="w-full py-3 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
-        style={{ background: "rgba(79,195,247,0.07)", border: "1px solid rgba(79,195,247,0.25)", color: "#4fc3f7" }}>
-        Load Cost Analysis
-      </button>
-    );
-  }
+      <div className="px-3">
+        {rows.map((r) => <CostRow key={r.label} {...r} />)}
+        <div className="flex items-center gap-3 py-3">
+          <span className="flex-1 text-white font-bold text-fs-body">Total estimated</span>
+          <span style={{ minWidth: 80 }} />
+          <span className="font-bold flex-shrink-0"
+            style={{ color: "#a78bfa", fontSize: "var(--fs-subtitle)", minWidth: 70, textAlign: "right" }}>
+            {fmtCost(total)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
+// ── Mode A: API usage tracker (cumulative) ────────────────────────────────────
+function UsageMode({ data, onRefresh }: { data: CostData; onRefresh: () => void }) {
   const { totals, storyCount, publicCount, privateCount, totalDurationSec } = data;
   const totalMinutes = totalDurationSec / 60;
-
   const costs = {
     gemini_text:  totals.gemini_tokens      * PRICING.gemini_token,
     gemini_tts:   totals.gemini_tts_chars   * PRICING.gemini_tts_char,
@@ -249,114 +279,184 @@ function CostAnalysis({ data, onRefresh, loading }: { data: CostData | null; onR
     el_tts:       totals.el_tts_chars       * PRICING.el_tts_char,
     el_sfx:       totals.el_sfx_calls       * PRICING.el_sfx_call,
   };
-
-  const totalCost = Object.values(costs).reduce((s, c) => s + c, 0);
-  const costPerMin = totalMinutes > 0 ? totalCost / totalMinutes : 0;
-  const costPerStory = storyCount > 0 ? totalCost / storyCount : 0;
-
-  // Voice type split
-  const totalTtsChars = totals.gemini_tts_chars + totals.el_tts_chars;
-  const elPct = totalTtsChars > 0 ? Math.round((totals.el_tts_chars / totalTtsChars) * 100) : 0;
-  const geminiPct = 100 - elPct;
+  const totalCost   = Object.values(costs).reduce((s, c) => s + c, 0);
+  const totalTts    = totals.gemini_tts_chars + totals.el_tts_chars;
+  const elPct       = totalTts > 0 ? Math.round((totals.el_tts_chars / totalTts) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Summary chips */}
-      <div className="grid grid-cols-2 gap-2">
-        {[
-          { label: "Total stories", value: storyCount, sub: `${publicCount} public · ${privateCount} private` },
-          { label: "Total audio", value: fmtDuration(totalDurationSec), sub: `${totalMinutes.toFixed(1)} minutes` },
-          { label: "Cost / minute", value: fmtCost(costPerMin), sub: "estimated average" },
-          { label: "Cost / story", value: fmtCost(costPerStory), sub: "estimated average" },
-        ].map((item) => (
-          <div key={item.label} className="rounded-xl px-3 py-3"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>{item.label}</p>
-            <p className="text-white font-bold text-fs-subtitle">{item.value}</p>
-            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>{item.sub}</p>
+      <SummaryChips items={[
+        { label: "Total stories",  value: storyCount,                            sub: `${publicCount} public · ${privateCount} private` },
+        { label: "Total audio",    value: fmtDuration(totalDurationSec),          sub: `${totalMinutes.toFixed(1)} min` },
+        { label: "Cost / minute",  value: fmtCost(totalCost / (totalMinutes||1)), sub: "cumulative average" },
+        { label: "Cost / story",   value: fmtCost(totalCost / (storyCount||1)),   sub: "cumulative average" },
+      ]} />
+
+      <div className="rounded-xl px-3 py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>TTS Voice Split</p>
+        <div className="flex rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
+          <div style={{ width: `${100 - elPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
+          <div style={{ width: `${elPct}%`, background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
+        </div>
+        <div className="flex justify-between">
+          <span className="text-fs-body" style={{ color: "#4fc3f7" }}>Gemini {100-elPct}% — {fmtNum(totals.gemini_tts_chars)} chars</span>
+          <span className="text-fs-body" style={{ color: "#f59e0b" }}>EL {elPct}% — {fmtNum(totals.el_tts_chars)} chars</span>
+        </div>
+      </div>
+
+      <BreakdownTable total={totalCost} rows={[
+        { label: "Gemini Text Gen",  usage: `${fmtNum(totals.gemini_tokens)} tokens`, cost: costs.gemini_text,  sub: `${totals.gemini_calls} calls · $0.40/1M tokens` },
+        { label: "Gemini TTS",       usage: `${fmtNum(totals.gemini_tts_chars)} chars`, cost: costs.gemini_tts, sub: `${totals.gemini_tts_calls} calls · $0.10/1M chars` },
+        { label: "Gemini Images",    usage: `${totals.gemini_image_calls} images`,    cost: costs.gemini_image, sub: "$0.04/image (Imagen)" },
+        { label: "ElevenLabs TTS",   usage: `${fmtNum(totals.el_tts_chars)} chars`,   cost: costs.el_tts,       sub: `${totals.el_tts_calls} calls · $0.20/1K chars` },
+        { label: "ElevenLabs SFX",   usage: `${totals.el_sfx_calls} effects`,         cost: costs.el_sfx,       sub: `${fmtNum(totals.el_sfx_chars)} prompt chars · $0.08/effect` },
+      ]} />
+
+      <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
+        Includes test runs, retries, voice previews — not just produced stories
+      </p>
+      <button onClick={onRefresh} className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
+        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        ↻ Refresh
+      </button>
+    </div>
+  );
+}
+
+// ── Mode B: Library script analysis (bottom-up per story) ────────────────────
+function LibraryMode({ data, onRefresh }: { data: LibraryCostData; onRefresh: () => void }) {
+  const { stories, totals, storyCount } = data;
+  const totalMinutes = totals.durationSeconds / 60;
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const totalTts = totals.geminiChars + totals.elChars;
+  const elPct    = totalTts > 0 ? Math.round((totals.elChars / totalTts) * 100) : 0;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <SummaryChips items={[
+        { label: "Stories analysed", value: storyCount,                                  sub: `${totals.coverCount} with cover` },
+        { label: "Total audio",      value: fmtDuration(totals.durationSeconds),          sub: `${totalMinutes.toFixed(1)} min` },
+        { label: "Cost / minute",    value: fmtCost(totals.costs.total / (totalMinutes||1)), sub: "script-based estimate" },
+        { label: "Cost / story",     value: fmtCost(totals.costs.total / (storyCount||1)),   sub: "script-based estimate" },
+      ]} />
+
+      <div className="rounded-xl px-3 py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>TTS Voice Split (from blocks)</p>
+        <div className="flex rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
+          <div style={{ width: `${100-elPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
+          <div style={{ width: `${elPct}%`,     background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
+        </div>
+        <div className="flex justify-between">
+          <span className="text-fs-body" style={{ color: "#4fc3f7" }}>Gemini {100-elPct}% — {fmtNum(totals.geminiChars)} chars</span>
+          <span className="text-fs-body" style={{ color: "#f59e0b" }}>EL {elPct}% — {fmtNum(totals.elChars)} chars</span>
+        </div>
+      </div>
+
+      <BreakdownTable total={totals.costs.total} rows={[
+        { label: "Gemini Text Gen",  usage: `~${fmtNum(totals.estimatedTokens)} tokens`,   cost: totals.costs.geminiTextGen, sub: "estimated: script gen + drama plan per story" },
+        { label: "Gemini TTS",       usage: `${fmtNum(totals.geminiChars)} chars`,          cost: totals.costs.geminiTts,     sub: "actual chars from blocks · $0.10/1M" },
+        { label: "Gemini Images",    usage: `${totals.coverCount} covers`,                  cost: totals.costs.geminiImage,   sub: "$0.04/image" },
+        { label: "ElevenLabs TTS",   usage: `${fmtNum(totals.elChars)} chars`,              cost: totals.costs.elTts,         sub: "cloned voice chars from blocks · $0.20/1K" },
+        { label: "ElevenLabs SFX",   usage: `~${totals.estimatedSfx} effects`,              cost: totals.costs.elSfx,         sub: "estimated from duration + block count · $0.08/effect" },
+      ]} />
+
+      {/* Per-story breakdown */}
+      <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>Per Story</p>
+      <div className="flex flex-col gap-1.5">
+        {[...stories].sort((a, b) => b.costs.total - a.costs.total).map((s) => (
+          <div key={s.id}>
+            <button
+              onClick={() => setExpanded(expanded === s.id ? null : s.id)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
+              style={{ background: expanded === s.id ? "rgba(79,195,247,0.07)" : "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }}>
+                {s.isPublic ? "🌍" : "🔒"}
+              </span>
+              <span className="flex-1 text-white text-fs-body truncate">{s.title}</span>
+              <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {fmtDuration(s.durationSeconds)}
+              </span>
+              <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7", minWidth: 60, textAlign: "right" }}>
+                {fmtCost(s.costs.total)}
+              </span>
+            </button>
+            {expanded === s.id && (
+              <div className="mx-3 mt-1 mb-1 rounded-xl px-3 py-2 flex flex-col gap-1"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                {[
+                  ["Text gen",    `~${fmtNum(s.estimatedTokens)} tokens`, s.costs.geminiTextGen],
+                  ["Gemini TTS",  `${fmtNum(s.geminiChars)} chars`,        s.costs.geminiTts],
+                  ["Cover image", s.hasCover ? "1 image" : "none",          s.costs.geminiImage],
+                  ["EL TTS",      `${fmtNum(s.elChars)} chars`,             s.costs.elTts],
+                  ["EL SFX",      `~${s.estimatedSfx} effects`,             s.costs.elSfx],
+                ].map(([name, usage, cost]) => (
+                  <div key={name as string} className="flex items-center gap-2">
+                    <span className="flex-1 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>{name as string}</span>
+                    <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>{usage as string}</span>
+                    <span className="text-fs-body font-bold" style={{ color: "#4fc3f7", minWidth: 60, textAlign: "right" }}>{fmtCost(cost as number)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Voice type split */}
-      <div className="rounded-xl px-3 py-3"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>TTS Voice Split</p>
-        <div className="flex gap-0 rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
-          <div style={{ width: `${geminiPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
-          <div style={{ width: `${elPct}%`, background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
-        </div>
-        <div className="flex justify-between">
-          <span className="text-fs-body" style={{ color: "#4fc3f7" }}>
-            Gemini TTS {geminiPct}% — {fmtNum(totals.gemini_tts_chars)} chars / {totals.gemini_tts_calls} calls
-          </span>
-          <span className="text-fs-body" style={{ color: "#f59e0b" }}>
-            EL {elPct}% — {fmtNum(totals.el_tts_chars)} chars
-          </span>
-        </div>
-      </div>
-
-      {/* Breakdown table */}
-      <div className="rounded-xl overflow-hidden"
-        style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div className="flex items-center gap-3 px-3 py-2"
-          style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          <span className="flex-1 text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>Service</span>
-          <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 80, textAlign: "right" }}>Usage</span>
-          <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 70, textAlign: "right" }}>Cost</span>
-        </div>
-        <div className="px-3">
-          <CostRow
-            label="Gemini Text Gen"
-            usage={`${fmtNum(totals.gemini_tokens)} tokens`}
-            cost={costs.gemini_text}
-            sub={`${totals.gemini_calls} calls · $0.40/1M tokens`}
-          />
-          <CostRow
-            label="Gemini TTS"
-            usage={`${fmtNum(totals.gemini_tts_chars)} chars`}
-            cost={costs.gemini_tts}
-            sub={`${totals.gemini_tts_calls} calls · $0.10/1M chars`}
-          />
-          <CostRow
-            label="Gemini Images"
-            usage={`${totals.gemini_image_calls} images`}
-            cost={costs.gemini_image}
-            sub="$0.04/image (Imagen)"
-          />
-          <CostRow
-            label="ElevenLabs TTS"
-            usage={`${fmtNum(totals.el_tts_chars)} chars`}
-            cost={costs.el_tts}
-            sub={`${totals.el_tts_calls} calls · $0.20/1K chars (eleven_v3)`}
-          />
-          <CostRow
-            label="ElevenLabs SFX"
-            usage={`${totals.el_sfx_calls} effects`}
-            cost={costs.el_sfx}
-            sub={`${fmtNum(totals.el_sfx_chars)} prompt chars · $0.08/effect`}
-          />
-          {/* Total */}
-          <div className="flex items-center gap-3 py-3">
-            <span className="flex-1 text-white font-bold text-fs-body">Total estimated</span>
-            <span className="text-fs-body flex-shrink-0" style={{ minWidth: 80 }} />
-            <span className="font-bold flex-shrink-0"
-              style={{ color: "#a78bfa", fontSize: "var(--fs-subtitle)", minWidth: 70, textAlign: "right" }}>
-              {fmtCost(totalCost)}
-            </span>
-          </div>
-        </div>
-      </div>
-
       <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
-        Estimates based on standard API rates · cumulative all-time
+        Derived from script blocks · SFX & text-gen are estimated
       </p>
-
-      <button onClick={onRefresh}
-        className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
+      <button onClick={onRefresh} className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
         style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
         ↻ Refresh
       </button>
+    </div>
+  );
+}
+
+// ── Outer shell with mode toggle ──────────────────────────────────────────────
+function CostAnalysis({
+  usageData, libraryData, usageLoading, libraryLoading, onLoadUsage, onLoadLibrary,
+}: {
+  usageData: CostData | null; libraryData: LibraryCostData | null;
+  usageLoading: boolean; libraryLoading: boolean;
+  onLoadUsage: () => void; onLoadLibrary: () => void;
+}) {
+  const [mode, setMode] = useState<"usage" | "library">("library");
+
+  const loading = mode === "usage" ? usageLoading : libraryLoading;
+  const hasData = mode === "usage" ? !!usageData : !!libraryData;
+  const onLoad  = mode === "usage" ? onLoadUsage : onLoadLibrary;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        {(["library", "usage"] as const).map((m) => (
+          <button key={m} onClick={() => setMode(m)}
+            className="px-4 py-2 rounded-full text-fs-body font-medium transition-all"
+            style={mode === m
+              ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+              : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}>
+            {m === "library" ? "📖 Script Analysis" : "📊 API Usage"}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col gap-2">
+          {[0,1,2,3,4].map((i) => <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />)}
+        </div>
+      ) : !hasData ? (
+        <button onClick={onLoad}
+          className="w-full py-3 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
+          style={{ background: "rgba(79,195,247,0.07)", border: "1px solid rgba(79,195,247,0.25)", color: "#4fc3f7" }}>
+          Load {mode === "library" ? "Script Analysis" : "API Usage"}
+        </button>
+      ) : mode === "library" ? (
+        <LibraryMode data={libraryData!} onRefresh={onLoadLibrary} />
+      ) : (
+        <UsageMode data={usageData!} onRefresh={onLoadUsage} />
+      )}
     </div>
   );
 }
@@ -445,6 +545,8 @@ export default function AdminPage() {
   // ── Cost analysis ─────────────────────────────────────────────────────────
   const [costData, setCostData]           = useState<CostData | null>(null);
   const [costLoading, setCostLoading]     = useState(false);
+  const [libraryData, setLibraryData]     = useState<LibraryCostData | null>(null);
+  const [libraryLoading, setLibraryLoading] = useState(false);
 
   const loadCostAnalysis = useCallback(() => {
     setCostLoading(true);
@@ -453,6 +555,15 @@ export default function AdminPage() {
       .then((d) => setCostData(d as CostData))
       .catch(() => {})
       .finally(() => setCostLoading(false));
+  }, []);
+
+  const loadLibraryAnalysis = useCallback(() => {
+    setLibraryLoading(true);
+    fetch("/api/admin/cost-analysis/library", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setLibraryData(d as LibraryCostData))
+      .catch(() => {})
+      .finally(() => setLibraryLoading(false));
   }, []);
 
   // Job polling
@@ -725,7 +836,14 @@ export default function AdminPage() {
         {/*  Cost analysis                                                    */}
         {/* ══════════════════════════════════════════════════════════════════ */}
         <Divider title="Cost Analysis" />
-        <CostAnalysis data={costData} loading={costLoading} onRefresh={loadCostAnalysis} />
+        <CostAnalysis
+          usageData={costData}
+          libraryData={libraryData}
+          usageLoading={costLoading}
+          libraryLoading={libraryLoading}
+          onLoadUsage={loadCostAnalysis}
+          onLoadLibrary={loadLibraryAnalysis}
+        />
 
       </div>
     </div>
