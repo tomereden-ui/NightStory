@@ -6,7 +6,10 @@ export const dynamic = "force-dynamic";
 // The code is passed to a client-side page so the browser exchanges it and
 // stores the session in localStorage (server-side exchange doesn't persist).
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
+  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  const origin = `${proto}://${host}`;
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/home";
 
