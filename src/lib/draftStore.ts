@@ -9,6 +9,7 @@ export interface DraftState {
   coverPrompt: string;
   coverUrl: string;
   editingStoryId?: string;
+  forkedFromTitle?: string;
   characterAvatars?: Record<string, string>;
   characterTypes?: Record<string, string>;
   storyTitle?: string;
