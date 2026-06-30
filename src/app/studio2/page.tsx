@@ -1084,6 +1084,8 @@ export default function Studio2Page() {
   const [promptText, setPromptText]         = useState("");
   const [generating, setGenerating]         = useState(false);
   const [generateError, setGenerateError]   = useState<string | null>(null);
+  const [genStep, setGenStep]               = useState(0);
+  const genStepTimer                        = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── Script state ───────────────────────────────────────────────────────────
   const [scriptBlocks, setScriptBlocks]     = useState<ScriptBlock[]>([]);
@@ -1225,6 +1227,32 @@ export default function Studio2Page() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generating, isValidating]);
+
+  // ─── Cycle through generation step labels while generating ─────────────────
+
+  const GEN_STEPS = [
+    "Imagining your hero…",
+    "Building the world…",
+    "Writing the adventure…",
+    "Planning the scenes…",
+    "Adding sound effects…",
+    "Polishing the story…",
+    "Almost ready…",
+  ];
+
+  useEffect(() => {
+    if (!generating) {
+      setGenStep(0);
+      if (genStepTimer.current) clearTimeout(genStepTimer.current);
+      return;
+    }
+    const delays = [0, 3000, 7000, 11000, 15000, 19000, 23000];
+    delays.forEach((d, i) => {
+      genStepTimer.current = setTimeout(() => setGenStep(i), d);
+    });
+    return () => { if (genStepTimer.current) clearTimeout(genStepTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generating]);
 
   // ─── Shared: classify cast + assign bank avatars ────────────────────────────
 
@@ -1840,8 +1868,6 @@ export default function Studio2Page() {
             onDiscard={() => setChatLocked(false)}
             onGenerating={() => {
               setScriptBlocks([]);
-              setGenerating(true);
-              setActiveTab("script");
             }}
             onScriptReady={(draft) => {
               const rawBlocks = draft.scriptBlocks;
@@ -1912,10 +1938,9 @@ export default function Studio2Page() {
               childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
               onGenerating={() => {
                 setScriptBlocks([]);
-                setGenerating(true);
               }}
               onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes }) => {
-                setGenerating(false);
+                setActiveTab("script");
                 setSummary(sm);
                 setCoverPrompt(cp);
                 setCoverUrl("");
@@ -1992,17 +2017,21 @@ export default function Studio2Page() {
                     <span className="text-fs-title relative z-10">✨</span>
                   </div>
                   {/* Text */}
-                  <p className="text-fs-body font-bold text-white/80 tracking-wide">{i18nT(language, "craftingStory")}</p>
+                  <p className="text-fs-body font-bold text-white/80 tracking-wide transition-all duration-500">{GEN_STEPS[genStep]}</p>
                   {lessons.length > 0 && (
                     <p className="text-fs-body mt-1.5" style={{ color: "rgba(139,92,246,0.75)" }}>
                       Weaving in {lessons.join(" · ")}
                     </p>
                   )}
-                  {/* Progress dots */}
-                  <div className="flex gap-2 mt-4">
-                    {[0,1,2,3,4].map((i) => (
-                      <span key={i} className="rounded-full animate-pulse"
-                        style={{ width: i === 2 ? 10 : 6, height: i === 2 ? 10 : 6, background: i === 2 ? "#4fc3f7" : "rgba(79,195,247,0.35)", animationDelay: `${i * 0.18}s`, animationDuration: "1.2s" }} />
+                  {/* Step progress bar */}
+                  <div className="flex gap-1.5 mt-4 items-center">
+                    {GEN_STEPS.map((_, i) => (
+                      <div key={i} className="rounded-full transition-all duration-500"
+                        style={{
+                          width: i === genStep ? 20 : 6,
+                          height: 6,
+                          background: i <= genStep ? "#4fc3f7" : "rgba(79,195,247,0.2)",
+                        }} />
                     ))}
                   </div>
                 </div>
