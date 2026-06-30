@@ -564,7 +564,6 @@ export default function AdminPage() {
   const [addIsPublic, setAddIsPublic]     = useState(true);
   const [addCategory, setAddCategory]     = useState<"classics" | "community">("classics");
   const [parsedBlocks, setParsedBlocks]   = useState<ScriptBlock[]>([]);
-  const [sfxSuggestions, setSfxSuggestions] = useState<Array<{ afterBlockIndex: number; description: string; reason: string }>>([]);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [processState, setProcessState]   = useState<"idle" | "processing" | "done" | "error">("idle");
   const [processError, setProcessError]   = useState("");
@@ -678,7 +677,6 @@ export default function AdminPage() {
     if (!addScript.trim()) return;
     setProcessState("processing");
     setProcessError("");
-    setSfxSuggestions([]);
     setValidationIssues([]);
     const blocks = parseScriptText(addScript);
     if (!blocks.length) {
@@ -688,14 +686,9 @@ export default function AdminPage() {
     }
     setParsedBlocks(blocks);
     const rawBlocks = blocks.map((b) => ({ characterName: b.characterName, textPayload: b.textPayload }));
-    const [valRes, sfxRes] = await Promise.all([
-      fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks }) }),
-      fetch("/api/admin/suggest-sfx", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks, title: addTitle }) }),
-    ]);
+    const valRes = await fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks }) });
     const valData = await valRes.json();
-    const sfxData = await sfxRes.json();
     if (!valData.ok && Array.isArray(valData.issues)) setValidationIssues(valData.issues as string[]);
-    if (Array.isArray(sfxData.suggestions)) setSfxSuggestions(sfxData.suggestions as typeof sfxSuggestions);
     setProcessState("done");
   };
 
@@ -755,7 +748,7 @@ export default function AdminPage() {
 
   const resetAddStory = () => {
     setAddTitle(""); setAddScript(""); setAddIsPublic(true); setAddCategory("classics");
-    setParsedBlocks([]); setSfxSuggestions([]); setValidationIssues([]);
+    setParsedBlocks([]); setValidationIssues([]);
     setProcessState("idle"); setProcessError(""); setAddProduceLog([]);
     setAddProducing(false); setAddProduceError(""); setJobId(null); setJob(null);
   };
@@ -886,39 +879,16 @@ export default function AdminPage() {
             {/* Parsed blocks */}
             <Divider title={`${parsedBlocks.length} Parsed Blocks`} />
             <div className="flex flex-col gap-2">
-              {parsedBlocks.map((b, i) => {
-                const sfxBefore = sfxSuggestions.filter((s) => s.afterBlockIndex === i - 1);
-                return (
-                  <div key={b.id}>
-                    {sfxBefore.map((sfx, si) => (
-                      <div key={si} className="flex gap-2 items-start px-3 py-2 rounded-xl mb-1.5"
-                        style={{ background: "rgba(167,139,250,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}>
-                        <span className="text-fs-body flex-shrink-0" style={{ color: "#a78bfa" }}>🔊</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-fs-body" style={{ color: "#a78bfa", fontWeight: 500 }}>SFX suggestion</p>
-                          <p className="text-fs-body leading-snug" style={{ color: "rgba(167,139,250,0.75)" }}>{sfx.description}</p>
-                          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>{sfx.reason}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="rounded-xl px-3 py-2.5"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                      <p className="text-fs-body font-medium" style={{ color: "#4fc3f7" }}>{b.characterName}</p>
-                      <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>{b.textPayload}</p>
-                      <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.22)" }}>Voice: {b.assignedVoiceId}</p>
-                    </div>
-                  </div>
-                );
-              })}
-              {/* SFX after last block */}
-              {sfxSuggestions.filter((s) => s.afterBlockIndex === parsedBlocks.length - 1).map((sfx, si) => (
-                <div key={`end-${si}`} className="flex gap-2 items-start px-3 py-2 rounded-xl"
-                  style={{ background: "rgba(167,139,250,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}>
-                  <span className="text-fs-body flex-shrink-0" style={{ color: "#a78bfa" }}>🔊</span>
-                  <div>
-                    <p className="text-fs-body" style={{ color: "#a78bfa", fontWeight: 500 }}>SFX (closing)</p>
-                    <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.75)" }}>{sfx.description}</p>
-                  </div>
+              {parsedBlocks.map((b) => (
+                <div key={b.id} className="rounded-xl px-3 py-2.5"
+                  style={{ background: b.characterName === "SFX" ? "rgba(167,139,250,0.07)" : "rgba(255,255,255,0.04)", border: b.characterName === "SFX" ? "1px solid rgba(167,139,250,0.2)" : "1px solid rgba(255,255,255,0.07)" }}>
+                  <p className="text-fs-body font-medium" style={{ color: b.characterName === "SFX" ? "#a78bfa" : "#4fc3f7" }}>
+                    {b.characterName === "SFX" ? "🔊 SFX" : b.characterName}
+                  </p>
+                  <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>{b.textPayload}</p>
+                  {b.characterName !== "SFX" && (
+                    <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.22)" }}>Voice: {b.assignedVoiceId}</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -997,9 +967,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── SFX Library seeder ── */}
-        <Divider title="SFX Library" />
-        <SfxLibrarySeeder />
 
         </>)}
 
