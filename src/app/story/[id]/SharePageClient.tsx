@@ -65,10 +65,90 @@ function ChildBubble({ child, large }: { child: { name: string; avatarEmoji: str
   );
 }
 
+function PromoBanner() {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError]   = useState(false);
+  const showImage = imgLoaded && !imgError;
+
+  return (
+    <div className="w-full overflow-hidden" style={{ maxWidth: 420, borderRadius: 24, position: "relative", boxShadow: "0 8px 40px rgba(0,0,0,0.55)" }}>
+      {/* Real promo image — hidden until loaded, stays hidden if missing */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/promo-banner.jpg"
+        alt="NightStory — Create a bedtime story for your child"
+        onLoad={() => setImgLoaded(true)}
+        onError={() => setImgError(true)}
+        style={{
+          display: showImage ? "block" : "none",
+          width: "100%",
+          borderRadius: 24,
+        }}
+      />
+
+      {/* CSS fallback — shown while image loads or if it's missing */}
+      {!showImage && (
+        <div
+          style={{
+            borderRadius: 24,
+            background: "linear-gradient(135deg, #0d1a3a 0%, #0a0d1f 50%, #110828 100%)",
+            border: "1px solid rgba(79,195,247,0.18)",
+            overflow: "hidden",
+            position: "relative",
+          }}
+        >
+          <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, background: "radial-gradient(circle, rgba(167,139,250,0.2) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", bottom: -20, left: 20, width: 100, height: 100, background: "radial-gradient(circle, rgba(79,195,247,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div className="relative px-6 pt-6 pb-1">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="flex-shrink-0 flex items-center justify-center rounded-2xl" style={{ width: 56, height: 56, background: "linear-gradient(135deg,rgba(79,195,247,0.15),rgba(167,139,250,0.15))", border: "1px solid rgba(79,195,247,0.25)", fontSize: 28 }}>🌙</div>
+              <div>
+                <p className="font-bold" style={{ color: "#fff", fontSize: "var(--fs-subtitle)", lineHeight: 1.2, marginBottom: 4 }}>NightStory</p>
+                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "var(--fs-body)", lineHeight: 1.5 }}>Magical AI bedtime stories,<br />personalised for your child.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {["✨ AI-generated", "🎙 Voice narrated", "👧 Personalised", "🌍 Multi-language"].map((f) => (
+                <span key={f} style={{ fontSize: "var(--fs-label)", color: "rgba(255,255,255,0.55)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, padding: "4px 10px" }}>{f}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CTA always overlaid at the bottom */}
+      <div style={{ padding: showImage ? "0 16px 20px" : "0 24px 20px", marginTop: showImage ? -8 : 0 }}>
+        {showImage && (
+          <div style={{ height: 1, background: "rgba(255,255,255,0.1)", marginBottom: 16 }} />
+        )}
+        <a
+          href="/"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            width: "100%", padding: "14px 20px", borderRadius: 16,
+            background: "linear-gradient(135deg, #4fc3f7, #a78bfa)",
+            color: "#fff", fontWeight: 700, fontSize: "var(--fs-body)",
+            textDecoration: "none",
+            boxShadow: "0 4px 24px rgba(79,195,247,0.4)",
+          }}
+        >
+          <span>🌙</span>
+          <span>Create a story for your child</span>
+          <span style={{ opacity: 0.8 }}>→</span>
+        </a>
+        <p className="text-center mt-3" style={{ color: showImage ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.2)", fontSize: "var(--fs-label)" }}>
+          Free to try · No account needed
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function SharePageClient({ storyId }: { storyId: string }) {
   const [story, setStory]     = useState<PublicStoryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [coverError, setCoverError] = useState(false);
 
   const audioRef    = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying]         = useState(false);
@@ -195,36 +275,44 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         </div>
 
         {/* Cover art — big and impressive */}
-        <div className="relative mb-8" style={{ width: "min(88vw, 340px)" }}>
-          {story.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={story.coverUrl}
-              alt={story.title}
-              className="w-full object-cover"
-              style={{
-                aspectRatio: "1/1",
-                borderRadius: 32,
-                boxShadow: "0 16px 64px rgba(0,0,0,0.75), 0 0 120px rgba(79,195,247,0.15), 0 0 48px rgba(167,139,250,0.1)",
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
-            />
-          ) : (
+        <div className="relative mb-8 mx-auto" style={{ width: "min(88vw, 320px)", maxWidth: 320 }}>
+          {/* Padding-bottom aspect-ratio trick: always reserves 1:1 space */}
+          <div style={{ position: "relative", paddingBottom: "100%", borderRadius: 32, overflow: "hidden" }}>
+            {story.coverUrl && !coverError ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={story.coverUrl}
+                alt={story.title}
+                onError={() => setCoverError(true)}
+                style={{
+                  position: "absolute", inset: 0,
+                  width: "100%", height: "100%",
+                  objectFit: "cover",
+                  borderRadius: 32,
+                }}
+              />
+            ) : (
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "radial-gradient(ellipse at 40% 35%, rgba(79,195,247,0.3) 0%, rgba(10,6,24,0.95) 70%)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ fontSize: 96 }}>🌙</span>
+              </div>
+            )}
+            {/* Overlay border */}
             <div style={{
-              aspectRatio: "1/1",
+              position: "absolute", inset: 0,
               borderRadius: 32,
-              background: "radial-gradient(ellipse at 40% 35%, rgba(79,195,247,0.25) 0%, rgba(10,6,24,0.9) 70%)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <span style={{ fontSize: 96 }}>🌙</span>
-            </div>
-          )}
-          {/* Subtle glow under the cover */}
+              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12), 0 16px 64px rgba(0,0,0,0.75), 0 0 80px rgba(79,195,247,0.12)",
+              pointerEvents: "none",
+            }} />
+          </div>
+          {/* Glow halo under cover */}
           <div style={{
-            position: "absolute", bottom: -20, left: "10%", right: "10%", height: 40,
-            background: "rgba(79,195,247,0.18)",
-            filter: "blur(20px)",
+            position: "absolute", bottom: -16, left: "15%", right: "15%", height: 32,
+            background: "rgba(79,195,247,0.2)",
+            filter: "blur(18px)",
             borderRadius: "50%",
             zIndex: -1,
           }} />
@@ -330,101 +418,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         )}
 
         {/* ── Promo banner ── */}
-        <div
-          className="w-full overflow-hidden"
-          style={{
-            maxWidth: 420,
-            borderRadius: 24,
-            background: "linear-gradient(135deg, #0d1a3a 0%, #0a0d1f 50%, #110828 100%)",
-            border: "1px solid rgba(79,195,247,0.18)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)",
-            position: "relative",
-          }}
-        >
-          {/* Decorative glow blobs */}
-          <div style={{
-            position: "absolute", top: -20, right: -20, width: 120, height: 120,
-            background: "radial-gradient(circle, rgba(167,139,250,0.2) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }} />
-          <div style={{
-            position: "absolute", bottom: -20, left: 20, width: 100, height: 100,
-            background: "radial-gradient(circle, rgba(79,195,247,0.15) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }} />
-
-          <div className="relative px-6 pt-6 pb-5">
-            {/* Top row — moon + tagline */}
-            <div className="flex items-start gap-4 mb-5">
-              <div
-                className="flex-shrink-0 flex items-center justify-center rounded-2xl"
-                style={{
-                  width: 56, height: 56,
-                  background: "linear-gradient(135deg,rgba(79,195,247,0.15),rgba(167,139,250,0.15))",
-                  border: "1px solid rgba(79,195,247,0.25)",
-                  fontSize: 28,
-                }}
-              >
-                🌙
-              </div>
-              <div>
-                <p className="font-bold" style={{ color: "#fff", fontSize: "var(--fs-subtitle)", lineHeight: 1.2, marginBottom: 4 }}>
-                  NightStory
-                </p>
-                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "var(--fs-body)", lineHeight: 1.5 }}>
-                  Magical AI bedtime stories,<br />personalised for your child.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature pills */}
-            <div className="flex flex-wrap gap-2 mb-5">
-              {["✨ AI-generated", "🎙 Voice narrated", "👧 Personalised", "🌍 Multi-language"].map((f) => (
-                <span
-                  key={f}
-                  style={{
-                    fontSize: "var(--fs-label)",
-                    color: "rgba(255,255,255,0.55)",
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 100,
-                    padding: "4px 10px",
-                  }}
-                >
-                  {f}
-                </span>
-              ))}
-            </div>
-
-            {/* CTA button */}
-            <a
-              href="/"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                width: "100%",
-                padding: "14px 20px",
-                borderRadius: 16,
-                background: "linear-gradient(135deg, #4fc3f7, #a78bfa)",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: "var(--fs-body)",
-                textDecoration: "none",
-                boxShadow: "0 4px 24px rgba(79,195,247,0.35)",
-                letterSpacing: 0.3,
-              }}
-            >
-              <span>🌙</span>
-              <span>Create a story for your child</span>
-              <span style={{ opacity: 0.8 }}>→</span>
-            </a>
-            <p className="text-center mt-3" style={{ color: "rgba(255,255,255,0.2)", fontSize: "var(--fs-label)" }}>
-              Free to try · No account needed
-            </p>
-          </div>
-        </div>
+        <PromoBanner />
 
       </div>
     </div>
