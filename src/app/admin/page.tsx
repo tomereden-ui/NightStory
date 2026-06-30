@@ -8,6 +8,16 @@ import type { ClassicMeta } from "@/lib/classicStories";
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
+// ─── Pricing model (estimates based on standard API rates) ────────────────────
+// All prices in USD. Adjust here if plans/pricing change.
+const PRICING = {
+  gemini_token:      0.40  / 1_000_000,  // $0.40/1M tokens — blended text gen (Flash 2.5)
+  gemini_tts_char:   0.10  / 1_000_000,  // $0.10/1M chars  — Gemini TTS synthesis
+  gemini_image:      0.04,               // $0.04/image     — Imagen / Flash-image
+  el_tts_char:       0.20  / 1_000,      // $0.20/1K chars  — ElevenLabs eleven_v3
+  el_sfx_call:       0.08,               // $0.08/call      — ElevenLabs SFX generation
+} as const;
+
 const LANGUAGES = [
   { code: "en", label: "English 🇺🇸" },
   { code: "he", label: "Hebrew 🇮🇱" },
@@ -163,6 +173,194 @@ function JobProgress({ status, step, progress, error }: { status: string; step: 
   );
 }
 
+// ─── Cost Analysis ────────────────────────────────────────────────────────────
+
+interface CostData {
+  totals: {
+    gemini_tokens: number; gemini_calls: number;
+    gemini_tts_chars: number; gemini_tts_calls: number;
+    gemini_image_calls: number;
+    el_tts_chars: number; el_tts_calls: number;
+    el_sfx_chars: number; el_sfx_calls: number;
+    pollinations_calls: number;
+  };
+  storyCount: number;
+  publicCount: number;
+  privateCount: number;
+  totalDurationSec: number;
+}
+
+function fmtCost(usd: number): string {
+  if (usd < 0.01) return `$${(usd * 100).toFixed(3)}¢`;
+  return `$${usd.toFixed(3)}`;
+}
+function fmtDuration(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function CostRow({ label, usage, cost, sub }: { label: string; usage: string; cost: number; sub?: string }) {
+  return (
+    <div className="flex items-center gap-3 py-2.5"
+      style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-fs-body">{label}</p>
+        {sub && <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>{sub}</p>}
+      </div>
+      <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)", minWidth: 80, textAlign: "right" }}>{usage}</span>
+      <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7", minWidth: 70, textAlign: "right" }}>{fmtCost(cost)}</span>
+    </div>
+  );
+}
+
+function CostAnalysis({ data, onRefresh, loading }: { data: CostData | null; onRefresh: () => void; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-2">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+        ))}
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <button onClick={onRefresh}
+        className="w-full py-3 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
+        style={{ background: "rgba(79,195,247,0.07)", border: "1px solid rgba(79,195,247,0.25)", color: "#4fc3f7" }}>
+        Load Cost Analysis
+      </button>
+    );
+  }
+
+  const { totals, storyCount, publicCount, privateCount, totalDurationSec } = data;
+  const totalMinutes = totalDurationSec / 60;
+
+  const costs = {
+    gemini_text:  totals.gemini_tokens      * PRICING.gemini_token,
+    gemini_tts:   totals.gemini_tts_chars   * PRICING.gemini_tts_char,
+    gemini_image: totals.gemini_image_calls * PRICING.gemini_image,
+    el_tts:       totals.el_tts_chars       * PRICING.el_tts_char,
+    el_sfx:       totals.el_sfx_calls       * PRICING.el_sfx_call,
+  };
+
+  const totalCost = Object.values(costs).reduce((s, c) => s + c, 0);
+  const costPerMin = totalMinutes > 0 ? totalCost / totalMinutes : 0;
+  const costPerStory = storyCount > 0 ? totalCost / storyCount : 0;
+
+  // Voice type split
+  const totalTtsChars = totals.gemini_tts_chars + totals.el_tts_chars;
+  const elPct = totalTtsChars > 0 ? Math.round((totals.el_tts_chars / totalTtsChars) * 100) : 0;
+  const geminiPct = 100 - elPct;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Summary chips */}
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { label: "Total stories", value: storyCount, sub: `${publicCount} public · ${privateCount} private` },
+          { label: "Total audio", value: fmtDuration(totalDurationSec), sub: `${totalMinutes.toFixed(1)} minutes` },
+          { label: "Cost / minute", value: fmtCost(costPerMin), sub: "estimated average" },
+          { label: "Cost / story", value: fmtCost(costPerStory), sub: "estimated average" },
+        ].map((item) => (
+          <div key={item.label} className="rounded-xl px-3 py-3"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>{item.label}</p>
+            <p className="text-white font-bold text-fs-subtitle">{item.value}</p>
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>{item.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Voice type split */}
+      <div className="rounded-xl px-3 py-3"
+        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>TTS Voice Split</p>
+        <div className="flex gap-0 rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
+          <div style={{ width: `${geminiPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
+          <div style={{ width: `${elPct}%`, background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
+        </div>
+        <div className="flex justify-between">
+          <span className="text-fs-body" style={{ color: "#4fc3f7" }}>
+            Gemini TTS {geminiPct}% — {fmtNum(totals.gemini_tts_chars)} chars / {totals.gemini_tts_calls} calls
+          </span>
+          <span className="text-fs-body" style={{ color: "#f59e0b" }}>
+            EL {elPct}% — {fmtNum(totals.el_tts_chars)} chars
+          </span>
+        </div>
+      </div>
+
+      {/* Breakdown table */}
+      <div className="rounded-xl overflow-hidden"
+        style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="flex items-center gap-3 px-3 py-2"
+          style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <span className="flex-1 text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>Service</span>
+          <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 80, textAlign: "right" }}>Usage</span>
+          <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 70, textAlign: "right" }}>Cost</span>
+        </div>
+        <div className="px-3">
+          <CostRow
+            label="Gemini Text Gen"
+            usage={`${fmtNum(totals.gemini_tokens)} tokens`}
+            cost={costs.gemini_text}
+            sub={`${totals.gemini_calls} calls · $0.40/1M tokens`}
+          />
+          <CostRow
+            label="Gemini TTS"
+            usage={`${fmtNum(totals.gemini_tts_chars)} chars`}
+            cost={costs.gemini_tts}
+            sub={`${totals.gemini_tts_calls} calls · $0.10/1M chars`}
+          />
+          <CostRow
+            label="Gemini Images"
+            usage={`${totals.gemini_image_calls} images`}
+            cost={costs.gemini_image}
+            sub="$0.04/image (Imagen)"
+          />
+          <CostRow
+            label="ElevenLabs TTS"
+            usage={`${fmtNum(totals.el_tts_chars)} chars`}
+            cost={costs.el_tts}
+            sub={`${totals.el_tts_calls} calls · $0.20/1K chars (eleven_v3)`}
+          />
+          <CostRow
+            label="ElevenLabs SFX"
+            usage={`${totals.el_sfx_calls} effects`}
+            cost={costs.el_sfx}
+            sub={`${fmtNum(totals.el_sfx_chars)} prompt chars · $0.08/effect`}
+          />
+          {/* Total */}
+          <div className="flex items-center gap-3 py-3">
+            <span className="flex-1 text-white font-bold text-fs-body">Total estimated</span>
+            <span className="text-fs-body flex-shrink-0" style={{ minWidth: 80 }} />
+            <span className="font-bold flex-shrink-0"
+              style={{ color: "#a78bfa", fontSize: "var(--fs-subtitle)", minWidth: 70, textAlign: "right" }}>
+              {fmtCost(totalCost)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
+        Estimates based on standard API rates · cumulative all-time
+      </p>
+
+      <button onClick={onRefresh}
+        className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
+        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        ↻ Refresh
+      </button>
+    </div>
+  );
+}
+
 // ─── Existing stories list ─────────────────────────────────────────────────────
 
 function ClassicsList({ classics, loading }: { classics: ClassicMeta[]; loading: boolean }) {
@@ -243,6 +441,19 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => { loadClassics(); }, [loadClassics]);
+
+  // ── Cost analysis ─────────────────────────────────────────────────────────
+  const [costData, setCostData]           = useState<CostData | null>(null);
+  const [costLoading, setCostLoading]     = useState(false);
+
+  const loadCostAnalysis = useCallback(() => {
+    setCostLoading(true);
+    fetch("/api/admin/cost-analysis", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setCostData(d as CostData))
+      .catch(() => {})
+      .finally(() => setCostLoading(false));
+  }, []);
 
   // Job polling
   useEffect(() => {
@@ -509,6 +720,12 @@ export default function AdminPage() {
         {/* ══════════════════════════════════════════════════════════════════ */}
         <Divider title={`Public Stories (${classics.length})`} />
         <ClassicsList classics={classics} loading={classicsLoading} />
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/*  Cost analysis                                                    */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <Divider title="Cost Analysis" />
+        <CostAnalysis data={costData} loading={costLoading} onRefresh={loadCostAnalysis} />
 
       </div>
     </div>
