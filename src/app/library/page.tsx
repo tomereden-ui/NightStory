@@ -503,6 +503,7 @@ export default function LibraryPage() {
   const [familyEntries, setFamilyEntries] = useState<LibraryEntry[]>([]);
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [recentClassics, setRecentClassics] = useState<ClassicMeta[]>([]);
+  const [communityStories, setCommunityStories] = useState<Array<{id: string; title: string; emoji?: string; summary?: string; cover_url?: string; duration_seconds?: number}>>([]);
   const [loading, setLoading] = useState(true);
   const [trashCount, setTrashCount] = useState(0);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -538,14 +539,16 @@ export default function LibraryPage() {
       fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/child-profiles", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/community", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([trash, cls, allLib, kids]) => {
+      .then(([trash, cls, allLib, kids, community]) => {
         setTrashCount(Array.isArray(trash) ? (trash as unknown[]).length : 0);
         applyClassics(Array.isArray(cls) ? cls as ClassicMeta[] : []);
         const allArr = Array.isArray(allLib) ? allLib as LibraryEntry[] : [];
         setFamilyEntries(allArr);
         allArr.slice(0, 12).forEach((e) => { if (e.coverUrl) { new Image().src = e.coverUrl; } });
         setChildren(Array.isArray(kids) ? kids as DBChildProfile[] : []);
+        if (Array.isArray(community)) setCommunityStories(community as typeof communityStories);
       })
       .catch(() => {})
       .finally(() => { setLoading(false); setTimeout(updateRecentScroll, 50); });
@@ -805,11 +808,41 @@ export default function LibraryPage() {
 
         {/* ── Community tab ── */}
         {activeTab === "community" && (
-          <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
-            <span className="text-5xl" style={{ filter: "drop-shadow(0 0 24px rgba(167,139,250,0.5))" }}>🌍</span>
-            <p className="text-white/50 text-fs-body font-medium tracking-wide">{t("communityStories")}</p>
-            <p className="text-white/25 text-fs-body max-w-[220px] leading-relaxed">{t("communityStoriesSoon")}</p>
-          </div>
+          communityStories.length === 0 ? (
+            <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
+              <span className="text-5xl" style={{ filter: "drop-shadow(0 0 24px rgba(167,139,250,0.5))" }}>🌍</span>
+              <p className="text-white/50 text-fs-body font-medium tracking-wide">{t("communityStories")}</p>
+              <p className="text-white/25 text-fs-body max-w-[220px] leading-relaxed">{t("communityStoriesSoon")}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <p className="text-fs-body px-1" style={{ color: "rgba(255,255,255,0.28)" }}>
+                🌍 Stories made with NightStory
+              </p>
+              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                {communityStories.map((s) => (
+                  <a key={s.id} href={`/library/classics/${s.id}`}
+                    className="flex flex-col rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div style={{ position: "relative", paddingBottom: "100%", background: "rgba(167,139,250,0.08)" }}>
+                      {s.cover_url
+                        ? <img src={s.cover_url} alt={s.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <div className="absolute inset-0 flex items-center justify-center text-3xl">{s.emoji ?? "🌙"}</div>
+                      }
+                    </div>
+                    <div className="p-2">
+                      <p className="text-white font-medium leading-tight" style={{ fontSize: "var(--fs-label)" }}>{s.title}</p>
+                      {s.duration_seconds ? (
+                        <p style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.3)" }}>
+                          {Math.round(s.duration_seconds / 60)} min
+                        </p>
+                      ) : null}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )
         )}
 
         {/* ── My Stories tab ── */}

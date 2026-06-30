@@ -210,6 +210,7 @@ async function runProduction(
   characterTypes?: Record<string, string>,
   childIds?: string[],
   isPublic?: boolean,
+  isClassic?: boolean,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -658,6 +659,7 @@ async function runProduction(
       language: scriptLanguage,
       childIds: childIds?.length ? childIds : undefined,
       isPublic: isPublic ?? false,
+      isClassic: isClassic ?? false,
     };
     try {
       await addEntry(entry);
@@ -724,6 +726,7 @@ export async function POST(req: NextRequest) {
       characterTypes?: Record<string, string>;
       childIds?: string[];
       isPublic?: boolean;
+      isClassic?: boolean;
     };
     try {
       body = await req.json();
@@ -756,7 +759,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

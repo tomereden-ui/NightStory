@@ -29,11 +29,12 @@ function publicUrl(path: string): string {
 export async function GET() {
   await ensureClassicsBucket();
 
-  // Load DB rows for classics that have been generated
+  // Load DB rows for classics that have been generated (is_classic=true)
   const { data: dbRows } = await supabase
     .from("stories")
     .select("id, title, emoji, summary, cover_url, duration_seconds")
-    .eq("is_public", true);
+    .eq("is_public", true)
+    .eq("is_classic", true);
 
   const dbById = new Map((dbRows ?? []).map((r) => [r.id, r]));
 

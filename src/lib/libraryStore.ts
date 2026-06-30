@@ -13,6 +13,7 @@ export interface LibraryEntry {
   language?: string;
   emoji?: string;      // classic stories only
   isPublic?: boolean;
+  isClassic?: boolean;
   childIds?: string[]; // which children this story belongs to (null = unscoped / pre-migration)
   shareMessage?: string;
   viewCount?: number;
@@ -38,6 +39,7 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
     language: row.language ?? undefined,
     emoji: row.emoji ?? undefined,
     isPublic: row.is_public ?? false,
+    isClassic: row.is_classic ?? false,
     childIds: Array.isArray(row.child_ids) ? row.child_ids as string[]
              : row.child_id ? [row.child_id as string]   // migrate legacy single value
              : undefined,
@@ -67,6 +69,7 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
     language: entry.language ?? null,
     emoji: entry.emoji ?? null,
     is_public: entry.isPublic ?? false,
+    is_classic: entry.isClassic ?? false,
     child_ids: entry.childIds ?? null,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
