@@ -13,6 +13,15 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/home";
 
+  // Supabase / Google sends error params when OAuth fails (e.g. email already registered
+  // with a different provider, user denied access, etc.)
+  const oauthError = searchParams.get("error");
+  const oauthErrorDesc = searchParams.get("error_description");
+  if (oauthError) {
+    const msg = oauthErrorDesc ?? oauthError;
+    return NextResponse.redirect(`${origin}/login?auth_error=${encodeURIComponent(msg)}`);
+  }
+
   if (code) {
     // Password reset / invite → set-password page (exchanges code + sets password)
     // Google OAuth / email confirmation → home page (exchanges code + logs in)

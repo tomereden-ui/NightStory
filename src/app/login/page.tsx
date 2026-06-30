@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { supabaseAuth } from "@/lib/supabaseAuth";
@@ -11,6 +11,7 @@ type Mode = "signin" | "signup" | "reset";
 export default function LoginPage() {
   const { signIn, signUp, resetPassword } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -18,6 +19,18 @@ export default function LoginPage() {
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Show errors forwarded from the OAuth callback (e.g. email already registered)
+  useEffect(() => {
+    const authError = searchParams.get("auth_error");
+    if (authError) {
+      setError(authError);
+      // Clean the param from the URL so a page refresh doesn't re-show it
+      const url = new URL(window.location.href);
+      url.searchParams.delete("auth_error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams]);
   const [success, setSuccess] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {

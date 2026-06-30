@@ -1091,6 +1091,7 @@ export default function Studio2Page() {
   const [coverUrl, setCoverUrl]             = useState("");
   const [coverPrompt, setCoverPrompt]       = useState("");
   const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
+  const [forkedFromTitle, setForkedFromTitle] = useState<string | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(3);
   const [voicePool, setVoicePool]           = useState<Voice[]>(PRESET_VOICE_POOL);
   const [loaded, setLoaded]                 = useState(false);
@@ -1175,6 +1176,7 @@ export default function Studio2Page() {
       setCoverUrl(draft.coverUrl ?? "");
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
+      setForkedFromTitle(draft.forkedFromTitle ?? null);
       const savedAvatars = draft.characterAvatars ?? {};
       const hasStale = Object.values(savedAvatars).some((u) => (u as string).includes("dicebear.com"));
       setCharacterAvatars(hasStale ? {} : savedAvatars);
@@ -1193,8 +1195,8 @@ export default function Studio2Page() {
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations }, DRAFT_KEY);
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations }, DRAFT_KEY);
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -1313,6 +1315,7 @@ export default function Studio2Page() {
     setGenerating(true);
     setGenerateError(null);
     setEditingStoryId(null);
+    setForkedFromTitle(null);
     setStoryTitle("");
     setScriptBlocks([]);
     setSummary("");
@@ -1383,7 +1386,7 @@ export default function Studio2Page() {
           if (i === blocks.length - 1) {
             setIsValidating(false);
             setTotalExpectedBlocks(undefined);
-            writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
+            writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, forkedFromTitle: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls }, DRAFT_KEY);
           }
         }, i * 65);
       }
@@ -1805,6 +1808,15 @@ export default function Studio2Page() {
               <span>🧚</span>
               <span>{i18nT(language, "stepByStep" as never)}</span>
             </button>
+          </div>
+        )}
+
+        {/* Forked copy banner */}
+        {forkedFromTitle && !editingStoryId && (
+          <div className="mb-4 px-4 py-2.5 rounded-2xl flex items-center gap-2 text-fs-body"
+            style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.25)", color: "rgba(167,139,250,0.9)" }}>
+            <span>📋</span>
+            <span>Editing your copy of <strong>«{forkedFromTitle}»</strong> — the original won&apos;t be changed</span>
           </div>
         )}
 

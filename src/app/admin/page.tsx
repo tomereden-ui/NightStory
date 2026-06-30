@@ -58,66 +58,132 @@ function TextInput({ value, onChange, placeholder, rows }: { value: string; onCh
 
 function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      className={baseInput} style={{ ...baseStyle, color: "rgba(255,255,255,0.8)" }}>
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={baseInput}
+      style={{ ...baseStyle, color: "#fff", appearance: "none" }}>
+      {options.map((o) => <option key={o.value} value={o.value} style={{ background: "#0D1120" }}>{o.label}</option>)}
     </select>
-  );
-}
-
-function Divider({ title }: { title: string }) {
-  return (
-    <div className="flex items-center gap-3 my-5">
-      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
-      <p className="text-fs-body font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.22)" }}>{title}</p>
-      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
-    </div>
   );
 }
 
 function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
   return (
-    <button onClick={onToggle}
-      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all"
-      style={{ background: on ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)", border: on ? "1px solid rgba(79,195,247,0.3)" : "1px solid rgba(255,255,255,0.08)" }}>
-      <div className="relative w-9 h-5 rounded-full flex-shrink-0 transition-all" style={{ background: on ? "#4fc3f7" : "rgba(255,255,255,0.15)" }}>
-        <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: on ? "calc(100% - 18px)" : "2px" }} />
+    <label className="flex items-center gap-3 cursor-pointer select-none">
+      <div onClick={onToggle} className="relative rounded-full transition-all flex-shrink-0"
+        style={{ width: 44, height: 24, background: on ? "rgba(79,195,247,0.4)" : "rgba(255,255,255,0.1)", border: on ? "1px solid rgba(79,195,247,0.6)" : "1px solid rgba(255,255,255,0.15)" }}>
+        <div className="absolute top-0.5 rounded-full transition-all"
+          style={{ width: 20, height: 20, background: on ? "#4fc3f7" : "rgba(255,255,255,0.4)", left: on ? 22 : 2 }} />
       </div>
-      <span className="text-fs-body" style={{ color: on ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)" }}>{label}</span>
-    </button>
+      <span className="text-fs-body" style={{ color: on ? "#4fc3f7" : "rgba(255,255,255,0.35)" }}>{label}</span>
+    </label>
   );
 }
 
-// ─── Job progress ──────────────────────────────────────────────────────────────
-
-function JobProgress({ status, step, progress, error }: { status: string; step: string; progress: number; error?: string }) {
-  const c1 = status === "error" ? "#f87171" : "#4fc3f7";
-  const c2 = status === "done"  ? "#34d399" : status === "error" ? "#f87171" : "#a78bfa";
+function Divider({ title }: { title: string }) {
   return (
-    <div className="rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${c1}33` }}>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-fs-body font-medium" style={{ color: c1 }}>{step}</p>
-        <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>{progress}%</p>
-      </div>
-      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-        <div className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${progress}%`, background: `linear-gradient(90deg,${c1},${c2})` }} />
-      </div>
-      {error && <p className="text-fs-body mt-2" style={{ color: "#f87171" }}>{error}</p>}
+    <div className="flex items-center gap-3 my-6">
+      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+      <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }}>{title}</span>
+      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
     </div>
   );
 }
 
-// ─── Cost Analysis tab ─────────────────────────────────────────────────────────
+// ─── Block Editor ──────────────────────────────────────────────────────────────
 
-interface UsageCost {
-  period: string;
-  gemini_tokens: number; gemini_calls: number;
-  gemini_tts_chars: number; gemini_tts_calls: number;
-  gemini_image_calls: number;
-  el_tts_chars: number; el_tts_calls: number;
-  el_sfx_chars: number; el_sfx_calls: number;
-  pollinations_calls: number;
+function BlockEditor({ blocks, onChange }: { blocks: ScriptBlock[]; onChange: (b: ScriptBlock[]) => void }) {
+  const update = (id: string, patch: Partial<ScriptBlock>) =>
+    onChange(blocks.map((b) => b.id === id ? { ...b, ...patch } : b));
+  const remove = (id: string) =>
+    onChange(blocks.filter((b) => b.id !== id).map((b, i) => ({ ...b, blockOrder: i })));
+  const add = () => onChange([...blocks, makeBlock(blocks.length)]);
+  const move = (id: string, dir: -1 | 1) => {
+    const i = blocks.findIndex((b) => b.id === id);
+    if (i + dir < 0 || i + dir >= blocks.length) return;
+    const arr = [...blocks];
+    [arr[i], arr[i + dir]] = [arr[i + dir], arr[i]];
+    onChange(arr.map((b, j) => ({ ...b, blockOrder: j })));
+  };
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      {blocks.map((block, idx) => (
+        <div key={block.id} className="rounded-xl p-3"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          {/* Header row */}
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-fs-body w-5 text-center flex-shrink-0 font-bold" style={{ color: "rgba(255,255,255,0.25)" }}>
+              {idx + 1}
+            </span>
+            <input type="text" value={block.characterName}
+              onChange={(e) => update(block.id, { characterName: e.target.value })}
+              placeholder="Character" className="flex-1 px-2.5 py-1.5 rounded-lg text-fs-body text-white outline-none"
+              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            <select value={block.assignedVoiceId}
+              onChange={(e) => update(block.id, { assignedVoiceId: e.target.value })}
+              className="px-2 py-1.5 rounded-lg text-fs-body outline-none"
+              style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.22)", color: "#a78bfa", maxWidth: 120 }}>
+              {PRESET_VOICES.map((v) => (
+                <option key={v.id} value={v.id} style={{ background: "#0D1120" }}>{v.emoji} {v.id}</option>
+              ))}
+            </select>
+            <button onClick={() => move(block.id, -1)} disabled={idx === 0}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-fs-body"
+              style={{ background: "rgba(255,255,255,0.05)", color: idx === 0 ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.45)" }}>↑</button>
+            <button onClick={() => move(block.id, 1)} disabled={idx === blocks.length - 1}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-fs-body"
+              style={{ background: "rgba(255,255,255,0.05)", color: idx === blocks.length - 1 ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.45)" }}>↓</button>
+            <button onClick={() => remove(block.id)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-fs-body"
+              style={{ background: "rgba(236,72,153,0.09)", color: "rgba(236,72,153,0.65)" }}>✕</button>
+          </div>
+          {/* Text */}
+          <textarea value={block.textPayload}
+            onChange={(e) => update(block.id, { textPayload: e.target.value })}
+            placeholder="Dialogue or narration…" rows={3}
+            className="w-full px-2.5 py-2 rounded-lg text-fs-body text-white outline-none resize-none"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }} />
+        </div>
+      ))}
+      <button onClick={add}
+        className="w-full py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
+        style={{ background: "rgba(79,195,247,0.06)", border: "1px dashed rgba(79,195,247,0.28)", color: "#4fc3f7" }}>
+        + Add Block
+      </button>
+    </div>
+  );
+}
+
+// ─── Job Progress ──────────────────────────────────────────────────────────────
+
+function JobProgress({ status, step, progress, error }: { status: string; step: string; progress: number; error?: string }) {
+  const done = status === "done";
+  const err = status === "error";
+  return (
+    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${err ? "rgba(236,72,153,0.3)" : done ? "rgba(79,195,247,0.3)" : "rgba(255,255,255,0.08)"}` }}>
+      <div className="flex justify-between mb-2">
+        <span className="text-white text-fs-body">{step || "Starting…"}</span>
+        <span className="text-fs-body font-bold" style={{ color: err ? "#EC4899" : "#4fc3f7" }}>{progress}%</span>
+      </div>
+      <div className="w-full rounded-full overflow-hidden" style={{ height: 5, background: "rgba(255,255,255,0.07)" }}>
+        <div className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${progress}%`, background: err ? "#EC4899" : "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
+      </div>
+      {err && error && <p className="text-fs-body mt-2" style={{ color: "#EC4899" }}>{error}</p>}
+    </div>
+  );
+}
+
+// ─── Cost Analysis ────────────────────────────────────────────────────────────
+
+interface CostData {
+  totals: {
+    gemini_tokens: number; gemini_calls: number;
+    gemini_tts_chars: number; gemini_tts_calls: number;
+    gemini_image_calls: number;
+    el_tts_chars: number; el_tts_calls: number;
+    el_sfx_chars: number; el_sfx_calls: number;
+    pollinations_calls: number;
+  };
   storyCount: number; publicCount: number; privateCount: number; totalDurationSec: number;
 }
 
@@ -165,277 +231,477 @@ function SummaryChips({ items }: { items: { label: string; value: string | numbe
   );
 }
 
-function CostAnalysis({
-  usageData, libraryData, usageLoading, libraryLoading, onLoadUsage, onLoadLibrary,
-}: {
-  usageData: UsageCost | null;
-  libraryData: LibraryCostData | null;
-  usageLoading: boolean;
-  libraryLoading: boolean;
-  onLoadUsage: () => void;
-  onLoadLibrary: () => void;
-}) {
-  const estimatedUsageCost = usageData ? (
-    usageData.gemini_tokens    * PRICING.gemini_token +
-    usageData.gemini_tts_chars * PRICING.gemini_tts_char +
-    usageData.gemini_image_calls * PRICING.gemini_image +
-    usageData.el_tts_chars     * PRICING.el_tts_char +
-    usageData.el_sfx_calls     * PRICING.el_sfx_call
-  ) : 0;
-
+function CostRow({ label, usage, cost, sub }: { label: string; usage: string; cost: number; sub?: string }) {
   return (
-    <div className="flex flex-col gap-6">
-
-      {/* Usage section */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-white font-bold text-fs-body">API Usage (30 days)</p>
-          <button onClick={onLoadUsage} disabled={usageLoading}
-            className="text-fs-body px-3 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-40"
-            style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.3)", color: "#4fc3f7" }}>
-            {usageLoading ? "Loading…" : "Load"}
-          </button>
-        </div>
-
-        {usageData && (
-          <div className="flex flex-col gap-3">
-            <SummaryChips items={[
-              { label: "Stories",    value: usageData.storyCount, sub: `${usageData.publicCount} public · ${usageData.privateCount} private` },
-              { label: "Duration",   value: fmtDuration(usageData.totalDurationSec), sub: "total audio produced" },
-              { label: "Est. cost",  value: fmtCost(estimatedUsageCost), sub: "30-day estimate" },
-              { label: "Gemini TTS", value: fmtNum(usageData.gemini_tts_chars), sub: `chars · ${usageData.gemini_tts_calls} calls` },
-            ]} />
-
-            <div className="rounded-xl px-4 py-3 flex flex-col gap-2"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              {[
-                { label: "Gemini text",  value: `${fmtNum(usageData.gemini_tokens)} tokens · ${usageData.gemini_calls} calls`, cost: usageData.gemini_tokens * PRICING.gemini_token },
-                { label: "Gemini TTS",   value: `${fmtNum(usageData.gemini_tts_chars)} chars · ${usageData.gemini_tts_calls} calls`, cost: usageData.gemini_tts_chars * PRICING.gemini_tts_char },
-                { label: "Gemini images",value: `${usageData.gemini_image_calls} images`, cost: usageData.gemini_image_calls * PRICING.gemini_image },
-                { label: "EL TTS",       value: `${fmtNum(usageData.el_tts_chars)} chars · ${usageData.el_tts_calls} calls`, cost: usageData.el_tts_chars * PRICING.el_tts_char },
-                { label: "EL SFX",       value: `${usageData.el_sfx_calls} calls`, cost: usageData.el_sfx_calls * PRICING.el_sfx_call },
-              ].map((row) => (
-                <div key={row.label} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.6)" }}>{row.label}</p>
-                    <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>{row.value}</p>
-                  </div>
-                  <p className="text-fs-body font-bold" style={{ color: "#4fc3f7" }}>{fmtCost(row.cost)}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+    <div className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-fs-body">{label}</p>
+        {sub && <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>{sub}</p>}
       </div>
+      <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)", minWidth: 80, textAlign: "right" }}>{usage}</span>
+      <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7", minWidth: 70, textAlign: "right" }}>{fmtCost(cost)}</span>
+    </div>
+  );
+}
 
-      {/* Library section */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-white font-bold text-fs-body">Library Cost Breakdown</p>
-          <button onClick={onLoadLibrary} disabled={libraryLoading}
-            className="text-fs-body px-3 py-1.5 rounded-lg transition-all active:scale-95 disabled:opacity-40"
-            style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}>
-            {libraryLoading ? "Loading…" : "Load"}
-          </button>
+function BreakdownTable({ rows, total }: { rows: { label: string; usage: string; cost: number; sub?: string }[]; total: number }) {
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div className="flex items-center gap-3 px-3 py-2"
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <span className="flex-1 text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>Service</span>
+        <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 80, textAlign: "right" }}>Usage</span>
+        <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 70, textAlign: "right" }}>Cost</span>
+      </div>
+      <div className="px-3">
+        {rows.map((r) => <CostRow key={r.label} {...r} />)}
+        <div className="flex items-center gap-3 py-3">
+          <span className="flex-1 text-white font-bold text-fs-body">Total estimated</span>
+          <span style={{ minWidth: 80 }} />
+          <span className="font-bold flex-shrink-0"
+            style={{ color: "#a78bfa", fontSize: "var(--fs-subtitle)", minWidth: 70, textAlign: "right" }}>
+            {fmtCost(total)}
+          </span>
         </div>
-
-        {libraryData && (
-          <div className="flex flex-col gap-3">
-            <SummaryChips items={[
-              { label: "Stories",    value: libraryData.storyCount, sub: "in library" },
-              { label: "Duration",   value: fmtDuration(libraryData.totals.durationSeconds), sub: "total audio" },
-              { label: "Est. total", value: fmtCost(libraryData.totals.costs.total), sub: "production cost" },
-              { label: "Covers",     value: libraryData.totals.coverCount, sub: "images generated" },
-            ]} />
-
-            <div className="flex flex-col gap-2">
-              {libraryData.stories.slice(0, 20).map((s) => (
-                <div key={s.id} className="rounded-xl px-3 py-2.5 flex items-start justify-between gap-3"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-fs-body font-medium truncate">{s.title}</p>
-                    <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
-                      {fmtDuration(s.durationSeconds)} · {s.blockCount} blocks · {s.isPublic ? "public" : "private"}
-                    </p>
-                  </div>
-                  <p className="text-fs-body font-bold flex-shrink-0" style={{ color: "#a78bfa" }}>{fmtCost(s.costs.total)}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-// ─── Script validation ─────────────────────────────────────────────────────────
+// ── Mode A: API usage tracker (cumulative) ────────────────────────────────────
+function UsageMode({ data, onRefresh }: { data: CostData; onRefresh: () => void }) {
+  const { totals, storyCount, publicCount, privateCount, totalDurationSec } = data;
+  const totalMinutes = totalDurationSec / 60;
+  const costs = {
+    gemini_text:  totals.gemini_tokens      * PRICING.gemini_token,
+    gemini_tts:   totals.gemini_tts_chars   * PRICING.gemini_tts_char,
+    gemini_image: totals.gemini_image_calls * PRICING.gemini_image,
+    el_tts:       totals.el_tts_chars       * PRICING.el_tts_char,
+    el_sfx:       totals.el_sfx_calls       * PRICING.el_sfx_call,
+  };
+  const totalCost   = Object.values(costs).reduce((s, c) => s + c, 0);
+  const totalTts    = totals.gemini_tts_chars + totals.el_tts_chars;
+  const elPct       = totalTts > 0 ? Math.round((totals.el_tts_chars / totalTts) * 100) : 0;
 
-const CHAR_VOICE_POOL = ["Puck", "Kore", "Charon", "Fenrir", "Leda", "Orus", "Zephyr", "Autonoe"];
+  return (
+    <div className="flex flex-col gap-4">
+      <SummaryChips items={[
+        { label: "Total stories",  value: storyCount,                            sub: `${publicCount} public · ${privateCount} private` },
+        { label: "Total audio",    value: fmtDuration(totalDurationSec),          sub: `${totalMinutes.toFixed(1)} min` },
+        { label: "Cost / minute",  value: fmtCost(totalCost / (totalMinutes||1)), sub: "cumulative average" },
+        { label: "Cost / story",   value: fmtCost(totalCost / (storyCount||1)),   sub: "cumulative average" },
+      ]} />
 
-function parseScriptText(raw: string): ScriptBlock[] {
-  const lines = raw.split("\n").map((l) => l.trim()).filter((l) => l);
-  const out: ScriptBlock[] = [];
-  const voiceMap: Record<string, string> = {};
-  let voiceIdx = 0;
+      <div className="rounded-xl px-3 py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>TTS Voice Split</p>
+        <div className="flex rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
+          <div style={{ width: `${100 - elPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
+          <div style={{ width: `${elPct}%`, background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
+        </div>
+        <div className="flex justify-between">
+          <span className="text-fs-body" style={{ color: "#4fc3f7" }}>Gemini {100-elPct}% — {fmtNum(totals.gemini_tts_chars)} chars</span>
+          <span className="text-fs-body" style={{ color: "#f59e0b" }}>EL {elPct}% — {fmtNum(totals.el_tts_chars)} chars</span>
+        </div>
+      </div>
 
-  for (const line of lines) {
-    // First [...] on the line is the character/SFX tag; everything after is textPayload
-    const m = line.match(/^\[([^\]]+)\](.*)/);
-    if (!m) continue;
-    const charName = m[1].trim();
-    const rest = m[2].trim();
+      <BreakdownTable total={totalCost} rows={[
+        { label: "Gemini Text Gen",  usage: `${fmtNum(totals.gemini_tokens)} tokens`, cost: costs.gemini_text,  sub: `${totals.gemini_calls} calls · $0.40/1M tokens` },
+        { label: "Gemini TTS",       usage: `${fmtNum(totals.gemini_tts_chars)} chars`, cost: costs.gemini_tts, sub: `${totals.gemini_tts_calls} calls · $0.10/1M chars` },
+        { label: "Gemini Images",    usage: `${totals.gemini_image_calls} images`,    cost: costs.gemini_image, sub: "$0.04/image (Imagen)" },
+        { label: "ElevenLabs TTS",   usage: `${fmtNum(totals.el_tts_chars)} chars`,   cost: costs.el_tts,       sub: `${totals.el_tts_calls} calls · $0.20/1K chars` },
+        { label: "ElevenLabs SFX",   usage: `${totals.el_sfx_calls} effects`,         cost: costs.el_sfx,       sub: `${fmtNum(totals.el_sfx_chars)} prompt chars · $0.08/effect` },
+      ]} />
 
-    if (charName.startsWith("SFX")) {
-      // Store entire original bracket as textPayload so validate-script sees the full SFX block
-      const textPayload = `[${charName}]${rest ? " " + rest : ""}`;
-      out.push({ id: uid(), blockOrder: out.length, characterName: "SFX", assignedVoiceId: "", textPayload });
-    } else {
-      if (!voiceMap[charName]) {
-        voiceMap[charName] = charName.toLowerCase() === "narrator"
-          ? "Aoede"
-          : CHAR_VOICE_POOL[voiceIdx++ % CHAR_VOICE_POOL.length];
-      }
-      if (rest) {
-        out.push({ id: uid(), blockOrder: out.length, characterName: charName, assignedVoiceId: voiceMap[charName], textPayload: rest });
-      }
+      <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
+        Includes test runs, retries, voice previews — not just produced stories
+      </p>
+      <button onClick={onRefresh} className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
+        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        ↻ Refresh
+      </button>
+    </div>
+  );
+}
+
+// ── Mode B: Library script analysis (bottom-up per story) ────────────────────
+function LibraryMode({ data, onRefresh }: { data: LibraryCostData; onRefresh: () => void }) {
+  const { stories, totals, storyCount } = data;
+  const totalMinutes = totals.durationSeconds / 60;
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const totalTts = totals.geminiChars + totals.elChars;
+  const elPct    = totalTts > 0 ? Math.round((totals.elChars / totalTts) * 100) : 0;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <SummaryChips items={[
+        { label: "Stories analysed", value: storyCount,                                  sub: `${totals.coverCount} with cover` },
+        { label: "Total audio",      value: fmtDuration(totals.durationSeconds),          sub: `${totalMinutes.toFixed(1)} min` },
+        { label: "Cost / minute",    value: fmtCost(totals.costs.total / (totalMinutes||1)), sub: "script-based estimate" },
+        { label: "Cost / story",     value: fmtCost(totals.costs.total / (storyCount||1)),   sub: "script-based estimate" },
+      ]} />
+
+      <div className="rounded-xl px-3 py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>TTS Voice Split (from blocks)</p>
+        <div className="flex rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
+          <div style={{ width: `${100-elPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
+          <div style={{ width: `${elPct}%`,     background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
+        </div>
+        <div className="flex justify-between">
+          <span className="text-fs-body" style={{ color: "#4fc3f7" }}>Gemini {100-elPct}% — {fmtNum(totals.geminiChars)} chars</span>
+          <span className="text-fs-body" style={{ color: "#f59e0b" }}>EL {elPct}% — {fmtNum(totals.elChars)} chars</span>
+        </div>
+      </div>
+
+      <BreakdownTable total={totals.costs.total} rows={[
+        { label: "Gemini Text Gen",  usage: `~${fmtNum(totals.estimatedTokens)} tokens`,   cost: totals.costs.geminiTextGen, sub: "estimated: script gen + drama plan per story" },
+        { label: "Gemini TTS",       usage: `${fmtNum(totals.geminiChars)} chars`,          cost: totals.costs.geminiTts,     sub: "actual chars from blocks · $0.10/1M" },
+        { label: "Gemini Images",    usage: `${totals.coverCount} covers`,                  cost: totals.costs.geminiImage,   sub: "$0.04/image" },
+        { label: "ElevenLabs TTS",   usage: `${fmtNum(totals.elChars)} chars`,              cost: totals.costs.elTts,         sub: "cloned voice chars from blocks · $0.20/1K" },
+        { label: "ElevenLabs SFX",   usage: `~${totals.estimatedSfx} effects`,              cost: totals.costs.elSfx,         sub: "estimated from duration + block count · $0.08/effect" },
+      ]} />
+
+      {/* Per-story breakdown */}
+      <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>Per Story</p>
+      <div className="flex flex-col gap-1.5">
+        {[...stories].sort((a, b) => b.costs.total - a.costs.total).map((s) => (
+          <div key={s.id}>
+            <button
+              onClick={() => setExpanded(expanded === s.id ? null : s.id)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
+              style={{ background: expanded === s.id ? "rgba(79,195,247,0.07)" : "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }}>
+                {s.isPublic ? "🌍" : "🔒"}
+              </span>
+              <span className="flex-1 text-white text-fs-body truncate">{s.title}</span>
+              <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {fmtDuration(s.durationSeconds)}
+              </span>
+              <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7", minWidth: 60, textAlign: "right" }}>
+                {fmtCost(s.costs.total)}
+              </span>
+            </button>
+            {expanded === s.id && (
+              <div className="mx-3 mt-1 mb-1 rounded-xl px-3 py-2 flex flex-col gap-1"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                {[
+                  ["Text gen",    `~${fmtNum(s.estimatedTokens)} tokens`, s.costs.geminiTextGen],
+                  ["Gemini TTS",  `${fmtNum(s.geminiChars)} chars`,        s.costs.geminiTts],
+                  ["Cover image", s.hasCover ? "1 image" : "none",          s.costs.geminiImage],
+                  ["EL TTS",      `${fmtNum(s.elChars)} chars`,             s.costs.elTts],
+                  ["EL SFX",      `~${s.estimatedSfx} effects`,             s.costs.elSfx],
+                ].map(([name, usage, cost]) => (
+                  <div key={name as string} className="flex items-center gap-2">
+                    <span className="flex-1 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>{name as string}</span>
+                    <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>{usage as string}</span>
+                    <span className="text-fs-body font-bold" style={{ color: "#4fc3f7", minWidth: 60, textAlign: "right" }}>{fmtCost(cost as number)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
+        Derived from script blocks · SFX & text-gen are estimated
+      </p>
+      <button onClick={onRefresh} className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
+        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        ↻ Refresh
+      </button>
+    </div>
+  );
+}
+
+// ── Outer shell with mode toggle ──────────────────────────────────────────────
+function CostAnalysis({
+  usageData, libraryData, usageLoading, libraryLoading, onLoadUsage, onLoadLibrary,
+}: {
+  usageData: CostData | null; libraryData: LibraryCostData | null;
+  usageLoading: boolean; libraryLoading: boolean;
+  onLoadUsage: () => void; onLoadLibrary: () => void;
+}) {
+  const [mode, setMode] = useState<"usage" | "library">("library");
+
+  const loading = mode === "usage" ? usageLoading : libraryLoading;
+  const hasData = mode === "usage" ? !!usageData : !!libraryData;
+  const onLoad  = mode === "usage" ? onLoadUsage : onLoadLibrary;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        {(["library", "usage"] as const).map((m) => (
+          <button key={m} onClick={() => setMode(m)}
+            className="px-4 py-2 rounded-full text-fs-body font-medium transition-all"
+            style={mode === m
+              ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+              : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}>
+            {m === "library" ? "📖 Script Analysis" : "📊 API Usage"}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col gap-2">
+          {[0,1,2,3,4].map((i) => <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />)}
+        </div>
+      ) : !hasData ? (
+        <button onClick={onLoad}
+          className="w-full py-3 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
+          style={{ background: "rgba(79,195,247,0.07)", border: "1px solid rgba(79,195,247,0.25)", color: "#4fc3f7" }}>
+          Load {mode === "library" ? "Script Analysis" : "API Usage"}
+        </button>
+      ) : mode === "library" ? (
+        <LibraryMode data={libraryData!} onRefresh={onLoadLibrary} />
+      ) : (
+        <UsageMode data={usageData!} onRefresh={onLoadUsage} />
+      )}
+    </div>
+  );
+}
+
+// ─── Existing stories list ─────────────────────────────────────────────────────
+
+function ClassicsList({ classics, loading }: { classics: ClassicMeta[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-2">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+        ))}
+      </div>
+    );
+  }
+  if (!classics.length) {
+    return <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>No public stories yet.</p>;
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {classics.map((c) => (
+        <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <span className="text-fs-subtitle flex-shrink-0">{c.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-fs-body font-medium truncate">{c.title}</p>
+            <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.28)" }}>{c.tagline}</p>
+          </div>
+          <span className="text-fs-body flex-shrink-0 px-2 py-0.5 rounded-full font-bold"
+            style={{
+              background: c.status === "ready" ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.04)",
+              color: c.status === "ready" ? "#4fc3f7" : "rgba(255,255,255,0.25)",
+              border: c.status === "ready" ? "1px solid rgba(79,195,247,0.22)" : "1px solid rgba(255,255,255,0.07)",
+            }}>
+            {c.status === "ready" ? "✓ ready" : "pending"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── SFX Library Seeder ────────────────────────────────────────────────────────
+
+function SfxLibrarySeeder() {
+  const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [result, setResult] = useState<{ total: number; seeded: number; skipped: number; alreadyInLibrary: number } | null>(null);
+  const [error, setError] = useState("");
+
+  const handleSeed = async () => {
+    setStatus("running");
+    setResult(null);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/seed-sfx-library", { method: "POST", cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Seeding failed");
+      setResult(data as typeof result);
+      setStatus("done");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+      setStatus("error");
     }
-  }
-  return out;
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>
+        Scan all existing SFX in story_elements, deduplicate by description, embed each one with
+        Gemini text-embedding-004, and insert into the global sfx_library for cross-story reuse.
+      </p>
+
+      {result && status === "done" && (
+        <div className="rounded-xl px-4 py-3 flex flex-col gap-1"
+          style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.2)" }}>
+          <p className="text-white font-bold text-fs-body">✅ Done</p>
+          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
+            {result.total} unique SFX found · {result.alreadyInLibrary} already in library · {result.seeded} newly added · {result.skipped} failed
+          </p>
+        </div>
+      )}
+
+      {status === "error" && (
+        <p className="text-fs-body" style={{ color: "#EC4899" }}>{error}</p>
+      )}
+
+      <button onClick={handleSeed} disabled={status === "running"}
+        className="w-full py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+        style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}>
+        {status === "running" ? "Seeding… (embedding takes a moment)" : "🔊 Seed SFX Library from story_elements"}
+      </button>
+    </div>
+  );
 }
 
-function validateScript(blocks: ScriptBlock[]): string[] {
-  const issues: string[] = [];
-  const charNames = blocks.map((b) => b.characterName).filter((n) => n !== "SFX");
-  const uniqueChars = Array.from(new Set(charNames));
-
-  // Check character count
-  const nonNarratorChars = uniqueChars.filter((n) => n.toLowerCase() !== "narrator");
-  if (nonNarratorChars.length > 8) {
-    issues.push(`Too many characters (${nonNarratorChars.length}). Max 8 non-narrator characters.`);
-  }
-
-  // Check for empty blocks
-  const emptyBlocks = blocks.filter((b) => !b.textPayload.trim());
-  if (emptyBlocks.length > 0) {
-    issues.push(`${emptyBlocks.length} block(s) have empty text.`);
-  }
-
-  // Check character names are reasonable
-  for (const name of uniqueChars) {
-    if (name.length > 30) issues.push(`Character name too long: "${name}"`);
-    if (/[^a-zA-Z0-9\s-￿'-]/.test(name)) issues.push(`Character name has special chars: "${name}"`);
-  }
-
-  // Check SFX format
-  const sfxBlocks = blocks.filter((b) => b.characterName === "SFX");
-  for (const sfx of sfxBlocks) {
-    if (!sfx.textPayload.trim()) issues.push("SFX block has empty description.");
-  }
-
-  return issues;
-}
-
-// ─── Main admin page ───────────────────────────────────────────────────────────
+// ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
 
-  // ── Story Factory state ──────────────────────────────────────────────────
-  const [addTitle,    setAddTitle]    = useState("");
-  const [addScript,   setAddScript]   = useState("");
-  const [addIsPublic, setAddIsPublic] = useState(true);
-  const [addCategory, setAddCategory] = useState<"classics" | "community">("classics");
-  const [parsedBlocks, setParsedBlocks] = useState<ScriptBlock[]>([]);
+  // ── Add Story fields ──────────────────────────────────────────────────────
+  const [addTitle, setAddTitle]           = useState("");
+  const [addScript, setAddScript]         = useState("");
+  const [addIsPublic, setAddIsPublic]     = useState(true);
+  const [addCategory, setAddCategory]     = useState<"classics" | "community">("classics");
+  const [parsedBlocks, setParsedBlocks]   = useState<ScriptBlock[]>([]);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
-  const [processState, setProcessState] = useState<"idle" | "processing" | "done">("idle");
-  const [processError, setProcessError] = useState("");
-  const [addProduceLog,   setAddProduceLog]   = useState<string[]>([]);
-  const [addProducing,    setAddProducing]     = useState(false);
+  const [processState, setProcessState]   = useState<"idle" | "processing" | "done" | "error">("idle");
+  const [processError, setProcessError]   = useState("");
+  const [addProduceLog, setAddProduceLog] = useState<string[]>([]);
+  const [addProducing, setAddProducing]   = useState(false);
   const [addProduceError, setAddProduceError] = useState("");
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [job,   setJob]   = useState<{
-    status: string; step: string; progress: number; error?: string;
-    audioUrl?: string; coverUrl?: string; title?: string;
-  } | null>(null);
 
-  // ── Cost Analysis state ──────────────────────────────────────────────────
-  const [costData,       setCostData]       = useState<UsageCost | null>(null);
-  const [libraryData,    setLibraryData]    = useState<LibraryCostData | null>(null);
-  const [costLoading,    setCostLoading]    = useState(false);
+  // ── Production job ─────────────────────────────────────────────────────────
+  const [jobId, setJobId]               = useState<string | null>(null);
+  const [job, setJob]                   = useState<{ status: string; step: string; progress: number; audioUrl?: string; coverUrl?: string; error?: string; title?: string } | null>(null);
+  const pollRef                         = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Classics list ─────────────────────────────────────────────────────────
+  const [classics, setClassics]         = useState<ClassicMeta[]>([]);
+  const [classicsLoading, setClassicsLoading] = useState(true);
+
+  const loadClassics = useCallback(() => {
+    fetch("/api/classics", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setClassics(d as ClassicMeta[]); })
+      .catch(() => {})
+      .finally(() => setClassicsLoading(false));
+  }, []);
+
+  useEffect(() => { loadClassics(); }, [loadClassics]);
+
+  // ── Cost analysis ─────────────────────────────────────────────────────────
+  const [costData, setCostData]           = useState<CostData | null>(null);
+  const [costLoading, setCostLoading]     = useState(false);
+  const [libraryData, setLibraryData]     = useState<LibraryCostData | null>(null);
   const [libraryLoading, setLibraryLoading] = useState(false);
 
-  const loadCostAnalysis = useCallback(async () => {
+  const loadCostAnalysis = useCallback(() => {
     setCostLoading(true);
-    try {
-      const res = await fetch("/api/admin/cost-analysis");
-      if (res.ok) setCostData(await res.json() as UsageCost);
-    } finally { setCostLoading(false); }
+    fetch("/api/admin/cost-analysis", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setCostData(d as CostData))
+      .catch(() => {})
+      .finally(() => setCostLoading(false));
   }, []);
 
-  const loadLibraryAnalysis = useCallback(async () => {
+  const loadLibraryAnalysis = useCallback(() => {
     setLibraryLoading(true);
-    try {
-      const res = await fetch("/api/admin/cost-analysis/library");
-      if (res.ok) setLibraryData(await res.json() as LibraryCostData);
-    } finally { setLibraryLoading(false); }
+    fetch("/api/admin/cost-analysis/library", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setLibraryData(d as LibraryCostData))
+      .catch(() => {})
+      .finally(() => setLibraryLoading(false));
   }, []);
 
-  // ── Job polling ──────────────────────────────────────────────────────────
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  // Job polling
   useEffect(() => {
     if (!jobId) return;
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/drama-status/${jobId}`);
+        const res = await fetch(`/api/drama-status/${jobId}`, { cache: "no-store" });
         if (!res.ok) return;
-        const data = await res.json() as typeof job;
-        setJob(data);
-        if (data?.status === "done" || data?.status === "error") {
+        const j = await res.json();
+        setJob(j);
+        if (j.status === "done" || j.status === "error") {
           clearInterval(pollRef.current!);
           setAddProducing(false);
+          if (j.status === "done") loadClassics();
         }
-      } catch { /* ignore transient errors */ }
-    }, 2000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [jobId]);
+      } catch {}
+    }, 2500);
+    return () => clearInterval(pollRef.current!);
+  }, [jobId, loadClassics]);
 
-  // ── Script processing ────────────────────────────────────────────────────
+  // ── Script parser ─────────────────────────────────────────────────────────
+  const CHAR_VOICE_POOL = ["Puck", "Kore", "Charon", "Fenrir", "Leda", "Orus", "Zephyr", "Autonoe"];
+  function parseScriptText(raw: string): ScriptBlock[] {
+    const lines = raw.split("\n").map((l) => l.trim()).filter((l) => l);
+    const out: ScriptBlock[] = [];
+    const voiceMap: Record<string, string> = {};
+    let voiceIdx = 0;
+    for (const line of lines) {
+      // First [...] on the line is the character/SFX tag; everything after is textPayload
+      const m = line.match(/^\[([^\]]+)\](.*)/);
+      if (!m) continue;
+      const charName = m[1].trim();
+      const rest = m[2].trim();
+      if (charName.startsWith("SFX")) {
+        // Store entire original bracket as textPayload so validate-script sees the full SFX block
+        const textPayload = `[${charName}]${rest ? " " + rest : ""}`;
+        out.push({ id: uid(), blockOrder: out.length, characterName: "SFX", assignedVoiceId: "", textPayload });
+      } else {
+        if (!voiceMap[charName]) {
+          voiceMap[charName] = charName.toLowerCase() === "narrator"
+            ? "Aoede"
+            : CHAR_VOICE_POOL[voiceIdx++ % CHAR_VOICE_POOL.length];
+        }
+        if (rest) {
+          out.push({ id: uid(), blockOrder: out.length, characterName: charName, assignedVoiceId: voiceMap[charName], textPayload: rest });
+        }
+      }
+    }
+    return out;
+  }
+
+  // ── Process Script ─────────────────────────────────────────────────────────
   const handleProcessScript = async () => {
     if (!addScript.trim()) return;
     setProcessState("processing");
     setProcessError("");
-    try {
-      const blocks = parseScriptText(addScript);
-      const issues = validateScript(blocks);
-      setParsedBlocks(blocks);
-      setValidationIssues(issues);
-      setProcessState("done");
-    } catch (e) {
-      setProcessError(e instanceof Error ? e.message : "Parse error");
-      setProcessState("idle");
+    setValidationIssues([]);
+    const blocks = parseScriptText(addScript);
+    if (!blocks.length) {
+      setProcessState("error");
+      setProcessError("Could not parse any blocks. Use [Character Name] to mark each speaker.");
+      return;
     }
+    setParsedBlocks(blocks);
+    const rawBlocks = blocks.map((b) => ({ characterName: b.characterName, textPayload: b.textPayload }));
+    const valRes = await fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks }) });
+    const valData = await valRes.json();
+    if (!valData.ok && Array.isArray(valData.issues)) setValidationIssues(valData.issues as string[]);
+    setProcessState("done");
   };
 
-  // ── Story production ─────────────────────────────────────────────────────
+  // ── Produce Story ──────────────────────────────────────────────────────────
   const handleProduceStory = async () => {
-    if (!parsedBlocks.length || !addTitle.trim()) return;
+    const blocks = parsedBlocks.filter((b) => b.textPayload.trim());
+    if (!addTitle.trim()) { setAddProduceError("Title is required."); return; }
+    if (!blocks.length)  { setAddProduceError("Process the script first."); return; }
     setAddProducing(true);
-    setAddProduceError("");
     setAddProduceLog([]);
+    setAddProduceError("");
     setJob(null);
     setJobId(null);
-
+    const log = (msg: string) => setAddProduceLog((p) => [...p, msg]);
     try {
-      const blocks = parsedBlocks;
-
       // 1. Classify characters
-      const log = (msg: string) => setAddProduceLog((l) => [...l, msg]);
       log("Classifying characters…");
+      const charNames = Array.from(new Set(blocks.map((b) => b.characterName)));
       const classifyRes = await fetch("/api/classify-characters", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characters: Array.from(new Set(blocks.map((b) => b.characterName))), summary: addTitle }),
+        body: JSON.stringify({ characters: charNames, summary: addTitle }),
       });
       const classifyData = await classifyRes.json() as { types?: Record<string, string> };
       const characterTypes = classifyData.types ?? {};

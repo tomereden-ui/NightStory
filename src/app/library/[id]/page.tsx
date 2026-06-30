@@ -210,13 +210,15 @@ export default function StoryDetailPage() {
 
   const handleEdit = useCallback(() => {
     if (!entry) return;
+    const isOwned = !entry.isPublic && !entry.isClassic;
     writeDraft({
       promptText: "",
       scriptBlocks: entry.blocks,
       summary: entry.summary,
       coverPrompt: "",
       coverUrl: entry.coverUrl ?? "",
-      editingStoryId: entry.id,
+      editingStoryId: isOwned ? entry.id : undefined,
+      forkedFromTitle: isOwned ? undefined : entry.title,
       storyTitle: entry.title,
     }, "nightstory_studio2_draft_v1");
     router.push("/studio2");
