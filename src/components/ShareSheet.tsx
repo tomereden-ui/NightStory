@@ -51,9 +51,8 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
     : childNames.length === 1 ? childNames[0]
     : childNames.slice(0, -1).join(", ") + " & " + childNames[childNames.length - 1];
 
-  const storyUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/story/${story.id}`
-    : `/story/${story.id}`;
+  const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? (typeof window !== "undefined" ? window.location.origin : "");
+  const storyUrl = `${siteOrigin}/story/${story.id}`;
 
   const shareText = [
     forLabel ? `🌙 I made a bedtime story for ${forLabel}!` : "🌙 Check out this bedtime story!",
