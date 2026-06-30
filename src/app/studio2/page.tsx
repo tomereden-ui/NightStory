@@ -1868,8 +1868,6 @@ export default function Studio2Page() {
             onDiscard={() => setChatLocked(false)}
             onGenerating={() => {
               setScriptBlocks([]);
-              setGenerating(true);
-              setActiveTab("script");
             }}
             onScriptReady={(draft) => {
               const rawBlocks = draft.scriptBlocks;
