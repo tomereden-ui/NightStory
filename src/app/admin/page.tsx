@@ -500,6 +500,59 @@ function ClassicsList({ classics, loading }: { classics: ClassicMeta[]; loading:
   );
 }
 
+// ─── SFX Library Seeder ────────────────────────────────────────────────────────
+
+function SfxLibrarySeeder() {
+  const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [result, setResult] = useState<{ total: number; seeded: number; skipped: number; alreadyInLibrary: number } | null>(null);
+  const [error, setError] = useState("");
+
+  const handleSeed = async () => {
+    setStatus("running");
+    setResult(null);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/seed-sfx-library", { method: "POST", cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Seeding failed");
+      setResult(data as typeof result);
+      setStatus("done");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>
+        Scan all existing SFX in story_elements, deduplicate by description, embed each one with
+        Gemini text-embedding-004, and insert into the global sfx_library for cross-story reuse.
+      </p>
+
+      {result && status === "done" && (
+        <div className="rounded-xl px-4 py-3 flex flex-col gap-1"
+          style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.2)" }}>
+          <p className="text-white font-bold text-fs-body">✅ Done</p>
+          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
+            {result.total} unique SFX found · {result.alreadyInLibrary} already in library · {result.seeded} newly added · {result.skipped} failed
+          </p>
+        </div>
+      )}
+
+      {status === "error" && (
+        <p className="text-fs-body" style={{ color: "#EC4899" }}>{error}</p>
+      )}
+
+      <button onClick={handleSeed} disabled={status === "running"}
+        className="w-full py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+        style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}>
+        {status === "running" ? "Seeding… (embedding takes a moment)" : "🔊 Seed SFX Library from story_elements"}
+      </button>
+    </div>
+  );
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -852,6 +905,10 @@ export default function AdminPage() {
         {/* Existing public stories */}
         <Divider title={`Public Stories (${classics.length})`} />
         <ClassicsList classics={classics} loading={classicsLoading} />
+
+        {/* SFX Library seeder */}
+        <Divider title="SFX Library" />
+        <SfxLibrarySeeder />
 
         </>)}
 
