@@ -318,9 +318,14 @@ function FamilyStoriesGrid({
               <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
               <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
                 <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
-                {entry.durationSeconds > 0 && (
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{durationLabel(entry.durationSeconds)}</p>
-                )}
+                <div className="flex items-center gap-2 mt-0.5">
+                  {entry.durationSeconds > 0 && (
+                    <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>{durationLabel(entry.durationSeconds)}</p>
+                  )}
+                  {(entry.viewCount ?? 0) > 0 && (
+                    <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
+                  )}
+                </div>
               </div>
             </Link>
 

@@ -53,5 +53,8 @@ export async function GET(
     children,
   };
 
+  // Log view (fire-and-forget, don't delay the response)
+  supabase.from("story_views").insert({ story_id: params.id, viewed_at: new Date().toISOString() }).then(() => {});
+
   return NextResponse.json(result);
 }

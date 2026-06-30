@@ -15,6 +15,8 @@ export interface LibraryEntry {
   isPublic?: boolean;
   childIds?: string[]; // which children this story belongs to (null = unscoped / pre-migration)
   shareMessage?: string;
+  viewCount?: number;
+  shareCount?: number;
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -23,7 +25,7 @@ export interface TrashEntry extends LibraryEntry {
 
 const TRASH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function toEntry(row: any): LibraryEntry { // eslint-disable-line
+function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Record<string, number>): LibraryEntry { // eslint-disable-line
   return {
     id: row.id,
     title: row.title,
@@ -40,11 +42,13 @@ function toEntry(row: any): LibraryEntry { // eslint-disable-line
              : row.child_id ? [row.child_id as string]   // migrate legacy single value
              : undefined,
     shareMessage: row.share_message ?? undefined,
+    viewCount: viewCounts?.[row.id] ?? 0,
+    shareCount: shareCounts?.[row.id] ?? 0,
   };
 }
 
 function toTrashEntry(row: any): TrashEntry { // eslint-disable-line
-  return { ...toEntry(row), deletedAt: row.deleted_at };
+  return { ...toEntry(row, {}, {}), deletedAt: row.deleted_at };
 }
 
 // ─── Library ──────────────────────────────────────────────────────────────────
@@ -74,7 +78,25 @@ export async function getEntries(childId?: string): Promise<LibraryEntry[]> {
   if (childId) q = q.filter("child_ids", "cs", JSON.stringify([childId]));
   const { data, error } = await q.order("created_at", { ascending: false });
   if (error) throw new Error(`getEntries: ${error.message}`);
-  return (data ?? []).map(toEntry);
+
+  const ids = (data ?? []).map((r) => r.id as string);
+  const [viewsResult, sharesResult] = ids.length > 0
+    ? await Promise.all([
+        supabase.from("story_views").select("story_id").in("story_id", ids),
+        supabase.from("story_shares").select("story_id").in("story_id", ids),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  const viewCounts = (viewsResult.data ?? []).reduce<Record<string, number>>((acc, r) => {
+    acc[r.story_id as string] = (acc[r.story_id as string] ?? 0) + 1;
+    return acc;
+  }, {});
+  const shareCounts = (sharesResult.data ?? []).reduce<Record<string, number>>((acc, r) => {
+    acc[r.story_id as string] = (acc[r.story_id as string] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return (data ?? []).map((row) => toEntry(row, viewCounts, shareCounts));
 }
 
 // Public (classic) stories from the DB
@@ -85,7 +107,7 @@ export async function getPublicEntries(): Promise<LibraryEntry[]> {
     .eq("is_public", true)
     .order("created_at", { ascending: false });
   if (error) throw new Error(`getPublicEntries: ${error.message}`);
-  return (data ?? []).map(toEntry);
+  return (data ?? []).map((row) => toEntry(row));
 }
 
 export async function getEntry(id: string): Promise<LibraryEntry | undefined> {
@@ -95,7 +117,16 @@ export async function getEntry(id: string): Promise<LibraryEntry | undefined> {
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(`getEntry: ${error.message}`);
-  return data ? toEntry(data) : undefined;
+  if (!data) return undefined;
+
+  const [viewsResult, sharesResult] = await Promise.all([
+    supabase.from("story_views").select("story_id").eq("story_id", id),
+    supabase.from("story_shares").select("story_id").eq("story_id", id),
+  ]);
+  const viewCounts = { [id]: (viewsResult.data ?? []).length };
+  const shareCounts = { [id]: (sharesResult.data ?? []).length };
+
+  return toEntry(data, viewCounts, shareCounts);
 }
 
 // ─── Trash ────────────────────────────────────────────────────────────────────

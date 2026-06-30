@@ -329,9 +329,17 @@ export default function StoryDetailPage() {
           >
             {entry.title}
           </h1>
-          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
-            {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
+              {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
+            </p>
+            {(entry.viewCount ?? 0) > 0 && (
+              <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>
+                · 👁 {entry.viewCount} {entry.viewCount === 1 ? "view" : "views"}
+                {(entry.shareCount ?? 0) > 0 && ` · 📤 shared ${entry.shareCount}×`}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Summary card */}

@@ -67,21 +67,32 @@ export default function ShareSheet({ story, children, onClose, onMessageSaved }:
     }
   };
 
+  const trackShare = (channel: string) => {
+    fetch(`/api/story/${story.id}/track`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel }),
+    }).catch(() => {});
+  };
+
   const handleCopyLink = async () => {
     await saveMessage();
     await navigator.clipboard.writeText(storyUrl).catch(() => {});
+    trackShare("copy");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleWhatsApp = async () => {
     await saveMessage();
+    trackShare("whatsapp");
     window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, "_blank");
   };
 
   const handleNativeShare = async () => {
     await saveMessage();
     if (navigator.share) {
+      trackShare("native");
       navigator.share({ title: story.title, text: shareText, url: storyUrl }).catch(() => {});
     }
   };
