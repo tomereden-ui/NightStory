@@ -227,7 +227,7 @@ async function runProduction(
     const { supabase, ensureBuckets } = await import("@/lib/supabase");
     const { getElementsForStory, uploadElementAudio, saveStoryElements,
             hashDialogue, hashSfx, downloadToFile } = await import("@/lib/elementStore");
-    const { findSimilarSfx, saveSfxLibraryEntry } = await import("@/lib/sfxLibrary");
+    const { findSimilarSfx, saveSfxLibraryEntry, fitAudioDuration } = await import("@/lib/sfxLibrary");
     await ensureBuckets();
 
     // ── Guard: return cached audio if this story is already produced ────────
@@ -428,11 +428,24 @@ async function runProduction(
           }
 
           // ── Global SFX library lookup (semantic similarity) ──────────────
-          const isLooping = !!track.loop;
-          const libraryHit = await findSimilarSfx(desc, durationHint, { isLooping });
+          const libraryHit = await findSimilarSfx(desc);
           if (libraryHit) {
-            const ok = await downloadToFile(libraryHit.audioUrl, outPath);
+            const rawPath = outPath.replace(/\.mp3$/, "-raw.mp3");
+            const ok = await downloadToFile(libraryHit.audioUrl, rawPath);
             if (ok) {
+              // Fit the cached clip to the script's requested duration:
+              // loop it if too short, trim + fade-out if too long.
+              if (!track.loop) {
+                try {
+                  await fitAudioDuration(rawPath, outPath, durationHint);
+                } catch {
+                  // Fitting failed — use raw clip as-is
+                  fs.renameSync(rawPath, outPath);
+                }
+              } else {
+                fs.renameSync(rawPath, outPath);
+              }
+              try { fs.unlinkSync(rawPath); } catch { /* already renamed */ }
               sfxLibraryHits++;
               // Register in story element cache so re-produces skip the library lookup
               newElements.push({

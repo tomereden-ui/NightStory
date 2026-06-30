@@ -1,4 +1,6 @@
 import { supabase } from "./supabase";
+import { spawn } from "child_process";
+import fs from "fs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,23 +59,72 @@ function wordOverlapSim(a: string, b: string): number {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const SIMILARITY_THRESHOLD = 0.90;
-const DURATION_TOLERANCE   = 0.40; // cached duration must be within ±40% of requested
+
+// ─── Duration fitting ─────────────────────────────────────────────────────────
+
+function getFfmpegPath(): string {
+  if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
+  try {
+    const p = require("ffmpeg-static") as string | null; // eslint-disable-line
+    if (p && fs.existsSync(p)) return p;
+  } catch { /* not installed */ }
+  for (const p of ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg"]) {
+    if (fs.existsSync(p)) return p;
+  }
+  throw new Error("ffmpeg not found");
+}
+
+function runFfmpeg(args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(getFfmpegPath(), args, { stdio: ["ignore", "ignore", "pipe"] });
+    const err: string[] = [];
+    proc.stderr?.on("data", (d: Buffer) => err.push(d.toString()));
+    proc.on("close", (code) => code === 0 ? resolve() : reject(new Error(`FFmpeg ${code}: ${err.slice(-2).join("")}`)));
+    proc.on("error", reject);
+  });
+}
+
+/**
+ * Fit a cached audio file to the required duration in-place:
+ * - If the file is longer → trim with a short fade-out so it doesn't cut abruptly
+ * - If the file is shorter → loop it seamlessly to fill the target length
+ *
+ * Writes the result to `outputPath` (may differ from `inputPath`).
+ * For looping ambient tracks no fitting is needed — the mixer handles looping.
+ */
+export async function fitAudioDuration(
+  inputPath: string,
+  outputPath: string,
+  targetMs: number,
+): Promise<void> {
+  const targetSec = targetMs / 1000;
+  const fadeSec   = Math.min(0.4, targetSec * 0.1); // short fade-out, max 0.4s
+
+  // Trim + fade-out
+  await runFfmpeg([
+    "-y",
+    "-stream_loop", "-1",        // loop input indefinitely so short clips fill the gap
+    "-i", inputPath,
+    "-t", targetSec.toFixed(3),
+    "-af", `afade=t=out:st=${(targetSec - fadeSec).toFixed(3)}:d=${fadeSec.toFixed(3)}`,
+    "-c:a", "libmp3lame", "-q:a", "4",
+    outputPath,
+  ]);
+}
 
 // ─── Lookup ───────────────────────────────────────────────────────────────────
 
 /**
  * Search the global SFX library for a semantically similar clip.
- *
- * Returns the best match if its similarity score ≥ threshold AND its duration
- * is within DURATION_TOLERANCE of the requested duration (looping clips skip
- * the duration check since they repeat).
+ * Duration is no longer a rejection criterion — callers use fitAudioDuration
+ * to adapt any hit to the required length.
+ * Returns null only when no entry scores ≥ threshold.
  */
 export async function findSimilarSfx(
   description: string,
-  durationMs: number,
-  opts: { threshold?: number; isLooping?: boolean } = {},
+  opts: { threshold?: number } = {},
 ): Promise<SfxLibraryEntry | null> {
-  const { threshold = SIMILARITY_THRESHOLD, isLooping = false } = opts;
+  const { threshold = SIMILARITY_THRESHOLD } = opts;
 
   try {
     const { data, error } = await supabase
@@ -82,20 +133,12 @@ export async function findSimilarSfx(
 
     if (error || !data?.length) return null;
 
-    // Generate query embedding once; fall back to word-overlap per row if it fails
     const queryEmbedding = await embedText(description);
 
     let best: SfxLibraryEntry | null = null;
     let bestScore = -1;
 
     for (const row of data) {
-      // Duration gate — skip clips that are too short or too long for this slot
-      if (!isLooping) {
-        const ratio = row.duration_ms / durationMs;
-        if (ratio < 1 - DURATION_TOLERANCE || ratio > 1 + DURATION_TOLERANCE) continue;
-      }
-
-      // Similarity — prefer embeddings; fall back to word overlap
       let score: number;
       if (queryEmbedding && row.embedding) {
         const storedEmb = (Array.isArray(row.embedding)
@@ -119,9 +162,7 @@ export async function findSimilarSfx(
     }
 
     if (bestScore >= threshold && best) {
-      console.log(
-        `[SfxLibrary] Hit — score ${bestScore.toFixed(3)} for "${description.slice(0, 50)}"`,
-      );
+      console.log(`[SfxLibrary] Hit — score ${bestScore.toFixed(3)} for "${description.slice(0, 50)}"`);
       return best;
     }
     return null;
