@@ -218,16 +218,29 @@ SFX DURATION REFERENCE
 
 WRITING GOOD SFX DESCRIPTIONS
 ------------------------------
-The description is sent directly to an AI sound-effect generator. Be vivid and specific
-about texture, environment, and emotional quality.
+⚠ SFX descriptions MUST always be written in ENGLISH regardless of the story's language.
+  They are sent directly to ElevenLabs sound generation, which only works correctly in English.
+  A Hebrew/Spanish/French SFX description will produce garbled or wrong audio.
 
-  Good: "gentle ocean waves lapping on a sandy beach at dusk, soft and rhythmic"
-  Good: "a small dragon's warm rumbling purr, friendly and low, like a purring cat but deeper"
-  Good: "delicate wind chimes tinkling in a breeze, magical and settling"
-  Good: "soft magical shimmer as something glows to life, warm and golden"
-  Bad:  "ocean"             (too vague — no texture or mood)
-  Bad:  "scary sound"       (not appropriate, and too vague)
-  Bad:  "background music"  (not a specific sound)
+The description is sent directly to an AI sound-effect generator. Write it as compact
+comma-separated sound descriptors — NOT as sentences or prose. Sentences cause the model
+to read the description as speech instead of generating audio.
+
+  CORRECT format (comma-separated descriptors):
+    "gentle ocean waves, soft and rhythmic, sandy beach at dusk"
+    "small dragon warm rumble, low purring, friendly and deep"
+    "delicate wind chimes, magical tinkling, light breeze, settling"
+    "soft magical shimmer, warm golden glow coming to life"
+    "crackling campfire, warm and cozy, occasional pop"
+
+  WRONG format (prose sentences — causes EL to read the text aloud):
+    "Gentle ocean waves lapping on a sandy beach at dusk, soft and rhythmic."
+    "A small dragon's warm rumbling purr, friendly and low, like a purring cat but deeper."
+
+  Also bad:
+    "ocean"             (too vague — no texture or mood)
+    "scary sound"       (not appropriate for bedtime, and too vague)
+    "background music"  (not a specific sound)
 
 SCRIPT FORMAT
 =============
@@ -267,12 +280,23 @@ Return a JSON object with the following top-level fields:
                                           Use "animal" for any animal, creature, fairy, monster, or non-human.
                                           Use "narrator" only for the Narrator role.
                     "visualDescription" — 10–20 words describing exactly what this character looks like.
-                                          Be specific: include species (for animals), approximate age, one
-                                          distinctive physical feature, and overall feeling/mood.
+                                          ⚠ ALWAYS write in ENGLISH regardless of story language.
+                                             This is used as an AI image generation prompt — non-English
+                                             descriptions produce wrong or garbled avatars.
+                                          ⚠ Base the description on the character's ACTUAL appearance
+                                             as established in the story, NOT just their name.
+                                             If the character is a well-known figure (Dumbo, Simba, Nemo,
+                                             Cinderella, etc.), describe their REAL species and features:
+                                             Dumbo → "large gray baby elephant with enormous floppy ears"
+                                             Simba → "small golden lion cub with curious bright eyes"
+                                             NOT generic descriptions like "small friendly animal".
+                                          Be specific: for animals include species + size + colour +
+                                          one distinctive feature. For humans: age + hair + expression.
                   Examples:
                     "Luna"     : { "type": "child",    "visualDescription": "curious 7-year-old girl with curly red hair and wide bright eyes" }
                     "Grandma"  : { "type": "adult",    "visualDescription": "kind elderly grandmother with silver bun, round glasses and a warm smile" }
                     "Pip"      : { "type": "animal",   "visualDescription": "tiny playful fox cub with bright orange fur and a white-tipped fluffy tail" }
+                    "Dumbo"    : { "type": "animal",   "visualDescription": "large gray baby elephant with enormous floppy ears that allow him to fly" }
                     "Squawk"   : { "type": "animal",   "visualDescription": "small colourful parrot with green and yellow feathers and a mischievous expression" }
                     "Captain"  : { "type": "adult",    "visualDescription": "weathered sea captain with a grey beard, navy coat and a kind gaze" }
                     "Narrator" : { "type": "narrator", "visualDescription": "warm wise storyteller" }
