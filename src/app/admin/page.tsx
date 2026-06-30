@@ -675,29 +675,52 @@ export default function AdminPage() {
   const isDone  = job?.status === "done";
   const isError = job?.status === "error";
 
+  const [adminTab, setAdminTab] = useState<"factory" | "costs">("factory");
+
   return (
     <div className="cosmic-page min-h-full pb-40">
       <div className="px-5 pt-12">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-fs-title font-bold"
               style={{ background: "linear-gradient(135deg,#fff 0%,#4fc3f7 50%,#a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              🏭 Story Factory
+              Admin
             </h1>
-            <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>Admin · {user.email}</p>
+            <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>{user.email}</p>
           </div>
-          <button onClick={handleReset}
-            className="text-fs-body px-3 py-1.5 rounded-lg transition-all active:scale-95"
-            style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            Reset
-          </button>
+          {adminTab === "factory" && (
+            <button onClick={handleReset}
+              className="text-fs-body px-3 py-1.5 rounded-lg transition-all active:scale-95"
+              style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* Tab bar */}
+        <div className="flex gap-2 mb-8 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          {([
+            { id: "factory", label: "🏭 Story Factory" },
+            { id: "costs",   label: "📊 Cost Analysis" },
+          ] as const).map((tab) => (
+            <button key={tab.id} onClick={() => setAdminTab(tab.id)}
+              className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all"
+              style={adminTab === tab.id
+                ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
+                : { background: "transparent", border: "1px solid transparent", color: "rgba(255,255,255,0.35)" }}>
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/*  SECTION 1 — Story record fields                                 */}
+        {/*  TAB: Factory                                                     */}
         {/* ══════════════════════════════════════════════════════════════════ */}
+        {adminTab === "factory" && (<>
+
+        {/* SECTION 1 — Story record fields */}
         <Divider title="Story Record" />
 
         <div className="flex gap-3 mb-4">
@@ -826,24 +849,25 @@ export default function AdminPage() {
           </button>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/*  Existing public stories                                          */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* Existing public stories */}
         <Divider title={`Public Stories (${classics.length})`} />
         <ClassicsList classics={classics} loading={classicsLoading} />
 
+        </>)}
+
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/*  Cost analysis                                                    */}
+        {/*  TAB: Cost Analysis                                               */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <Divider title="Cost Analysis" />
-        <CostAnalysis
-          usageData={costData}
-          libraryData={libraryData}
-          usageLoading={costLoading}
-          libraryLoading={libraryLoading}
-          onLoadUsage={loadCostAnalysis}
-          onLoadLibrary={loadLibraryAnalysis}
-        />
+        {adminTab === "costs" && (
+          <CostAnalysis
+            usageData={costData}
+            libraryData={libraryData}
+            usageLoading={costLoading}
+            libraryLoading={libraryLoading}
+            onLoadUsage={loadCostAnalysis}
+            onLoadLibrary={loadLibraryAnalysis}
+          />
+        )}
 
       </div>
     </div>
