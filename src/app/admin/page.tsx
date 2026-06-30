@@ -636,37 +636,29 @@ export default function AdminPage() {
   // ── Script parser ─────────────────────────────────────────────────────────
   const CHAR_VOICE_POOL = ["Puck", "Kore", "Charon", "Fenrir", "Leda", "Orus", "Zephyr", "Autonoe"];
   function parseScriptText(raw: string): ScriptBlock[] {
-    const regex = /\[([^\]]+)\]/g;
+    const lines = raw.split("\n").map((l) => l.trim()).filter((l) => l);
     const out: ScriptBlock[] = [];
     const voiceMap: Record<string, string> = {};
     let voiceIdx = 0;
-    let lastChar = "";
-    let lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = regex.exec(raw)) !== null) {
-      if (lastChar) {
-        const text = raw.slice(lastIndex, m.index).trim();
-        if (text) {
-          if (!voiceMap[lastChar]) {
-            voiceMap[lastChar] = lastChar.toLowerCase() === "narrator"
-              ? "Aoede"
-              : CHAR_VOICE_POOL[voiceIdx++ % CHAR_VOICE_POOL.length];
-          }
-          out.push({ id: uid(), blockOrder: out.length, characterName: lastChar, assignedVoiceId: voiceMap[lastChar], textPayload: text });
-        }
-      }
-      lastChar = m[1].trim();
-      lastIndex = regex.lastIndex;
-    }
-    if (lastChar) {
-      const text = raw.slice(lastIndex).trim();
-      if (text) {
-        if (!voiceMap[lastChar]) {
-          voiceMap[lastChar] = lastChar.toLowerCase() === "narrator"
+    for (const line of lines) {
+      // First [...] on the line is the character/SFX tag; everything after is textPayload
+      const m = line.match(/^\[([^\]]+)\](.*)/);
+      if (!m) continue;
+      const charName = m[1].trim();
+      const rest = m[2].trim();
+      if (charName.startsWith("SFX")) {
+        // Store entire original bracket as textPayload so validate-script sees the full SFX block
+        const textPayload = `[${charName}]${rest ? " " + rest : ""}`;
+        out.push({ id: uid(), blockOrder: out.length, characterName: "SFX", assignedVoiceId: "", textPayload });
+      } else {
+        if (!voiceMap[charName]) {
+          voiceMap[charName] = charName.toLowerCase() === "narrator"
             ? "Aoede"
             : CHAR_VOICE_POOL[voiceIdx++ % CHAR_VOICE_POOL.length];
         }
-        out.push({ id: uid(), blockOrder: out.length, characterName: lastChar, assignedVoiceId: voiceMap[lastChar], textPayload: text });
+        if (rest) {
+          out.push({ id: uid(), blockOrder: out.length, characterName: charName, assignedVoiceId: voiceMap[charName], textPayload: rest });
+        }
       }
     }
     return out;
