@@ -821,7 +821,7 @@ export default function LibraryPage() {
               </p>
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
                 {communityStories.map((s) => (
-                  <a key={s.id} href={`/library/classics/${s.id}`}
+                  <a key={s.id} href={`/library/${s.id}`}
                     className="flex flex-col rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                     <div style={{ position: "relative", paddingBottom: "100%", background: "rgba(167,139,250,0.08)" }}>
