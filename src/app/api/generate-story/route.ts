@@ -49,6 +49,15 @@ export interface RawCharacter {
   visualDescription: string;
 }
 
+interface RawScene {
+  sceneNumber: number;
+  title: string;
+  summary: string;
+  primaryMood: string;
+  sfxTags: string[];
+  lineRange: { start: number; end: number };
+}
+
 interface RawResponse {
   title?: string;
   summary: string;
@@ -56,6 +65,7 @@ interface RawResponse {
   characters?: Record<string, RawCharacter>;
   blocks: RawBlock[];
   lessonImplementations?: RawLessonImpl[];
+  scenes?: RawScene[];
 }
 
 export interface LessonImplementation {
@@ -137,7 +147,20 @@ RUNTIME TARGETS FOR THIS STORY
 -------------------------------
 Target duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}
 Target word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)
-Target blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)`;
+Target blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)
+
+SCENE STRUCTURE (required — output in "scenes" array)
+------------------------------------------------------
+Divide the story into 3–5 logical scenes based on natural story beats. For each scene output:
+  - sceneNumber: integer starting at 1
+  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")
+  - summary: exactly 1 sentence describing what happens in this scene
+  - primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy
+  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])
+  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }
+
+Scene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).
+lineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
 }
 
 // ─── User prompt — story description only ────────────────────────────────────
@@ -230,7 +253,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ blocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {} });
+    // Build scenes with computed durations
+    const scenes = (raw.scenes ?? []).map((s) => {
+      const { start, end } = s.lineRange ?? { start: 0, end: blocks.length - 1 };
+      const sceneBlocks = blocks.slice(start, end + 1).filter((b) => b.characterName !== "SFX");
+      const words = sceneBlocks.reduce((sum, b) => sum + b.textPayload.trim().split(/\s+/).filter(Boolean).length, 0);
+      return { ...s, estimatedDurationSeconds: Math.ceil(words / (130 / 60)) };
+    });
+
+    return NextResponse.json({ blocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import type { ScriptBlock, Voice } from "@/types";
+import type { ScriptBlock, Voice, StoryScene } from "@/types";
 import ScriptBlockCard, { buildSfxPayload } from "./ScriptBlockCard";
 import SpeechPlayerModal from "./SpeechPlayerModal";
 import { useLanguage } from "@/context/LanguageContext";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import Icon from "@/components/ui/Icon";
+import SceneMap from "./SceneMap";
 
 interface ScriptTabProps {
   blocks: ScriptBlock[];
@@ -30,6 +31,7 @@ interface ScriptTabProps {
   characterAvatars?: Record<string, string>;
   /** Total block count including blocks still being validated (not yet in `blocks`) */
   totalExpectedBlocks?: number;
+  scenes?: StoryScene[];
 }
 
 function makeId() {
@@ -392,7 +394,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -825,6 +827,23 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {/* Slot rendered between cover/summary and script blocks (e.g. CharacterCards) */}
         {belowCover}
 
+        {/* Scene-by-scene outline */}
+        {scenes && scenes.length > 0 && (
+          <SceneMap
+            scenes={scenes}
+            blocks={blocks}
+            onSceneClick={(blockIdx) => {
+              setScriptExpanded(true);
+              setTimeout(() => {
+                const targetId = blocks[blockIdx]?.id;
+                if (targetId) {
+                  document.getElementById(`block-${targetId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }, 120);
+            }}
+          />
+        )}
+
         {/* Stats row */}
         {(() => {
           const pendingCount = totalExpectedBlocks ? Math.max(0, totalExpectedBlocks - blocks.length) : 0;
@@ -870,7 +889,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
         {/* Block list — collapsed by default */}
         {scriptExpanded && blocks.map((block, idx) => (
-          <div key={block.id}>
+          <div key={block.id} id={`block-${block.id}`}>
             {/* Separator BEFORE this block */}
             {studioMode ? (
               <AIBlockSeparator

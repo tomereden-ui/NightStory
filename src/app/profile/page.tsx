@@ -885,7 +885,7 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <p className="text-fs-body font-medium" style={{ color: "#e2e8f0" }}>
-                        {m.user_id === user?.id ? t("you") : t("familyMember")}
+                        {m.user_id === user?.id ? (user?.email ?? t("you")) : t("familyMember")}
                       </p>
                       <p className="text-fs-label" style={{ color: "rgba(148,163,184,0.5)" }}>{m.role === "owner" ? t("roleOwner" as never) : t("roleMember" as never)}</p>
                     </div>
