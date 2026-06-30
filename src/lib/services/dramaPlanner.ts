@@ -43,9 +43,11 @@ TIMING RULES — make it sound like a live natural performance, NOT a robotic se
 - Start first dialogue at 1500ms to let the opening ambient SFX establish
 
 SFX RULES:
-- First track MUST be an ambient background loop (start_ms: 0, loop: true, duration_hint_ms: 12000). Its description must be a rich, gentle soundscape that matches the story's setting — include the environment, texture, and mood (e.g. "a sunny garden with soft birdsong, a gentle breeze rustling leaves, and cheerful crickets — warm, peaceful and inviting").
+- ALL SFX descriptions MUST be written in English only, regardless of the story's language. Never use Hebrew, Spanish, French, or any other language for SFX descriptions — ElevenLabs sound generation only works correctly with English.
+- SFX descriptions must be compact comma-separated sound descriptors, NOT sentences or prose. Write what the sound IS, not a story about it. Good: "soft wind chimes, gentle, magical, tinkling". Bad: "Soft wind chimes tinkling in a gentle breeze, magical and light, like fairy bells announcing something wonderful." The bad format causes the model to read the text aloud instead of generating audio.
+- Keep descriptions under 15 words. Focus on: environment/source + texture + mood. Example: "crackling fireplace, warm and cozy, gentle pops"
+- First track MUST be an ambient background loop (start_ms: 0, loop: true, duration_hint_ms: 12000). Describe the setting's soundscape in comma-separated form: e.g. "sunny garden, soft birdsong, gentle breeze, rustling leaves, peaceful"
 - Add 2–4 event SFX at emotionally significant moments (a discovery, a magical moment, a surprise, a joyful reunion).
-- Each SFX description should be warm and child-friendly — 1–2 sentences describing the sound and its cheerful or gentle emotional tone. Example: "Soft wind chimes tinkling in a gentle breeze, magical and light, like fairy bells announcing something wonderful."
 - Non-looping SFX duration_hint_ms: typically 1500–4000ms
 
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no explanation:
@@ -57,7 +59,7 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown, no explanation:
       "id": "t1",
       "type": "sfx",
       "start_ms": 0,
-      "description": "magical starry night ambience, soft and dreamy",
+      "description": "magical starry night, soft crickets, gentle wind, dreamy and calm",
       "duration_hint_ms": 12000,
       "loop": true
     },
