@@ -10,14 +10,14 @@ function formatTime(s: number): string {
 }
 
 function StarField() {
-  const stars = Array.from({ length: 60 }, (_, i) => ({
+  const stars = Array.from({ length: 80 }, (_, i) => ({
     x: (i * 137.5) % 100,
     y: (i * 79.3) % 100,
-    r: 0.5 + (i % 3) * 0.4,
-    op: 0.2 + (i % 5) * 0.12,
+    r: 0.4 + (i % 4) * 0.35,
+    op: 0.15 + (i % 6) * 0.1,
   }));
   return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+    <svg className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
       {stars.map((s, i) => (
         <circle key={i} cx={`${s.x}%`} cy={`${s.y}%`} r={s.r} fill="white" opacity={s.op} />
       ))}
@@ -25,28 +25,42 @@ function StarField() {
   );
 }
 
-function ChildBubble({ child }: { child: { name: string; avatarEmoji: string } }) {
+function ChildBubble({ child, large }: { child: { name: string; avatarEmoji: string }; large?: boolean }) {
   const isUrl = child.avatarEmoji.startsWith("http");
+  const size = large ? 96 : 80;
+  const innerPad = large ? 3 : 2.5;
+  const fontSize = large ? 48 : 40;
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="flex flex-col items-center gap-2">
       <div
         className="rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
         style={{
-          width: 72, height: 72,
+          width: size, height: size,
           background: "linear-gradient(135deg,#4fc3f7,#f59e0b,#a78bfa)",
-          padding: 2.5,
-          boxShadow: "0 0 24px rgba(79,195,247,0.4), 0 0 48px rgba(79,195,247,0.15)",
+          padding: innerPad,
+          boxShadow: `0 0 32px rgba(79,195,247,0.5), 0 0 64px rgba(79,195,247,0.2), 0 0 96px rgba(167,139,250,0.15)`,
         }}
       >
         <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
           style={{ background: "#0a1628" }}>
           {isUrl
             ? <img src={child.avatarEmoji} alt={child.name} className="w-full h-full object-cover" />
-            : <span style={{ fontSize: 36, lineHeight: 1 }}>{child.avatarEmoji}</span>
+            : <span style={{ fontSize, lineHeight: 1 }}>{child.avatarEmoji}</span>
           }
         </div>
       </div>
-      <span className="text-white font-bold" style={{ fontSize: "var(--fs-subtitle)" }}>{child.name}</span>
+      <span
+        className="font-bold tracking-wide"
+        style={{
+          fontSize: large ? "var(--fs-title)" : "var(--fs-subtitle)",
+          background: "linear-gradient(135deg,#fff 0%,#b3e5fc 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}
+      >
+        {child.name}
+      </span>
     </div>
   );
 }
@@ -57,7 +71,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
   const [notFound, setNotFound] = useState(false);
 
   const audioRef    = useRef<HTMLAudioElement | null>(null);
-  const [playing, setPlaying]       = useState(false);
+  const [playing, setPlaying]         = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration]       = useState(0);
 
@@ -110,10 +124,11 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
     : childNames.slice(0, -1).join(", ") + " & " + childNames[childNames.length - 1];
 
   const durationMin = Math.round(story.durationSeconds / 60);
+  const singleChild = story.children.length === 1;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden" style={{ background: "#040612" }}>
-      {/* ── Atmospheric background ── */}
+      {/* Atmospheric blurred background */}
       {story.coverUrl && (
         <div
           className="fixed inset-0 pointer-events-none"
@@ -121,14 +136,14 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
             backgroundImage: `url(${story.coverUrl})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
-            filter: "blur(48px) brightness(0.18) saturate(1.4)",
-            transform: "scale(1.08)",
+            filter: "blur(60px) brightness(0.15) saturate(1.6)",
+            transform: "scale(1.1)",
             zIndex: 0,
           }}
         />
       )}
       <div className="fixed inset-0 pointer-events-none" style={{
-        background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79,195,247,0.06) 0%, transparent 70%)",
+        background: "radial-gradient(ellipse 90% 50% at 50% 0%, rgba(79,195,247,0.07) 0%, transparent 70%)",
         zIndex: 1,
       }} />
       <StarField />
@@ -143,68 +158,81 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
       />
 
-      {/* ── Content ── */}
-      <div className="relative flex flex-col items-center px-6 pt-16 pb-20" style={{ zIndex: 2 }}>
+      {/* Content */}
+      <div className="relative flex flex-col items-center px-5 pt-10 pb-6" style={{ zIndex: 2 }}>
 
-        {/* Cover art */}
-        <div className="relative mb-6">
-          {story.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={story.coverUrl}
-              alt={story.title}
-              className="object-cover"
-              style={{
-                width: 220, height: 220,
-                borderRadius: 28,
-                boxShadow: "0 8px 48px rgba(0,0,0,0.7), 0 0 80px rgba(79,195,247,0.12)",
-                border: "1px solid rgba(255,255,255,0.1)",
-              }}
-            />
-          ) : (
-            <div style={{
-              width: 220, height: 220, borderRadius: 28,
-              background: "radial-gradient(ellipse at 40% 35%, rgba(79,195,247,0.25) 0%, rgba(10,6,24,0.9) 70%)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              display: "flex", alignItems: "center", justifyContent: "center",
+        {/* ── "Made with love for" — prominent, near the top ── */}
+        {forLabel && (
+          <div className="flex flex-col items-center mb-8">
+            <p style={{
+              color: "rgba(255,255,255,0.38)",
+              fontSize: "var(--fs-body)",
+              letterSpacing: 3,
+              textTransform: "uppercase",
+              marginBottom: 16,
             }}>
-              <span style={{ fontSize: 72 }}>🌙</span>
-            </div>
-          )}
-
-          {/* NightStory badge */}
-          <div
-            className="absolute flex items-center gap-1.5 px-3 py-1 rounded-full"
-            style={{
-              top: -10, left: "50%", transform: "translateX(-50%)",
-              background: "rgba(5,8,20,0.85)",
-              border: "1px solid rgba(79,195,247,0.3)",
-              backdropFilter: "blur(8px)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span style={{ fontSize: 12 }}>🌙</span>
-            <span style={{ color: "#4fc3f7", fontSize: "var(--fs-label)", fontWeight: 700, letterSpacing: 1 }}>NightStory</span>
-          </div>
-        </div>
-
-        {/* Child avatars + for label */}
-        {story.children.length > 0 && (
-          <div className="flex flex-col items-center mb-6">
-            <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "var(--fs-body)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
-              ✨ A story for
+              ✨ Made with love for
             </p>
-            <div className="flex items-end justify-center" style={{ gap: story.children.length > 1 ? 20 : 0 }}>
+            <div className="flex items-end justify-center" style={{ gap: story.children.length > 1 ? 28 : 0 }}>
               {story.children.map((child) => (
-                <ChildBubble key={child.id} child={child} />
+                <ChildBubble key={child.id} child={child} large={singleChild} />
               ))}
             </div>
           </div>
         )}
 
+        {/* NightStory badge */}
+        <div
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full mb-6"
+          style={{
+            background: "rgba(5,8,20,0.75)",
+            border: "1px solid rgba(79,195,247,0.25)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <span style={{ fontSize: 12 }}>🌙</span>
+          <span style={{ color: "rgba(79,195,247,0.7)", fontSize: "var(--fs-label)", fontWeight: 700, letterSpacing: 1.5 }}>NightStory</span>
+        </div>
+
+        {/* Cover art — big and impressive */}
+        <div className="relative mb-8" style={{ width: "min(88vw, 340px)" }}>
+          {story.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={story.coverUrl}
+              alt={story.title}
+              className="w-full object-cover"
+              style={{
+                aspectRatio: "1/1",
+                borderRadius: 32,
+                boxShadow: "0 16px 64px rgba(0,0,0,0.75), 0 0 120px rgba(79,195,247,0.15), 0 0 48px rgba(167,139,250,0.1)",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}
+            />
+          ) : (
+            <div style={{
+              aspectRatio: "1/1",
+              borderRadius: 32,
+              background: "radial-gradient(ellipse at 40% 35%, rgba(79,195,247,0.25) 0%, rgba(10,6,24,0.9) 70%)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <span style={{ fontSize: 96 }}>🌙</span>
+            </div>
+          )}
+          {/* Subtle glow under the cover */}
+          <div style={{
+            position: "absolute", bottom: -20, left: "10%", right: "10%", height: 40,
+            background: "rgba(79,195,247,0.18)",
+            filter: "blur(20px)",
+            borderRadius: "50%",
+            zIndex: -1,
+          }} />
+        </div>
+
         {/* Title */}
         <h1
-          className="text-center font-bold mb-2"
+          className="text-center font-bold mb-1"
           style={{
             fontSize: "var(--fs-title)",
             lineHeight: 1.2,
@@ -212,7 +240,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
-            maxWidth: 320,
+            maxWidth: 340,
             filter: "drop-shadow(0 0 20px rgba(79,195,247,0.3))",
           }}
         >
@@ -220,7 +248,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         </h1>
 
         {/* Duration */}
-        <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-body)", marginBottom: story.shareMessage ? 24 : 32 }}>
+        <p style={{ color: "rgba(255,255,255,0.28)", fontSize: "var(--fs-body)", marginBottom: story.shareMessage ? 20 : 28 }}>
           ◷ {durationMin} min
         </p>
 
@@ -230,8 +258,8 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
             className="w-full mb-8"
             style={{
               maxWidth: 360,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(79,195,247,0.04)",
+              border: "1px solid rgba(79,195,247,0.15)",
               borderRadius: 20,
               padding: "18px 22px",
             }}
@@ -248,16 +276,16 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         {/* Play button */}
         <button
           onClick={handlePlayPause}
-          className="flex items-center justify-center mb-6 transition-transform active:scale-95"
+          className="flex items-center justify-center mb-5 transition-transform active:scale-95"
           style={{
-            width: 88, height: 88, borderRadius: "50%",
-            background: "linear-gradient(135deg,rgba(79,195,247,0.2),rgba(167,139,250,0.2))",
+            width: 96, height: 96, borderRadius: "50%",
+            background: "linear-gradient(135deg,rgba(79,195,247,0.18),rgba(167,139,250,0.18))",
             border: "2px solid rgba(79,195,247,0.55)",
             boxShadow: playing
-              ? "0 0 48px rgba(79,195,247,0.55), 0 0 80px rgba(79,195,247,0.2)"
-              : "0 0 28px rgba(79,195,247,0.3)",
+              ? "0 0 56px rgba(79,195,247,0.6), 0 0 100px rgba(79,195,247,0.25)"
+              : "0 0 32px rgba(79,195,247,0.35)",
             color: "#fff",
-            fontSize: 32,
+            fontSize: 36,
           }}
           aria-label={playing ? "Pause" : "Play"}
         >
@@ -270,7 +298,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
             {formatTime(currentTime)}
           </span>
           <div className="flex-1 relative" style={{ height: 4 }}>
-            <div className="absolute inset-0 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }} />
+            <div className="absolute inset-0 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
             <div
               className="absolute top-0 left-0 h-full rounded-full"
               style={{
@@ -294,39 +322,110 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         {/* Summary */}
         {story.summary && (
           <p className="text-center mb-10" style={{
-            color: "rgba(255,255,255,0.35)", fontSize: "var(--fs-body)",
-            lineHeight: 1.6, maxWidth: 320,
+            color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-body)",
+            lineHeight: 1.7, maxWidth: 320,
           }}>
             {story.summary}
           </p>
         )}
 
-        {/* Divider */}
-        <div style={{ width: "100%", maxWidth: 320, height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 20 }} />
-
-        {/* CTA */}
-        <a
-          href="/"
-          className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all active:scale-95"
+        {/* ── Promo banner ── */}
+        <div
+          className="w-full overflow-hidden"
           style={{
-            background: "rgba(79,195,247,0.08)",
-            border: "1px solid rgba(79,195,247,0.25)",
-            color: "#4fc3f7",
-            fontSize: "var(--fs-body)",
-            fontWeight: 600,
-            textDecoration: "none",
+            maxWidth: 420,
+            borderRadius: 24,
+            background: "linear-gradient(135deg, #0d1a3a 0%, #0a0d1f 50%, #110828 100%)",
+            border: "1px solid rgba(79,195,247,0.18)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)",
+            position: "relative",
           }}
         >
-          <span>🌙</span>
-          <span>Create a story for your child</span>
-          <span>→</span>
-        </a>
+          {/* Decorative glow blobs */}
+          <div style={{
+            position: "absolute", top: -20, right: -20, width: 120, height: 120,
+            background: "radial-gradient(circle, rgba(167,139,250,0.2) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }} />
+          <div style={{
+            position: "absolute", bottom: -20, left: 20, width: 100, height: 100,
+            background: "radial-gradient(circle, rgba(79,195,247,0.15) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }} />
 
-        {forLabel && (
-          <p className="mt-4 text-center" style={{ color: "rgba(255,255,255,0.15)", fontSize: "var(--fs-label)" }}>
-            Made with love for {forLabel}
-          </p>
-        )}
+          <div className="relative px-6 pt-6 pb-5">
+            {/* Top row — moon + tagline */}
+            <div className="flex items-start gap-4 mb-5">
+              <div
+                className="flex-shrink-0 flex items-center justify-center rounded-2xl"
+                style={{
+                  width: 56, height: 56,
+                  background: "linear-gradient(135deg,rgba(79,195,247,0.15),rgba(167,139,250,0.15))",
+                  border: "1px solid rgba(79,195,247,0.25)",
+                  fontSize: 28,
+                }}
+              >
+                🌙
+              </div>
+              <div>
+                <p className="font-bold" style={{ color: "#fff", fontSize: "var(--fs-subtitle)", lineHeight: 1.2, marginBottom: 4 }}>
+                  NightStory
+                </p>
+                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "var(--fs-body)", lineHeight: 1.5 }}>
+                  Magical AI bedtime stories,<br />personalised for your child.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature pills */}
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["✨ AI-generated", "🎙 Voice narrated", "👧 Personalised", "🌍 Multi-language"].map((f) => (
+                <span
+                  key={f}
+                  style={{
+                    fontSize: "var(--fs-label)",
+                    color: "rgba(255,255,255,0.55)",
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 100,
+                    padding: "4px 10px",
+                  }}
+                >
+                  {f}
+                </span>
+              ))}
+            </div>
+
+            {/* CTA button */}
+            <a
+              href="/"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                width: "100%",
+                padding: "14px 20px",
+                borderRadius: 16,
+                background: "linear-gradient(135deg, #4fc3f7, #a78bfa)",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: "var(--fs-body)",
+                textDecoration: "none",
+                boxShadow: "0 4px 24px rgba(79,195,247,0.35)",
+                letterSpacing: 0.3,
+              }}
+            >
+              <span>🌙</span>
+              <span>Create a story for your child</span>
+              <span style={{ opacity: 0.8 }}>→</span>
+            </a>
+            <p className="text-center mt-3" style={{ color: "rgba(255,255,255,0.2)", fontSize: "var(--fs-label)" }}>
+              Free to try · No account needed
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
   );

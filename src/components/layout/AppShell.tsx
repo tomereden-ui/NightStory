@@ -22,7 +22,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isMobile = effective === "mobile";
-  const isPublicPath = PUBLIC_PATHS.includes(pathname);
+  const isPublicPath = PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/story/");
 
   useEffect(() => {
     if (!loading && !user && !isPublicPath) {
@@ -39,8 +39,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  // Auth/invite pages render full-screen with no chrome
-  if (["/login", "/set-password", "/auth/confirm", "/join"].includes(pathname)) {
+  // Auth/invite pages and public story share pages render full-screen with no chrome
+  if (["/login", "/set-password", "/auth/confirm", "/join"].includes(pathname) || pathname.startsWith("/story/")) {
     return <>{children}</>;
   }
 
