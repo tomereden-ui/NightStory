@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
       } catch {
         // If DB lookup fails, fall through to character-name heuristics
       }
-    } else if (/[0-9]/.test(assignedVoiceId)) {
-      // Raw EL voice ID passed directly (alphanumeric, no hyphens/prefix)
+    } else if (assignedVoiceId.length >= 15 && /^[a-zA-Z0-9]+$/.test(assignedVoiceId)) {
+      // Raw EL voice ID passed directly — must be 15+ chars alphanumeric (real EL IDs are ~20 chars)
       elVoiceId = assignedVoiceId;
     }
   }
