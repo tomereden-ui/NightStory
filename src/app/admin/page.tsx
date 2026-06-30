@@ -766,7 +766,38 @@ export default function AdminPage() {
   const isDone  = job?.status === "done";
   const isError = job?.status === "error";
 
-  const [adminTab, setAdminTab] = useState<"factory" | "costs">("factory");
+  const [adminTab, setAdminTab] = useState<"factory" | "costs" | "services">("factory");
+
+  // ── Admin Services: SFX cache update ─────────────────────────────────────
+  const [sfxRunning, setSfxRunning] = useState(false);
+  const [sfxProgress, setSfxProgress] = useState(0);
+  const [sfxLog, setSfxLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const handleUpdateSfxCache = async () => {
+    setSfxRunning(true);
+    setSfxProgress(10);
+    setSfxLog([{ type: "info", text: "Scanning story_elements for SFX entries…" }]);
+    try {
+      setSfxProgress(30);
+      const res = await fetch("/api/admin/seed-sfx-library", { method: "POST" });
+      setSfxProgress(90);
+      if (!res.ok) {
+        const { error } = await res.json() as { error?: string };
+        setSfxLog((l) => [...l, { type: "error", text: `Server error: ${error ?? res.statusText}` }]);
+      } else {
+        const data = await res.json() as { total: number; seeded: number; skipped: number; alreadyInLibrary: number };
+        setSfxLog((l) => [
+          ...l,
+          { type: "success", text: `✅ Done — ${data.seeded} new SFX added to cache (${data.skipped} skipped, ${data.alreadyInLibrary} already stored, ${data.total} unique descriptions total)` },
+        ]);
+      }
+    } catch (e) {
+      setSfxLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setSfxProgress(100);
+      setSfxRunning(false);
+    }
+  };
 
   return (
     <div className="cosmic-page min-h-full pb-40">
@@ -793,8 +824,9 @@ export default function AdminPage() {
         {/* Tab bar */}
         <div className="flex gap-2 mb-8 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
           {([
-            { id: "factory", label: "➕ Add Story" },
-            { id: "costs",   label: "📊 Cost Analysis" },
+            { id: "factory",  label: "➕ Add Story" },
+            { id: "costs",    label: "📊 Cost Analysis" },
+            { id: "services", label: "🛠️ Admin Services" },
           ] as const).map((tab) => (
             <button key={tab.id} onClick={() => setAdminTab(tab.id)}
               className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all"
@@ -974,6 +1006,74 @@ export default function AdminPage() {
             onLoadUsage={loadCostAnalysis}
             onLoadLibrary={loadLibraryAnalysis}
           />
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/*  TAB: Admin Services                                               */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {adminTab === "services" && (
+          <div className="flex flex-col gap-6">
+
+            {/* ── SFX Cache Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🔊 SFX Cache</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Scans all story_elements for SFX clips and seeds the sfx_library table for cross-story reuse.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleUpdateSfxCache}
+                disabled={sfxRunning}
+                className="w-full mt-4 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {sfxRunning ? "Updating…" : "Update SFXs"}
+              </button>
+
+              {/* Progress bar */}
+              {(sfxRunning || sfxProgress > 0) && (
+                <div className="mt-4">
+                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${sfxProgress}%`,
+                        background: sfxProgress === 100
+                          ? "linear-gradient(90deg,#10b981,#4fc3f7)"
+                          : "linear-gradient(90deg,#a78bfa,#4fc3f7)",
+                      }}
+                    />
+                  </div>
+                  <p className="text-fs-body mt-1 text-right" style={{ color: "rgba(255,255,255,0.25)" }}>
+                    {sfxProgress}%
+                  </p>
+                </div>
+              )}
+
+              {/* Log output */}
+              {sfxLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {sfxLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
         )}
 
       </div>
