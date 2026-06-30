@@ -25,21 +25,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Exchange OAuth/magic-link code if present in URL (e.g. after Google login)
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
-    const promise = code
-      ? supabaseAuth.auth.exchangeCodeForSession(code).then(({ data }) => data.session)
-      : supabaseAuth.auth.getSession().then(({ data }) => data.session);
 
-    promise.then((session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      // Clean code from URL without triggering a navigation
+    const init = async () => {
       if (code) {
+        // Clean code from URL immediately so a page refresh doesn't try to reuse it
         const url = new URL(window.location.href);
         url.searchParams.delete("code");
         window.history.replaceState({}, "", url.toString());
+
+        const { data, error } = await supabaseAuth.auth.exchangeCodeForSession(code);
+        if (error) {
+          // PKCE verifier may be missing on mobile (different browser context).
+          // Fall back to checking if the session was established another way.
+          console.warn("[Auth] exchangeCodeForSession failed:", error.message);
+          const { data: fallback } = await supabaseAuth.auth.getSession();
+          setSession(fallback.session);
+          setUser(fallback.session?.user ?? null);
+        } else {
+          setSession(data.session);
+          setUser(data.session?.user ?? null);
+        }
+      } else {
+        const { data } = await supabaseAuth.auth.getSession();
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
       }
-    });
+      setLoading(false);
+    };
+
+    init();
 
     const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange((_event, session) => {
       setSession(session);
