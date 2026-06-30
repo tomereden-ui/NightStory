@@ -227,6 +227,7 @@ async function runProduction(
     const { supabase, ensureBuckets } = await import("@/lib/supabase");
     const { getElementsForStory, uploadElementAudio, saveStoryElements,
             hashDialogue, hashSfx, downloadToFile } = await import("@/lib/elementStore");
+    const { findSimilarSfx, saveSfxLibraryEntry } = await import("@/lib/sfxLibrary");
     await ensureBuckets();
 
     // ── Guard: return cached audio if this story is already produced ────────
@@ -312,6 +313,7 @@ async function runProduction(
     const newElements: Parameters<typeof saveStoryElements>[0] = [];
     let cacheDialogueHits = 0;
     let cacheSfxHits = 0;
+    let sfxLibraryHits = 0;
     console.log(`[${ts()}][ElementStore] Loaded ${elementCache.size} cached elements for story ${storyId}`);
 
     // Process dialogue in small parallel batches — 3 concurrent keeps Gemini TTS
@@ -425,7 +427,34 @@ async function runProduction(
             }
           }
 
-          // ── Cache miss: generate and queue for upload ────────────────────
+          // ── Global SFX library lookup (semantic similarity) ──────────────
+          const isLooping = !!track.loop;
+          const libraryHit = await findSimilarSfx(desc, durationHint, { isLooping });
+          if (libraryHit) {
+            const ok = await downloadToFile(libraryHit.audioUrl, outPath);
+            if (ok) {
+              sfxLibraryHits++;
+              // Register in story element cache so re-produces skip the library lookup
+              newElements.push({
+                id: `el-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+                storyId,
+                elementType: "sfx",
+                contentHash: sfxHash,
+                audioUrl: libraryHit.audioUrl,
+                durationMs: libraryHit.durationMs,
+                textPayload: desc,
+                createdAt: Date.now(),
+              });
+              sfxDone++;
+              updateJob(jobId, {
+                step: `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`,
+                progress: 57 + Math.round((sfxDone / sfxTracks.length) * 15),
+              });
+              return;
+            }
+          }
+
+          // ── Cache miss: generate via ElevenLabs and queue for upload ─────
           const sfxResult = await generateSfx(desc, durationHint, elevenKey, outPath);
           if (!sfxResult.ok) {
             writeSilence(durationHint, outPath.replace(".mp3", ".wav"));
@@ -460,6 +489,10 @@ async function runProduction(
             textPayload: pu.text,
             createdAt: Date.now(),
           });
+          // Save SFX clips to global library for cross-story reuse
+          if (pu.type === "sfx") {
+            saveSfxLibraryEntry(pu.text, durationMs, audioUrl).catch(() => {});
+          }
         } catch (uploadErr) {
           console.warn(`[${ts()}][ElementStore] Upload failed for ${pu.hash.slice(0, 8)}:`, uploadErr);
         }
@@ -629,7 +662,7 @@ async function runProduction(
     if (newElements.length > 0) {
       try {
         await saveStoryElements(newElements);
-        console.log(`[${ts()}][ElementStore] Saved ${newElements.length} new elements (dialogue hits: ${cacheDialogueHits}, SFX hits: ${cacheSfxHits})`);
+        console.log(`[${ts()}][ElementStore] Saved ${newElements.length} new elements (dialogue hits: ${cacheDialogueHits}, SFX hits: ${cacheSfxHits}, library hits: ${sfxLibraryHits})`);
       } catch (elErr) {
         console.warn(`[${ts()}][ElementStore] saveStoryElements failed:`, elErr);
       }
