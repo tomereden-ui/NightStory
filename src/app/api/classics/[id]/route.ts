@@ -12,22 +12,38 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
-  const def = CLASSIC_STORIES.find((s) => s.id === id);
-  if (!def) return NextResponse.json({ error: "Unknown classic id" }, { status: 404 });
+  const isHardcoded = CLASSIC_STORIES.some((s) => s.id === id);
 
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .download(`${id}/script.json`);
+  if (isHardcoded) {
+    // Serve from Supabase Storage (generated script JSON)
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .download(`${id}/script.json`);
 
-  if (error || !data) {
-    return NextResponse.json({ error: "Not yet generated" }, { status: 404 });
+    if (error || !data) {
+      return NextResponse.json({ error: "Not yet generated" }, { status: 404 });
+    }
+
+    try {
+      const text = await data.text();
+      const parsed = JSON.parse(text) as { blocks: ScriptBlock[]; durationSeconds: number };
+      return NextResponse.json(parsed);
+    } catch {
+      return NextResponse.json({ error: "Corrupt script data" }, { status: 500 });
+    }
   }
 
-  try {
-    const text = await data.text();
-    const parsed = JSON.parse(text) as { blocks: ScriptBlock[]; durationSeconds: number };
-    return NextResponse.json(parsed);
-  } catch {
-    return NextResponse.json({ error: "Corrupt script data" }, { status: 500 });
+  // Admin-added classic: fetch blocks directly from the stories table
+  const { data: row, error: dbErr } = await supabase
+    .from("stories")
+    .select("blocks, duration_seconds")
+    .eq("id", id)
+    .eq("is_classic", true)
+    .maybeSingle();
+
+  if (dbErr || !row) {
+    return NextResponse.json({ error: "Classic not found" }, { status: 404 });
   }
+
+  return NextResponse.json({ blocks: row.blocks ?? [], durationSeconds: row.duration_seconds ?? 0 });
 }

@@ -84,7 +84,21 @@ export async function GET() {
     })
   );
 
-  return NextResponse.json(metas);
+  // Also include admin-added stories (is_classic=true) whose IDs aren't in CLASSIC_STORIES
+  const hardcodedIds = new Set(CLASSIC_STORIES.map((s) => s.id));
+  const adminClassics: ClassicMeta[] = (dbRows ?? [])
+    .filter((r) => !hardcodedIds.has(r.id))
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      emoji: r.emoji ?? "✨",
+      tagline: r.summary ?? "",
+      coverUrl: r.cover_url ?? undefined,
+      durationSeconds: r.duration_seconds ?? undefined,
+      status: "ready" as const,
+    }));
+
+  return NextResponse.json([...metas, ...adminClassics]);
 }
 
 // POST { id } — generate (or regenerate) a single classic story
