@@ -1895,11 +1895,12 @@ export default function Studio2Page() {
             onGenerating={() => {
               setScriptBlocks([]);
             }}
-            onScriptReady={(draft) => {
+            onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
               setGenerating(false);
               setScriptBlocks([]);
               setSummary(draft.summary);
+              if (chatDuration) setDurationMinutes(chatDuration);
               setCoverPrompt(draft.coverPrompt);
               setCoverUrl("");
               setStoryTitle(draft.storyTitle ?? "");
