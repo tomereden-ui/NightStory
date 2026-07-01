@@ -407,6 +407,21 @@ async function synthesizeGemini(
   throw new Error(lastError || "Gemini TTS failed");
 }
 
+// ── Hebrew EL preset voice map ────────────────────────────────────────────────────────────────
+// WaveNet can't handle Hebrew pronunciation — EL eleven_v3 does.
+// Maps Gemini/Chirp voice names → EL preset voice IDs by character archetype.
+const HE_EL_VOICE_MAP: Record<string, string> = {
+  Aoede:         "21m00Tcm4TlvDq8ikWAM", // Rachel   — warm melodic female
+  Kore:          "EXAVITQu4vr4xnSDxMaL", // Bella    — soft gentle female
+  Leda:          "MF3mGyEYCl7XYWbV9V6O", // Elli     — clear youthful female
+  Autonoe:       "AZnzlk1XvdvUeBnXmlld", // Domi     — bright lively female
+  Charon:        "pNInz6obpgDQGcFmaJgB", // Adam     — deep authoritative male
+  Fenrir:        "VR6AewLTigWG4xSOukaG", // Arnold   — strong gruff male
+  Puck:          "ErXwobaYiN019PkySvjV", // Antoni   — playful upbeat
+  Orus:          "TxGEqnHWrfWFTfGW9XjX", // Josh     — steady rich male
+  Zephyr:        "yoZ06aMxZJJ28mfd3POQ", // Sam      — bright airy
+};
+
 // ── Public API ────────────────────────────────────────────────────────────────────────────────
 
 export async function synthesizeLine(
@@ -431,6 +446,19 @@ export async function synthesizeLine(
     console.log(`[${ts()}][EL TTS] text →`, JSON.stringify(spokenText || line));
     await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language, similarityBoost, useSpeakerBoost, speed);
     return {};
+  }
+
+  // Hebrew: ElevenLabs handles Hebrew pronunciation correctly; WaveNet/Chirp do not
+  if (language === "he") {
+    const elKey = process.env.ELEVENLABS_API_KEY;
+    if (elKey) {
+      const heVoiceId = HE_EL_VOICE_MAP[voiceId] ?? HE_EL_VOICE_MAP["Charon"]!;
+      console.log(`[${ts()}][HE-EL] ${voiceId} → ${heVoiceId}`);
+      await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.5, style ?? 0.4, language, similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
+      return {};
+    }
+    // No EL key — fall through to GC TTS with WaveNet (degraded quality)
+    console.warn(`[${ts()}][HE] ELEVENLABS_API_KEY not set — using WaveNet fallback for Hebrew`);
   }
 
   // Chirp 3 HD — active when GOOGLE_CLOUD_TTS_API_KEY is set in env
