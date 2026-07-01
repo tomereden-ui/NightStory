@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
             "",
             "Write ONE image generation prompt (3-4 sentences). Follow these rules strictly:",
             "",
-            "1. FANTASTICAL CHARACTERS — describe characters as clearly magical/cartoon beings (e.g. 'a glowing fairy with butterfly wings', 'a tiny round creature with huge expressive eyes', 'a fluffy dragon cub'). Never describe realistic human anatomy.",
+            "1. PRESERVE & RESTYLE CHARACTERS — Keep ALL specific character names and distinctive visual details from the story hint. Restyle them as Pixar-style cartoon characters: glowing outlines, round expressive eyes, vibrant magical colors. Do NOT replace named characters with generic 'fantastical beings' — keep their identities.",
             "2. MAGICAL SCENE — the single most enchanting moment from the story. Focus on light, atmosphere, and setting.",
             "3. NIGHT-THEMED — dreamlike night setting: moon, fireflies, lanterns, bioluminescent glow, or starfields.",
             "4. CHILD-SAFE — all content must be clearly appropriate for ages 3-8. No dark, scary, or ambiguous elements. Pure joy and wonder only.",
