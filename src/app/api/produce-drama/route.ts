@@ -259,6 +259,7 @@ async function runProduction(
   isPublic?: boolean,
   isClassic?: boolean,
   characterProfiles?: Record<string, CharacterProfile>,
+  skipLibrarySave?: boolean,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -279,7 +280,7 @@ async function runProduction(
     const { findSimilarSfx, saveSfxLibraryEntry, fitAudioDuration } = await import("@/lib/sfxLibrary");
     await ensureBuckets();
 
-    // ── Guard: return cached audio if this story is already produced ────────
+    // ── Guard: return cached audio if this story is already produced ─────────────────────
     // storyId === jobId only for brand-new stories (no editingStoryId); for
     // edits the IDs differ — so this check only fires for existing library stories.
     if (!force && storyId !== jobId) {
@@ -302,7 +303,10 @@ async function runProduction(
       }
     }
 
-    // ── Step 1: Drama planning + voice profiling (parallel) ───────────────
+    // Store storyId in job so callers can retrieve it (e.g. admin save-story)
+    updateJob(jobId, { storyId });
+
+    // ── Step 1: Drama planning + voice profiling (parallel) ─────────────────────
     updateJob(jobId, {
       status: "planning",
       step: "🗺️ Planning audio timeline…",
@@ -336,7 +340,7 @@ async function runProduction(
           }).catch(() => generateCoverImage(drama.title, blocks, geminiKey, coverPrompt))
         : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
 
-    // ── Step 2: TTS for each dialogue line (batched parallel) ────────────────
+    // ── Step 2: TTS for each dialogue line (batched parallel) ────────────────────
     updateJob(jobId, {
       status: "recording",
       step: `🎙️ Recording dialogue (0/${dialogueTracks.length})…`,
@@ -354,7 +358,7 @@ async function runProduction(
     const skippedLines: string[] = [];
     let dialogueDone = 0;
 
-    // ── Element audio cache ─────────────────────────────────────────────────
+    // ── Element audio cache ──────────────────────────────────────────────────────
     // Load cached per-element audio for this story. On the first produce this
     // will be empty; on re-produces only changed lines are regenerated.
     const elementCache = await getElementsForStory(storyId);
@@ -393,7 +397,7 @@ async function runProduction(
           if (!line) {
             writeSilence(500, path.join(jobTmp, `${track.id}.wav`));
           } else {
-            // ── Cache lookup ───────────────────────────────────────────────
+            // ── Cache lookup ─────────────────────────────────────────────────────
             const voiceKey = `${useELForChar ? "el" : "gm"}:${voice}`;
             const contentHash = hashDialogue(charName, line, voiceKey);
             const cached = elementCache.get(contentHash);
@@ -414,7 +418,7 @@ async function runProduction(
               }
             }
 
-            // ── Cache miss: synthesise and queue for upload ────────────────
+            // ── Cache miss: synthesise and queue for upload ────────────────────────
             const persona = profile?.persona;
             try {
               await synthesizeLine(line, voice, ttsKey, outPath, persona, useELForChar, profile?.stability, profile?.style, scriptLanguage);
@@ -477,7 +481,7 @@ async function runProduction(
             }
           }
 
-          // ── Global SFX library lookup (semantic similarity) ──────────────
+          // ── Global SFX library lookup (semantic similarity) ──────────────────
           const libraryHit = await findSimilarSfx(desc);
           if (libraryHit) {
             const rawPath = outPath.replace(/\.mp3$/, "-raw.mp3");
@@ -517,7 +521,7 @@ async function runProduction(
             }
           }
 
-          // ── Cache miss: generate via ElevenLabs and queue for upload ─────
+          // ── Cache miss: generate via ElevenLabs and queue for upload ─────────
           const sfxResult = await generateSfx(desc, durationHint, elevenKey, outPath);
           if (!sfxResult.ok) {
             writeSilence(durationHint, outPath.replace(".mp3", ".wav"));
@@ -563,7 +567,7 @@ async function runProduction(
       console.log(`[${ts()}][ElementStore] Uploaded ${newElements.length}/${pendingUploads.length} new elements`);
     }
 
-    // ── Step 4: Audio mixing ──────────────────────────────────────────────
+    // ── Step 4: Audio mixing ────────────────────────────────────────────
     updateJob(jobId, {
       status: "mixing",
       step: "🎚️ Mixing audio tracks…",
@@ -712,15 +716,21 @@ async function runProduction(
       isClassic: isClassic ?? false,
       characterProfiles: characterProfiles && Object.keys(characterProfiles).length ? characterProfiles : undefined,
     };
-    try {
-      await addEntry(entry);
-    } catch (err) {
-      console.warn(`[${ts()}][produce-drama] addEntry failed, retrying once:`, err);
+
+    if (skipLibrarySave) {
+      // Admin "preview before save" flow: store entry in job so /api/admin/save-story can persist it later
+      updateJob(jobId, { pendingEntry: entry, durationSeconds: drama.duration_estimate_seconds });
+    } else {
       try {
         await addEntry(entry);
-      } catch (retryErr) {
-        libraryError = retryErr instanceof Error ? retryErr.message : "Failed to save to library";
-        console.error(`[${ts()}][produce-drama] addEntry retry failed:`, libraryError);
+      } catch (err) {
+        console.warn(`[${ts()}][produce-drama] addEntry failed, retrying once:`, err);
+        try {
+          await addEntry(entry);
+        } catch (retryErr) {
+          libraryError = retryErr instanceof Error ? retryErr.message : "Failed to save to library";
+          console.error(`[${ts()}][produce-drama] addEntry retry failed:`, libraryError);
+        }
       }
     }
 
@@ -779,6 +789,7 @@ export async function POST(req: NextRequest) {
       childIds?: string[];
       isPublic?: boolean;
       isClassic?: boolean;
+      skipLibrarySave?: boolean;
     };
     try {
       body = await req.json();
@@ -811,7 +822,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

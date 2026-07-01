@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
+import { COVER_FALLBACK_PROMPT, buildCoverRewriterPrompt } from "@/config/coverImageInstructions";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const IMAGE_MODEL = "gemini-2.5-flash-image";
@@ -10,12 +11,6 @@ const SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
 ];
-
-const STYLE_SUFFIX =
-  "3D animated movie still, Pixar style, high-fidelity render, cute character design, soft global illumination, vibrant colors, cinematic depth, magical starry background, no text or letters.";
-
-const FALLBACK_PROMPT =
-  `Whimsical fantasy creatures in an enchanted night forest, surrounded by floating glowing stars and warm lantern light, with a cozy magical atmosphere. ${STYLE_SUFFIX}`;
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -35,24 +30,7 @@ export async function POST(req: NextRequest) {
     const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
       contents: [{
         role: "user",
-        parts: [{
-          text: [
-            "You are a professional children's book cover illustrator. Write a safe, fantastical image prompt for this story's cover.",
-            "",
-            `STORY HINT: ${prompt}`,
-            summary ? `STORY SUMMARY:\n${summary}` : "",
-            "",
-            "Write ONE image generation prompt (3-4 sentences). Follow these rules strictly:",
-            "",
-            "1. PRESERVE & RESTYLE CHARACTERS — Keep ALL specific character names and distinctive visual details from the story hint. Restyle them as Pixar-style cartoon characters: glowing outlines, round expressive eyes, vibrant magical colors. Do NOT replace named characters with generic 'fantastical beings' — keep their identities.",
-            "2. MAGICAL SCENE — the single most enchanting moment from the story. Focus on light, atmosphere, and setting.",
-            "3. NIGHT-THEMED — dreamlike night setting: moon, fireflies, lanterns, bioluminescent glow, or starfields.",
-            "4. CHILD-SAFE — all content must be clearly appropriate for ages 3-8. No dark, scary, or ambiguous elements. Pure joy and wonder only.",
-            `5. END WITH THIS EXACT SUFFIX — "${STYLE_SUFFIX}"`,
-            "",
-            "Output ONLY the prompt. No explanation, no preamble.",
-          ].filter(Boolean).join("\n"),
-        }],
+        parts: [{ text: buildCoverRewriterPrompt(prompt, summary) }],
       }],
       generationConfig: { temperature: 0.7, maxOutputTokens: 220, thinkingConfig: { thinkingBudget: 0 } },
     });
@@ -88,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     if (raw?.candidates?.[0]?.finishReason === "PROHIBITED_CONTENT") {
       console.warn("[CoverGen] PROHIBITED_CONTENT — retrying with generic fallback prompt");
-      ({ res, raw } = await callImageModel(FALLBACK_PROMPT));
+      ({ res, raw } = await callImageModel(COVER_FALLBACK_PROMPT));
     }
 
     if (!res.ok) {

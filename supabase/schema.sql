@@ -4,23 +4,31 @@ create table if not exists public.stories (
   id text primary key,
   title text not null,
   summary text not null default '',
-  audio_url text not null,
+  audio_url text,
   cover_url text,
   duration_seconds float not null default 0,
   created_at bigint not null,
-  blocks jsonb not null default '[]'::jsonb
+  blocks jsonb not null default '[]'::jsonb,
+  language text,
+  emoji text,
+  is_public boolean not null default false,
+  is_classic boolean not null default false,
+  child_ids jsonb,
+  scenes jsonb,
+  character_profiles jsonb
 );
 
 create table if not exists public.trash (
   id text primary key,
   title text not null,
   summary text not null default '',
-  audio_url text not null,
+  audio_url text,
   cover_url text,
   duration_seconds float not null default 0,
   created_at bigint not null,
   deleted_at bigint not null,
-  blocks jsonb not null default '[]'::jsonb
+  blocks jsonb not null default '[]'::jsonb,
+  scenes jsonb
 );
 
 create table if not exists public.voices (
