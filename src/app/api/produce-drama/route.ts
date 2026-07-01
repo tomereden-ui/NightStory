@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock, StoryScene } from "@/types";
+import type { CharacterProfile } from "@/lib/libraryStore";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 min — POST returns immediately; production runs in background
@@ -257,6 +258,7 @@ async function runProduction(
   childIds?: string[],
   isPublic?: boolean,
   isClassic?: boolean,
+  characterProfiles?: Record<string, CharacterProfile>,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -708,6 +710,7 @@ async function runProduction(
       childIds: childIds?.length ? childIds : undefined,
       isPublic: isPublic ?? false,
       isClassic: isClassic ?? false,
+      characterProfiles: characterProfiles && Object.keys(characterProfiles).length ? characterProfiles : undefined,
     };
     try {
       await addEntry(entry);
@@ -772,6 +775,7 @@ export async function POST(req: NextRequest) {
       narratorVoiceId?: string;
       characterDescriptions?: Record<string, string>;
       characterTypes?: Record<string, string>;
+      characterProfiles?: Record<string, CharacterProfile>;
       childIds?: string[];
       isPublic?: boolean;
       isClassic?: boolean;
@@ -807,7 +811,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

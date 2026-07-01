@@ -1,4 +1,5 @@
 import type { ScriptBlock, StoryScene } from "@/types";
+import type { CharacterProfile } from "./libraryStore";
 
 const KEY = "nightstory_draft_v1";
 
@@ -17,6 +18,7 @@ export interface DraftState {
   lessons?: string[];
   lessonImplementations?: { lesson: string; implemented: boolean; how: string }[];
   scenes?: StoryScene[];
+  characterProfiles?: Record<string, CharacterProfile>;
 }
 
 export function readDraft(key = KEY): DraftState | null {
