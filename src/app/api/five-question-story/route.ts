@@ -66,26 +66,43 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, langu
     ? `\n\nTITLE UNIQUENESS\n----------------\nThe following titles already exist in this family's library. You MUST pick a title that does NOT appear in this list (not even as a close variant or reordering of the same words):\n${existingTitles.map((t) => `  - "${t}"`).join("\n")}\nIf your first choice matches any of these, invent a different title.`
     : "";
 
-  return `${guidance}${langPart}${titleUniquePart}
+  return `${guidance}${langPart}${titleUniquePart}\n\nRUNTIME TARGETS FOR THIS STORY\n-------------------------------\nTarget duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}\nTarget word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)\nTarget blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)\n\nSCENE STRUCTURE (required — output in "scenes" array)\n------------------------------------------------------\nDivide the story into 3–5 logical scenes based on natural story beats. For each scene output:\n  - sceneNumber: integer starting at 1\n  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")\n  - summary: exactly 1 sentence describing what happens in this scene\n  - primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy\n  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])\n  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }\n\nScene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).\nlineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
+}
 
-RUNTIME TARGETS FOR THIS STORY
--------------------------------
-Target duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}
-Target word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)
-Target blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)
+function normTitle(t: string): string {
+  return t.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
-SCENE STRUCTURE (required — output in "scenes" array)
-------------------------------------------------------
-Divide the story into 3–5 logical scenes based on natural story beats. For each scene output:
-  - sceneNumber: integer starting at 1
-  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")
-  - summary: exactly 1 sentence describing what happens in this scene
-  - primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy
-  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])
-  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }
-
-Scene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).
-lineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
+async function fixConflictingTitle(
+  genAI: GoogleGenerativeAI,
+  title: string,
+  summary: string,
+  existingTitles: string[]
+): Promise<string> {
+  const existNorm = new Set(existingTitles.map(normTitle));
+  if (!existNorm.has(normTitle(title))) return title;
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 30,
+        // @ts-expect-error thinkingConfig valid but not in typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
+    const existList = existingTitles.slice(0, 20).map((t) => `"${t}"`).join(", ");
+    const prompt = `The children's story title "${title}" is already in this family's library. Based on this story summary: "${summary.slice(0, 200)}", suggest ONE alternative title. It must NOT be any of: ${existList}. Output ONLY the title, nothing else.`;
+    const result = await model.generateContent(prompt);
+    const alt = result.response.text().trim().replace(/^["'`]|["'`]$/g, "").trim();
+    if (alt && alt.length > 2 && alt.length < 80 && !existNorm.has(normTitle(alt))) return alt;
+  } catch { /* ignore */ }
+  const SUFFIXES = ["A New Adventure", "A Magical Tale", "The Next Chapter", "A New Journey"];
+  for (const sfx of SUFFIXES) {
+    const candidate = `${title}: ${sfx}`;
+    if (!existNorm.has(normTitle(candidate))) return candidate;
+  }
+  return `${title} (New)`;
 }
 
 function buildUserPrompt(seeds: StorySeeds): string {
