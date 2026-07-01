@@ -7,6 +7,7 @@ import { BLUEBELL, MOOD_LABELS } from "@/constants/bluebellScripts";
 import { WORLD_OPTIONS } from "@/constants/worldOptions";
 import {
   SURPRISE_HERO_NAMES,
+  SURPRISE_HEROES,
   MAGICAL_NAME_CHIPS,
   SURPRISE_COMPANIONS,
   SURPRISE_ENGINES,
@@ -323,8 +324,24 @@ function PrimaryButton({ label, onClick, disabled }: { label: string; onClick: (
   );
 }
 
-function QuestionShell({ onBack, onSkip, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl }: {
-  onBack?: () => void; onSkip?: () => void; children: React.ReactNode;
+function FieldHint({ text }: { text: string }) {
+  return (
+    <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.28)", fontStyle: "italic" }}>{text}</p>
+  );
+}
+
+function SkipLink({ onSkip }: { onSkip: () => void }) {
+  return (
+    <button onClick={onSkip}
+      className="text-center text-fs-body w-full py-1"
+      style={{ color: "rgba(255,255,255,0.22)", letterSpacing: "0.01em" }}>
+      Skip this step →
+    </button>
+  );
+}
+
+function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl }: {
+  onBack?: () => void; children: React.ReactNode;
   bluebellText: string; bluebellSpeed?: number; onBluebellComplete?: () => void;
   audioUrl?: string;
 }) {
@@ -349,16 +366,9 @@ function QuestionShell({ onBack, onSkip, children, bluebellText, bluebellSpeed, 
         <div className="flex-1 flex justify-center">
           <FairyFigure size={52} />
         </div>
-        {onSkip ? (
-          <button onClick={onSkip}
-            className="text-fs-body font-medium transition-all active:scale-95 px-1 py-1"
-            style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.02em" }}>
-            Skip →
-          </button>
-        ) : <div className="w-8" />}
+        <div className="w-8" />
       </div>
       <div className="mb-7">
-        <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
         <BluebellLine text={bluebellText} speed={bluebellSpeed} onComplete={onBluebellComplete} />
       </div>
       {children}
@@ -375,31 +385,53 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
 
 // ─── Q1 — Hero identity ───────────────────────────────────────────────────────
 
-type Q1Mode = null | "own" | "magical" | "stranger" | "surprise";
+type Q1Card = "own" | "magical" | "stranger" | "surprise";
 
 function Q1View({ initialHero, onNext, onBack, onSkip, optionImages, audioUrl, childName, childAvatarUrl }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string }) {
-  const [mode, setMode] = useState<Q1Mode>(null);
-  const [textVal, setTextVal] = useState(initialHero);
-  const [magicChip, setMagicChip] = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
-  const [surpriseName, setSurpriseName] = useState("");
+  const [selectedCard, setSelectedCard] = useState<Q1Card | null>(null);
+  const [textVal, setTextVal]           = useState(initialHero);
+  const [magicChip, setMagicChip]       = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
+  const [surpriseHero, setSurpriseHero] = useState<{ figure: string; name: string } | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
   const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
     if (!initialHero) return;
-    if (MAGICAL_NAME_CHIPS.includes(initialHero)) { setMode("magical"); setMagicChip(initialHero); }
-    else { setMode("own"); setTextVal(initialHero); }
+    if (MAGICAL_NAME_CHIPS.includes(initialHero)) { setSelectedCard("magical"); setMagicChip(initialHero); }
+    else { setSelectedCard("own"); setTextVal(initialHero); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const confirm = (name: string) => {
-    if (!name.trim()) { setValidationError(BLUEBELL.emptyError); return; }
-    setTransitionMsg(BLUEBELL.q1Confirm(name));
+  const doConfirm = (displayName: string, heroStr: string) => {
+    if (!displayName.trim()) { setValidationError(BLUEBELL.emptyError); return; }
+    setTransitionMsg(BLUEBELL.q1Confirm(displayName));
     setTransitioning(true);
-    setTimeout(() => { setTransitioning(false); onNext(name.trim()); }, 1500);
+    setTimeout(() => { setTransitioning(false); onNext(heroStr.trim()); }, 1500);
   };
 
-  const handleSurprise = () => { const p = pickRandom(SURPRISE_HERO_NAMES); setSurpriseName(p); setMode("surprise"); };
+  const handleSurprise = () => {
+    const hero = pickRandom(SURPRISE_HEROES);
+    setSurpriseHero(hero);
+    setSelectedCard("surprise");
+  };
+
+  const canConfirm = (() => {
+    if (selectedCard === "own")     return childName ? true : !!textVal.trim();
+    if (selectedCard === "magical") return !!magicChip;
+    if (selectedCard === "stranger") return !!textVal.trim();
+    if (selectedCard === "surprise") return !!surpriseHero;
+    return false;
+  })();
+
+  const handleConfirm = () => {
+    if (!selectedCard) return;
+    if (selectedCard === "own")     return doConfirm(childName || textVal, childName || textVal);
+    if (selectedCard === "magical") return magicChip && doConfirm(magicChip, magicChip);
+    if (selectedCard === "stranger") return doConfirm(textVal, textVal);
+    if (selectedCard === "surprise" && surpriseHero) {
+      return doConfirm(surpriseHero.name, `${surpriseHero.figure} named ${surpriseHero.name}`);
+    }
+  };
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
@@ -408,70 +440,78 @@ function Q1View({ initialHero, onNext, onBack, onSkip, optionImages, audioUrl, c
     </div>
   );
 
-  // When in a sub-mode, Back returns to mode selection; otherwise exits the step.
-  const shellBack = mode ? () => setMode(null) : onBack;
-  const shellSkip = mode ? undefined : onSkip;
-
   return (
-    <QuestionShell onBack={shellBack} onSkip={shellSkip} bluebellText={BLUEBELL.q1} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q1} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
-        {mode === null && (
-          <div className="grid grid-cols-2 gap-2">
-            <IllustratedCard
-              label={childName ? childName : "Your own name"}
-              emoji="👤"
-              imageUrl={childAvatarUrl || optionImages["hero-own"]}
-              onClick={() => {
-                if (childName) { setTextVal(childName); confirm(childName); }
-                else setMode("own");
-              }}
-            />
-            <IllustratedCard label="A magical name"  emoji="✨" imageUrl={optionImages["hero-magical"]}  onClick={() => setMode("magical")} />
-            <IllustratedCard label="A brave stranger" emoji="🗺️" imageUrl={optionImages["hero-stranger"]} onClick={() => setMode("stranger")} />
-            <IllustratedCard label="Surprise me!"    emoji="🎲" imageUrl={optionImages["hero-surprise"]} onClick={handleSurprise} />
+
+        {/* All 4 option cards — always visible */}
+        <div className="grid grid-cols-2 gap-2">
+          <IllustratedCard
+            label={childName || "Your own name"}
+            emoji="👤"
+            imageUrl={childAvatarUrl || optionImages["hero-own"]}
+            selected={selectedCard === "own"}
+            onClick={() => {
+              if (childName) { setSelectedCard("own"); }
+              else { setSelectedCard("own"); }
+            }}
+          />
+          <IllustratedCard label="A magical name"   emoji="✨"  imageUrl={optionImages["hero-magical"]}  selected={selectedCard === "magical"}  onClick={() => setSelectedCard("magical")} />
+          <IllustratedCard label="A brave stranger" emoji="🗺️" imageUrl={optionImages["hero-stranger"]} selected={selectedCard === "stranger"} onClick={() => setSelectedCard("stranger")} />
+          <IllustratedCard label="Surprise me!"     emoji="🎲"  imageUrl={optionImages["hero-surprise"]} selected={selectedCard === "surprise"} onClick={handleSurprise} />
+        </div>
+
+        {/* Inline content below cards based on selection */}
+        {selectedCard === "own" && !childName && (
+          <>
+            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextOwn} autoFocus onSubmit={handleConfirm} />
+            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
+            <FieldHint text="(like Finn, Zara, Milo — or your real name!)" />
+          </>
+        )}
+
+        {selectedCard === "magical" && (
+          <div className="flex flex-wrap gap-2">
+            {MAGICAL_NAME_CHIPS.map((n) => (
+              <button key={n} onClick={() => setMagicChip(n)}
+                className="px-4 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                style={magicChip === n
+                  ? { background: "rgba(79,195,247,0.18)", border: "1.5px solid #4fc3f7", color: "#4fc3f7" }
+                  : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }}>
+                {n}
+              </button>
+            ))}
           </div>
         )}
-        {mode === "own" && (
+
+        {selectedCard === "stranger" && (
           <>
-            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextOwn} autoFocus onSubmit={() => confirm(textVal)} />
+            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextStranger} autoFocus onSubmit={handleConfirm} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <PrimaryButton label="This is my hero!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
+            <FieldHint text="(like Ember the fox, Sir Bravely, or Captain Nimbus)" />
           </>
         )}
-        {mode === "magical" && (
-          <>
-            <div className="flex flex-wrap gap-2">
-              {MAGICAL_NAME_CHIPS.map((n) => (
-                <button key={n} onClick={() => setMagicChip(n)}
-                  className="px-4 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-95"
-                  style={magicChip === n
-                    ? { background: "rgba(79,195,247,0.18)", border: "1.5px solid #4fc3f7", color: "#4fc3f7" }
-                    : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }}>
-                  {n}
-                </button>
-              ))}
-            </div>
-            <PrimaryButton label="This is my hero!" onClick={() => magicChip && confirm(magicChip)} disabled={!magicChip} />
-          </>
+
+        {selectedCard === "surprise" && surpriseHero && (
+          <div className="rounded-2xl px-5 py-4 text-center"
+            style={{ background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.25)" }}>
+            <p className="text-white/40 text-fs-body mb-0.5">Your hero is…</p>
+            <p className="text-white text-fs-title font-bold" style={{ color: "#4fc3f7" }}>{surpriseHero.name}</p>
+            <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.38)", fontStyle: "italic" }}>{surpriseHero.figure}</p>
+            <button onClick={handleSurprise} className="text-white/25 text-fs-body mt-3 block w-full">Try another 🎲</button>
+          </div>
         )}
-        {mode === "stranger" && (
-          <>
-            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextStranger} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <PrimaryButton label="This is my hero!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
-          </>
+
+        {/* Confirm + skip at bottom */}
+        {selectedCard && (
+          <PrimaryButton
+            label={selectedCard === "own" && childName ? `Yes, I'm ${childName}!` : "This is my hero!"}
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+          />
         )}
-        {mode === "surprise" && (
-          <>
-            <div className="rounded-2xl px-5 py-4 text-center mb-2"
-              style={{ background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.25)" }}>
-              <p className="text-white/40 text-fs-body mb-1">Your hero is...</p>
-              <p className="text-white text-fs-title font-bold" style={{ color: "#4fc3f7" }}>{surpriseName}</p>
-            </div>
-            <PrimaryButton label={`Yes — ${surpriseName}!`} onClick={() => confirm(surpriseName)} />
-            <button onClick={handleSurprise} className="text-white/35 text-fs-body text-center w-full py-2">Try another</button>
-          </>
-        )}
+        {onSkip && <SkipLink onSkip={onSkip} />}
+
       </div>
     </QuestionShell>
   );
@@ -497,25 +537,26 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, optionImages, 
   );
 
   return (
-    <QuestionShell onBack={onBack} onSkip={onSkip} bluebellText={BLUEBELL.q2(heroName)} audioUrl={audioUrl}>
-      <div className="grid grid-cols-2 gap-2 mb-5">
-        {WORLD_OPTIONS.map((w) => {
-          const isSel = selected === w.label;
-          return (
-            <IllustratedCard
-              key={w.id}
-              label={w.label}
-              emoji={w.emoji}
-              imageUrl={optionImages[`world-${w.id}`]}
-              selected={isSel}
-              onClick={() => setSelected(w.label)}
-            />
-          );
-        })}
-      </div>
-      <OptionPill label="Surprise me!" emoji="🎲" onClick={() => setSelected(pickRandom(WORLD_OPTIONS).label)} />
-      <div className="mt-4">
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q2(heroName)} audioUrl={audioUrl}>
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-2">
+          {WORLD_OPTIONS.map((w) => {
+            const isSel = selected === w.label;
+            return (
+              <IllustratedCard
+                key={w.id}
+                label={w.label}
+                emoji={w.emoji}
+                imageUrl={optionImages[`world-${w.id}`]}
+                selected={isSel}
+                onClick={() => setSelected(w.label)}
+              />
+            );
+          })}
+        </div>
+        <OptionPill label="Surprise me!" emoji="🎲" onClick={() => setSelected(pickRandom(WORLD_OPTIONS).label)} />
         <PrimaryButton label="This is the world!" onClick={() => selected && confirm(selected)} disabled={!selected} />
+        {onSkip && <SkipLink onSkip={onSkip} />}
       </div>
     </QuestionShell>
   );
@@ -557,8 +598,15 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
     </div>
   );
 
+  const Q3_EXAMPLES: Record<Q3CompanionType, string> = {
+    friend:   "(like Mia, Jake, Sam — or just leave it blank!)",
+    pet:      "(like Biscuit the dog, Pepper the cat, or Toasty the bunny)",
+    creature: "(like Nimbus, Glimmer — or a shimmering cloud moth named Wisp)",
+    family:   "(like little sister Rosa, grandpa Joe, or just \"my brother\")",
+  };
+
   return (
-    <QuestionShell onBack={onBack} onSkip={onSkip} bluebellText={BLUEBELL.q3(worldName, heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q3(worldName, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
           {COMPANION_TYPES.map((ct) => (
@@ -574,7 +622,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
         </div>
 
         {selectedType && (
-          <div className="flex flex-col gap-2 mt-1">
+          <>
             <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
               Give them a name — or leave it blank and Bluebell will choose!
             </p>
@@ -590,16 +638,21 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
               onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
               onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
             />
+            <FieldHint text={Q3_EXAMPLES[selectedType]} />
             <PrimaryButton label="This is the companion!" onClick={() => confirm(selectedType, nameVal)} />
-          </div>
+          </>
         )}
 
         {!selectedType && (
-          <>
-            <OptionPill label="Surprise me!" emoji="🎲" onClick={() => { onNext(pickRandom(SURPRISE_COMPANIONS)); }} />
-            <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
-          </>
+          <OptionPill label="Surprise me!" emoji="🎲" onClick={() => {
+            const randomType = pickRandom(COMPANION_TYPES);
+            setSelectedType(randomType.id);
+            setNameVal(pickRandom(SURPRISE_COMPANIONS).replace(/^a /, "").split(" ")[0]);
+          }} />
         )}
+
+        <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
+        {onSkip && <SkipLink onSkip={onSkip} />}
       </div>
     </QuestionShell>
   );
@@ -607,30 +660,32 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
 
 // ─── Q4 — Dramatic engine ─────────────────────────────────────────────────────
 
-type Q4Mode = null | "funny" | "spooky" | "weird" | "delicious";
+type Q4Category = "funny" | "spooky" | "weird" | "delicious";
 type Q4Phase = "input" | "reaction1" | "reaction2";
 
+const Q4_CATEGORIES: { id: Q4Category; label: string; emoji: string; placeholder: string; hint: string }[] = [
+  { id: "funny",    label: "Funny",      emoji: "😂", placeholder: "like... giant sneezing broccoli",       hint: "(e.g. a hiccuping rainbow machine, a cloud that laughs at everything)" },
+  { id: "spooky",  label: "Spooky-fun", emoji: "👻", placeholder: "like... shadows that giggle",            hint: "(e.g. a door that whispers your name backwards, footsteps with no feet)" },
+  { id: "weird",   label: "Very weird",  emoji: "🌀", placeholder: "like... invisible cheese",              hint: "(e.g. mountains that hum lullabies, clocks that run upside down)" },
+  { id: "delicious",label: "Delicious",  emoji: "🍫", placeholder: "like... a river of hot chocolate",      hint: "(e.g. flowers that taste like candy floss, rain made of lemonade)" },
+];
+
 function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
-  const [mode, setMode] = useState<Q4Mode>(null);
-  const [textVal, setTextVal] = useState(initialEngine);
-  const [phase, setPhase] = useState<Q4Phase>("input");
+  const [selectedCat, setSelectedCat] = useState<Q4Category | null>(null);
+  const [textVal, setTextVal]         = useState(initialEngine);
+  const [phase, setPhase]             = useState<Q4Phase>("input");
   const [confirmedEngine, setConfirmedEngine] = useState("");
   const [validationError, setValidationError] = useState("");
 
-  useEffect(() => { if (initialEngine) { setMode("funny"); setTextVal(initialEngine); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (initialEngine) { setSelectedCat("funny"); setTextVal(initialEngine); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const confirm = (engine: string) => {
     if (!engine.trim()) { setValidationError(BLUEBELL.emptyError); return; }
     setConfirmedEngine(engine.trim());
     setTimeout(() => setPhase("reaction1"), 1500);
   };
-
-  const Q4_MODES: { id: Q4Mode; label: string; emoji: string; placeholder: string }[] = [
-    { id: "funny",    label: "Something funny",      emoji: "😂", placeholder: "like... giant sneezing broccoli" },
-    { id: "spooky",   label: "Something spooky-fun", emoji: "👻", placeholder: "like... shadows that giggle" },
-    { id: "weird",    label: "Something very weird",  emoji: "🌀", placeholder: "like... invisible cheese" },
-    { id: "delicious",label: "Something delicious",   emoji: "🍫", placeholder: "like... a river of hot chocolate" },
-  ];
 
   if (phase === "reaction1") return (
     <div className="flex flex-col min-h-full items-center justify-center px-5 gap-5">
@@ -647,37 +702,50 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
     </div>
   );
 
-  const activeMode = Q4_MODES.find((m) => m.id === mode);
-  const shellBack = mode ? () => setMode(null) : onBack;
-  const shellSkip = mode ? undefined : onSkip;
+  const activeCat = Q4_CATEGORIES.find((c) => c.id === selectedCat);
 
   return (
-    <QuestionShell onBack={shellBack} onSkip={shellSkip} bluebellText={BLUEBELL.q4(companionName, heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q4(companionName, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
-        {mode === null && (
+
+        {/* All 4 category cards — always visible */}
+        <div className="grid grid-cols-2 gap-2">
+          {Q4_CATEGORIES.map((c) => (
+            <IllustratedCard
+              key={c.id}
+              label={c.label}
+              emoji={c.emoji}
+              imageUrl={optionImages[`engine-${c.id}`]}
+              selected={selectedCat === c.id}
+              onClick={() => { setSelectedCat(c.id); setTextVal(""); setValidationError(""); }}
+            />
+          ))}
+        </div>
+
+        {/* Inline text field below cards when category selected */}
+        {selectedCat && activeCat && (
           <>
-            <div className="grid grid-cols-2 gap-2 mb-1">
-              {Q4_MODES.map((m) => (
-                <IllustratedCard
-                  key={m.id}
-                  label={m.label.replace(/^Something /, "")}
-                  emoji={m.emoji}
-                  imageUrl={optionImages[`engine-${m.id}`]}
-                  onClick={() => setMode(m.id)}
-                />
-              ))}
-            </div>
-            <OptionPill label="Surprise me!" emoji="🎲" onClick={() => { setTextVal(pickRandom(SURPRISE_ENGINES)); setMode("funny"); }} />
-          </>
-        )}
-        {mode !== null && activeMode && (
-          <>
-            <p className="text-fs-body text-white/50">{activeMode.label}</p>
-            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} maxSoftLimit={80} autoFocus onSubmit={() => confirm(textVal)} />
+            <StoryInput value={textVal}
+              onChange={(v) => { setTextVal(v); setValidationError(""); }}
+              placeholder={activeCat.placeholder}
+              maxSoftLimit={80}
+              autoFocus
+              onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
+            <FieldHint text={activeCat.hint} />
             <PrimaryButton label="This is the challenge!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
+
+        {!selectedCat && (
+          <OptionPill label="Surprise me!" emoji="🎲" onClick={() => {
+            const cat = pickRandom(Q4_CATEGORIES);
+            setSelectedCat(cat.id);
+            setTextVal(pickRandom(SURPRISE_ENGINES));
+          }} />
+        )}
+
+        {onSkip && <SkipLink onSkip={onSkip} />}
       </div>
     </QuestionShell>
   );
@@ -693,8 +761,11 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, optionImages, au
     { id: "sleepy",    label: "Warm and sleepy",        emoji: "🌙", isBedtime: true },
   ];
 
+  const [surpriseMood, setSurpiseMood] = useState<ResolutionMood | null>(null);
+  const surpriseMoodLabel = MOODS.find((m) => m.id === surpriseMood)?.label;
+
   return (
-    <QuestionShell onBack={onBack} onSkip={onSkip} bluebellText={BLUEBELL.q5(engineText, heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q5(engineText, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2.5">
           {MOODS.map((m) => (
@@ -703,7 +774,8 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, optionImages, au
               label={m.label}
               emoji={m.emoji}
               imageUrl={optionImages[`mood-${m.id}`]}
-              onClick={() => onNext(m.id)}
+              selected={surpriseMood === m.id}
+              onClick={() => { setSurpiseMood(null); onNext(m.id); }}
               badge={m.isBedtime
                 ? <span className="block text-fs-body font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
                 : undefined
@@ -711,7 +783,11 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, optionImages, au
             />
           ))}
         </div>
-        <OptionPill label="Surprise me!" emoji="🎲" onClick={() => onNext(pickRandom(MOODS).id)} />
+        <OptionPill label="Surprise me!" emoji="🎲" onClick={() => setSurpiseMood(pickRandom(MOODS).id)} />
+        {surpriseMood && (
+          <PrimaryButton label={`✨ Go with "${surpriseMoodLabel}"`} onClick={() => onNext(surpriseMood)} />
+        )}
+        {onSkip && <SkipLink onSkip={onSkip} />}
       </div>
     </QuestionShell>
   );
