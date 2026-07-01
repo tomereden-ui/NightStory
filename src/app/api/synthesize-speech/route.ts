@@ -108,7 +108,9 @@ export async function POST(req: NextRequest) {
       savedVoiceSettings?.stability,
       savedVoiceSettings?.style,
       language,
-      useEL ? undefined : { maxAttempts: 2, perAttemptTimeoutMs: 22_000 },
+      // maxAttempts:1 for interactive previews — fail fast on 429 rather than
+      // blocking a server thread for 30 s waiting for Gemini rate-limit reset.
+      useEL ? undefined : { maxAttempts: 1, perAttemptTimeoutMs: 22_000 },
       savedVoiceSettings?.similarity_boost,
       savedVoiceSettings?.use_speaker_boost,
     );
