@@ -52,6 +52,7 @@ async function synthesizeEL(
   language?: string,
   similarityBoost = 0.80,
   useSpeakerBoost = true,
+  speed?: number,
 ): Promise<void> {
   const langCode = detectLanguageCode(text, language);
   for (let attempt = 1; attempt <= 5; attempt++) {
@@ -69,6 +70,7 @@ async function synthesizeEL(
             text,
             model_id: "eleven_v3",
             ...(langCode ? { language_code: langCode } : {}),
+            ...(speed !== undefined ? { speed } : {}),
             voice_settings: { stability, similarity_boost: similarityBoost, style, use_speaker_boost: useSpeakerBoost },
           }),
           signal: controller.signal,
@@ -245,12 +247,13 @@ export async function synthesizeLine(
   geminiOpts?: GeminiTTSOptions,
   similarityBoost?: number,
   useSpeakerBoost?: boolean,
+  speed?: number,
 ): Promise<{ mimeType?: string }> {
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
   if (useElevenLabs) {
     console.log(`[${ts()}][EL TTS] text →`, JSON.stringify(spokenText || line));
-    await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language, similarityBoost, useSpeakerBoost);
+    await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language, similarityBoost, useSpeakerBoost, speed);
     return {};
   }
 

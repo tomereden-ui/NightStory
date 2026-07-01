@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       text,
       model_id: "eleven_v3",
       ...(langCode ? { language_code: langCode } : {}),
+      speed: preset.speed,
       voice_settings: {
         stability: preset.stability,
         similarity_boost: preset.similarity_boost,
