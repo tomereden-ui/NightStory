@@ -491,7 +491,11 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
       audio.onerror = () => { setSpeechError("Playback failed"); setIsLoading(false); setIsPlaying(false); };
       await audio.play();
     } catch (err: unknown) {
-      setSpeechError(err instanceof Error ? err.message : "Failed to generate audio");
+      const msg = err instanceof Error ? err.message : "Failed to generate audio";
+      const friendly = msg.includes("429") || msg.toLowerCase().includes("rate limit")
+        ? "Rate limit hit — wait a few seconds and try again"
+        : msg;
+      setSpeechError(friendly);
       setIsLoading(false);
     }
   }, [stopAudio, language]);
