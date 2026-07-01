@@ -19,7 +19,7 @@ interface ChatResponse {
   storyParams?: Record<string, string>;
 }
 
-// ─── Typing dots ───────────────────────────────────────────────────────────────────────────
+// ─── Typing dots ──────────────────────────────────────────────────────
 
 function OwlAvatar({ size = 44 }: { size?: number }) {
   return (
@@ -62,7 +62,7 @@ function TypingDots() {
   );
 }
 
-// ─── Message bubble ─────────────────────────────────────────────────────────────────────
+// ─── Message bubble ────────────────────────────────────────────────────
 
 function MessageBubble({
   msg,
@@ -150,7 +150,7 @@ function MessageBubble({
   );
 }
 
-// ─── Luna chat panel ───────────────────────────────────────────────────────────────────
+// ─── Luna chat panel ───────────────────────────────────────────────────
 
 const CHAT_DRAFT_KEY_PREFIX = "ns-chat-draft-v1";
 
@@ -210,7 +210,7 @@ export default function LunaChatPanel({
     setMicSupported(!!SR);
   }, []);
 
-  // ─── On-demand TTS per Luna message ────────────────────────────────────────────
+  // ─── On-demand TTS per Luna message ────────────────────────────────────
 
   const stopSpeaking = useCallback(() => {
     speakAbortRef.current?.abort();
@@ -248,7 +248,7 @@ export default function LunaChatPanel({
     }
   }, [stopSpeaking]);
 
-  // ─── Mic toggle ────────────────────────────────────────────────────────────────────
+  // ─── Mic toggle ───────────────────────────────────────────────────
 
   const toggleMic = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -288,7 +288,7 @@ export default function LunaChatPanel({
     setListening(true);
   }, [listening]);
 
-  // ─── Scroll / reset ──────────────────────────────────────────────────────────────
+  // ─── Scroll / reset ──────────────────────────────────────────────────
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -344,7 +344,7 @@ export default function LunaChatPanel({
     } catch { /* ignore */ }
   }, [messages, storyReady, storyParams, readyConfirmed, durationMinutes, chatDraftKey]);
 
-  // ─── Greeting ─────────────────────────────────────────────────────────────────────────
+  // ─── Greeting ────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (greeted) return;
@@ -375,7 +375,7 @@ export default function LunaChatPanel({
       .finally(() => setLoading(false));
   }, [greeted, activeChild]);
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────────────
+  // ─── Helpers ───────────────────────────────────────────────────────
 
   function getChildAgeGroup() {
     const age = activeChild?.age;
@@ -383,7 +383,7 @@ export default function LunaChatPanel({
     return age <= 4 ? "2-4" : age <= 6 ? "4-6" : age <= 8 ? "6-8" : age <= 10 ? "8-10" : "10-12";
   }
 
-  // ─── Send message ──────────────────────────────────────────────────────────────────
+  // ─── Send message ──────────────────────────────────────────────────
 
   async function sendMessage() {
     const text = input.trim();
@@ -568,7 +568,7 @@ export default function LunaChatPanel({
         ))}
         {loading && <TypingDots />}
 
-        {/* "No, let's go" — attached right below the last Luna message, aligned with bubbles */}
+        {/* "No, let's go" — attached right below the last Luna message */}
         {storyReady && !readyConfirmed && (
           <div className="flex justify-start pl-14">
             <button
