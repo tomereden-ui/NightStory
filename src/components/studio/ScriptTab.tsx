@@ -443,7 +443,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
       const res = await fetch("/api/synthesize-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: summary, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId() }),
+        body: JSON.stringify({ text: summary, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), language }),
         signal: ctrl.signal,
       });
       if (!res.ok || ctrl.signal.aborted) return;
