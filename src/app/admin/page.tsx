@@ -111,8 +111,24 @@ interface BankAvatar { id: string; type: string; image_url: string; }
 async function fetchBankAvatars(): Promise<BankAvatar[]> {
   try {
     const res = await fetch("/api/avatar-bank-list", { cache: "no-store" });
-    return res.ok ? res.json() : [];
+    if (!res.ok) return [];
+    const data = await res.json() as { avatars?: BankAvatar[] };
+    return data.avatars ?? [];
   } catch { return []; }
+}
+
+function nameHash(name: string): number {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function pickBankAvatar(name: string, type: CharacterType, bank: BankAvatar[]): string {
+  const typeKey = type === "narrator" ? "adult" : type;
+  const candidates = bank.filter((a) => a.type === typeKey);
+  const pool = candidates.length > 0 ? candidates : bank;
+  if (!pool.length) return buildDiceBearUrl(name, type);
+  return pool[nameHash(name) % pool.length].image_url;
 }
 
 const AVATAR_TABS_ADMIN = [
@@ -880,6 +896,7 @@ export default function AdminPage() {
 
   // ── Cast / voice pool ─────────────────────────────────────────────────────
   const [voicePool, setVoicePool]               = useState<Voice[]>(PRESET_VOICE_POOL);
+  const [bankAvatars, setBankAvatars]           = useState<BankAvatar[]>([]);
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
   const [openDirectSheet, setOpenDirectSheet]   = useState<string | null>(null);
   const [characterTypes, setCharacterTypes]     = useState<Record<string, CharacterType>>({});
@@ -941,8 +958,11 @@ export default function AdminPage() {
     return () => clearInterval(pollRef.current!);
   }, [jobId, loadClassics]);
 
-  // Load voice pool once
-  useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
+  // Load voice pool + avatar bank once
+  useEffect(() => {
+    fetchVoicePool().then(setVoicePool);
+    fetchBankAvatars().then(setBankAvatars);
+  }, []);
 
   // ── Cast handlers ─────────────────────────────────────────────────────────
   const handleVoiceChangeForChar = useCallback((characterName: string, voiceId: string) => {
@@ -1002,6 +1022,19 @@ export default function AdminPage() {
       return;
     }
     setParsedBlocks(blocks);
+
+    // Auto-assign avatars from bank for all cast members
+    const uniqueChars = Array.from(new Set(blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
+    const autoAvatars: Record<string, string> = {};
+    const autoTypes: Record<string, CharacterType> = {};
+    for (const char of uniqueChars) {
+      const type: CharacterType = char.toLowerCase() === "narrator" ? "narrator" : "adult";
+      autoTypes[char] = type;
+      autoAvatars[char] = pickBankAvatar(char, type, bankAvatars);
+    }
+    setCharacterAvatars(autoAvatars);
+    setCharacterTypes(autoTypes);
+
     const rawBlocks = blocks.map((b) => ({ characterName: b.characterName, textPayload: b.textPayload }));
 
     // Validate + fetch story meta in parallel
