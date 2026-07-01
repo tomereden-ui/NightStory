@@ -11,8 +11,8 @@ interface RawBlock {
 
 interface ValidateResponse {
   ok: boolean;
-  blocks?: RawBlock[];
-  issues?: string[];
+  blocks: RawBlock[];
+  issues: string[];
 }
 
 function readGuidance(): string {
@@ -45,11 +45,16 @@ Your task:
 1. Read every block carefully.
 2. Check for any violation of the guidance rules — content boundaries, SFX placement rules,
    mandatory SFX moments, performance tags, language mixing, inappropriate content, etc.
-3. If the script is fully compliant (or has only trivial issues you can silently fix):
-   Return: { "ok": true, "blocks": [ ...the script, with any minor corrections applied... ] }
-4. If the script has real violations that need the author's attention:
-   Return: { "ok": false, "issues": [ "Clear description of issue 1", "Clear description of issue 2" ] }
-   Issues must be specific and actionable — tell the author exactly what is wrong and where.
+3. Fix ALL violations you find — rewrite blocks as needed, preserving the story's intent.
+4. ALWAYS return this exact JSON shape:
+   {
+     "ok": true or false,
+     "blocks": [ ...the COMPLETE script with ALL corrections applied, every block included... ],
+     "issues": [ ...description of each real violation you fixed... ]
+   }
+   "ok" is true if the script was already clean (issues will be []).
+   "ok" is false if you had to fix real violations (issues lists what was wrong and what you changed).
+   Issues must be specific: which block, which rule, what you changed and why.
 
 Return ONLY the raw JSON object. No markdown fences, no explanation outside the JSON.`;
 
