@@ -566,11 +566,11 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, optionImages, 
 
 type Q3CompanionType = "friend" | "pet" | "creature" | "family";
 
-const COMPANION_TYPES: { id: Q3CompanionType; label: string; geminiLabel: string; emoji: string }[] = [
-  { id: "friend",   label: "Best friend",       geminiLabel: "best friend",       emoji: "👫" },
-  { id: "pet",      label: "A pet",              geminiLabel: "pet",               emoji: "🐾" },
-  { id: "creature", label: "A magical creature", geminiLabel: "magical creature",  emoji: "🦄" },
-  { id: "family",   label: "A family member",    geminiLabel: "family member",     emoji: "👨‍👩‍👧" },
+const COMPANION_TYPES: { id: Q3CompanionType; label: string; geminiLabel: string; emoji: string; surpriseNames: string[] }[] = [
+  { id: "friend",   label: "Best friend",       geminiLabel: "best friend",      emoji: "👫", surpriseNames: ["Mia", "Jake", "Sam", "Theo", "Lily", "Omar", "Priya"] },
+  { id: "pet",      label: "A pet",              geminiLabel: "pet",              emoji: "🐾", surpriseNames: ["Biscuit", "Pepper", "Mochi", "Pebble", "Rolo", "Toasty", "Noodle"] },
+  { id: "creature", label: "A magical creature", geminiLabel: "magical creature", emoji: "🦄", surpriseNames: ["Nimbus", "Ember", "Glimmer", "Pip", "Nova", "Wisp", "Cinder"] },
+  { id: "family",   label: "A family member",    geminiLabel: "family member",    emoji: "👨‍👩‍👧", surpriseNames: ["Rosa", "Leo", "Nana", "my brother", "my sister", "Grandpa Joe", "Auntie Bea"] },
 ];
 
 function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
@@ -621,6 +621,12 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
           ))}
         </div>
 
+        <OptionPill label="Surprise me!" emoji="🎲" onClick={() => {
+          const randomType = pickRandom(COMPANION_TYPES);
+          setSelectedType(randomType.id);
+          setNameVal(pickRandom(randomType.surpriseNames));
+        }} />
+
         {selectedType && (
           <>
             <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
@@ -641,14 +647,6 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
             <FieldHint text={Q3_EXAMPLES[selectedType]} />
             <PrimaryButton label="This is the companion!" onClick={() => confirm(selectedType, nameVal)} />
           </>
-        )}
-
-        {!selectedType && (
-          <OptionPill label="Surprise me!" emoji="🎲" onClick={() => {
-            const randomType = pickRandom(COMPANION_TYPES);
-            setSelectedType(randomType.id);
-            setNameVal(pickRandom(SURPRISE_COMPANIONS).replace(/^a /, "").split(" ")[0]);
-          }} />
         )}
 
         <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
