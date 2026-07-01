@@ -442,14 +442,19 @@ export async function synthesizeLine(
   // Strip performance tags [warmly] etc. for providers that don't interpret them
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
+  // Auto-detect language from text content — UI language hint may be wrong
+  // (e.g. app UI in English while story text is Hebrew)
+  const detectedLang = detectLanguageCode(spokenText || line, language ?? undefined);
+  const effectiveLang = detectedLang ?? language ?? "en";
+
   if (useElevenLabs) {
     console.log(`[${ts()}][EL TTS] text →`, JSON.stringify(spokenText || line));
-    await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, language, similarityBoost, useSpeakerBoost, speed);
+    await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, effectiveLang, similarityBoost, useSpeakerBoost, speed);
     return {};
   }
 
   // Hebrew: ElevenLabs handles Hebrew pronunciation correctly; WaveNet/Chirp do not
-  if (language === "he") {
+  if (effectiveLang === "he") {
     const elKey = process.env.ELEVENLABS_API_KEY;
     if (elKey) {
       const heVoiceId = HE_EL_VOICE_MAP[voiceId] ?? HE_EL_VOICE_MAP["Charon"]!;
@@ -465,7 +470,7 @@ export async function synthesizeLine(
   const gcTtsKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
   if (gcTtsKey) {
     // Pass raw line — synthesizeChirp3HD converts [tags] to SSML internally
-    await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, language ?? "en", geminiOpts);
+    await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, effectiveLang, geminiOpts);
     return { mimeType: "audio/mpeg" };
   }
 
