@@ -115,9 +115,9 @@ async function synthesizeEL(
   throw new Error("EL TTS failed after 5 attempts");
 }
 
-// ── Google Cloud Chirp 3 HD ───────────────────────────────────────────────────────────────────────
+// ── Google Cloud TTS (Chirp 3 HD + WaveNet fallback for unsupported locales) ─────────────────────
 
-// ISO 639-1 → BCP-47 locale for Chirp 3 HD
+// ISO 639-1 → BCP-47 locale
 const LANG_TO_LOCALE: Record<string, string> = {
   en: "en-US", he: "he-IL", ar: "ar-XA", fr: "fr-FR", de: "de-DE",
   es: "es-ES", it: "it-IT", pt: "pt-BR", ru: "ru-RU", zh: "cmn-CN",
@@ -129,6 +129,23 @@ const LANG_TO_LOCALE: Record<string, string> = {
 const CHIRP3_VOICES = new Set([
   "Aoede", "Puck", "Kore", "Charon", "Fenrir", "Leda", "Orus", "Zephyr", "Autonoe",
 ]);
+
+// Female Chirp voices — used to pick the right WaveNet gender variant
+const FEMALE_CHIRP_VOICES = new Set(["Aoede", "Kore", "Leda", "Autonoe"]);
+
+// Locales where Chirp 3 HD quality is poor — route to WaveNet instead.
+// WaveNet uses the same API key/endpoint, just a different voice name format.
+const WAVENET_LOCALES: Record<string, { female: string; male: string }> = {
+  "he-IL": { female: "he-IL-Wavenet-A", male: "he-IL-Wavenet-B" },
+};
+
+function resolveGCVoiceName(locale: string, chirpVoice: string): string {
+  const wavenet = WAVENET_LOCALES[locale];
+  if (wavenet) {
+    return FEMALE_CHIRP_VOICES.has(chirpVoice) ? wavenet.female : wavenet.male;
+  }
+  return `${locale}-Chirp3-HD-${chirpVoice}`;
+}
 
 function escapeXML(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -185,15 +202,15 @@ async function synthesizeChirp3HD(
   const maxAttempts = opts?.maxAttempts ?? 5;
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const locale = LANG_TO_LOCALE[language] ?? "en-US";
-  // Fall back to Aoede if the voice isn't in Chirp 3 HD's set
   const chirpVoice = CHIRP3_VOICES.has(voiceName) ? voiceName : "Aoede";
-  const fullVoiceName = `${locale}-Chirp3-HD-${chirpVoice}`;
+  const fullVoiceName = resolveGCVoiceName(locale, chirpVoice);
   const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
 
   const ssml = lineToSSML(line);
   const input = ssml ? { ssml } : { text: line };
 
-  console.log(`[${ts()}][Chirp3HD] voice=${fullVoiceName} lang=${locale} ssml=${!!ssml}`);
+  const model = WAVENET_LOCALES[locale] ? "WaveNet" : "Chirp3-HD";
+  console.log(`[${ts()}][GC-TTS/${model}] voice=${fullVoiceName} lang=${locale} ssml=${!!ssml}`);
 
   let lastError = "";
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
