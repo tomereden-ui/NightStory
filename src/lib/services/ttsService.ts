@@ -350,15 +350,15 @@ export async function synthesizeLine(
     return {};
   }
 
-  // Chirp 3 HD — active when GOOGLE_CLOUD_TTS_KEY is set in env
-  const gcTtsKey = process.env.GOOGLE_CLOUD_TTS_KEY;
+  // Chirp 3 HD — active when GOOGLE_CLOUD_TTS_API_KEY is set in env
+  const gcTtsKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
   if (gcTtsKey) {
     console.log(`[${ts()}][Chirp3HD] text →`, JSON.stringify(spokenText || line));
     await synthesizeChirp3HD(spokenText || line, voiceId, gcTtsKey, outputPath, language ?? "en", geminiOpts);
     return { mimeType: "audio/mpeg" };
   }
 
-  // Gemini TTS fallback — used when GOOGLE_CLOUD_TTS_KEY is not set
+  // Gemini TTS fallback — used when GOOGLE_CLOUD_TTS_API_KEY is not set
   console.log(`[${ts()}][Gemini TTS] text →`, JSON.stringify(line));
   return synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts);
 }
