@@ -1,3 +1,5 @@
+import type { LibraryEntry } from "./libraryStore";
+
 export type JobStatus =
   | "pending"
   | "planning"
@@ -13,14 +15,18 @@ export interface Job {
   step: string;
   progress: number; // 0–100
   title?: string;
+  storyId?: string;
   scriptJson?: object;
   audioUrl?: string;
   coverUrl?: string;
+  durationSeconds?: number;
   voiceAssignments?: Record<string, string>;
   skippedLines?: string[];
   error?: string;
   libraryError?: string;
   createdAt: number;
+  /** Populated when produce-drama is called with skipLibrarySave:true — used by /api/admin/save-story */
+  pendingEntry?: LibraryEntry;
 }
 
 declare global {
