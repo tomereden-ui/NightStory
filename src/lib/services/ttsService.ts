@@ -115,9 +115,9 @@ async function synthesizeEL(
   throw new Error("EL TTS failed after 5 attempts");
 }
 
-// ── Google Cloud Chirp 3 HD ───────────────────────────────────────────────────────────────────────
+// ── Google Cloud TTS (Chirp 3 HD + WaveNet fallback for unsupported locales) ─────────────────────
 
-// ISO 639-1 → BCP-47 locale for Chirp 3 HD
+// ISO 639-1 → BCP-47 locale
 const LANG_TO_LOCALE: Record<string, string> = {
   en: "en-US", he: "he-IL", ar: "ar-XA", fr: "fr-FR", de: "de-DE",
   es: "es-ES", it: "it-IT", pt: "pt-BR", ru: "ru-RU", zh: "cmn-CN",
@@ -130,17 +130,43 @@ const CHIRP3_VOICES = new Set([
   "Aoede", "Puck", "Kore", "Charon", "Fenrir", "Leda", "Orus", "Zephyr", "Autonoe",
 ]);
 
+// Locales where Chirp 3 HD quality is poor — route to WaveNet instead.
+// Each entry maps Chirp voice name → { voice, pitch } so all 4 WaveNet
+// voices + SSML pitch offsets give 9 perceptually distinct characters.
+const WAVENET_VOICE_MAP: Record<string, Record<string, { voice: string; pitch?: string }>> = {
+  "he-IL": {
+    // Females — A and C, each used at two pitch levels
+    Aoede:   { voice: "he-IL-Wavenet-A" },             // warm narrator/lead female
+    Kore:    { voice: "he-IL-Wavenet-C" },             // brighter female
+    Leda:    { voice: "he-IL-Wavenet-A", pitch: "+2st" }, // lighter female
+    Autonoe: { voice: "he-IL-Wavenet-C", pitch: "-2st" }, // deeper/older female
+    // Males — B and D, each used at two pitch levels
+    Charon:  { voice: "he-IL-Wavenet-B" },             // narrator/deep male
+    Fenrir:  { voice: "he-IL-Wavenet-D" },             // gruff/beast male
+    Puck:    { voice: "he-IL-Wavenet-B", pitch: "+3st" }, // child/young male
+    Orus:    { voice: "he-IL-Wavenet-D", pitch: "+2st" }, // lighter adult male
+    Zephyr:  { voice: "he-IL-Wavenet-B", pitch: "-2st" }, // older/authority male
+  },
+};
+
+function resolveGCVoiceName(locale: string, chirpVoice: string): { name: string; pitchOverride?: string } {
+  const localeMap = WAVENET_VOICE_MAP[locale];
+  if (localeMap) {
+    const entry = localeMap[chirpVoice] ?? localeMap["Aoede"] ?? { voice: `${locale}-Wavenet-A` };
+    return { name: entry.voice, pitchOverride: entry.pitch };
+  }
+  return { name: `${locale}-Chirp3-HD-${chirpVoice}` };
+}
+
 function escapeXML(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
-// Convert a script line with [performance tag] prefix into SSML for Chirp 3 HD.
-// Tags are freeform English so we keyword-match rather than exact-match.
-function lineToSSML(line: string): string {
-  // Extract leading tag: "[warmly] Some text" or "[bravely, though scared] text"
+// Convert a script line with [performance tag] prefix into SSML.
+// basePitch is added when a voice map entry has a pitch offset (e.g. "+2st" for Puck).
+function lineToSSML(line: string, basePitch?: string): string {
   const tagMatch = line.match(/^\[([^\]]+)\]\s*/);
   const tag = tagMatch ? tagMatch[1].toLowerCase() : "";
-  // Strip the tag and any remaining bracket content (mid-line tags, SFX refs)
   const spoken = line
     .replace(/^\[[^\]]+\]\s*/, "")
     .replace(/\[SFX:[^\]]*\]/gi, "")
@@ -152,25 +178,35 @@ function lineToSSML(line: string): string {
 
   const body = escapeXML(spoken);
 
-  // Map tag keywords → SSML prosody attributes
-  let attrs = "";
-  if (/whisper/i.test(tag))                   attrs = 'volume="x-soft" rate="slow"';
-  else if (/excited|energetic|enthusiastic/i.test(tag)) attrs = 'rate="fast" pitch="+2st"';
-  else if (/sleep|drowsy|tired|yawn/i.test(tag))  attrs = 'rate="slow" pitch="-2st" volume="soft"';
-  else if (/gentle|softly|soft|tenderly/i.test(tag)) attrs = 'volume="soft" rate="slow"';
-  else if (/nervous|anxious|tremble/i.test(tag))  attrs = 'rate="fast" pitch="+1st"';
-  else if (/wonder|awe|amazed|wide.eyed/i.test(tag)) attrs = 'rate="slow" pitch="+2st"';
-  else if (/scar|fear|panic/i.test(tag))       attrs = 'rate="fast" volume="soft" pitch="+1st"';
-  else if (/proud|confident|triumphant/i.test(tag)) attrs = 'pitch="+1st"';
-  else if (/warm|kind|loving|affection/i.test(tag)) attrs = 'pitch="+1st" rate="medium"';
-  else if (/sad|crying|sob|teary/i.test(tag))  attrs = 'rate="slow" pitch="-2st" volume="soft"';
-  else if (/dramatic|serious|solemn/i.test(tag)) attrs = 'rate="slow" pitch="-2st"';
-  else if (/giggle|laugh/i.test(tag))          attrs = 'rate="fast" pitch="+3st"';
-  else if (/brave|heroic|bold/i.test(tag))     attrs = 'pitch="-1st" rate="medium"';
-  else if (/mysterious|hushed/i.test(tag))     attrs = 'volume="soft" rate="slow" pitch="-1st"';
-  else if (/angry|frustrated/i.test(tag))      attrs = 'rate="fast" pitch="-1st" volume="loud"';
+  // Map performance tag keywords → prosody attrs (pitch here is relative to basePitch)
+  let rate = "";
+  let pitchDelta = 0;
+  let volume = "";
 
-  if (attrs) return `<speak><prosody ${attrs}>${body}</prosody></speak>`;
+  if (/whisper/i.test(tag))                            { volume = "x-soft"; rate = "slow"; }
+  else if (/excited|energetic|enthusiastic/i.test(tag)){ rate = "fast";  pitchDelta = +2; }
+  else if (/sleep|drowsy|tired|yawn/i.test(tag))       { rate = "slow";  pitchDelta = -2; volume = "soft"; }
+  else if (/gentle|softly|soft|tenderly/i.test(tag))   { volume = "soft"; rate = "slow"; }
+  else if (/nervous|anxious|tremble/i.test(tag))       { rate = "fast";  pitchDelta = +1; }
+  else if (/wonder|awe|amazed|wide.eyed/i.test(tag))   { rate = "slow";  pitchDelta = +2; }
+  else if (/scar|fear|panic/i.test(tag))               { rate = "fast";  pitchDelta = +1; volume = "soft"; }
+  else if (/proud|confident|triumphant/i.test(tag))    { pitchDelta = +1; }
+  else if (/warm|kind|loving|affection/i.test(tag))    { pitchDelta = +1; rate = "medium"; }
+  else if (/sad|crying|sob|teary/i.test(tag))          { rate = "slow";  pitchDelta = -2; volume = "soft"; }
+  else if (/dramatic|serious|solemn/i.test(tag))       { rate = "slow";  pitchDelta = -2; }
+  else if (/giggle|laugh/i.test(tag))                  { rate = "fast";  pitchDelta = +3; }
+  else if (/brave|heroic|bold/i.test(tag))             { pitchDelta = -1; rate = "medium"; }
+  else if (/mysterious|hushed/i.test(tag))             { volume = "soft"; rate = "slow"; pitchDelta = -1; }
+  else if (/angry|frustrated/i.test(tag))              { rate = "fast";  pitchDelta = -1; volume = "loud"; }
+
+  // Combine basePitch offset + tag-driven delta into a single pitch attr
+  const baseSt = basePitch ? parseInt(basePitch) : 0;
+  const totalSt = baseSt + pitchDelta;
+  const pitchAttr = totalSt !== 0 ? `pitch="${totalSt > 0 ? "+" : ""}${totalSt}st"` : "";
+
+  const parts = [rate ? `rate="${rate}"` : "", pitchAttr, volume ? `volume="${volume}"` : ""].filter(Boolean).join(" ");
+
+  if (parts) return `<speak><prosody ${parts}>${body}</prosody></speak>`;
   return `<speak>${body}</speak>`;
 }
 
@@ -185,15 +221,15 @@ async function synthesizeChirp3HD(
   const maxAttempts = opts?.maxAttempts ?? 5;
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const locale = LANG_TO_LOCALE[language] ?? "en-US";
-  // Fall back to Aoede if the voice isn't in Chirp 3 HD's set
   const chirpVoice = CHIRP3_VOICES.has(voiceName) ? voiceName : "Aoede";
-  const fullVoiceName = `${locale}-Chirp3-HD-${chirpVoice}`;
+  const { name: fullVoiceName, pitchOverride } = resolveGCVoiceName(locale, chirpVoice);
   const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
 
-  const ssml = lineToSSML(line);
+  const ssml = lineToSSML(line, pitchOverride);
   const input = ssml ? { ssml } : { text: line };
 
-  console.log(`[${ts()}][Chirp3HD] voice=${fullVoiceName} lang=${locale} ssml=${!!ssml}`);
+  const model = WAVENET_VOICE_MAP[locale] ? "WaveNet" : "Chirp3-HD";
+  console.log(`[${ts()}][GC-TTS/${model}] voice=${fullVoiceName} pitch=${pitchOverride ?? "0"} lang=${locale} ssml=${!!ssml}`);
 
   let lastError = "";
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

@@ -1420,20 +1420,41 @@ export default function Studio2Page() {
       setIsValidating(true);
       if (cp) fetchCover(cp, sm);
 
-      // Validate all blocks — runs concurrently with cover fetch
+      // Round 2 — policy check + auto-fix (validate-script)
       const childAge = activeChild?.age ?? 6;
+      let policyBlocks = rawBlocks;
+      try {
+        const polRes = await fetch("/api/validate-script", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blocks: rawBlocks }),
+        });
+        const polData = await polRes.json();
+        if (polRes.ok && Array.isArray(polData.blocks) && polData.blocks.length) {
+          policyBlocks = polData.blocks as ScriptBlock[];
+          if (!polData.ok && polData.issues?.length) {
+            console.warn(`[Policy] Auto-fixed ${polData.issues.length} violation(s):`, polData.issues);
+          } else {
+            console.log("[Policy] Script passed policy check.");
+          }
+        }
+      } catch (err) {
+        console.warn("[Policy] Policy check failed, using raw script:", err);
+      }
+
+      // Round 2.5 — per-block age/content check (validate-blocks)
       let blocks: ScriptBlock[];
       try {
         const valRes = await fetch("/api/validate-blocks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: selectedLessons, summary: sm }),
+          body: JSON.stringify({ blocks: policyBlocks, age: childAge, lessons: selectedLessons, summary: sm }),
         });
         const valData = await valRes.json();
-        blocks = (valRes.ok && valData.blocks?.length) ? valData.blocks as ScriptBlock[] : rawBlocks;
+        blocks = (valRes.ok && valData.blocks?.length) ? valData.blocks as ScriptBlock[] : policyBlocks;
         if (valData.changes > 0) console.log(`[Validation] Fixed ${valData.changes} block(s)`);
       } catch {
-        blocks = rawBlocks; // fall back to unvalidated on network error
+        blocks = policyBlocks; // fall back to policy-checked blocks on network error
       }
 
       // Stagger-reveal validated blocks one by one for progressive feel
