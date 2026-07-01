@@ -988,6 +988,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const [step, setStep]                   = useState<Step>("q1");
   const [answers, setAnswers]             = useState<Answers>(INITIAL_ANSWERS);
   const [durationMinutes, setDuration]    = useState(5);
+  const [editingFromSummary, setEditingFromSummary] = useState(false);
   const [scriptBlocks, setScriptBlocks]   = useState<ScriptBlock[]>([]);
   const [error, setError]                 = useState<string | null>(null);
   // Production state (used in done step)
@@ -1237,16 +1238,21 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     </div>
   ) : null;
 
-  if (step === "q1") return <>{GeneratingBadge}<Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={onComplete ? undefined : () => router.push("/create")} onSkip={() => { setAnswer("q1_hero", answers.q1_hero || pickRandom(SURPRISE_HERO_NAMES)); setStep("q2"); }} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} /></>;
-  if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} onSkip={() => { setAnswer("q2_world", answers.q2_world || pickRandom(WORLD_OPTIONS).label); setStep("q3"); }} optionImages={optionImages} audioUrl={questionAudios.q2} /></>;
-  if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} onSkip={() => { setAnswer("q3_companion", answers.q3_companion || pickRandom(SURPRISE_COMPANIONS)); setStep("q4"); }} optionImages={optionImages} audioUrl={questionAudios.q3} /></>;
-  if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} onSkip={() => { setAnswer("q4_engine", answers.q4_engine || pickRandom(SURPRISE_ENGINES)); setStep("q5"); }} optionImages={optionImages} audioUrl={questionAudios.q4} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} onSkip={() => { setAnswer("q5_mood", answers.q5_mood ?? "sleepy"); setStep("summary"); }} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
+  // When editing a step from the summary screen, onNext/onSkip/onBack all return to summary.
+  const backToSummary = () => { setEditingFromSummary(false); setStep("summary"); };
+  const nextOrSummary = (next: Step) => editingFromSummary ? backToSummary() : setStep(next);
+  const skipOrSummary = (next: Step, setDefault: () => void) => { setDefault(); nextOrSummary(next); };
+
+  if (step === "q1") return <>{GeneratingBadge}<Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} /></>;
+  if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(WORLD_OPTIONS).label); })} optionImages={optionImages} audioUrl={questionAudios.q2} /></>;
+  if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} optionImages={optionImages} audioUrl={questionAudios.q3} /></>;
+  if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} optionImages={optionImages} audioUrl={questionAudios.q4} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
 
   if (step === "summary") return (
     <>
       {ErrorBanner}
-      <SummaryView answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => setStep(s)} onLaunch={handleLaunch} />
+      <SummaryView answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} />
     </>
   );
 
