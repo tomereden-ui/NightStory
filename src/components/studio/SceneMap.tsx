@@ -122,30 +122,13 @@ export default function SceneMap({ scenes, blocks, onSceneClick }: SceneMapProps
                   {scene.summary}
                 </p>
 
-                {/* Chips */}
-                <div className="flex flex-wrap gap-1.5">
-                  {/* Mood chip */}
-                  <span
-                    className="text-fs-label font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: mood.bg, border: `1px solid ${mood.border}`, color: mood.text }}
-                  >
-                    {scene.primaryMood}
-                  </span>
-                  {/* SFX chips */}
-                  {scene.sfxTags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-fs-label px-2 py-0.5 rounded-full"
-                      style={{
-                        background: "rgba(245,158,11,0.07)",
-                        border: "1px solid rgba(245,158,11,0.18)",
-                        color: "rgba(245,158,11,0.65)",
-                      }}
-                    >
-                      🔊 {tag}
-                    </span>
-                  ))}
-                </div>
+                {/* Mood chip */}
+                <span
+                  className="text-fs-label font-semibold px-2 py-0.5 rounded-full"
+                  style={{ background: mood.bg, border: `1px solid ${mood.border}`, color: mood.text }}
+                >
+                  {scene.primaryMood}
+                </span>
               </button>
             </div>
           );

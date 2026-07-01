@@ -174,6 +174,7 @@ export default function LunaChatPanel({
   const [greeted, setGreeted]               = useState(false);
   const [discardConfirm, setDiscardConfirm] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(5);
+  const [readyConfirmed, setReadyConfirmed] = useState(false);
 
   // Per-message TTS (on-demand)
   const [speakingIdx, setSpeakingIdx]       = useState<number | null>(null);
@@ -320,7 +321,7 @@ export default function LunaChatPanel({
         if ((err as Error).name === "AbortError") return;
         setMessages([{
           role: "model",
-          content: "Hello! 🌙 I'm Luna, your story guide. Tonight we're going to dream up something magical together!\n\nSo — who's going to be the hero of our story? 🌟",
+          content: "Hello! 🌙 I'm Luna.\nYour magical story guide.\n\nWho's our hero tonight? 🌟",
         }]);
       })
       .finally(() => setLoading(false));
@@ -364,7 +365,7 @@ export default function LunaChatPanel({
         const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string };
         onScriptReady({ promptText, scriptBlocks: data.blocks ?? [], summary: data.summary ?? "", coverPrompt: data.coverPrompt ?? "", storyTitle: data.title ?? "" });
       } catch {
-        setMessages((prev) => [...prev, { role: "model", content: "Oops! 🌙 I couldn't create the story — try describing it a little differently!" }]);
+        setMessages((prev) => [...prev, { role: "model", content: "Oops! 🌙\nCouldn't create the story.\nTry describing it a little differently!" }]);
         setLoading(false);
       }
       return;
@@ -389,9 +390,13 @@ export default function LunaChatPanel({
       if (data.storyReady && data.storyParams) {
         setStoryReady(true);
         setStoryParams(data.storyParams);
+        setReadyConfirmed(false);
+        setTimeout(() => {
+          setMessages((prev) => [...prev, { role: "model", content: "We're all set! ✨\nAnything else to add?\nOr tap below to create the story." }]);
+        }, 600);
       }
     } catch {
-      setMessages((prev) => [...prev, { role: "model", content: "Hmm, something got a little starry-eyed there ✨ Can you say that again?" }]);
+      setMessages((prev) => [...prev, { role: "model", content: "Hmm, something went sideways. ✨\nCan you say that again?" }]);
     } finally {
       setLoading(false);
       textareaRef.current?.focus();
@@ -417,6 +422,7 @@ export default function LunaChatPanel({
     setStoryParams(null);
     setGreeted(false);
     setDiscardConfirm(false);
+    setReadyConfirmed(false);
     firstMsgSent.current = false;
     onDiscard?.();
   }
@@ -459,6 +465,17 @@ export default function LunaChatPanel({
   const childEmoji = activeChild?.avatar_emoji;
   const hasUserMessages = messages.some((m) => m.role === "user");
 
+  const LETS_GO_LABELS: Record<string, string> = {
+    he: "לא, בואו נתחיל :)",
+    ar: "لا، هيا بنا :)",
+    fr: "Non, c'est parti :)",
+    es: "¡No, vamos! :)",
+    de: "Nein, los geht's :)",
+    it: "No, andiamo :)",
+    pt: "Não, vamos lá :)",
+  };
+  const letsGoLabel = LETS_GO_LABELS[language] ?? "No, let's go :)";
+
   return (
     <div className="flex flex-col gap-4">
 
@@ -495,8 +512,8 @@ export default function LunaChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {/* Story ready CTA */}
-      {storyReady && (
+      {/* Story ready CTA — only after user confirms */}
+      {storyReady && readyConfirmed && (
         <div className="pt-1 flex flex-col gap-3">
           {/* Duration picker */}
           <div className="rounded-2xl px-4 py-3" style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
@@ -602,6 +619,17 @@ export default function LunaChatPanel({
           </p>
         )}
       </div>
+
+      {/* "No, let's go" — shown when story is ready but user hasn't confirmed yet */}
+      {storyReady && !readyConfirmed && (
+        <button
+          onClick={() => setReadyConfirmed(true)}
+          className="w-full py-3.5 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
+          style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)", color: "#fff", boxShadow: "0 0 20px rgba(79,195,247,0.25)" }}
+        >
+          {letsGoLabel}
+        </button>
+      )}
 
       {/* Discard */}
       {hasUserMessages && (
