@@ -130,8 +130,52 @@ const CHIRP3_VOICES = new Set([
   "Aoede", "Puck", "Kore", "Charon", "Fenrir", "Leda", "Orus", "Zephyr", "Autonoe",
 ]);
 
+function escapeXML(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+// Convert a script line with [performance tag] prefix into SSML for Chirp 3 HD.
+// Tags are freeform English so we keyword-match rather than exact-match.
+function lineToSSML(line: string): string {
+  // Extract leading tag: "[warmly] Some text" or "[bravely, though scared] text"
+  const tagMatch = line.match(/^\[([^\]]+)\]\s*/);
+  const tag = tagMatch ? tagMatch[1].toLowerCase() : "";
+  // Strip the tag and any remaining bracket content (mid-line tags, SFX refs)
+  const spoken = line
+    .replace(/^\[[^\]]+\]\s*/, "")
+    .replace(/\[SFX:[^\]]*\]/gi, "")
+    .replace(/\[[^\]]+\]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!spoken) return "";
+
+  const body = escapeXML(spoken);
+
+  // Map tag keywords → SSML prosody attributes
+  let attrs = "";
+  if (/whisper/i.test(tag))                   attrs = 'volume="x-soft" rate="slow"';
+  else if (/excited|energetic|enthusiastic/i.test(tag)) attrs = 'rate="fast" pitch="+2st"';
+  else if (/sleep|drowsy|tired|yawn/i.test(tag))  attrs = 'rate="slow" pitch="-2st" volume="soft"';
+  else if (/gentle|softly|soft|tenderly/i.test(tag)) attrs = 'volume="soft" rate="slow"';
+  else if (/nervous|anxious|tremble/i.test(tag))  attrs = 'rate="fast" pitch="+1st"';
+  else if (/wonder|awe|amazed|wide.eyed/i.test(tag)) attrs = 'rate="slow" pitch="+2st"';
+  else if (/scar|fear|panic/i.test(tag))       attrs = 'rate="fast" volume="soft" pitch="+1st"';
+  else if (/proud|confident|triumphant/i.test(tag)) attrs = 'pitch="+1st"';
+  else if (/warm|kind|loving|affection/i.test(tag)) attrs = 'pitch="+1st" rate="medium"';
+  else if (/sad|crying|sob|teary/i.test(tag))  attrs = 'rate="slow" pitch="-2st" volume="soft"';
+  else if (/dramatic|serious|solemn/i.test(tag)) attrs = 'rate="slow" pitch="-2st"';
+  else if (/giggle|laugh/i.test(tag))          attrs = 'rate="fast" pitch="+3st"';
+  else if (/brave|heroic|bold/i.test(tag))     attrs = 'pitch="-1st" rate="medium"';
+  else if (/mysterious|hushed/i.test(tag))     attrs = 'volume="soft" rate="slow" pitch="-1st"';
+  else if (/angry|frustrated/i.test(tag))      attrs = 'rate="fast" pitch="-1st" volume="loud"';
+
+  if (attrs) return `<speak><prosody ${attrs}>${body}</prosody></speak>`;
+  return `<speak>${body}</speak>`;
+}
+
 async function synthesizeChirp3HD(
-  text: string,
+  line: string,
   voiceName: string,
   apiKey: string,
   outputPath: string,
@@ -146,7 +190,10 @@ async function synthesizeChirp3HD(
   const fullVoiceName = `${locale}-Chirp3-HD-${chirpVoice}`;
   const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
 
-  console.log(`[${ts()}][Chirp3HD] voice=${fullVoiceName} lang=${locale}`);
+  const ssml = lineToSSML(line);
+  const input = ssml ? { ssml } : { text: line };
+
+  console.log(`[${ts()}][Chirp3HD] voice=${fullVoiceName} lang=${locale} ssml=${!!ssml}`);
 
   let lastError = "";
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -158,7 +205,7 @@ async function synthesizeChirp3HD(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          input: { text },
+          input,
           voice: { languageCode: locale, name: fullVoiceName },
           audioConfig: { audioEncoding: "MP3" },
         }),
@@ -353,8 +400,8 @@ export async function synthesizeLine(
   // Chirp 3 HD — active when GOOGLE_CLOUD_TTS_API_KEY is set in env
   const gcTtsKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
   if (gcTtsKey) {
-    console.log(`[${ts()}][Chirp3HD] text →`, JSON.stringify(spokenText || line));
-    await synthesizeChirp3HD(spokenText || line, voiceId, gcTtsKey, outputPath, language ?? "en", geminiOpts);
+    // Pass raw line — synthesizeChirp3HD converts [tags] to SSML internally
+    await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, language ?? "en", geminiOpts);
     return { mimeType: "audio/mpeg" };
   }
 
