@@ -19,7 +19,7 @@ interface ChatResponse {
   storyParams?: Record<string, string>;
 }
 
-// ─── Typing dots ──────────────────────────────────────────────────────────────
+// ─── Typing dots ───────────────────────────────────────────────────────────────────────────
 
 function OwlAvatar({ size = 44 }: { size?: number }) {
   return (
@@ -62,7 +62,7 @@ function TypingDots() {
   );
 }
 
-// ─── Message bubble ───────────────────────────────────────────────────────────
+// ─── Message bubble ─────────────────────────────────────────────────────────────────────
 
 function MessageBubble({
   msg,
@@ -78,28 +78,36 @@ function MessageBubble({
   onTogglePlay?: () => void;
 }) {
   const isLuna = msg.role === "model";
+  // Split Luna messages on newlines into separate visual bubbles
+  const parts = isLuna
+    ? msg.content.split("\n").map((s) => s.trim()).filter(Boolean)
+    : [msg.content];
+
   return (
     <div className={`flex gap-3 items-end ${isLuna ? "justify-start" : "justify-end"}`}>
       {isLuna && <OwlAvatar size={44} />}
       <div className={`flex flex-col gap-1.5 ${isLuna ? "items-start" : "items-end"}`} style={{ maxWidth: "80%" }}>
-        <div
-          className="px-4 py-3.5 rounded-2xl leading-relaxed whitespace-pre-wrap text-fs-body"
-          style={{
-            ...(isLuna ? {
-              background: "linear-gradient(135deg,rgba(88,28,220,0.18) 0%,rgba(30,58,120,0.22) 100%)",
-              border: "1.5px solid rgba(167,139,250,0.28)",
-              color: "rgba(255,255,255,0.93)",
-              borderBottomLeftRadius: 6,
-            } : {
-              background: "linear-gradient(135deg,#1a4a8a 0%,#1a6ab8 100%)",
-              border: "1.5px solid rgba(79,195,247,0.35)",
-              color: "#fff",
-              borderBottomRightRadius: 6,
-            }),
-          }}
-        >
-          {msg.content}
-        </div>
+        {parts.map((part, partIdx) => (
+          <div
+            key={partIdx}
+            className="px-4 py-3.5 rounded-2xl leading-relaxed text-fs-body"
+            style={{
+              ...(isLuna ? {
+                background: "linear-gradient(135deg,rgba(88,28,220,0.18) 0%,rgba(30,58,120,0.22) 100%)",
+                border: "1.5px solid rgba(167,139,250,0.28)",
+                color: "rgba(255,255,255,0.93)",
+                borderBottomLeftRadius: partIdx === parts.length - 1 ? 6 : undefined,
+              } : {
+                background: "linear-gradient(135deg,#1a4a8a 0%,#1a6ab8 100%)",
+                border: "1.5px solid rgba(79,195,247,0.35)",
+                color: "#fff",
+                borderBottomRightRadius: partIdx === parts.length - 1 ? 6 : undefined,
+              }),
+            }}
+          >
+            {part}
+          </div>
+        ))}
 
         {/* Per-message listen button — Luna messages only */}
         {isLuna && onTogglePlay && (
@@ -142,7 +150,9 @@ function MessageBubble({
   );
 }
 
-// ─── Luna chat panel ──────────────────────────────────────────────────────────
+// ─── Luna chat panel ───────────────────────────────────────────────────────────────────
+
+const CHAT_DRAFT_KEY_PREFIX = "ns-chat-draft-v1";
 
 const CHAT_DURATION_PRESETS = [
   { value: 3, icon: "⚡", label: "Short",  desc: "~3 min" },
@@ -200,7 +210,7 @@ export default function LunaChatPanel({
     setMicSupported(!!SR);
   }, []);
 
-  // ─── On-demand TTS per Luna message ────────────────────────────────────────
+  // ─── On-demand TTS per Luna message ────────────────────────────────────────────
 
   const stopSpeaking = useCallback(() => {
     speakAbortRef.current?.abort();
@@ -238,7 +248,7 @@ export default function LunaChatPanel({
     }
   }, [stopSpeaking]);
 
-  // ─── Mic toggle ────────────────────────────────────────────────────────────
+  // ─── Mic toggle ────────────────────────────────────────────────────────────────────
 
   const toggleMic = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -278,7 +288,7 @@ export default function LunaChatPanel({
     setListening(true);
   }, [listening]);
 
-  // ─── Scroll / reset ────────────────────────────────────────────────────────
+  // ─── Scroll / reset ──────────────────────────────────────────────────────────────
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -286,17 +296,55 @@ export default function LunaChatPanel({
 
   useEffect(() => { scrollToBottom(); }, [messages, loading, scrollToBottom]);
 
+  const chatDraftKey = `${CHAT_DRAFT_KEY_PREFIX}-${activeChild?.id ?? "no-child"}`;
+
   useEffect(() => {
     greetAbortRef.current?.abort();
     stopSpeaking();
-    setMessages([]);
-    setStoryReady(false);
-    setStoryParams(null);
-    setGreeted(false);
-    firstMsgSent.current = false;
-  }, [activeChild?.id, stopSpeaking]);
+    // Try to restore saved chat state for this child
+    let restored = false;
+    try {
+      const saved = localStorage.getItem(`${CHAT_DRAFT_KEY_PREFIX}-${activeChild?.id ?? "no-child"}`);
+      if (saved) {
+        const parsed = JSON.parse(saved) as {
+          messages?: Message[];
+          storyReady?: boolean;
+          storyParams?: Record<string, string> | null;
+          readyConfirmed?: boolean;
+          durationMinutes?: number;
+        };
+        if (parsed.messages?.length) {
+          setMessages(parsed.messages);
+          if (parsed.storyReady) setStoryReady(parsed.storyReady);
+          if (parsed.storyParams) setStoryParams(parsed.storyParams);
+          if (parsed.readyConfirmed) setReadyConfirmed(parsed.readyConfirmed);
+          if (parsed.durationMinutes) setDurationMinutes(parsed.durationMinutes);
+          setGreeted(true);
+          firstMsgSent.current = true;
+          restored = true;
+        }
+      }
+    } catch { /* ignore */ }
 
-  // ─── Greeting ──────────────────────────────────────────────────────────────
+    if (!restored) {
+      setMessages([]);
+      setStoryReady(false);
+      setStoryParams(null);
+      setReadyConfirmed(false);
+      setGreeted(false);
+      firstMsgSent.current = false;
+    }
+  }, [activeChild?.id, stopSpeaking]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist chat state on every message change
+  useEffect(() => {
+    if (!messages.length) return;
+    try {
+      localStorage.setItem(chatDraftKey, JSON.stringify({ messages, storyReady, storyParams, readyConfirmed, durationMinutes }));
+    } catch { /* ignore */ }
+  }, [messages, storyReady, storyParams, readyConfirmed, durationMinutes, chatDraftKey]);
+
+  // ─── Greeting ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (greeted) return;
@@ -327,7 +375,7 @@ export default function LunaChatPanel({
       .finally(() => setLoading(false));
   }, [greeted, activeChild]);
 
-  // ─── Helpers ───────────────────────────────────────────────────────────────
+  // ─── Helpers ────────────────────────────────────────────────────────────────────────
 
   function getChildAgeGroup() {
     const age = activeChild?.age;
@@ -335,7 +383,7 @@ export default function LunaChatPanel({
     return age <= 4 ? "2-4" : age <= 6 ? "4-6" : age <= 8 ? "6-8" : age <= 10 ? "8-10" : "10-12";
   }
 
-  // ─── Send message ──────────────────────────────────────────────────────────
+  // ─── Send message ──────────────────────────────────────────────────────────────────
 
   async function sendMessage() {
     const text = input.trim();
@@ -392,7 +440,7 @@ export default function LunaChatPanel({
         setStoryParams(data.storyParams);
         setReadyConfirmed(false);
         setTimeout(() => {
-          setMessages((prev) => [...prev, { role: "model", content: "We're all set! ✨\nAnything else to add?\nOr tap below to create the story." }]);
+          setMessages((prev) => [...prev, { role: "model", content: "We're all set! ✨\nAnything else to add?" }]);
         }, 600);
       }
     } catch {
@@ -414,6 +462,7 @@ export default function LunaChatPanel({
   }
 
   function handleDiscard() {
+    try { localStorage.removeItem(chatDraftKey); } catch { /* ignore */ }
     stopSpeaking();
     recogRef.current?.stop();
     setListening(false);
@@ -487,10 +536,19 @@ export default function LunaChatPanel({
           <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0a0f1e] animate-pulse"
             style={{ background: "#10D9A0", zIndex:10 }} />
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-fs-body font-bold text-white">Luna</p>
           <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.8)" }}>Your magical story guide ✨</p>
         </div>
+        {hasUserMessages && (
+          <button
+            onClick={handleDiscard}
+            className="text-fs-body transition-all active:scale-95 flex-shrink-0"
+            style={{ color: "rgba(255,255,255,0.22)" }}
+          >
+            Start over
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -509,6 +567,25 @@ export default function LunaChatPanel({
           />
         ))}
         {loading && <TypingDots />}
+
+        {/* "No, let's go" — attached right below the last Luna message, aligned with bubbles */}
+        {storyReady && !readyConfirmed && (
+          <div className="flex justify-start pl-14">
+            <button
+              onClick={() => setReadyConfirmed(true)}
+              className="py-2.5 px-5 rounded-2xl text-fs-body transition-all active:scale-[0.98]"
+              style={{
+                background: "rgba(167,139,250,0.1)",
+                border: "1.5px solid rgba(167,139,250,0.35)",
+                color: "#c4b5fd",
+                fontWeight: 500,
+              }}
+            >
+              {letsGoLabel}
+            </button>
+          </div>
+        )}
+
         <div ref={bottomRef} />
       </div>
 
@@ -592,7 +669,7 @@ export default function LunaChatPanel({
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder={listening ? "Listening… 🎙️" : "Tell Luna your story idea… 🌟"}
+            placeholder={listening ? "Listening… 🎤" : hasUserMessages ? "" : "Tell Luna your story idea… 🌟"}
             rows={1}
             className="flex-1 bg-transparent outline-none resize-none leading-relaxed"
             style={{ fontSize: "var(--fs-body)", color: "rgba(255,255,255,0.9)", caretColor: "#a78bfa", maxHeight: 120 }}
@@ -615,21 +692,10 @@ export default function LunaChatPanel({
 
         {micSupported && (
           <p className="text-center mt-1.5" style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.13)" }}>
-            {listening ? "🎙️ Tap mic to stop" : "🎙️ Tap mic to speak · Enter to send"}
+            {listening ? "🎤 Tap mic to stop" : "🎤 Tap mic to speak · Enter to send"}
           </p>
         )}
       </div>
-
-      {/* "No, let's go" — shown when story is ready but user hasn't confirmed yet */}
-      {storyReady && !readyConfirmed && (
-        <button
-          onClick={() => setReadyConfirmed(true)}
-          className="w-full py-3.5 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
-          style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)", color: "#fff", boxShadow: "0 0 20px rgba(79,195,247,0.25)" }}
-        >
-          {letsGoLabel}
-        </button>
-      )}
 
       {/* Discard */}
       {hasUserMessages && (
