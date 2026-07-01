@@ -416,8 +416,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
   // ─── Summary narration (Gemini TTS) ───────────────────────────────────────
   const [summaryPlaying, setSummaryPlaying] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
-  // Auto-expand in studioMode so lesson badges and block cards are immediately visible
-  const [scriptExpanded, setScriptExpanded] = useState(studioMode);
+  const [scriptExpanded, setScriptExpanded] = useState(false);
   const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
   const summaryAbortRef = useRef<AbortController | null>(null);
 
