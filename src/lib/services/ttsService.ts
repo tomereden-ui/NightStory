@@ -30,13 +30,13 @@ function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// ── ElevenLabs TTS ────────────────────────────────────────────────────────────
+// ── ElevenLabs TTS ────────────────────────────────────────────────────────────────────────────────
 
 // Detect script/language from text content for EL language_code hint
 function detectLanguageCode(text: string, hint?: string): string | undefined {
-  if (/[֐-׿יִ-ﭏ]/.test(text)) return "he";
+  if (/[֐-׿יִ-ﮯ]/.test(text)) return "he";
   if (/[؀-ۿ]/.test(text)) return "ar";
-  if (/[一-鿿぀-ヿ]/.test(text)) return hint === "ja" ? "ja" : "zh";
+  if (/[一-鿿　-ヿ]/.test(text)) return hint === "ja" ? "ja" : "zh";
   if (/[ऀ-ॿ]/.test(text)) return "hi";
   if (hint && hint !== "en") return hint;
   return undefined;
@@ -123,7 +123,7 @@ const LANG_NAMES: Record<string, string> = {
   hi: "Hindi", sv: "Swedish", da: "Danish", fi: "Finnish", no: "Norwegian",
 };
 
-// ── Gemini TTS fallback ───────────────────────────────────────────────────────
+// ── Gemini TTS fallback ────────────────────────────────────────────────────────────────────────────
 
 interface GeminiTTSOptions {
   maxAttempts?: number;       // per payload; default 5
@@ -170,10 +170,17 @@ async function synthesizeGemini(
     }
     clearTimeout(timer);
     if (res.status === 429) {
-      await res.text().catch(() => "");
-      lastError = "TTS rate limited (429)";
+      const body429 = await res.text().catch(() => "");
+      // Log headers that reveal the real reason (quota vs. model overload vs. burst)
+      const hdrs: Record<string, string> = {};
+      res.headers.forEach((v, k) => { hdrs[k] = v; });
+      console.warn(
+        `[${ts()}][TTS] 429 from Gemini (attempt ${attempt}/${maxAttempts})\n` +
+        `  headers: ${JSON.stringify(hdrs)}\n` +
+        `  body:    ${body429.slice(0, 600)}`,
+      );
+      lastError = `TTS rate limited (429): ${body429.slice(0, 200)}`;
       const wait429 = Math.min(30_000, attempt * 10_000);
-      console.warn(`[${ts()}][TTS] 429 from Gemini (attempt ${attempt}/${maxAttempts}), waiting ${wait429}ms`);
       if (attempt < maxAttempts) { await sleep(wait429); continue; }
       break;
     }
@@ -232,7 +239,7 @@ async function synthesizeGemini(
   throw new Error(lastError || "Gemini TTS failed");
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// ── Public API ────────────────────────────────────────────────────────────────────────────────
 
 export async function synthesizeLine(
   line: string,
