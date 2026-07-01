@@ -273,25 +273,50 @@ Return a JSON object with the following top-level fields:
   "characters"  — A map of every named speaking character (exclude "SFX") to their visual profile.
                   Include ALL characters who appear in blocks, including "Narrator".
                   Each key is the EXACT character name as used in the blocks array.
+
+                  HOW TO DERIVE EACH CHARACTER'S PROFILE:
+                  Read back through the FULL script you just wrote. For every character, ask:
+                    • What species/kind of being are they? (human child, adult human, elephant,
+                      dragon, fox, robot, fairy, etc.) — establish this from WHAT THEY DO AND SAY
+                      in the script, not just their name.
+                    • What do they look like physically? Size, colour, age, distinctive feature.
+                    • What is their emotional presence? (timid, bold, gentle, mischievous, wise…)
+                  Do NOT invent a generic description. Do NOT guess from the name alone.
+                  Read every block in which this character speaks or acts, then synthesise.
+
                   Each value has:
                     "type"              — exactly one of: "child", "adult", "animal", "narrator"
-                                          Use "child" for children and young creatures.
+                                          Use "child" for children and young creatures (including
+                                          baby animals and juvenile characters of any species).
                                           Use "adult" for grown-up humans, elders, wizards, etc.
-                                          Use "animal" for any animal, creature, fairy, monster, or non-human.
+                                          Use "animal" for any animal, creature, monster, fairy,
+                                          mythical being, robot, or non-human of any kind.
                                           Use "narrator" only for the Narrator role.
                     "visualDescription" — 10–20 words describing exactly what this character looks like.
+
                                           ⚠ ALWAYS write in ENGLISH regardless of story language.
-                                             This is used as an AI image generation prompt — non-English
-                                             descriptions produce wrong or garbled avatars.
-                                          ⚠ Base the description on the character's ACTUAL appearance
-                                             as established in the story, NOT just their name.
-                                             If the character is a well-known figure (Dumbo, Simba, Nemo,
-                                             Cinderella, etc.), describe their REAL species and features:
-                                             Dumbo → "large gray baby elephant with enormous floppy ears"
-                                             Simba → "small golden lion cub with curious bright eyes"
-                                             NOT generic descriptions like "small friendly animal".
-                                          Be specific: for animals include species + size + colour +
-                                          one distinctive feature. For humans: age + hair + expression.
+                                             This is an AI image-generation prompt — non-English
+                                             text produces garbled or completely wrong avatars.
+
+                                          ⚠ Derive from the script, not the name:
+                                             Read what the character does in the story. An elephant
+                                             that flies must be described as an elephant. A cat that
+                                             talks must be described as a cat. Never assign a different
+                                             species because you didn't read the context.
+
+                                          ⚠ Well-known characters: use their CANONICAL appearance.
+                                             If the story features Dumbo, Simba, Nemo, Cinderella,
+                                             Pinocchio, or any other recognisable character, describe
+                                             their actual, canonical look — not a generic animal.
+                                             Dumbo  → "large gray baby elephant with enormous floppy ears that let him fly"
+                                             Simba  → "small golden lion cub, large curious eyes, fluffy tuft on head"
+                                             Nemo   → "small orange and white clownfish with one small fin"
+
+                                          Format rules:
+                                             Animals  — species + size + colour + one distinctive feature + mood
+                                             Children — age + hair colour/style + one clothing or feature detail + mood
+                                             Adults   — age range + defining physical trait + expression/presence
+
                   Examples:
                     "Luna"     : { "type": "child",    "visualDescription": "curious 7-year-old girl with curly red hair and wide bright eyes" }
                     "Grandma"  : { "type": "adult",    "visualDescription": "kind elderly grandmother with silver bun, round glasses and a warm smile" }
