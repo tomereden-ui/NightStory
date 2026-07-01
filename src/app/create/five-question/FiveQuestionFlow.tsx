@@ -22,7 +22,7 @@ import type { ScriptBlock, Voice } from "@/types";
 import type { Job } from "@/lib/jobs";
 import type { ResolutionMood, StorySeeds } from "@/utils/buildStoryPrompt";
 
-// ─── Types ───────────────────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────────────
 
 type Step = "q1" | "q2" | "q3" | "q4" | "q5" | "summary" | "generating" | "done";
 
@@ -36,7 +36,7 @@ interface Answers {
 
 const DRAFT_KEY = "ns-wizard-draft-v1";
 
-// ─── FairyFigure: animated Bluebell fairy portrait ───────────────────────────────────
+// ─── FairyFigure: animated Bluebell fairy portrait ────────────────────────────────
 
 function FairyFigure({ size = 80 }: { size?: number }) {
   return (
@@ -86,7 +86,7 @@ function FairyFigure({ size = 80 }: { size?: number }) {
   );
 }
 
-// ─── BluebellLine: progressive word-by-word reveal ─────────────────────────────────
+// ─── BluebellLine: progressive word-by-word reveal ───────────────────────────────
 
 function BluebellLine({
   text,
@@ -131,7 +131,7 @@ function BluebellLine({
   );
 }
 
-// ─── LaunchCountdown: 3-second animated pause ──────────────────────────────────────
+// ─── LaunchCountdown: 3-second animated pause ───────────────────────────────────
 
 function LaunchCountdown({ onComplete }: { onComplete: () => void }) {
   const [tick, setTick] = useState(0);
@@ -162,7 +162,7 @@ function LaunchCountdown({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-// ─── Shared primitives ──────────────────────────────────────────────────────────────────
+// ─── Shared primitives ───────────────────────────────────────────────────────
 
 function OptionPill({ label, emoji, selected, onClick }: { label: string; emoji?: string; selected?: boolean; onClick: () => void }) {
   return (
@@ -177,7 +177,7 @@ function OptionPill({ label, emoji, selected, onClick }: { label: string; emoji?
   );
 }
 
-// ─── BackButton ─────────────────────────────────────────────────────────────────────────────
+// ─── BackButton ────────────────────────────────────────────────────────────────────
 
 function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: string }) {
   return (
@@ -195,7 +195,7 @@ function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: 
   );
 }
 
-// ─── IllustratedCard ────────────────────────────────────────────────────────────────────
+// ─── IllustratedCard ────────────────────────────────────────────────────────────────
 
 const CARD_PALETTES: [string, string][] = [
   ["#4fc3f7", "#7c3aed"],
@@ -304,7 +304,7 @@ function StoryInput({ value, onChange, placeholder, maxSoftLimit, autoFocus, onS
   );
 }
 
-// ─── ExampleChips: tappable examples that populate the field ───────────────────────
+// ─── ExampleChips: tappable examples that populate the field ─────────────────────
 
 function ExampleChips({ examples, onTap }: { examples: string[]; onTap: (v: string) => void }) {
   return (
@@ -325,7 +325,7 @@ function ExampleChips({ examples, onTap }: { examples: string[]; onTap: (v: stri
   );
 }
 
-// ─── SkipLink: standalone skip (shown when no confirm is visible yet) ─────────────────
+// ─── SkipLink: standalone skip (shown when no confirm is visible yet) ─────────────
 
 function SkipLink({ onSkip }: { onSkip: () => void }) {
   return (
@@ -412,7 +412,7 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
   return null;
 }
 
-// ─── Q1 — Hero identity ───────────────────────────────────────────────────────────────────
+// ─── Q1 — Hero identity ─────────────────────────────────────────────────────────────────
 
 type Q1Card = "own" | "magical" | "stranger" | "surprise";
 
@@ -538,7 +538,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
   );
 }
 
-// ─── Q2 — Story world ────────────────────────────────────────────────────────────────────
+// ─── Q2 — Story world ───────────────────────────────────────────────────────────────────
 
 function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [selected, setSelected] = useState(initialWorld);
@@ -587,7 +587,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optio
   );
 }
 
-// ─── Q3 — Companion ──────────────────────────────────────────────────────────────────────
+// ─── Q3 — Companion ────────────────────────────────────────────────────────────────────
 
 type Q3CompanionType = "friend" | "pet" | "creature" | "family";
 
@@ -706,7 +706,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
   );
 }
 
-// ─── Q4 — Dramatic engine ─────────────────────────────────────────────────────────────────
+// ─── Q4 — Dramatic engine ───────────────────────────────────────────────────────────
 
 type Q4Category = "funny" | "spooky" | "weird" | "delicious";
 type Q4Phase = "input" | "reaction1" | "reaction2";
@@ -806,11 +806,11 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
   );
 }
 
-// ─── Q5 — Resolution mood ─────────────────────────────────────────────────────────────────
+// ─── Q5 — Resolution mood ───────────────────────────────────────────────────────────────
 
 function Q5View({ heroName, engineText, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const MOODS: { id: ResolutionMood; label: string; emoji: string; isBedtime?: boolean }[] = [
-    { id: "brave",     label: "Super brave",          emoji: "🦁" },
+    { id: "brave",     label: "Super brave",          emoji: "🦱" },
     { id: "laughing",  label: "Laughing so much",      emoji: "😂" },
     { id: "surprised", label: "Wonderfully surprised", emoji: "🌟" },
     { id: "sleepy",    label: "Warm and sleepy",        emoji: "🌙", isBedtime: true },
@@ -831,7 +831,7 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, onReset, optionI
               selected={selectedMood === m.id}
               onClick={() => setSelectedMood(m.id)}
               badge={m.isBedtime
-                ? <span className="block text-fs-body font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✶</span>
+                ? <span className="block text-fs-body font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ❖</span>
                 : undefined
               }
             />
@@ -852,7 +852,7 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, onReset, optionI
   );
 }
 
-// ─── Summary screen ──────────────────────────────────────────────────────────────────────
+// ─── Summary screen ─────────────────────────────────────────────────────────────────────
 
 type SummaryPhase = "table" | "script" | "countdown" | "herewego";
 
@@ -1042,7 +1042,7 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
   );
 }
 
-// ─── Main orchestrator ────────────────────────────────────────────────────────────────
+// ─── Main orchestrator ────────────────────────────────────────────────────────────────────
 
 const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", q4_engine: "", q5_mood: null };
 
