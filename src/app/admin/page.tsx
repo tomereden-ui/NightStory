@@ -879,7 +879,7 @@ export default function AdminPage() {
 
   // ── Production job ─────────────────────────────────────────────────────────
   const [jobId, setJobId]               = useState<string | null>(null);
-  const [job, setJob]                   = useState<{ status: string; step: string; progress: number; audioUrl?: string; coverUrl?: string; error?: string; title?: string; voiceAssignments?: Record<string, string>; storyId?: string } | null>(null);
+  const [job, setJob]                   = useState<{ status: string; step: string; progress: number; audioUrl?: string; coverUrl?: string; error?: string; libraryError?: string; title?: string; voiceAssignments?: Record<string, string>; storyId?: string } | null>(null);
   const pollRef                         = useRef<ReturnType<typeof setInterval> | null>(null);
   const coverUploadRef                  = useRef<HTMLInputElement | null>(null);
 
@@ -946,7 +946,7 @@ export default function AdminPage() {
       try {
         const res = await fetch(`/api/drama-status/${jobId}`, { cache: "no-store" });
         if (!res.ok) return;
-        const j = await res.json() as { status: string; step: string; progress: number; audioUrl?: string; coverUrl?: string; error?: string; title?: string; voiceAssignments?: Record<string, string>; storyId?: string };
+        const j = await res.json() as { status: string; step: string; progress: number; audioUrl?: string; coverUrl?: string; error?: string; libraryError?: string; title?: string; voiceAssignments?: Record<string, string>; storyId?: string };
         setJob(j);
         if (j.status === "done" || j.status === "error") {
           clearInterval(pollRef.current!);
@@ -1393,6 +1393,18 @@ export default function AdminPage() {
             {job && (
               <div className="mb-4">
                 <JobProgress status={job.status} step={job.step} progress={job.progress} error={job.error} />
+                {(job as { libraryError?: string }).libraryError && (
+                  <div className="mt-2 rounded-xl px-4 py-3"
+                    style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.3)" }}>
+                    <p className="text-fs-body font-bold" style={{ color: "#fbbf24" }}>⚠️ Library save failed</p>
+                    <p className="text-fs-body mt-0.5" style={{ color: "rgba(251,191,36,0.7)" }}>
+                      {(job as { libraryError?: string }).libraryError}
+                    </p>
+                    <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                      Audio was produced but could not be saved. Try clicking "Produce Story" again.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             {addProduceError && (
