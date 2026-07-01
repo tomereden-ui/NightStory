@@ -1430,13 +1430,22 @@ export default function Studio2Page() {
           body: JSON.stringify({ blocks: rawBlocks }),
         });
         const polData = await polRes.json();
-        if (polRes.ok && Array.isArray(polData.blocks) && polData.blocks.length) {
+        const validShape = Array.isArray(polData.blocks) &&
+          polData.blocks.length === rawBlocks.length &&
+          polData.blocks.every((b: unknown) =>
+            typeof b === "object" && b !== null &&
+            typeof (b as Record<string, unknown>).characterName === "string" &&
+            typeof (b as Record<string, unknown>).textPayload === "string"
+          );
+        if (polRes.ok && validShape) {
           policyBlocks = polData.blocks as ScriptBlock[];
           if (!polData.ok && polData.issues?.length) {
             console.warn(`[Policy] Auto-fixed ${polData.issues.length} violation(s):`, polData.issues);
           } else {
             console.log("[Policy] Script passed policy check.");
           }
+        } else if (!validShape && polData.blocks) {
+          console.warn("[Policy] Gemini returned unexpected block shape — using raw script", polData.blocks?.[0]);
         }
       } catch (err) {
         console.warn("[Policy] Policy check failed, using raw script:", err);
