@@ -323,8 +323,8 @@ function PrimaryButton({ label, onClick, disabled }: { label: string; onClick: (
   );
 }
 
-function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl }: {
-  onBack?: () => void; children: React.ReactNode;
+function QuestionShell({ onBack, onSkip, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl }: {
+  onBack?: () => void; onSkip?: () => void; children: React.ReactNode;
   bluebellText: string; bluebellSpeed?: number; onBluebellComplete?: () => void;
   audioUrl?: string;
 }) {
@@ -349,7 +349,13 @@ function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebe
         <div className="flex-1 flex justify-center">
           <FairyFigure size={52} />
         </div>
-        <div className="w-8" />
+        {onSkip ? (
+          <button onClick={onSkip}
+            className="text-fs-body font-medium transition-all active:scale-95 px-1 py-1"
+            style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.02em" }}>
+            Skip →
+          </button>
+        ) : <div className="w-8" />}
       </div>
       <div className="mb-7">
         <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>Bluebell</p>
@@ -371,7 +377,7 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
 
 type Q1Mode = null | "own" | "magical" | "stranger" | "surprise";
 
-function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName, childAvatarUrl }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string }) {
+function Q1View({ initialHero, onNext, onBack, onSkip, optionImages, audioUrl, childName, childAvatarUrl }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string }) {
   const [mode, setMode] = useState<Q1Mode>(null);
   const [textVal, setTextVal] = useState(initialHero);
   const [magicChip, setMagicChip] = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
@@ -402,8 +408,12 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
     </div>
   );
 
+  // When in a sub-mode, Back returns to mode selection; otherwise exits the step.
+  const shellBack = mode ? () => setMode(null) : onBack;
+  const shellSkip = mode ? undefined : onSkip;
+
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q1} audioUrl={audioUrl}>
+    <QuestionShell onBack={shellBack} onSkip={shellSkip} bluebellText={BLUEBELL.q1} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         {mode === null && (
           <div className="grid grid-cols-2 gap-2">
@@ -423,15 +433,13 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
         )}
         {mode === "own" && (
           <>
-            <BackButton onClick={() => setMode(null)} />
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextOwn} autoFocus onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <PrimaryButton label="That's the one!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
+            <PrimaryButton label="This is my hero!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
         {mode === "magical" && (
           <>
-            <BackButton onClick={() => setMode(null)} />
             <div className="flex flex-wrap gap-2">
               {MAGICAL_NAME_CHIPS.map((n) => (
                 <button key={n} onClick={() => setMagicChip(n)}
@@ -443,15 +451,14 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
                 </button>
               ))}
             </div>
-            <PrimaryButton label="Choose this name" onClick={() => magicChip && confirm(magicChip)} disabled={!magicChip} />
+            <PrimaryButton label="This is my hero!" onClick={() => magicChip && confirm(magicChip)} disabled={!magicChip} />
           </>
         )}
         {mode === "stranger" && (
           <>
-            <BackButton onClick={() => setMode(null)} />
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextStranger} autoFocus onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <PrimaryButton label="That's the one!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
+            <PrimaryButton label="This is my hero!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
         {mode === "surprise" && (
@@ -472,7 +479,7 @@ function Q1View({ initialHero, onNext, onBack, optionImages, audioUrl, childName
 
 // ─── Q2 — Story world ─────────────────────────────────────────────────────────
 
-function Q2View({ heroName, initialWorld, onNext, onBack, optionImages, audioUrl }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [selected, setSelected] = useState(initialWorld);
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
@@ -490,7 +497,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, optionImages, audioUrl
   );
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q2(heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} onSkip={onSkip} bluebellText={BLUEBELL.q2(heroName)} audioUrl={audioUrl}>
       <div className="grid grid-cols-2 gap-2 mb-5">
         {WORLD_OPTIONS.map((w) => {
           const isSel = selected === w.label;
@@ -516,29 +523,32 @@ function Q2View({ heroName, initialWorld, onNext, onBack, optionImages, audioUrl
 
 // ─── Q3 — Companion ───────────────────────────────────────────────────────────
 
-type Q3Mode = null | "friend" | "pet" | "creature" | "family";
+type Q3CompanionType = "friend" | "pet" | "creature" | "family";
 
-function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionImages, audioUrl }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
-  const [mode, setMode] = useState<Q3Mode>(null);
-  const [textVal, setTextVal] = useState(initialCompanion);
+const COMPANION_TYPES: { id: Q3CompanionType; label: string; geminiLabel: string; emoji: string }[] = [
+  { id: "friend",   label: "Best friend",       geminiLabel: "best friend",       emoji: "👫" },
+  { id: "pet",      label: "A pet",              geminiLabel: "pet",               emoji: "🐾" },
+  { id: "creature", label: "A magical creature", geminiLabel: "magical creature",  emoji: "🦄" },
+  { id: "family",   label: "A family member",    geminiLabel: "family member",     emoji: "👨‍👩‍👧" },
+];
+
+function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+  const [selectedType, setSelectedType] = useState<Q3CompanionType | null>(null);
+  const [nameVal, setNameVal] = useState("");
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
-  const [validationError, setValidationError] = useState("");
 
-  useEffect(() => { if (initialCompanion) { setMode("friend"); setTextVal(initialCompanion); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const confirm = (companion: string) => {
-    if (!companion.trim()) { setValidationError(BLUEBELL.emptyError); return; }
-    setTransitionMsg(BLUEBELL.q3Confirm(companion.trim())); setTransitioning(true);
-    setTimeout(() => { setTransitioning(false); onNext(companion.trim()); }, 1500);
+  const buildCompanionString = (type: Q3CompanionType, name: string): string => {
+    const ct = COMPANION_TYPES.find((t) => t.id === type)!;
+    return name.trim() ? `a ${ct.geminiLabel} named ${name.trim()}` : `a ${ct.geminiLabel}`;
   };
 
-  const COMPANION_MODES: { id: Q3Mode; label: string; emoji: string; placeholder: string }[] = [
-    { id: "friend",   label: "Best friend",        emoji: "👫", placeholder: "What's their name?" },
-    { id: "pet",      label: "A pet",               emoji: "🐾", placeholder: "What kind of pet? What's their name?" },
-    { id: "creature", label: "A magical creature",  emoji: "🦄", placeholder: "What kind of creature?" },
-    { id: "family",   label: "A family member",     emoji: "👨‍👩‍👧", placeholder: "Who?" },
-  ];
+  const confirm = (type: Q3CompanionType, name: string) => {
+    const companion = buildCompanionString(type, name);
+    setTransitionMsg(BLUEBELL.q3Confirm(name.trim() || COMPANION_TYPES.find((t) => t.id === type)!.label));
+    setTransitioning(true);
+    setTimeout(() => { setTransitioning(false); onNext(companion); }, 1500);
+  };
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
@@ -547,35 +557,47 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
     </div>
   );
 
-  const activeMode = COMPANION_MODES.find((m) => m.id === mode);
-
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q3(worldName, heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} onSkip={onSkip} bluebellText={BLUEBELL.q3(worldName, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
-        {mode === null && (
-          <>
-            <div className="grid grid-cols-2 gap-2 mb-1">
-              {COMPANION_MODES.map((m) => (
-                <IllustratedCard
-                  key={m.id}
-                  label={m.label}
-                  emoji={m.emoji}
-                  imageUrl={optionImages[`companion-${m.id}`]}
-                  onClick={() => setMode(m.id)}
-                />
-              ))}
-            </div>
-            <OptionPill label="Surprise me!" emoji="🎲" onClick={() => { setTextVal(pickRandom(SURPRISE_COMPANIONS)); setMode("creature"); }} />
-            <p className="text-fs-body text-center mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
-          </>
+        <div className="grid grid-cols-2 gap-2">
+          {COMPANION_TYPES.map((ct) => (
+            <IllustratedCard
+              key={ct.id}
+              label={ct.label}
+              emoji={ct.emoji}
+              imageUrl={optionImages[`companion-${ct.id}`]}
+              selected={selectedType === ct.id}
+              onClick={() => { setSelectedType(ct.id); setNameVal(""); }}
+            />
+          ))}
+        </div>
+
+        {selectedType && (
+          <div className="flex flex-col gap-2 mt-1">
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
+              Give them a name — or leave it blank and Bluebell will choose!
+            </p>
+            <input
+              autoFocus
+              type="text"
+              value={nameVal}
+              onChange={(e) => setNameVal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && confirm(selectedType, nameVal)}
+              placeholder="Name (optional)"
+              className="w-full rounded-xl px-4 py-3 text-fs-body text-white placeholder-white/25 outline-none transition-colors"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)" }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
+            />
+            <PrimaryButton label="This is the companion!" onClick={() => confirm(selectedType, nameVal)} />
+          </div>
         )}
-        {mode !== null && activeMode && (
+
+        {!selectedType && (
           <>
-            <BackButton onClick={() => setMode(null)} />
-            <p className="text-fs-body text-white/50">{activeMode.label}</p>
-            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} autoFocus onSubmit={() => confirm(textVal)} />
-            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <PrimaryButton label="Magnificent!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
+            <OptionPill label="Surprise me!" emoji="🎲" onClick={() => { onNext(pickRandom(SURPRISE_COMPANIONS)); }} />
+            <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
           </>
         )}
       </div>
@@ -588,7 +610,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, optionI
 type Q4Mode = null | "funny" | "spooky" | "weird" | "delicious";
 type Q4Phase = "input" | "reaction1" | "reaction2";
 
-function Q4View({ heroName, companionName, initialEngine, onNext, onBack, optionImages, audioUrl }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [mode, setMode] = useState<Q4Mode>(null);
   const [textVal, setTextVal] = useState(initialEngine);
   const [phase, setPhase] = useState<Q4Phase>("input");
@@ -626,9 +648,11 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
   );
 
   const activeMode = Q4_MODES.find((m) => m.id === mode);
+  const shellBack = mode ? () => setMode(null) : onBack;
+  const shellSkip = mode ? undefined : onSkip;
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q4(companionName, heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={shellBack} onSkip={shellSkip} bluebellText={BLUEBELL.q4(companionName, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         {mode === null && (
           <>
@@ -648,11 +672,10 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
         )}
         {mode !== null && activeMode && (
           <>
-            <BackButton onClick={() => setMode(null)} />
             <p className="text-fs-body text-white/50">{activeMode.label}</p>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={activeMode.placeholder} maxSoftLimit={80} autoFocus onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <PrimaryButton label="That's it!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
+            <PrimaryButton label="This is the challenge!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
           </>
         )}
       </div>
@@ -662,7 +685,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, option
 
 // ─── Q5 — Resolution mood ─────────────────────────────────────────────────────
 
-function Q5View({ heroName, engineText, onNext, onBack, optionImages, audioUrl }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q5View({ heroName, engineText, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const MOODS: { id: ResolutionMood; label: string; emoji: string; isBedtime?: boolean }[] = [
     { id: "brave",     label: "Super brave",          emoji: "🦁" },
     { id: "laughing",  label: "Laughing so much",      emoji: "😂" },
@@ -671,21 +694,24 @@ function Q5View({ heroName, engineText, onNext, onBack, optionImages, audioUrl }
   ];
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q5(engineText, heroName)} audioUrl={audioUrl}>
-      <div className="grid grid-cols-2 gap-2.5">
-        {MOODS.map((m) => (
-          <IllustratedCard
-            key={m.id}
-            label={m.label}
-            emoji={m.emoji}
-            imageUrl={optionImages[`mood-${m.id}`]}
-            onClick={() => onNext(m.id)}
-            badge={m.isBedtime
-              ? <span className="block text-fs-body font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
-              : undefined
-            }
-          />
-        ))}
+    <QuestionShell onBack={onBack} onSkip={onSkip} bluebellText={BLUEBELL.q5(engineText, heroName)} audioUrl={audioUrl}>
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
+          {MOODS.map((m) => (
+            <IllustratedCard
+              key={m.id}
+              label={m.label}
+              emoji={m.emoji}
+              imageUrl={optionImages[`mood-${m.id}`]}
+              onClick={() => onNext(m.id)}
+              badge={m.isBedtime
+                ? <span className="block text-fs-body font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
+                : undefined
+              }
+            />
+          ))}
+        </div>
+        <OptionPill label="Surprise me!" emoji="🎲" onClick={() => onNext(pickRandom(MOODS).id)} />
       </div>
     </QuestionShell>
   );
@@ -745,16 +771,38 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         ))}
       </div>
 
-      {/* Duration slider — shown before launch sequence begins */}
+      {/* Duration picker — shown before launch sequence begins */}
       {phase === "table" && (
         <div className="mb-5">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <label className="text-white/40 text-fs-body font-bold uppercase tracking-widest">Story Length</label>
             <span className="text-fs-body font-bold px-2.5 py-0.5 rounded-full"
               style={{ background: "rgba(79,195,247,0.12)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.25)" }}>
               {durationMinutes} min
             </span>
           </div>
+          {/* Preset buttons */}
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {[
+              { value: 3, icon: "⚡", label: "Short",  desc: "~3 min" },
+              { value: 5, icon: "🌙", label: "Medium", desc: "~5 min" },
+              { value: 8, icon: "✨", label: "Long",   desc: "~8 min" },
+            ].map((p) => {
+              const sel = durationMinutes === p.value;
+              return (
+                <button key={p.value} onClick={() => onDurationChange(p.value)}
+                  className="flex flex-col items-center gap-0.5 py-2.5 rounded-2xl transition-all active:scale-[0.97]"
+                  style={sel
+                    ? { background: "rgba(79,195,247,0.14)", border: "1.5px solid rgba(79,195,247,0.5)", color: "#4fc3f7" }
+                    : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)" }}>
+                  <span className="text-fs-heading">{p.icon}</span>
+                  <span className="text-fs-body font-semibold">{p.label}</span>
+                  <span className="text-fs-body" style={{ color: sel ? "rgba(79,195,247,0.7)" : "rgba(255,255,255,0.3)" }}>{p.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* Fine-tune slider */}
           <input type="range" min={1} max={15} step={1} value={durationMinutes}
             onChange={(e) => onDurationChange(+e.target.value)}
             className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
@@ -1115,11 +1163,11 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     </div>
   ) : null;
 
-  if (step === "q1") return <>{GeneratingBadge}<Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={onComplete ? undefined : () => router.push("/create")} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} /></>;
-  if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q2} /></>;
-  if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q3} /></>;
-  if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q4} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
+  if (step === "q1") return <>{GeneratingBadge}<Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); setStep("q2"); }} onBack={onComplete ? undefined : () => router.push("/create")} onSkip={() => { setAnswer("q1_hero", answers.q1_hero || pickRandom(SURPRISE_HERO_NAMES)); setStep("q2"); }} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} /></>;
+  if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); setStep("q3"); }} onBack={handleBack} onSkip={() => { setAnswer("q2_world", answers.q2_world || pickRandom(WORLD_OPTIONS).label); setStep("q3"); }} optionImages={optionImages} audioUrl={questionAudios.q2} /></>;
+  if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); setStep("q4"); }} onBack={handleBack} onSkip={() => { setAnswer("q3_companion", answers.q3_companion || pickRandom(SURPRISE_COMPANIONS)); setStep("q4"); }} optionImages={optionImages} audioUrl={questionAudios.q3} /></>;
+  if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); setStep("q5"); }} onBack={handleBack} onSkip={() => { setAnswer("q4_engine", answers.q4_engine || pickRandom(SURPRISE_ENGINES)); setStep("q5"); }} optionImages={optionImages} audioUrl={questionAudios.q4} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); setStep("summary"); }} onBack={handleBack} onSkip={() => { setAnswer("q5_mood", answers.q5_mood ?? "sleepy"); setStep("summary"); }} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
 
   if (step === "summary") return (
     <>
