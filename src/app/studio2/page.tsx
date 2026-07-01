@@ -12,6 +12,7 @@ import LessonEditor from "@/components/studio/LessonEditor";
 import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import type { ScriptBlock, Voice, StoryScene } from "@/types";
+import type { CharacterProfile } from "@/lib/libraryStore";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
@@ -1128,6 +1129,7 @@ export default function Studio2Page() {
   const [characterAvatars, setCharacterAvatars]           = useState<Record<string, string>>({});
   const [characterTypes, setCharacterTypes]               = useState<Record<string, CharacterType>>({});
   const [characterDescriptions, setCharacterDescriptions] = useState<Record<string, string>>({});
+  const [characterProfiles, setCharacterProfiles]         = useState<Record<string, CharacterProfile>>({});
 
   // ─── Pending character directions ──────────────────────────────────────────
   const [pendingDirections, setPendingDirections] = useState<string[]>([]);
@@ -1184,6 +1186,7 @@ export default function Studio2Page() {
       const hasStale = Object.values(savedAvatars).some((u) => (u as string).includes("dicebear.com"));
       setCharacterAvatars(hasStale ? {} : savedAvatars);
       setCharacterTypes((draft.characterTypes ?? {}) as Record<string, CharacterType>);
+      setCharacterProfiles(draft.characterProfiles ?? {});
       setStoryTitle(draft.storyTitle ?? "");
       // Migrate: support both old string `lesson` and new array `lessons`
       setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
@@ -1199,8 +1202,8 @@ export default function Studio2Page() {
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations, scenes }, DRAFT_KEY);
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, storyTitle, lessons, lessonImplementations, scenes, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, scenes }, DRAFT_KEY);
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, scenes, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -1259,7 +1262,7 @@ export default function Studio2Page() {
   const resolveAndSetCharacterAvatars = useCallback(async (
     blocks: ScriptBlock[],
     summary: string,
-    storyCharacters?: Record<string, { type: string; visualDescription: string }>,
+    storyCharacters?: Record<string, CharacterProfile>,
   ) => {
     const uniqueChars = Array.from(new Set(
       blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)
@@ -1279,6 +1282,7 @@ export default function Studio2Page() {
     setCharacterAvatars(defaultAvatars);
 
     if (storyCharacters && Object.keys(storyCharacters).length > 0) {
+      setCharacterProfiles(storyCharacters);
       // Store descriptions so produce-drama can use them for voice profiling
       const descs: Record<string, string> = {};
       for (const [name, info] of Object.entries(storyCharacters)) {
@@ -1353,7 +1357,8 @@ export default function Studio2Page() {
     if (avatarRefreshFiredRef.current) return;
     if (Object.keys(characterAvatars).length === 0) {
       avatarRefreshFiredRef.current = true;
-      void resolveAndSetCharacterAvatars(scriptBlocks, summary);
+      const savedProfiles = Object.keys(characterProfiles).length > 0 ? characterProfiles : undefined;
+      void resolveAndSetCharacterAvatars(scriptBlocks, summary, savedProfiles);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, scriptBlocks, resolveAndSetCharacterAvatars]);
@@ -1396,7 +1401,7 @@ export default function Studio2Page() {
       const cp = data.coverPrompt ?? "";
       const title = (data.title as string | undefined) ?? "";
       const impls = (data.lessonImplementations ?? []) as { lesson: string; implemented: boolean; how: string }[];
-      const storyChars = (data.characters ?? {}) as Record<string, { type: string; visualDescription: string }>;
+      const storyChars = (data.characters ?? {}) as Record<string, CharacterProfile>;
       const rawScenes = (data.scenes ?? []) as StoryScene[];
 
       // Story is ready — transition from "generating" to "validating"
@@ -1521,7 +1526,7 @@ export default function Studio2Page() {
           fetch(`/api/library/${editingStoryId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ blocks: scriptBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined }),
+            body: JSON.stringify({ blocks: scriptBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined }),
           })
         );
 
@@ -1680,7 +1685,7 @@ export default function Studio2Page() {
     setActiveTab("producing");
     try {
       const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
-      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes, ...(activeChildId ? { childIds: [activeChildId] } : {}) };
+      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, ...(activeChildId ? { childIds: [activeChildId] } : {}) };
       if (editingStoryId) {
         body.editingStoryId = editingStoryId;
         // Always force re-production when editing an existing story — the server-side
