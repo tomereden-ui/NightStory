@@ -19,7 +19,7 @@ import { geminiPost, geminiText } from "@/lib/geminiClient";
 async function buildVoiceOverrides(
   blocks: ScriptBlock[],
   supabase: SupabaseClient,
-): Promise<Record<string, { elevenLabsId?: string; geminiVoiceName?: string }>> {
+): Promise<Record<string, { elevenLabsId?: string; geminiVoiceName?: string; voiceSettings?: { stability?: number; similarity_boost?: number; style?: number; use_speaker_boost?: boolean; speed?: number } }>> {
   const presetById: Record<string, { geminiVoiceName: string }> = Object.fromEntries(
     PRESET_VOICES.map((p) => [p.id, { geminiVoiceName: p.geminiVoiceName }]),
   );
@@ -32,7 +32,7 @@ async function buildVoiceOverrides(
   const isValidElId = (id: string | null | undefined): id is string =>
     typeof id === "string" && id.length >= 15 && /^[a-zA-Z0-9]+$/.test(id);
 
-  const familyById: Record<string, { elevenLabsId?: string; geminiVoiceName?: string }> = {};
+  const familyById: Record<string, { elevenLabsId?: string; geminiVoiceName?: string; voiceSettings?: { stability?: number; similarity_boost?: number; style?: number; use_speaker_boost?: boolean; speed?: number } }> = {};
   if (unresolvedIds.length > 0) {
     const { data, error } = await supabase.from("voices").select("*").in("id", unresolvedIds);
     if (error) {
@@ -42,12 +42,13 @@ async function buildVoiceOverrides(
         familyById[row.id] = {
           elevenLabsId: isValidElId(row.el_voice_id) ? row.el_voice_id : undefined,
           geminiVoiceName: row.gemini_voice_name ?? undefined,
+          voiceSettings: row.voice_settings ?? undefined,
         };
       }
     }
   }
 
-  const overrides: Record<string, { elevenLabsId?: string; geminiVoiceName?: string }> = {};
+  const overrides: Record<string, { elevenLabsId?: string; geminiVoiceName?: string; voiceSettings?: { stability?: number; similarity_boost?: number; style?: number; use_speaker_boost?: boolean; speed?: number } }> = {};
   for (const block of blocks) {
     if (overrides[block.characterName]) continue;
     const voice = presetById[block.assignedVoiceId] ?? familyById[block.assignedVoiceId];
@@ -421,7 +422,17 @@ async function runProduction(
             // ── Cache miss: synthesise and queue for upload ────────────────────────
             const persona = profile?.persona;
             try {
-              await synthesizeLine(line, voice, ttsKey, outPath, persona, useELForChar, profile?.stability, profile?.style, scriptLanguage);
+              const vs = useELForChar ? override?.voiceSettings : undefined;
+              await synthesizeLine(
+                line, voice, ttsKey, outPath, persona, useELForChar,
+                vs?.stability ?? profile?.stability,
+                vs?.style ?? profile?.style,
+                scriptLanguage,
+                undefined,
+                vs?.similarity_boost,
+                vs?.use_speaker_boost,
+                vs?.speed,
+              );
               const resolvedPath = [`${track.id}.mp3`, `${track.id}.wav`]
                 .map((n) => path.join(jobTmp, n))
                 .find((p) => fs.existsSync(p));
