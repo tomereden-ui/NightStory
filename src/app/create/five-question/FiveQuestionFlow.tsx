@@ -22,7 +22,7 @@ import type { ScriptBlock, Voice } from "@/types";
 import type { Job } from "@/lib/jobs";
 import type { ResolutionMood, StorySeeds } from "@/utils/buildStoryPrompt";
 
-// ─── Types ──────────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────────
 
 type Step = "q1" | "q2" | "q3" | "q4" | "q5" | "summary" | "generating" | "done";
 
@@ -36,7 +36,7 @@ interface Answers {
 
 const DRAFT_KEY = "ns-wizard-draft-v1";
 
-// ─── FairyFigure: animated Bluebell fairy portrait ────────────────────────────────
+// ─── FairyFigure: animated Bluebell fairy portrait ────────────────────────────────────
 
 function FairyFigure({ size = 80 }: { size?: number }) {
   return (
@@ -86,7 +86,7 @@ function FairyFigure({ size = 80 }: { size?: number }) {
   );
 }
 
-// ─── BluebellLine: progressive word-by-word reveal ───────────────────────────────
+// ─── BluebellLine: progressive word-by-word reveal ─────────────────────────────────
 
 function BluebellLine({
   text,
@@ -131,7 +131,7 @@ function BluebellLine({
   );
 }
 
-// ─── LaunchCountdown: 3-second animated pause ───────────────────────────────────
+// ─── LaunchCountdown: 3-second animated pause ─────────────────────────────────
 
 function LaunchCountdown({ onComplete }: { onComplete: () => void }) {
   const [tick, setTick] = useState(0);
@@ -162,7 +162,7 @@ function LaunchCountdown({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-// ─── Shared primitives ───────────────────────────────────────────────────────
+// ─── Shared primitives ─────────────────────────────────────────────────────
 
 function OptionPill({ label, emoji, selected, onClick }: { label: string; emoji?: string; selected?: boolean; onClick: () => void }) {
   return (
@@ -195,7 +195,7 @@ function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: 
   );
 }
 
-// ─── IllustratedCard ────────────────────────────────────────────────────────────────
+// ─── IllustratedCard ────────────────────────────────────────────────────────────────────
 
 const CARD_PALETTES: [string, string][] = [
   ["#4fc3f7", "#7c3aed"],
@@ -325,32 +325,25 @@ function ExampleChips({ examples, onTap }: { examples: string[]; onTap: (v: stri
   );
 }
 
-// ─── SkipLink: standalone skip (shown when no confirm is visible yet) ─────────────
+// ─── SkipLink: standalone skip (shown when no confirm is visible yet) ─────────────────
 
 function SkipLink({ onSkip }: { onSkip: () => void }) {
   return (
     <button onClick={onSkip}
-      className="text-center text-fs-body w-full py-1"
-      style={{ color: "rgba(255,255,255,0.22)", letterSpacing: "0.01em" }}>
+      className="text-center text-fs-body w-full py-3 rounded-2xl transition-all active:scale-[0.98]"
+      style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)", letterSpacing: "0.01em" }}>
       Skip this step →
     </button>
   );
 }
 
-// ─── ConfirmRow: skip (left ghost) + confirm (right primary) on same row ──────
+// ─── ConfirmRow: confirm (left primary) + skip (right ghost) on same row ──────
 
 function ConfirmRow({ confirmLabel, onConfirm, disabled, onSkip }: {
   confirmLabel: string; onConfirm: () => void; disabled?: boolean; onSkip?: () => void;
 }) {
   return (
     <div className="flex gap-2">
-      {onSkip && (
-        <button onClick={onSkip}
-          className="flex-shrink-0 py-4 px-5 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
-          style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)" }}>
-          Skip →
-        </button>
-      )}
       <button onClick={onConfirm} disabled={disabled}
         className="flex-1 py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
         style={!disabled
@@ -358,11 +351,18 @@ function ConfirmRow({ confirmLabel, onConfirm, disabled, onSkip }: {
           : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }}>
         {confirmLabel}
       </button>
+      {onSkip && (
+        <button onClick={onSkip}
+          className="flex-shrink-0 py-4 px-5 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
+          style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)" }}>
+          Skip →
+        </button>
+      )}
     </div>
   );
 }
 
-// ─── QuestionShell ────────────────────────────────────────────────────────────────────
+// ─── QuestionShell ─────────────────────────────────────────────────────────────────────────
 
 function QuestionShell({ onBack, onReset, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl }: {
   onBack?: () => void; onReset?: () => void; children: React.ReactNode;
@@ -391,8 +391,8 @@ function QuestionShell({ onBack, onReset, children, bluebellText, bluebellSpeed,
         </div>
         {onReset ? (
           <button onClick={onReset}
-            className="text-fs-body transition-all active:scale-95"
-            style={{ color: "rgba(255,255,255,0.22)" }}>
+            className="text-fs-body py-1.5 px-3 rounded-xl transition-all active:scale-95"
+            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)" }}>
             Start over
           </button>
         ) : <div className="w-16" />}
@@ -412,7 +412,7 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
   return null;
 }
 
-// ─── Q1 — Hero identity ─────────────────────────────────────────────────────────────────
+// ─── Q1 — Hero identity ───────────────────────────────────────────────────────────────────────
 
 type Q1Card = "own" | "magical" | "stranger" | "surprise";
 
@@ -538,7 +538,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
   );
 }
 
-// ─── Q2 — Story world ───────────────────────────────────────────────────────────────────
+// ─── Q2 — Story world ─────────────────────────────────────────────────────────────────────────
 
 function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [selected, setSelected] = useState(initialWorld);
@@ -587,7 +587,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optio
   );
 }
 
-// ─── Q3 — Companion ────────────────────────────────────────────────────────────────────
+// ─── Q3 — Companion ──────────────────────────────────────────────────────────────────────────────
 
 type Q3CompanionType = "friend" | "pet" | "creature" | "family";
 
@@ -595,12 +595,29 @@ const COMPANION_TYPES: { id: Q3CompanionType; label: string; geminiLabel: string
   { id: "friend",   label: "Best friend",       geminiLabel: "best friend",      emoji: "👫", surpriseNames: ["Mia", "Jake", "Sam", "Theo", "Lily", "Omar", "Priya"] },
   { id: "pet",      label: "A pet",              geminiLabel: "pet",              emoji: "🐾", surpriseNames: ["Biscuit", "Pepper", "Mochi", "Pebble", "Rolo", "Toasty", "Noodle"] },
   { id: "creature", label: "A magical creature", geminiLabel: "magical creature", emoji: "🦄", surpriseNames: ["Nimbus", "Ember", "Glimmer", "Pip", "Nova", "Wisp", "Cinder"] },
-  { id: "family",   label: "A family member",    geminiLabel: "family member",    emoji: "👨‍👩‍👧", surpriseNames: ["Rosa", "Leo", "Nana", "my brother", "my sister", "Grandpa Joe", "Auntie Bea"] },
+  { id: "family",   label: "A family member",    geminiLabel: "family member",    emoji: "👨‍👩‍👧", surpriseNames: ["Mom", "Dad", "Grandpa", "Grandma", "my brother", "my sister"] },
 ];
 
 function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [selectedType, setSelectedType] = useState<Q3CompanionType | null>(null);
   const [nameVal, setNameVal]           = useState("");
+
+  // Restore prior selection when editing from summary
+  useEffect(() => {
+    if (!initialCompanion) return;
+    for (const ct of COMPANION_TYPES) {
+      const withName = `a ${ct.geminiLabel} named `;
+      if (initialCompanion.startsWith(withName)) {
+        setSelectedType(ct.id);
+        setNameVal(initialCompanion.slice(withName.length));
+        return;
+      }
+      if (initialCompanion === `a ${ct.geminiLabel}`) {
+        setSelectedType(ct.id);
+        return;
+      }
+    }
+  }, [initialCompanion]);
   const [suggestedNames, setSuggestedNames] = useState<string[]>([]);
   const [transitioning, setTransitioning]   = useState(false);
   const [transitionMsg, setTransitionMsg]   = useState("");
@@ -706,7 +723,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
   );
 }
 
-// ─── Q4 — Dramatic engine ───────────────────────────────────────────────────────────
+// ─── Q4 — Dramatic engine ───────────────────────────────────────────────────────────────────
 
 type Q4Category = "funny" | "spooky" | "weird" | "delicious";
 type Q4Phase = "input" | "reaction1" | "reaction2";
@@ -806,9 +823,9 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
   );
 }
 
-// ─── Q5 — Resolution mood ───────────────────────────────────────────────────────────────
+// ─── Q5 — Resolution mood ───────────────────────────────────────────────────────────────────────
 
-function Q5View({ heroName, engineText, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q5View({ heroName, engineText, initialMood, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; engineText: string; initialMood?: ResolutionMood | null; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const MOODS: { id: ResolutionMood; label: string; emoji: string; isBedtime?: boolean }[] = [
     { id: "brave",     label: "Super brave",          emoji: "🦱" },
     { id: "laughing",  label: "Laughing so much",      emoji: "😂" },
@@ -816,7 +833,7 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, onReset, optionI
     { id: "sleepy",    label: "Warm and sleepy",        emoji: "🌙", isBedtime: true },
   ];
 
-  const [selectedMood, setSelectedMood] = useState<ResolutionMood | null>(null);
+  const [selectedMood, setSelectedMood] = useState<ResolutionMood | null>(initialMood ?? null);
 
   return (
     <QuestionShell onBack={onBack} onReset={onReset} bluebellText={BLUEBELL.q5(engineText, heroName)} audioUrl={audioUrl}>
@@ -852,7 +869,7 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, onReset, optionI
   );
 }
 
-// ─── Summary screen ─────────────────────────────────────────────────────────────────────
+// ─── Summary screen ────────────────────────────────────────────────────────────────────────────────
 
 type SummaryPhase = "table" | "script" | "countdown" | "herewego";
 
@@ -890,8 +907,8 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         <div className="flex-1 flex justify-center"><FairyFigure size={52} /></div>
         {onReset ? (
           <button onClick={onReset}
-            className="text-fs-body transition-all active:scale-95"
-            style={{ color: "rgba(255,255,255,0.22)" }}>
+            className="text-fs-body py-1.5 px-3 rounded-xl transition-all active:scale-95"
+            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)" }}>
             Start over
           </button>
         ) : <div className="w-16" />}
@@ -941,13 +958,13 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
               );
             })}
           </div>
-          <input type="range" min={1} max={15} step={1} value={durationMinutes}
+          <input type="range" min={1} max={10} step={1} value={durationMinutes}
             onChange={(e) => onDurationChange(+e.target.value)}
             className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
           <div className="flex justify-between text-white/20 text-fs-body mt-1">
             <span>1 min</span>
-            <span className="text-white/15">· · · · · · · · · · · · · ·</span>
-            <span>15 min</span>
+            <span className="text-white/15">· · · · · · · · ·</span>
+            <span>10 min</span>
           </div>
         </div>
       )}
@@ -981,7 +998,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   );
 }
 
-// ─── Generating screen ────────────────────────────────────────────────────────────────
+// ─── Generating screen ────────────────────────────────────────────────────────────────────────
 
 function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, onError }: {
   heroName: string; worldName: string;
@@ -1042,7 +1059,7 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
   );
 }
 
-// ─── Main orchestrator ────────────────────────────────────────────────────────────────────
+// ─── Main orchestrator ────────────────────────────────────────────────────────────────────────────
 
 const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", q4_engine: "", q5_mood: null };
 
@@ -1328,7 +1345,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(WORLD_OPTIONS).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} /></>;
   if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} /></>;
   if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
 
   if (step === "summary") return (
     <>
