@@ -3,8 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import type { ScriptBlock } from "@/types";
-import { PRESET_VOICES } from "@/config/presetVoices";
+import type { Voice } from "@/types";
 import type { ClassicMeta } from "@/lib/classicStories";
+import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
+import ScriptTab from "@/components/studio/ScriptTab";
+import VoicePicker from "@/components/studio/VoicePicker";
+import Icon from "@/components/ui/Icon";
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -88,67 +92,353 @@ function Divider({ title }: { title: string }) {
   );
 }
 
-// ─── Block Editor ──────────────────────────────────────────────────────────────
+// ─── Cast + direction components (mirrors studio) ─────────────────────────────
 
-function BlockEditor({ blocks, onChange }: { blocks: ScriptBlock[]; onChange: (b: ScriptBlock[]) => void }) {
-  const update = (id: string, patch: Partial<ScriptBlock>) =>
-    onChange(blocks.map((b) => b.id === id ? { ...b, ...patch } : b));
-  const remove = (id: string) =>
-    onChange(blocks.filter((b) => b.id !== id).map((b, i) => ({ ...b, blockOrder: i })));
-  const add = () => onChange([...blocks, makeBlock(blocks.length)]);
-  const move = (id: string, dir: -1 | 1) => {
-    const i = blocks.findIndex((b) => b.id === id);
-    if (i + dir < 0 || i + dir >= blocks.length) return;
-    const arr = [...blocks];
-    [arr[i], arr[i + dir]] = [arr[i + dir], arr[i]];
-    onChange(arr.map((b, j) => ({ ...b, blockOrder: j })));
-  };
+type CharacterType = "child" | "adult" | "animal" | "narrator";
+
+function buildDiceBearUrl(characterName: string, type: CharacterType): string {
+  const seed = encodeURIComponent(characterName);
+  const bg = "0d1b4a";
+  switch (type) {
+    case "child":  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}&backgroundColor=${bg}`;
+    case "animal": return `https://api.dicebear.com/9.x/croodles/svg?seed=${seed}&backgroundColor=${bg}&scale=90`;
+    default:       return `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=${bg}&scale=85`;
+  }
+}
+
+interface BankAvatar { id: string; type: string; image_url: string; }
+
+async function fetchBankAvatars(): Promise<BankAvatar[]> {
+  try {
+    const res = await fetch("/api/avatar-bank-list", { cache: "no-store" });
+    return res.ok ? res.json() : [];
+  } catch { return []; }
+}
+
+const AVATAR_TABS_ADMIN = [
+  { key: "child",  label: "Kids",    emoji: "🧒" },
+  { key: "adult",  label: "Adults",  emoji: "🧑" },
+  { key: "animal", label: "Animals", emoji: "🐾" },
+];
+
+function AvatarGallery({ currentUrl, characterType, onSelect }: {
+  currentUrl?: string;
+  characterType: CharacterType;
+  onSelect: (url: string, type: CharacterType) => void;
+}) {
+  const [bank, setBank] = useState<BankAvatar[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>(characterType === "narrator" ? "adult" : characterType);
+
+  useEffect(() => { fetchBankAvatars().then((b) => { setBank(b); setLoading(false); }); }, []);
+
+  const filtered = bank.filter((a) => a.type === activeTab);
 
   return (
-    <div className="flex flex-col gap-2.5">
-      {blocks.map((block, idx) => (
-        <div key={block.id} className="rounded-xl p-3"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          {/* Header row */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-fs-body w-5 text-center flex-shrink-0 font-bold" style={{ color: "rgba(255,255,255,0.25)" }}>
-              {idx + 1}
-            </span>
-            <input type="text" value={block.characterName}
-              onChange={(e) => update(block.id, { characterName: e.target.value })}
-              placeholder="Character" className="flex-1 px-2.5 py-1.5 rounded-lg text-fs-body text-white outline-none"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }} />
-            <select value={block.assignedVoiceId}
-              onChange={(e) => update(block.id, { assignedVoiceId: e.target.value })}
-              className="px-2 py-1.5 rounded-lg text-fs-body outline-none"
-              style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.22)", color: "#a78bfa", maxWidth: 120 }}>
-              {PRESET_VOICES.map((v) => (
-                <option key={v.id} value={v.id} style={{ background: "#0D1120" }}>{v.emoji} {v.id}</option>
-              ))}
-            </select>
-            <button onClick={() => move(block.id, -1)} disabled={idx === 0}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-fs-body"
-              style={{ background: "rgba(255,255,255,0.05)", color: idx === 0 ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.45)" }}>↑</button>
-            <button onClick={() => move(block.id, 1)} disabled={idx === blocks.length - 1}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-fs-body"
-              style={{ background: "rgba(255,255,255,0.05)", color: idx === blocks.length - 1 ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.45)" }}>↓</button>
-            <button onClick={() => remove(block.id)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-fs-body"
-              style={{ background: "rgba(236,72,153,0.09)", color: "rgba(236,72,153,0.65)" }}>✕</button>
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: "rgba(5,7,18,0.97)", border: "1px solid rgba(139,92,246,0.2)" }}>
+      <div className="flex p-1.5 gap-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        {AVATAR_TABS_ADMIN.map(({ key, label, emoji }) => (
+          <button key={key} onClick={() => setActiveTab(key)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-bold transition-all active:scale-95"
+            style={activeTab === key
+              ? { background: "linear-gradient(135deg,rgba(139,92,246,0.3),rgba(79,195,247,0.15))", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.45)" }
+              : { color: "rgba(255,255,255,0.25)", border: "1px solid transparent" }}>
+            <span style={{ fontSize: "var(--fs-label)" }}>{emoji}</span>
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="p-2.5 overflow-y-auto" style={{ maxHeight: 210 }}>
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <span className="w-6 h-6 border-2 rounded-full animate-spin"
+              style={{ borderColor: "rgba(167,139,250,0.15)", borderTopColor: "#A78BFA" }} />
           </div>
-          {/* Text */}
-          <textarea value={block.textPayload}
-            onChange={(e) => update(block.id, { textPayload: e.target.value })}
-            placeholder="Dialogue or narration…" rows={3}
-            className="w-full px-2.5 py-2 rounded-lg text-fs-body text-white outline-none resize-none"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }} />
+        ) : filtered.length === 0 ? (
+          <p className="text-center py-6 text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>No avatars yet</p>
+        ) : (
+          <div className="grid grid-cols-5 gap-2">
+            {filtered.map((avatar) => {
+              const selected = currentUrl === avatar.image_url;
+              return (
+                <button key={avatar.id}
+                  onClick={() => onSelect(avatar.image_url, activeTab as CharacterType)}
+                  className="aspect-square rounded-xl overflow-hidden transition-all active:scale-90 relative"
+                  style={selected
+                    ? { background: "#07091a", boxShadow: "0 0 0 3px #A78BFA, 0 0 18px rgba(167,139,250,0.45)", transform: "scale(1.04)" }
+                    : { background: "#07091a", boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={avatar.image_url} alt="" className="w-full h-full object-cover" />
+                  {selected && (
+                    <div className="absolute inset-0 flex items-center justify-center"
+                      style={{ background: "rgba(139,92,246,0.25)" }}>
+                      <span style={{ fontSize: "var(--fs-heading)" }}>✓</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DirectionSheet({ characterName, voice, voicePool, avatarUrl, characterType, onAvatarChange, onVoiceChange, onClose }: {
+  characterName: string;
+  voice: Voice | undefined;
+  voicePool: Voice[];
+  avatarUrl?: string;
+  characterType: CharacterType;
+  onAvatarChange: (url: string, type: CharacterType) => void;
+  onVoiceChange: (voiceId: string) => void;
+  onClose: () => void;
+}) {
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showVoicePicker, setShowVoicePicker]   = useState(false);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
+        onClick={onClose} />
+      <div className="fixed z-50 flex flex-col overflow-hidden"
+        style={{
+          left: "50%", transform: "translateX(-50%)",
+          bottom: 80, width: "calc(100vw - 24px)", maxWidth: 460,
+          maxHeight: "calc(100dvh - 160px)", borderRadius: 24,
+          background: "linear-gradient(170deg,#0d1530 0%,#080d1e 55%,#0a0618 100%)",
+          border: "1px solid rgba(139,92,246,0.35)",
+          boxShadow: "0 24px 80px rgba(0,0,0,0.8)",
+        }}>
+        {/* Header */}
+        <div className="relative flex-shrink-0 px-5 pt-5 pb-4"
+          style={{ background: "linear-gradient(160deg,rgba(88,28,220,0.22) 0%,rgba(30,58,120,0.18) 100%)", borderBottom: "1px solid rgba(139,92,246,0.18)" }}>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0"
+              style={{ background: "#07091a", boxShadow: "0 0 0 2.5px rgba(167,139,250,0.6),0 0 20px rgba(139,92,246,0.4)" }}>
+              {avatarUrl
+                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-fs-subtitle font-black"
+                    style={{ background: "linear-gradient(135deg,rgba(88,28,220,0.5),rgba(30,58,120,0.5))", color: "#C4B5FD" }}>
+                    {characterName.charAt(0)}
+                  </div>
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-black leading-tight truncate" style={{ fontSize: "var(--fs-subtitle)", color: "#fff" }}>
+                {characterName}
+              </p>
+              {voice && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.35)" }}>🎙</span>
+                  <span className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{voice.name}</span>
+                </div>
+              )}
+            </div>
+            <button onClick={onClose}
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-90"
+              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+              <Icon name="close" size={14} />
+            </button>
+          </div>
         </div>
-      ))}
-      <button onClick={add}
-        className="w-full py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
-        style={{ background: "rgba(79,195,247,0.06)", border: "1px dashed rgba(79,195,247,0.28)", color: "#4fc3f7" }}>
-        + Add Block
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-4">
+          {/* Avatar section */}
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: "rgba(88,28,220,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
+            <button onClick={() => { setShowAvatarPicker((p) => !p); setShowVoicePicker(false); }}
+              className="flex items-center gap-3 w-full px-4 py-3 transition-all active:scale-[0.99]">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)" }}>
+                <span style={{ fontSize: "var(--fs-body)" }}>🎭</span>
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: "#A78BFA" }}>Avatar</p>
+                <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  {showAvatarPicker ? "Tap an image to select" : "Choose character look"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {avatarUrl && (
+                  <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0"
+                    style={{ border: "1.5px solid rgba(167,139,250,0.4)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                  </div>
+                )}
+                <Icon name={showAvatarPicker ? "collapse" : "expand"} size={12} style={{ color: "rgba(167,139,250,0.5)" }} />
+              </div>
+            </button>
+            {showAvatarPicker && (
+              <div className="px-3 pb-3">
+                <AvatarGallery currentUrl={avatarUrl} characterType={characterType}
+                  onSelect={(url, type) => { onAvatarChange(url, type); setShowAvatarPicker(false); }} />
+              </div>
+            )}
+          </div>
+
+          {/* Voice section */}
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: "rgba(14,78,107,0.15)", border: "1px solid rgba(79,195,247,0.18)" }}>
+            <button onClick={() => { setShowVoicePicker((p) => !p); setShowAvatarPicker(false); }}
+              className="flex items-center gap-3 w-full px-4 py-3 transition-all active:scale-[0.99]">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.28)" }}>
+                <span style={{ fontSize: "var(--fs-body)" }}>🎙️</span>
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: "#4FC3F7" }}>Voice</p>
+                <p className="text-fs-body mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  {voice?.name ?? "No voice selected"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {voice?.avatarUrl && (
+                  <div className="w-7 h-7 rounded-full overflow-hidden"
+                    style={{ border: "1.5px solid rgba(79,195,247,0.4)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={voice.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <Icon name={showVoicePicker ? "collapse" : "expand"} size={12} style={{ color: "rgba(79,195,247,0.45)" }} />
+              </div>
+            </button>
+            {showVoicePicker && (
+              <div className="px-3 pb-3">
+                <VoicePicker inline voices={voicePool} selectedVoiceId={voice?.id ?? ""}
+                  onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
+                  onClose={() => setShowVoicePicker(false)} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function CharacterCard({ characterName, voice, avatarUrl, isOpen, onOpen }: {
+  characterName: string;
+  voice: Voice | undefined;
+  avatarUrl?: string;
+  isOpen: boolean;
+  onOpen: () => void;
+}) {
+  const isNarrator = characterName === "Narrator";
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [avatarUrl]);
+
+  const size = isNarrator ? 72 : 64;
+  const ringActive = isNarrator
+    ? "linear-gradient(135deg,#f59e0b,#fbbf24,#f59e0b)"
+    : "linear-gradient(135deg,#4fc3f7,#a78bfa)";
+  const ringIdle = "linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))";
+  const glowActive = isNarrator
+    ? "0 0 22px rgba(245,158,11,0.5),0 0 40px rgba(251,191,36,0.2)"
+    : "0 0 20px rgba(79,195,247,0.35),0 0 36px rgba(167,139,250,0.2)";
+  const accentColor = isNarrator ? "#fbbf24" : "rgba(79,195,247,0.8)";
+  const displayUrl = avatarUrl || buildDiceBearUrl(characterName, isNarrator ? "narrator" : "adult");
+
+  return (
+    <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: isNarrator ? 80 : 72 }}>
+      <button onClick={onOpen} className="flex flex-col items-center gap-1.5 w-full">
+        <div className="relative flex items-center justify-center"
+          style={{
+            width: size + 6, height: size + 6, borderRadius: "50%",
+            background: isOpen ? ringActive : ringIdle,
+            padding: 2.5, boxShadow: isOpen ? glowActive : "none",
+            transition: "all 0.25s ease",
+          }}>
+          <div className="w-full h-full rounded-full overflow-hidden" style={{ background: "#07091a" }}>
+            {!imgError && displayUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={displayUrl} alt={characterName} className="w-full h-full object-cover"
+                onError={() => setImgError(true)} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-black text-fs-heading"
+                style={{ background: "linear-gradient(135deg,rgba(79,195,247,0.25),rgba(167,139,250,0.2))", color: "rgba(255,255,255,0.6)" }}>
+                {characterName.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          {isNarrator && (
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-fs-body leading-none">👑</div>
+          )}
+        </div>
+        <div className="flex flex-col items-center gap-0.5 w-full">
+          <p className="text-fs-body font-semibold text-center leading-tight truncate w-full px-1"
+            style={{ color: "rgba(255,255,255,0.85)" }}>
+            {characterName}
+          </p>
+          {voice && (
+            <p className="text-fs-body text-center leading-none" style={{ color: accentColor }}>
+              {voice.name.split(" ")[0]}
+            </p>
+          )}
+        </div>
       </button>
+    </div>
+  );
+}
+
+function CharacterCards({ blocks, voicePool, avatars, characterTypes, openCharacter, onOpen, onClose, onAvatarChange, onVoiceChange }: {
+  blocks: ScriptBlock[];
+  voicePool: Voice[];
+  avatars: Record<string, string>;
+  characterTypes: Record<string, CharacterType>;
+  openCharacter: string | null;
+  onOpen: (name: string) => void;
+  onClose: () => void;
+  onAvatarChange: (characterName: string, url: string, type: CharacterType) => void;
+  onVoiceChange: (characterName: string, voiceId: string) => void;
+}) {
+  type CastMember = { characterName: string; voice: Voice | undefined };
+  const cast = Array.from(
+    blocks.filter((b) => b.characterName !== "SFX")
+      .reduce<Map<string, CastMember>>((map, b) => {
+        if (!map.has(b.characterName)) {
+          map.set(b.characterName, {
+            characterName: b.characterName,
+            voice: voicePool.find((v) => v.id === b.assignedVoiceId),
+          });
+        }
+        return map;
+      }, new Map()).values(),
+  );
+
+  if (cast.length === 0) return null;
+
+  const openMember = openCharacter ? cast.find((c) => c.characterName === openCharacter) : null;
+
+  return (
+    <div className="mb-5">
+      <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
+        Cast
+      </p>
+      <div className="flex gap-3 pb-2 -mx-5 px-5"
+        style={{ overflowX: "scroll", scrollbarWidth: "none" } as React.CSSProperties}>
+        {cast.map(({ characterName, voice }) => (
+          <CharacterCard key={characterName} characterName={characterName} voice={voice}
+            avatarUrl={avatars[characterName]} isOpen={openCharacter === characterName}
+            onOpen={() => onOpen(characterName)} />
+        ))}
+      </div>
+      {openCharacter && openMember && (
+        <DirectionSheet
+          characterName={openCharacter}
+          voice={openMember.voice}
+          voicePool={voicePool}
+          avatarUrl={avatars[openCharacter]}
+          characterType={characterTypes[openCharacter] ?? (openCharacter === "Narrator" ? "narrator" : "adult")}
+          onAvatarChange={(url, type) => onAvatarChange(openCharacter, url, type)}
+          onVoiceChange={(voiceId) => onVoiceChange(openCharacter, voiceId)}
+          onClose={onClose}
+        />
+      )}
     </div>
   );
 }
@@ -587,6 +877,12 @@ export default function AdminPage() {
   const [addSaveError, setAddSaveError] = useState("");
   const [addSaved, setAddSaved]         = useState(false);
 
+  // ── Cast / voice pool ─────────────────────────────────────────────────────
+  const [voicePool, setVoicePool]               = useState<Voice[]>(PRESET_VOICE_POOL);
+  const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
+  const [openDirectSheet, setOpenDirectSheet]   = useState<string | null>(null);
+  const [characterTypes, setCharacterTypes]     = useState<Record<string, CharacterType>>({});
+
   // ── Classics list ─────────────────────────────────────────────────────────
   const [classics, setClassics]         = useState<ClassicMeta[]>([]);
   const [classicsLoading, setClassicsLoading] = useState(true);
@@ -643,6 +939,22 @@ export default function AdminPage() {
     }, 2500);
     return () => clearInterval(pollRef.current!);
   }, [jobId, loadClassics]);
+
+  // Load voice pool once
+  useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
+
+  // ── Cast handlers ─────────────────────────────────────────────────────────
+  const handleVoiceChangeForChar = useCallback((characterName: string, voiceId: string) => {
+    setParsedBlocks((prev) => prev.map((b) =>
+      b.characterName === characterName ? { ...b, assignedVoiceId: voiceId } : b,
+    ));
+  }, []);
+
+  const handleAvatarChange = useCallback((characterName: string, url: string, type: CharacterType) => {
+    setCharacterAvatars((prev) => ({ ...prev, [characterName]: url }));
+    setCharacterTypes((prev) => ({ ...prev, [characterName]: type }));
+    setOpenDirectSheet(null);
+  }, []);
 
   // ── Script parser ─────────────────────────────────────────────────────────
   const CHAR_VOICE_POOL = ["Puck", "Kore", "Charon", "Fenrir", "Leda", "Orus", "Zephyr", "Autonoe"];
@@ -797,6 +1109,7 @@ export default function AdminPage() {
     setAddProducing(false); setAddProduceError(""); setJobId(null); setJob(null);
     setStoreCoverUrl(""); setStoreCoverLoading(false); setStoreCoverPrompt(""); setStoreSummary("");
     setAddSaving(false); setAddSaveError(""); setAddSaved(false);
+    setCharacterAvatars({}); setOpenDirectSheet(null); setCharacterTypes({});
   };
 
   const handleRegenerateCover = async () => {
@@ -834,7 +1147,6 @@ export default function AdminPage() {
   const isDone  = job?.status === "done";
   const isError = job?.status === "error";
   const CAST_COLORS = ["#4fc3f7", "#a78bfa", "#fbbf24", "#f87171", "#34d399", "#fb923c"];
-  const uniqueCast  = Array.from(new Set(parsedBlocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
 
   const [adminTab, setAdminTab] = useState<"factory" | "costs" | "services">("factory");
 
@@ -970,60 +1282,34 @@ export default function AdminPage() {
         {/* ── Preview (after script processed) ── */}
         {processState === "done" && !isDone && (
           <>
-            {/* Cover */}
-            <Divider title="Cover Image" />
-            <div className="relative w-full rounded-2xl overflow-hidden"
-              style={{ aspectRatio: "16/9", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              {storeCoverLoading ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
-                    style={{ borderColor: "#4fc3f7 transparent transparent transparent" }} />
-                  <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Painting cover…</p>
-                </div>
-              ) : storeCoverUrl ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={storeCoverUrl} alt="Story cover" className="w-full h-full object-cover" />
-                  <button onClick={handleRegenerateCover}
-                    className="absolute top-2.5 right-2.5 px-3 py-1.5 rounded-lg text-fs-body font-medium transition-all active:scale-95"
-                    style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", backdropFilter: "blur(8px)" }}>
-                    ↻ Regenerate
-                  </button>
-                </>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>Cover not generated</p>
-                </div>
-              )}
-            </div>
-
-            {/* Cast overview */}
-            {uniqueCast.length > 0 && (
-              <>
-                <Divider title="Cast & Voices" />
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {uniqueCast.map((char, i) => {
-                    const color = CAST_COLORS[i % CAST_COLORS.length];
-                    const voice = parsedBlocks.find((b) => b.characterName === char)?.assignedVoiceId ?? "";
-                    return (
-                      <div key={char} className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
-                        style={{ background: `${color}14`, border: `1px solid ${color}33` }}>
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-fs-label font-bold flex-shrink-0"
-                          style={{ background: `${color}20`, color }}>
-                          {char[0].toUpperCase()}
-                        </div>
-                        <span className="text-white text-fs-body font-medium">{char}</span>
-                        {voice && <span className="text-fs-label" style={{ color: `${color}aa` }}>· {voice}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {/* Editable block list */}
-            <Divider title={`Script — ${parsedBlocks.length} Blocks`} />
-            <BlockEditor blocks={parsedBlocks} onChange={setParsedBlocks} />
+            <ScriptTab
+              blocks={parsedBlocks}
+              voices={voicePool}
+              onBlocksChange={setParsedBlocks}
+              onProduce={() => {}}
+              isProducing={false}
+              title={addTitle}
+              summary={storeSummary}
+              coverUrl={storeCoverUrl}
+              isFetchingCover={storeCoverLoading}
+              onRegenerateCover={handleRegenerateCover}
+              hideDurationPicker
+              hideProduceButton
+              characterAvatars={characterAvatars}
+              belowCover={
+                <CharacterCards
+                  blocks={parsedBlocks}
+                  voicePool={voicePool}
+                  avatars={characterAvatars}
+                  characterTypes={characterTypes}
+                  openCharacter={openDirectSheet}
+                  onOpen={setOpenDirectSheet}
+                  onClose={() => setOpenDirectSheet(null)}
+                  onAvatarChange={handleAvatarChange}
+                  onVoiceChange={handleVoiceChangeForChar}
+                />
+              }
+            />
 
             {/* Validation */}
             {validationIssues.length > 0 && (
