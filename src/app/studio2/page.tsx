@@ -1307,17 +1307,38 @@ export default function Studio2Page() {
           })
       );
     } else {
-      // Fallback: classify by character names + story summary (draft restore / chat paths)
+      // Fallback: classify by character names + full script sample (draft restore / chat paths)
+      const scriptSample = blocks
+        .filter((b) => b.characterName !== "SFX")
+        .slice(0, 40)
+        .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
+        .join("\n");
       fetch("/api/classify-characters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characters: uniqueChars, summary }),
-      }).then((r) => r.json()).then((types: Record<string, string>) => {
+        body: JSON.stringify({ characters: uniqueChars, summary, scriptSample }),
+      }).then((r) => r.json()).then((profiles: Record<string, { type: string; visualDescription: string } | string>) => {
         const refined: Record<string, CharacterType> = {};
         const refinedAvatars: Record<string, string> = {};
-        for (const [name, type] of Object.entries(types)) {
-          refined[name] = type as CharacterType;
-          refinedAvatars[name] = resolveCharacterAvatar(name, type as CharacterType, bank, voicePool);
+        for (const [name, profile] of Object.entries(profiles)) {
+          // Support both old string format and new {type, visualDescription} format
+          const type = (typeof profile === "string" ? profile : profile.type) as CharacterType;
+          const desc = typeof profile === "object" ? profile.visualDescription : undefined;
+          refined[name] = type;
+          refinedAvatars[name] = resolveCharacterAvatar(name, type, bank, voicePool);
+          // If we got a visual description, generate a proper avatar instead of bank hash
+          if (desc && name !== "Narrator") {
+            fetch("/api/generate-avatar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ description: desc, type }),
+            }).then((r) => r.json()).then(({ avatarUrl }: { avatarUrl: string | null }) => {
+              if (avatarUrl) {
+                setCharacterAvatars((prev) => ({ ...prev, [name]: avatarUrl }));
+                setCharacterTypes((prev) => ({ ...prev, [name]: type }));
+              }
+            }).catch(() => { /* keep bank fallback */ });
+          }
         }
         setCharacterTypes(refined);
         setCharacterAvatars(refinedAvatars);
