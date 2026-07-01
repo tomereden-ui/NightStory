@@ -265,10 +265,30 @@ Return a JSON object with the following top-level fields:
                     – Keep it under 55 words total. No lists. Pure flowing prose.
                     – Written in the story language. Warm, child-friendly tone.
 
-  "coverPrompt" — A single vivid sentence (no quotes, no labels) describing the KEY visual
-                  moment of the story, for use as an AI image generation prompt.
-                  Focus on setting, mood, and main characters. No text or words in the image.
-                  Example: "A small child and a glowing firefly standing at the entrance of a crystal cave under a starry sky"
+  "coverPrompt" — An image-generation prompt (1–2 sentences, no quotes, no labels) for the
+                  story's cover art. Read the FULL script AND the "characters" map you are
+                  about to write before crafting this — the characters must match the script.
+
+                  MANDATORY RULES:
+                  1. THE HERO MUST APPEAR. Describe them with at least 3 visual details taken
+                     from their entry in the "characters" map (species, colour/markings, size,
+                     distinctive feature). Show them in a dynamic pose or mid-emotion — never
+                     just standing still.
+                  2. Include 1–2 SUPPORTING CAST MEMBERS if they appear in a key scene.
+                     Describe each with the same specificity. Well-known characters (Dumbo,
+                     Simba, Cinderella…) must use their canonical appearance.
+                  3. Ground the image in the story's SETTING: time of day, colours, textures,
+                     environment. Be specific — not "a forest" but "a moonlit pine forest with
+                     glowing fireflies".
+                  4. Capture the EMOTIONAL CLIMAX or most visually beautiful moment.
+                  5. No text, letters, or numbers anywhere in the image.
+                  6. Always write in ENGLISH even if the story language is different.
+
+                  ✓ GOOD: "A large gray baby elephant with enormous floppy ears soaring
+                    joyfully above a golden circus tent at sunset, a tiny brown mouse
+                    riding on his hat, warm confetti and streamers filling the sky"
+                  ✗ BAD:  "A magical adventure scene"  — no characters, no setting
+                  ✗ BAD:  "The hero on a journey"      — no visual detail whatsoever
 
   "characters"  — A map of every named speaking character (exclude "SFX") to their visual profile.
                   Include ALL characters who appear in blocks, including "Narrator".

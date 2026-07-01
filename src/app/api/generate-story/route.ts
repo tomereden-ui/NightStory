@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
+import { getEntries } from "@/lib/libraryStore";
 import type { ScriptBlock } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -122,7 +123,7 @@ function ageLanguageRules(ageGroup: string): string {
   );
 }
 
-function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string, lessons?: string[], language?: string, avoid?: string): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string, lessons?: string[], language?: string, avoid?: string, existingTitles?: string[]): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
@@ -141,7 +142,11 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, child
     ? `\n\nCONTENT TO STRICTLY AVOID\n--------------------------\n${avoid}\nThis is a HARD rule. Never include these elements — not even briefly, not even resolved positively. The child has fears or sensitivities around these topics.`
     : "";
 
-  return `${guidance}${lessonPart}${agePart}${langPart}${avoidPart}
+  const titleUniquePart = existingTitles?.length
+    ? `\n\nTITLE UNIQUENESS\n----------------\nThe following titles already exist in this family's library. You MUST pick a title that does NOT appear in this list (not even as a close variant or reordering of the same words):\n${existingTitles.map((t) => `  - "${t}"`).join("\n")}\nIf your first choice matches any of these, invent a different title.`
+    : "";
+
+  return `${guidance}${lessonPart}${agePart}${langPart}${avoidPart}${titleUniquePart}
 
 RUNTIME TARGETS FOR THIS STORY
 -------------------------------
@@ -193,11 +198,17 @@ export async function POST(req: NextRequest) {
   const guidance = readGuidance();
   const prompt = buildUserPrompt(body);
 
+  let existingTitles: string[] = [];
+  try {
+    const entries = await getEntries();
+    existingTitles = entries.map((e) => e.title).filter(Boolean);
+  } catch { /* best-effort — don't block generation if DB is unreachable */ }
+
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons, body.language, body.avoid),
+      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons, body.language, body.avoid, existingTitles),
       generationConfig: {
         temperature: 0.85,
         maxOutputTokens: 8192,

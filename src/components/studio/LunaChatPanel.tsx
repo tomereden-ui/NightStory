@@ -144,6 +144,12 @@ function MessageBubble({
 
 // ─── Luna chat panel ──────────────────────────────────────────────────────────
 
+const CHAT_DURATION_PRESETS = [
+  { value: 3, icon: "⚡", label: "Short",  desc: "~3 min" },
+  { value: 5, icon: "🌙", label: "Medium", desc: "~5 min" },
+  { value: 8, icon: "✨", label: "Long",   desc: "~8 min" },
+];
+
 export default function LunaChatPanel({
   activeChild,
   onScriptReady,
@@ -152,7 +158,7 @@ export default function LunaChatPanel({
   onGenerating,
 }: {
   activeChild: DBChildProfile | null;
-  onScriptReady: (draft: Omit<DraftState, "coverUrl">) => void;
+  onScriptReady: (draft: Omit<DraftState, "coverUrl">, durationMinutes?: number) => void;
   onFirstMessage?: () => void;
   onDiscard?: () => void;
   onGenerating?: () => void;
@@ -167,6 +173,7 @@ export default function LunaChatPanel({
   const [createError, setCreateError]       = useState<string | null>(null);
   const [greeted, setGreeted]               = useState(false);
   const [discardConfirm, setDiscardConfirm] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState(5);
 
   // Per-message TTS (on-demand)
   const [speakingIdx, setSpeakingIdx]       = useState<number | null>(null);
@@ -351,7 +358,7 @@ export default function LunaChatPanel({
         const res = await fetch("/api/generate-story", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes: 3, childAgeGroup: getChildAgeGroup(), language }),
+          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language }),
         });
         if (!res.ok) throw new Error("Generation failed");
         const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string };
@@ -429,7 +436,7 @@ export default function LunaChatPanel({
           setting: storyParams.setting ?? "",
           plot: storyParams.plot ?? "",
           primaryVoiceId: storyParams.primaryVoiceId ?? "v1",
-          durationMinutes: 3,
+          durationMinutes,
           childAgeGroup: getChildAgeGroup(),
           language,
         }),
@@ -442,7 +449,7 @@ export default function LunaChatPanel({
         summary: data.summary ?? "",
         coverPrompt: data.coverPrompt ?? "",
         storyTitle: data.title ?? "",
-      });
+      }, durationMinutes);
     } catch {
       setCreateError("Couldn't write the story — please try again! ✨");
       setCreating(false);
@@ -490,9 +497,34 @@ export default function LunaChatPanel({
 
       {/* Story ready CTA */}
       {storyReady && (
-        <div className="pt-1">
+        <div className="pt-1 flex flex-col gap-3">
+          {/* Duration picker */}
+          <div className="rounded-2xl px-4 py-3" style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Story length</span>
+              <span className="text-fs-body font-bold tabular-nums" style={{ color: "#4fc3f7" }}>{durationMinutes} min</span>
+            </div>
+            <div className="flex gap-2">
+              {CHAT_DURATION_PRESETS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setDurationMinutes(p.value)}
+                  className="flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all active:scale-95"
+                  style={durationMinutes === p.value
+                    ? { background: "rgba(79,195,247,0.16)", border: "1.5px solid rgba(79,195,247,0.45)", boxShadow: "0 0 10px rgba(79,195,247,0.15)" }
+                    : { background: "rgba(255,255,255,0.04)", border: "1.5px solid rgba(255,255,255,0.08)" }
+                  }
+                >
+                  <span className="text-fs-heading mb-0.5">{p.icon}</span>
+                  <span className="text-fs-body font-bold" style={{ color: durationMinutes === p.value ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>{p.label}</span>
+                  <span className="text-fs-body" style={{ color: durationMinutes === p.value ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>{p.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {createError && (
-            <p className="text-center text-fs-body mb-2.5" style={{ color: "#f87171" }}>{createError}</p>
+            <p className="text-center text-fs-body" style={{ color: "#f87171" }}>{createError}</p>
           )}
           <button
             onClick={handleCreateStory}

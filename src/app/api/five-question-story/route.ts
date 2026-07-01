@@ -8,6 +8,7 @@ import { MOOD_LABELS } from "@/constants/bluebellScripts";
 import type { StorySeeds } from "@/utils/buildStoryPrompt";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
+import { getEntries } from "@/lib/libraryStore";
 
 export interface FiveQuestionStoryRequest {
   seeds: StorySeeds;
@@ -53,7 +54,7 @@ function readGuidance(): string {
   }
 }
 
-function buildSystemInstruction(guidance: string, durationMinutes: number, language?: string): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, language?: string, existingTitles?: string[]): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
@@ -61,7 +62,11 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, langu
     ? `\n\nLANGUAGE\n--------\nWrite all DIALOGUE and NARRATION in ${language} (ISO 639-1: "${language}"). Character names and the story title must also be in this language.\nEXCEPTIONS — keep these fields in English regardless of story language:\n  • SFX textPayload descriptions (sent to ElevenLabs sound generator — non-English produces garbled audio)\n  • visualDescription in the characters map (sent to Imagen avatar generator — non-English produces wrong images)\n  • coverPrompt (sent to Imagen image generator)`
     : "";
 
-  return `${guidance}${langPart}
+  const titleUniquePart = existingTitles?.length
+    ? `\n\nTITLE UNIQUENESS\n----------------\nThe following titles already exist in this family's library. You MUST pick a title that does NOT appear in this list (not even as a close variant or reordering of the same words):\n${existingTitles.map((t) => `  - "${t}"`).join("\n")}\nIf your first choice matches any of these, invent a different title.`
+    : "";
+
+  return `${guidance}${langPart}${titleUniquePart}
 
 RUNTIME TARGETS FOR THIS STORY
 -------------------------------
@@ -122,7 +127,14 @@ export async function POST(req: NextRequest) {
 
   const clampedDuration = Math.min(15, Math.max(1, durationMinutes));
   const guidance = readGuidance();
-  const systemInstruction = buildSystemInstruction(guidance, clampedDuration, body.language);
+
+  let existingTitles: string[] = [];
+  try {
+    const entries = await getEntries();
+    existingTitles = entries.map((e) => e.title).filter(Boolean);
+  } catch { /* best-effort */ }
+
+  const systemInstruction = buildSystemInstruction(guidance, clampedDuration, body.language, existingTitles);
   const userPrompt = buildUserPrompt(seeds);
 
   try {
