@@ -493,7 +493,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to generate audio";
       const friendly = msg.includes("429") || msg.toLowerCase().includes("rate limit")
-        ? "Rate limit hit — wait a few seconds and try again"
+        ? `Rate limit hit — wait a few seconds and try again\n${msg.replace("TTS rate limited (429):", "").trim()}`
         : msg;
       setSpeechError(friendly);
       setIsLoading(false);
