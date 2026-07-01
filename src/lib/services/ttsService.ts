@@ -30,13 +30,13 @@ function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// ── ElevenLabs TTS ────────────────────────────────────────────────────────────
+// ── ElevenLabs TTS ────────────────────────────────────────────────────────────────────────────────
 
 // Detect script/language from text content for EL language_code hint
 function detectLanguageCode(text: string, hint?: string): string | undefined {
-  if (/[֐-׿יִ-ﭏ]/.test(text)) return "he";
+  if (/[֐-׿יִ-ﮯ]/.test(text)) return "he";
   if (/[؀-ۿ]/.test(text)) return "ar";
-  if (/[一-鿿぀-ヿ]/.test(text)) return hint === "ja" ? "ja" : "zh";
+  if (/[一-鿿　-ヿ]/.test(text)) return hint === "ja" ? "ja" : "zh";
   if (/[ऀ-ॿ]/.test(text)) return "hi";
   if (hint && hint !== "en") return hint;
   return undefined;
@@ -123,7 +123,7 @@ const LANG_NAMES: Record<string, string> = {
   hi: "Hindi", sv: "Swedish", da: "Danish", fi: "Finnish", no: "Norwegian",
 };
 
-// ── Gemini TTS fallback ───────────────────────────────────────────────────────
+// ── Gemini TTS fallback ────────────────────────────────────────────────────────────────────────────
 
 interface GeminiTTSOptions {
   maxAttempts?: number;       // per payload; default 5
@@ -143,9 +143,9 @@ async function synthesizeGemini(
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
+    `gemini-2.5-flash:generateContent?key=${apiKey}`;
 
-  // Gemini 3.1 Flash TTS does NOT support systemInstruction.
+  // Gemini 2.5 Flash TTS does NOT support systemInstruction.
   // Expressiveness comes from inline [audio tags] already in the line text.
   const payload: Record<string, unknown> = {
     contents: [{ role: "user", parts: [{ text }] }],
@@ -239,7 +239,7 @@ async function synthesizeGemini(
   throw new Error(lastError || "Gemini TTS failed");
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// ── Public API ────────────────────────────────────────────────────────────────────────────────
 
 export async function synthesizeLine(
   line: string,
