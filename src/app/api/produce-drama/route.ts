@@ -660,25 +660,31 @@ async function runProduction(
       }
     }
 
-    // Upload audio to Supabase Storage
+    // Upload audio to Supabase Storage (retry up to 3 times — upload errors used to
+    // silently fall back to a local /output/ path that has no serving route, causing
+    // the story to be saved with a dead audio URL).
     let audioUrl = "";
     if (fs.existsSync(localAudioPath)) {
       const audioBuf = fs.readFileSync(localAudioPath);
       const storageKey = `${storyId}.${audioExt}`;
       const contentType = audioExt === "wav" ? "audio/wav" : "audio/mpeg";
-      const { error: uploadErr } = await supabase.storage
-        .from("audio")
-        .upload(storageKey, audioBuf, { contentType, upsert: true });
-      if (!uploadErr) {
-        audioUrl = supabase.storage.from("audio").getPublicUrl(storageKey).data.publicUrl;
-      } else {
-        console.warn(`[${ts()}][Storage] Audio upload failed:`, uploadErr.message);
-        // Copy to tmp as fallback
-        const OUT_DIR_FALLBACK = path.join(os.tmpdir(), "nightstory-output");
-        fs.mkdirSync(OUT_DIR_FALLBACK, { recursive: true });
-        const fallbackName = `drama_${storyId}.${audioExt}`;
-        fs.copyFileSync(localAudioPath, path.join(OUT_DIR_FALLBACK, fallbackName));
-        audioUrl = `/output/${fallbackName}`;
+      let uploadErr: { message: string } | null = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const { error } = await supabase.storage
+          .from("audio")
+          .upload(storageKey, audioBuf, { contentType, upsert: true });
+        if (!error) {
+          audioUrl = supabase.storage.from("audio").getPublicUrl(storageKey).data.publicUrl;
+          uploadErr = null;
+          break;
+        }
+        uploadErr = error;
+        console.warn(`[${ts()}][Storage] Audio upload attempt ${attempt}/3 failed:`, error.message);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 2000));
+      }
+      if (uploadErr) {
+        // All retries exhausted — fail loudly so the user sees the real problem
+        throw new Error(`Audio upload to Supabase storage failed after 3 attempts: ${uploadErr.message}`);
       }
     }
 
