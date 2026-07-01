@@ -143,9 +143,9 @@ async function synthesizeGemini(
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `gemini-2.5-flash:generateContent?key=${apiKey}`;
+    `gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
 
-  // Gemini 2.5 Flash TTS does NOT support systemInstruction.
+  // Gemini 3.1 Flash TTS does NOT support systemInstruction.
   // Expressiveness comes from inline [audio tags] already in the line text.
   const payload: Record<string, unknown> = {
     contents: [{ role: "user", parts: [{ text }] }],
@@ -210,7 +210,6 @@ async function synthesizeGemini(
     const isWav  = lmime.includes("wav");
 
     if (isPcm) {
-      // Parse sample rate from mime like "audio/L16;rate=24000"
       const rateMatch = mime.match(/rate=(\d+)/i);
       const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
       fs.writeFileSync(outputPath, pcmToWav(rawBuf, sampleRate));
@@ -221,10 +220,8 @@ async function synthesizeGemini(
     } else if (isWav) {
       fs.writeFileSync(outputPath, rawBuf);
     } else {
-      // Unknown — log first bytes to diagnose, write with detected extension
       const header = rawBuf.slice(0, 4).toString("ascii");
       console.warn(`[${ts()}][Gemini TTS] Unknown mime "${mime}", header bytes: ${JSON.stringify(header)}`);
-      // Try to auto-detect by magic bytes
       const isOggMagic = rawBuf[0] === 0x4f && rawBuf[1] === 0x67 && rawBuf[2] === 0x67;
       const isMp3Magic = rawBuf[0] === 0xff && (rawBuf[1] & 0xe0) === 0xe0;
       const isWavMagic = header === "RIFF";
