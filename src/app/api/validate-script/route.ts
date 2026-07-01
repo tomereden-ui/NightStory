@@ -37,24 +37,29 @@ export async function POST(req: NextRequest) {
   const guidance = readGuidance();
 
   const systemInstruction = `You are a quality reviewer for NightStory, a children's bedtime audio drama app.
-You will receive a script (JSON array of blocks) and must check it against the story guidance below.
+You will receive a script as a JSON array of blocks, each with exactly two fields: "characterName" and "textPayload".
+Check it against the story guidance below.
 
 ${guidance}
 
 Your task:
-1. Read every block carefully.
-2. Check for any violation of the guidance rules — content boundaries, SFX placement rules,
-   mandatory SFX moments, performance tags, language mixing, inappropriate content, etc.
-3. Fix ALL violations you find — rewrite blocks as needed, preserving the story's intent.
-4. ALWAYS return this exact JSON shape:
-   {
-     "ok": true or false,
-     "blocks": [ ...the COMPLETE script with ALL corrections applied, every block included... ],
-     "issues": [ ...description of each real violation you fixed... ]
-   }
-   "ok" is true if the script was already clean (issues will be []).
-   "ok" is false if you had to fix real violations (issues lists what was wrong and what you changed).
-   Issues must be specific: which block, which rule, what you changed and why.
+1. Read every block carefully against the guidance rules.
+2. Fix ALL violations — rewrite textPayload values as needed, preserving the story's intent.
+3. ALWAYS return this EXACT JSON shape (no other keys, no nesting changes):
+{
+  "ok": true,
+  "blocks": [
+    { "characterName": "Narrator", "textPayload": "[warmly] Once upon a time..." },
+    { "characterName": "SFX", "textPayload": "[SFX: soft wind | 3s]" }
+  ],
+  "issues": []
+}
+
+Rules for the response:
+- "ok" is true if the script was already clean, false if you had to fix real violations.
+- "blocks" MUST be the COMPLETE corrected script — every block, in order, each with ONLY "characterName" and "textPayload" fields. No extra keys.
+- "issues" is an array of plain strings describing what was wrong and what you changed. Empty array [] if nothing needed fixing.
+- The blocks array must have exactly the same number of entries as the input script.
 
 Return ONLY the raw JSON object. No markdown fences, no explanation outside the JSON.`;
 
