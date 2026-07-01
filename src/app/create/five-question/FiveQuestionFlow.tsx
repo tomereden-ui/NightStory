@@ -22,7 +22,7 @@ import type { ScriptBlock, Voice } from "@/types";
 import type { Job } from "@/lib/jobs";
 import type { ResolutionMood, StorySeeds } from "@/utils/buildStoryPrompt";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────────────────
 
 type Step = "q1" | "q2" | "q3" | "q4" | "q5" | "summary" | "generating" | "done";
 
@@ -34,7 +34,9 @@ interface Answers {
   q5_mood: ResolutionMood | null;
 }
 
-// ─── FairyFigure: animated Bluebell fairy portrait ───────────────────────────
+const DRAFT_KEY = "ns-wizard-draft-v1";
+
+// ─── FairyFigure: animated Bluebell fairy portrait ───────────────────────────────────
 
 function FairyFigure({ size = 80 }: { size?: number }) {
   return (
@@ -84,7 +86,7 @@ function FairyFigure({ size = 80 }: { size?: number }) {
   );
 }
 
-// ─── BluebellLine: progressive word-by-word reveal ───────────────────────────
+// ─── BluebellLine: progressive word-by-word reveal ─────────────────────────────────
 
 function BluebellLine({
   text,
@@ -129,7 +131,7 @@ function BluebellLine({
   );
 }
 
-// ─── LaunchCountdown: 3-second animated pause ─────────────────────────────────
+// ─── LaunchCountdown: 3-second animated pause ──────────────────────────────────────
 
 function LaunchCountdown({ onComplete }: { onComplete: () => void }) {
   const [tick, setTick] = useState(0);
@@ -160,7 +162,7 @@ function LaunchCountdown({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-// ─── Shared primitives ────────────────────────────────────────────────────────
+// ─── Shared primitives ──────────────────────────────────────────────────────────────────
 
 function OptionPill({ label, emoji, selected, onClick }: { label: string; emoji?: string; selected?: boolean; onClick: () => void }) {
   return (
@@ -175,7 +177,7 @@ function OptionPill({ label, emoji, selected, onClick }: { label: string; emoji?
   );
 }
 
-// ─── BackButton ───────────────────────────────────────────────────────────────
+// ─── BackButton ─────────────────────────────────────────────────────────────────────────────
 
 function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: string }) {
   return (
@@ -193,7 +195,7 @@ function BackButton({ onClick, label = "Back" }: { onClick: () => void; label?: 
   );
 }
 
-// ─── IllustratedCard: AI image card for world/companion/engine/mood options ────
+// ─── IllustratedCard ────────────────────────────────────────────────────────────────────
 
 const CARD_PALETTES: [string, string][] = [
   ["#4fc3f7", "#7c3aed"],
@@ -233,7 +235,6 @@ function IllustratedCard({
           : "0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)",
       }}
     >
-      {/* AI illustration */}
       {imageUrl && (
         <img
           src={imageUrl}
@@ -243,8 +244,6 @@ function IllustratedCard({
           onLoad={() => setImgLoaded(true)}
         />
       )}
-
-      {/* Vibrant themed placeholder — unique per card, looks great while image loads */}
       <div
         className="absolute inset-0 flex flex-col items-center justify-center gap-1"
         style={{
@@ -254,7 +253,6 @@ function IllustratedCard({
           pointerEvents: "none",
         }}
       >
-        {/* Glow ring behind emoji */}
         <div style={{
           position: "absolute", width: 64, height: 64, borderRadius: "50%",
           background: `radial-gradient(circle, ${c1}44, transparent 70%)`,
@@ -262,19 +260,13 @@ function IllustratedCard({
         }} />
         <span className="text-fs-display relative" style={{ filter: `drop-shadow(0 0 20px ${c1}) drop-shadow(0 0 8px ${c2})` }}>{emoji}</span>
       </div>
-
-      {/* Cinematic gradient overlay */}
       <div
         className="absolute inset-0"
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.02) 100%)" }}
       />
-
-      {/* Selected tint */}
       {selected && (
         <div className="absolute inset-0" style={{ background: `${c1}14` }} />
       )}
-
-      {/* Label */}
       <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5">
         {badge}
         <span
@@ -312,23 +304,28 @@ function StoryInput({ value, onChange, placeholder, maxSoftLimit, autoFocus, onS
   );
 }
 
-function PrimaryButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+// ─── ExampleChips: tappable examples that populate the field ───────────────────────
+
+function ExampleChips({ examples, onTap }: { examples: string[]; onTap: (v: string) => void }) {
   return (
-    <button onClick={onClick} disabled={disabled}
-      className="w-full py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
-      style={!disabled
-        ? { background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }
-        : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }}>
-      {label}
-    </button>
+    <div className="flex flex-wrap gap-1.5">
+      {examples.map((ex) => (
+        <button key={ex} onClick={() => onTap(ex)}
+          className="px-3 py-1.5 rounded-full text-fs-body transition-all active:scale-95"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "rgba(255,255,255,0.4)",
+            fontStyle: "italic",
+          }}>
+          {ex}
+        </button>
+      ))}
+    </div>
   );
 }
 
-function FieldHint({ text }: { text: string }) {
-  return (
-    <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.28)", fontStyle: "italic" }}>{text}</p>
-  );
-}
+// ─── SkipLink: standalone skip (shown when no confirm is visible yet) ─────────────────
 
 function SkipLink({ onSkip }: { onSkip: () => void }) {
   return (
@@ -340,19 +337,45 @@ function SkipLink({ onSkip }: { onSkip: () => void }) {
   );
 }
 
-function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl }: {
-  onBack?: () => void; children: React.ReactNode;
+// ─── ConfirmRow: skip (left ghost) + confirm (right primary) on same row ──────
+
+function ConfirmRow({ confirmLabel, onConfirm, disabled, onSkip }: {
+  confirmLabel: string; onConfirm: () => void; disabled?: boolean; onSkip?: () => void;
+}) {
+  return (
+    <div className="flex gap-2">
+      {onSkip && (
+        <button onClick={onSkip}
+          className="flex-shrink-0 py-4 px-5 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
+          style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)" }}>
+          Skip →
+        </button>
+      )}
+      <button onClick={onConfirm} disabled={disabled}
+        className="flex-1 py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
+        style={!disabled
+          ? { background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }
+          : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        {confirmLabel}
+      </button>
+    </div>
+  );
+}
+
+// ─── QuestionShell ────────────────────────────────────────────────────────────────────
+
+function QuestionShell({ onBack, onReset, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl }: {
+  onBack?: () => void; onReset?: () => void; children: React.ReactNode;
   bluebellText: string; bluebellSpeed?: number; onBluebellComplete?: () => void;
   audioUrl?: string;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Auto-play Bluebell's voice when the audio URL becomes available
   useEffect(() => {
     if (!audioUrl) return;
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
-    audio.play().catch(() => {}); // graceful: browser may block autoplay
+    audio.play().catch(() => {});
     return () => { audio.pause(); audioRef.current = null; };
   }, [audioUrl]);
 
@@ -366,7 +389,13 @@ function QuestionShell({ onBack, children, bluebellText, bluebellSpeed, onBluebe
         <div className="flex-1 flex justify-center">
           <FairyFigure size={52} />
         </div>
-        <div className="w-8" />
+        {onReset ? (
+          <button onClick={onReset}
+            className="text-fs-body transition-all active:scale-95"
+            style={{ color: "rgba(255,255,255,0.22)" }}>
+            Start over
+          </button>
+        ) : <div className="w-16" />}
       </div>
       <div className="mb-7">
         <BluebellLine text={bluebellText} speed={bluebellSpeed} onComplete={onBluebellComplete} />
@@ -383,11 +412,11 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
   return null;
 }
 
-// ─── Q1 — Hero identity ───────────────────────────────────────────────────────
+// ─── Q1 — Hero identity ───────────────────────────────────────────────────────────────────
 
 type Q1Card = "own" | "magical" | "stranger" | "surprise";
 
-function Q1View({ initialHero, onNext, onBack, onSkip, optionImages, audioUrl, childName, childAvatarUrl }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string }) {
+function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, audioUrl, childName, childAvatarUrl }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string }) {
   const [selectedCard, setSelectedCard] = useState<Q1Card | null>(null);
   const [textVal, setTextVal]           = useState(initialHero);
   const [magicChip, setMagicChip]       = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
@@ -441,32 +470,27 @@ function Q1View({ initialHero, onNext, onBack, onSkip, optionImages, audioUrl, c
   );
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q1} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={BLUEBELL.q1} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
 
-        {/* All 4 option cards — always visible */}
         <div className="grid grid-cols-2 gap-2">
           <IllustratedCard
             label={childName || "Your own name"}
             emoji="👤"
             imageUrl={childAvatarUrl || optionImages["hero-own"]}
             selected={selectedCard === "own"}
-            onClick={() => {
-              if (childName) { setSelectedCard("own"); }
-              else { setSelectedCard("own"); }
-            }}
+            onClick={() => setSelectedCard("own")}
           />
           <IllustratedCard label="A magical name"   emoji="✨"  imageUrl={optionImages["hero-magical"]}  selected={selectedCard === "magical"}  onClick={() => setSelectedCard("magical")} />
           <IllustratedCard label="A brave stranger" emoji="🗺️" imageUrl={optionImages["hero-stranger"]} selected={selectedCard === "stranger"} onClick={() => setSelectedCard("stranger")} />
           <IllustratedCard label="Surprise me!"     emoji="🎲"  imageUrl={optionImages["hero-surprise"]} selected={selectedCard === "surprise"} onClick={handleSurprise} />
         </div>
 
-        {/* Inline content below cards based on selection */}
         {selectedCard === "own" && !childName && (
           <>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextOwn} autoFocus onSubmit={handleConfirm} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <FieldHint text="(like Finn, Zara, Milo — or your real name!)" />
+            <ExampleChips examples={["Finn", "Zara", "Milo", "Wren"]} onTap={(v) => { setTextVal(v); setValidationError(""); }} />
           </>
         )}
 
@@ -488,7 +512,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, optionImages, audioUrl, c
           <>
             <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={BLUEBELL.q1TextStranger} autoFocus onSubmit={handleConfirm} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <FieldHint text="(like Ember the fox, Sir Bravely, or Captain Nimbus)" />
+            <ExampleChips examples={["Ember the fox", "Sir Bravely", "Captain Nimbus"]} onTap={(v) => { setTextVal(v); setValidationError(""); }} />
           </>
         )}
 
@@ -502,24 +526,21 @@ function Q1View({ initialHero, onNext, onBack, onSkip, optionImages, audioUrl, c
           </div>
         )}
 
-        {/* Confirm + skip at bottom */}
-        {selectedCard && (
-          <PrimaryButton
-            label={selectedCard === "own" && childName ? `Yes, I'm ${childName}!` : "This is my hero!"}
-            onClick={handleConfirm}
-            disabled={!canConfirm}
-          />
-        )}
-        {onSkip && <SkipLink onSkip={onSkip} />}
+        <ConfirmRow
+          confirmLabel={selectedCard === "own" && childName ? `Yes, I'm ${childName}!` : "This is my hero!"}
+          onConfirm={handleConfirm}
+          disabled={!canConfirm || !selectedCard}
+          onSkip={onSkip}
+        />
 
       </div>
     </QuestionShell>
   );
 }
 
-// ─── Q2 — Story world ─────────────────────────────────────────────────────────
+// ─── Q2 — Story world ────────────────────────────────────────────────────────────────────
 
-function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [selected, setSelected] = useState(initialWorld);
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
@@ -537,7 +558,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, optionImages, 
   );
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q2(heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={BLUEBELL.q2(heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
           {WORLD_OPTIONS.map((w) => {
@@ -555,14 +576,18 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, optionImages, 
           })}
         </div>
         <OptionPill label="Surprise me!" emoji="🎲" onClick={() => setSelected(pickRandom(WORLD_OPTIONS).label)} />
-        <PrimaryButton label="This is the world!" onClick={() => selected && confirm(selected)} disabled={!selected} />
-        {onSkip && <SkipLink onSkip={onSkip} />}
+        <ConfirmRow
+          confirmLabel="This is the world!"
+          onConfirm={() => selected && confirm(selected)}
+          disabled={!selected}
+          onSkip={onSkip}
+        />
       </div>
     </QuestionShell>
   );
 }
 
-// ─── Q3 — Companion ───────────────────────────────────────────────────────────
+// ─── Q3 — Companion ──────────────────────────────────────────────────────────────────────
 
 type Q3CompanionType = "friend" | "pet" | "creature" | "family";
 
@@ -573,11 +598,12 @@ const COMPANION_TYPES: { id: Q3CompanionType; label: string; geminiLabel: string
   { id: "family",   label: "A family member",    geminiLabel: "family member",    emoji: "👨‍👩‍👧", surpriseNames: ["Rosa", "Leo", "Nana", "my brother", "my sister", "Grandpa Joe", "Auntie Bea"] },
 ];
 
-function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [selectedType, setSelectedType] = useState<Q3CompanionType | null>(null);
-  const [nameVal, setNameVal] = useState("");
-  const [transitioning, setTransitioning] = useState(false);
-  const [transitionMsg, setTransitionMsg] = useState("");
+  const [nameVal, setNameVal]           = useState("");
+  const [suggestedNames, setSuggestedNames] = useState<string[]>([]);
+  const [transitioning, setTransitioning]   = useState(false);
+  const [transitionMsg, setTransitionMsg]   = useState("");
 
   const buildCompanionString = (type: Q3CompanionType, name: string): string => {
     const ct = COMPANION_TYPES.find((t) => t.id === type)!;
@@ -591,6 +617,27 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
     setTimeout(() => { setTransitioning(false); onNext(companion); }, 1500);
   };
 
+  // Load contextual name suggestions when companion type changes
+  useEffect(() => {
+    if (!selectedType) { setSuggestedNames([]); return; }
+    const ct = COMPANION_TYPES.find((t) => t.id === selectedType)!;
+    // Show hardcoded names immediately
+    setSuggestedNames(ct.surpriseNames.slice(0, 4));
+    // Try to get AI-generated contextual names
+    let cancelled = false;
+    fetch("/api/suggest-names", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companionType: selectedType, heroName, worldName }),
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { names?: string[] } | null) => {
+        if (!cancelled && data?.names?.length) setSuggestedNames(data.names.slice(0, 4));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [selectedType, heroName, worldName]);
+
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
       <FairyFigure size={80} />
@@ -598,15 +645,8 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
     </div>
   );
 
-  const Q3_EXAMPLES: Record<Q3CompanionType, string> = {
-    friend:   "(like Mia, Jake, Sam — or just leave it blank!)",
-    pet:      "(like Biscuit the dog, Pepper the cat, or Toasty the bunny)",
-    creature: "(like Nimbus, Glimmer — or a shimmering cloud moth named Wisp)",
-    family:   "(like little sister Rosa, grandpa Joe, or just \"my brother\")",
-  };
-
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q3(worldName, heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={BLUEBELL.q3(worldName, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
           {COMPANION_TYPES.map((ct) => (
@@ -644,31 +684,41 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
               onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
               onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
             />
-            <FieldHint text={Q3_EXAMPLES[selectedType]} />
-            <PrimaryButton label="This is the companion!" onClick={() => confirm(selectedType, nameVal)} />
+            {suggestedNames.length > 0 && (
+              <ExampleChips examples={suggestedNames} onTap={(v) => setNameVal(v)} />
+            )}
+            <ConfirmRow
+              confirmLabel="This is the companion!"
+              onConfirm={() => confirm(selectedType, nameVal)}
+              onSkip={onSkip}
+            />
           </>
         )}
 
-        <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
-        {onSkip && <SkipLink onSkip={onSkip} />}
+        {!selectedType && (
+          <>
+            <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{BLUEBELL.q3Nudge}</p>
+            {onSkip && <SkipLink onSkip={onSkip} />}
+          </>
+        )}
       </div>
     </QuestionShell>
   );
 }
 
-// ─── Q4 — Dramatic engine ─────────────────────────────────────────────────────
+// ─── Q4 — Dramatic engine ─────────────────────────────────────────────────────────────────
 
 type Q4Category = "funny" | "spooky" | "weird" | "delicious";
 type Q4Phase = "input" | "reaction1" | "reaction2";
 
-const Q4_CATEGORIES: { id: Q4Category; label: string; emoji: string; placeholder: string; hint: string }[] = [
-  { id: "funny",    label: "Funny",      emoji: "😂", placeholder: "like... giant sneezing broccoli",       hint: "(e.g. a hiccuping rainbow machine, a cloud that laughs at everything)" },
-  { id: "spooky",  label: "Spooky-fun", emoji: "👻", placeholder: "like... shadows that giggle",            hint: "(e.g. a door that whispers your name backwards, footsteps with no feet)" },
-  { id: "weird",   label: "Very weird",  emoji: "🌀", placeholder: "like... invisible cheese",              hint: "(e.g. mountains that hum lullabies, clocks that run upside down)" },
-  { id: "delicious",label: "Delicious",  emoji: "🍫", placeholder: "like... a river of hot chocolate",      hint: "(e.g. flowers that taste like candy floss, rain made of lemonade)" },
+const Q4_CATEGORIES: { id: Q4Category; label: string; emoji: string; placeholder: string; hint: string; examples: string[] }[] = [
+  { id: "funny",     label: "Funny",      emoji: "😂", placeholder: "like... giant sneezing broccoli",       hint: "(e.g. a hiccuping rainbow machine, a cloud that laughs at everything)", examples: ["giant sneezing broccoli", "a hiccuping rainbow machine", "a cloud that laughs at everything"] },
+  { id: "spooky",   label: "Spooky-fun", emoji: "👻", placeholder: "like... shadows that giggle",            hint: "(e.g. a door that whispers your name backwards, footsteps with no feet)",  examples: ["shadows that giggle", "footsteps with no feet", "a door that whispers your name"] },
+  { id: "weird",    label: "Very weird",  emoji: "🌀", placeholder: "like... invisible cheese",              hint: "(e.g. mountains that hum lullabies, clocks that run upside down)",         examples: ["invisible cheese", "mountains that hum lullabies", "clocks that run upside down"] },
+  { id: "delicious", label: "Delicious",  emoji: "🍫", placeholder: "like... a river of hot chocolate",      hint: "(e.g. flowers that taste like candy floss, rain made of lemonade)",        examples: ["a river of hot chocolate", "candy floss flowers", "rain made of lemonade"] },
 ];
 
-function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const [selectedCat, setSelectedCat] = useState<Q4Category | null>(null);
   const [textVal, setTextVal]         = useState(initialEngine);
   const [phase, setPhase]             = useState<Q4Phase>("input");
@@ -703,10 +753,9 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
   const activeCat = Q4_CATEGORIES.find((c) => c.id === selectedCat);
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q4(companionName, heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={BLUEBELL.q4(companionName, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
 
-        {/* All 4 category cards — always visible */}
         <div className="grid grid-cols-2 gap-2">
           {Q4_CATEGORIES.map((c) => (
             <IllustratedCard
@@ -720,7 +769,6 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
           ))}
         </div>
 
-        {/* Inline text field below cards when category selected */}
         {selectedCat && activeCat && (
           <>
             <StoryInput value={textVal}
@@ -730,28 +778,37 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
               autoFocus
               onSubmit={() => confirm(textVal)} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
-            <FieldHint text={activeCat.hint} />
-            <PrimaryButton label="This is the challenge!" onClick={() => confirm(textVal)} disabled={!textVal.trim()} />
+            <ExampleChips
+              examples={activeCat.examples}
+              onTap={(v) => { setTextVal(v); setValidationError(""); }}
+            />
+            <ConfirmRow
+              confirmLabel="This is the challenge!"
+              onConfirm={() => confirm(textVal)}
+              disabled={!textVal.trim()}
+              onSkip={onSkip}
+            />
           </>
         )}
 
         {!selectedCat && (
-          <OptionPill label="Surprise me!" emoji="🎲" onClick={() => {
-            const cat = pickRandom(Q4_CATEGORIES);
-            setSelectedCat(cat.id);
-            setTextVal(pickRandom(SURPRISE_ENGINES));
-          }} />
+          <>
+            <OptionPill label="Surprise me!" emoji="🎲" onClick={() => {
+              const cat = pickRandom(Q4_CATEGORIES);
+              setSelectedCat(cat.id);
+              setTextVal(pickRandom(SURPRISE_ENGINES));
+            }} />
+            {onSkip && <SkipLink onSkip={onSkip} />}
+          </>
         )}
-
-        {onSkip && <SkipLink onSkip={onSkip} />}
       </div>
     </QuestionShell>
   );
 }
 
-// ─── Q5 — Resolution mood ─────────────────────────────────────────────────────
+// ─── Q5 — Resolution mood ─────────────────────────────────────────────────────────────────
 
-function Q5View({ heroName, engineText, onNext, onBack, onSkip, optionImages, audioUrl }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
+function Q5View({ heroName, engineText, onNext, onBack, onSkip, onReset, optionImages, audioUrl }: { heroName: string; engineText: string; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string }) {
   const MOODS: { id: ResolutionMood; label: string; emoji: string; isBedtime?: boolean }[] = [
     { id: "brave",     label: "Super brave",          emoji: "🦁" },
     { id: "laughing",  label: "Laughing so much",      emoji: "😂" },
@@ -759,11 +816,10 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, optionImages, au
     { id: "sleepy",    label: "Warm and sleepy",        emoji: "🌙", isBedtime: true },
   ];
 
-  const [surpriseMood, setSurpiseMood] = useState<ResolutionMood | null>(null);
-  const surpriseMoodLabel = MOODS.find((m) => m.id === surpriseMood)?.label;
+  const [selectedMood, setSelectedMood] = useState<ResolutionMood | null>(null);
 
   return (
-    <QuestionShell onBack={onBack} bluebellText={BLUEBELL.q5(engineText, heroName)} audioUrl={audioUrl}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={BLUEBELL.q5(engineText, heroName)} audioUrl={audioUrl}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2.5">
           {MOODS.map((m) => (
@@ -772,35 +828,41 @@ function Q5View({ heroName, engineText, onNext, onBack, onSkip, optionImages, au
               label={m.label}
               emoji={m.emoji}
               imageUrl={optionImages[`mood-${m.id}`]}
-              selected={surpriseMood === m.id}
-              onClick={() => { setSurpiseMood(null); onNext(m.id); }}
+              selected={selectedMood === m.id}
+              onClick={() => setSelectedMood(m.id)}
               badge={m.isBedtime
-                ? <span className="block text-fs-body font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✦</span>
+                ? <span className="block text-fs-body font-bold uppercase tracking-widest mb-0.5" style={{ color: "#FBB824" }}>bedtime ✶</span>
                 : undefined
               }
             />
           ))}
         </div>
-        <OptionPill label="Surprise me!" emoji="🎲" onClick={() => setSurpiseMood(pickRandom(MOODS).id)} />
-        {surpriseMood && (
-          <PrimaryButton label={`✨ Go with "${surpriseMoodLabel}"`} onClick={() => onNext(surpriseMood)} />
+        <OptionPill label="Surprise me!" emoji="🎲" onClick={() => setSelectedMood(pickRandom(MOODS).id)} />
+        {selectedMood ? (
+          <ConfirmRow
+            confirmLabel="This is the ending!"
+            onConfirm={() => onNext(selectedMood)}
+            onSkip={onSkip}
+          />
+        ) : (
+          onSkip && <SkipLink onSkip={onSkip} />
         )}
-        {onSkip && <SkipLink onSkip={onSkip} />}
       </div>
     </QuestionShell>
   );
 }
 
-// ─── Summary screen ───────────────────────────────────────────────────────────
+// ─── Summary screen ──────────────────────────────────────────────────────────────────────
 
 type SummaryPhase = "table" | "script" | "countdown" | "herewego";
 
-function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch }: {
+function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset }: {
   answers: Answers;
   durationMinutes: number;
   onDurationChange: (v: number) => void;
   onEditStep: (step: Step) => void;
   onLaunch: () => void;
+  onReset?: () => void;
 }) {
   const [phase, setPhase] = useState<SummaryPhase>("table");
   const [showReady, setShowReady] = useState(false);
@@ -826,10 +888,15 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
       <div className="flex items-center mb-8">
         <BackButton onClick={() => onEditStep("q5")} />
         <div className="flex-1 flex justify-center"><FairyFigure size={52} /></div>
-        <div className="w-8" />
+        {onReset ? (
+          <button onClick={onReset}
+            className="text-fs-body transition-all active:scale-95"
+            style={{ color: "rgba(255,255,255,0.22)" }}>
+            Start over
+          </button>
+        ) : <div className="w-16" />}
       </div>
 
-      {/* Summary table */}
       <div className="rounded-2xl mb-5 overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
         {ROWS.map((row, i) => (
           <div key={row.label} className="flex items-center px-4 py-3 gap-3"
@@ -845,7 +912,6 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         ))}
       </div>
 
-      {/* Duration picker — shown before launch sequence begins */}
       {phase === "table" && (
         <div className="mb-5">
           <div className="flex items-center justify-between mb-3">
@@ -855,7 +921,6 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
               {durationMinutes} min
             </span>
           </div>
-          {/* Preset buttons */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             {[
               { value: 3, icon: "⚡", label: "Short",  desc: "~3 min" },
@@ -876,7 +941,6 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
               );
             })}
           </div>
-          {/* Fine-tune slider */}
           <input type="range" min={1} max={15} step={1} value={durationMinutes}
             onChange={(e) => onDurationChange(+e.target.value)}
             className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
@@ -888,9 +952,13 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         </div>
       )}
 
-      {/* Launch sequence */}
       {phase === "table" && (
-        <PrimaryButton label="Ready to hear the story?" onClick={() => setPhase("script")} />
+        <button
+          onClick={() => setPhase("script")}
+          className="w-full py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
+          style={{ background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }}>
+          Ready to hear the story?
+        </button>
       )}
 
       {(phase === "script" || phase === "countdown" || phase === "herewego") && (
@@ -913,7 +981,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   );
 }
 
-// ─── Generating screen ────────────────────────────────────────────────────────
+// ─── Generating screen ────────────────────────────────────────────────────────────────
 
 function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, onError }: {
   heroName: string; worldName: string;
@@ -974,7 +1042,7 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
   );
 }
 
-// ─── Main orchestrator ────────────────────────────────────────────────────────
+// ─── Main orchestrator ────────────────────────────────────────────────────────────────
 
 const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", q4_engine: "", q5_mood: null };
 
@@ -991,11 +1059,9 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const [editingFromSummary, setEditingFromSummary] = useState(false);
   const [scriptBlocks, setScriptBlocks]   = useState<ScriptBlock[]>([]);
   const [error, setError]                 = useState<string | null>(null);
-  // Production state (used in done step)
   const [isProducing, setIsProducing]     = useState(false);
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob]   = useState<Job | null>(null);
-  // Story summary + cover
   const [summary, setSummary]             = useState("");
   const [coverUrl, setCoverUrl]           = useState("");
   const [coverPrompt, setCoverPrompt]     = useState("");
@@ -1005,23 +1071,42 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const [optionImages, setOptionImages] = useState<Record<string, string>>({});
   const [imagesGenerating, setImagesGenerating] = useState(false);
 
-  // Load cached images from localStorage immediately so cards show on first render
+  // Restore saved draft on mount
   useEffect(() => {
     try {
       const cached = localStorage.getItem(LS_KEY);
       if (cached) setOptionImages(JSON.parse(cached) as Record<string, string>);
     } catch { /* ignore */ }
+
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { step?: Step; answers?: Answers; durationMinutes?: number };
+        const hasContent = parsed.answers && Object.values(parsed.answers).some((v) => v);
+        if (hasContent && parsed.answers) {
+          setAnswers(parsed.answers);
+          if (parsed.durationMinutes) setDuration(parsed.durationMinutes);
+          const safestep = parsed.step;
+          if (safestep && !["generating", "done"].includes(safestep)) setStep(safestep);
+        }
+      }
+    } catch { /* ignore */ }
   }, []);
+
+  // Persist draft on every step/answer change
+  useEffect(() => {
+    if (step === "generating" || step === "done") return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ step, answers, durationMinutes }));
+    } catch { /* ignore */ }
+  }, [step, answers, durationMinutes]);
+
   const [questionAudios, setQuestionAudios] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchVoicePool().then(setVoicePool);
   }, []);
 
-  // Seed Bluebell question audio: generate via server-side Gemini TTS and cache
-  // in Supabase. Re-runs whenever the UI language changes so the correct
-  // language's audio is fetched/generated. Generates q1 first so it's ready
-  // as soon as the flow opens.
   useEffect(() => {
     let cancelled = false;
     async function seedAudio() {
@@ -1039,7 +1124,6 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
 
         if (!missing?.length) return;
 
-        // Prioritise q1 so audio is ready before the user finishes reading
         const ordered = ["q1", "q2", "q3", "q4", "q5"].filter((k) => missing.includes(k));
         for (const key of ordered) {
           if (cancelled) return;
@@ -1049,21 +1133,15 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
               const { url } = await genRes.json() as { ok: boolean; key: string; url: string };
               if (url) setQuestionAudios((prev) => ({ ...prev, [key]: url }));
             }
-          } catch {
-            // ignore individual failures — will retry on next visit
-          }
+          } catch { /* ignore */ }
         }
-      } catch {
-        // ignore silently
-      }
+      } catch { /* ignore */ }
     }
     setQuestionAudios({});
     seedAudio();
     return () => { cancelled = true; };
   }, [language]);
 
-  // Image seeder: generates option card images via Gemini (server-side) and caches in Supabase.
-  // Calls GET to find missing keys, then POSTs in parallel batches of 4 to generate + store.
   useEffect(() => {
     let cancelled = false;
     async function seedImages() {
@@ -1129,10 +1207,12 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     setAnswers((prev) => ({ ...prev, [key]: value }));
 
   const handleReset = () => {
+    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
     setStep("q1"); setAnswers(INITIAL_ANSWERS); setDuration(5);
     setScriptBlocks([]); setError(null);
     setIsProducing(false); setProductionJobId(null); setCompletedJob(null);
     setSummary(""); setCoverUrl(""); setCoverPrompt("");
+    setEditingFromSummary(false);
   };
 
   const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
@@ -1191,7 +1271,6 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       const produceBody: Record<string, unknown> = { blocks, durationMinutes };
       if (summary) produceBody.summary = summary;
       if (coverPrompt) produceBody.coverPrompt = coverPrompt;
-      // Reuse the cover already generated right after the script (avoid regenerating it).
       const coverMatch = coverUrl.match(/^data:([^;]+);base64,(.+)$/);
       if (coverMatch) {
         produceBody.coverImageMimeType = coverMatch[1];
@@ -1229,8 +1308,6 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     </div>
   ) : null;
 
-  // ─── Step routing ───────────────────────────────────────────────────────────
-
   const GeneratingBadge = imagesGenerating ? (
     <div className="flex items-center justify-center gap-2 py-1.5 mb-2">
       <span className="w-1.5 h-1.5 rounded-full bg-purple-bright animate-pulse" />
@@ -1238,21 +1315,25 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     </div>
   ) : null;
 
-  // When editing a step from the summary screen, onNext/onSkip/onBack all return to summary.
+  // Whether user has made any progress (for showing Start over button)
+  const hasProgress = Object.values(answers).some((v) => v) || step !== "q1";
+
   const backToSummary = () => { setEditingFromSummary(false); setStep("summary"); };
   const nextOrSummary = (next: Step) => editingFromSummary ? backToSummary() : setStep(next);
   const skipOrSummary = (next: Step, setDefault: () => void) => { setDefault(); nextOrSummary(next); };
 
-  if (step === "q1") return <>{GeneratingBadge}<Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} /></>;
-  if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(WORLD_OPTIONS).label); })} optionImages={optionImages} audioUrl={questionAudios.q2} /></>;
-  if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} optionImages={optionImages} audioUrl={questionAudios.q3} /></>;
-  if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} optionImages={optionImages} audioUrl={questionAudios.q4} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
+  const resetProp = hasProgress ? handleReset : undefined;
+
+  if (step === "q1") return <>{GeneratingBadge}<Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} /></>;
+  if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(WORLD_OPTIONS).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} /></>;
+  if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} /></>;
+  if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} /></>;
 
   if (step === "summary") return (
     <>
       {ErrorBanner}
-      <SummaryView answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} />
+      <SummaryView answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={handleReset} />
     </>
   );
 
@@ -1261,7 +1342,6 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   );
 
   if (step === "done") {
-    // Production in progress
     if (isProducing && productionJobId) return (
       <div className="min-h-full" style={{ background: "transparent" }}>
         <div className="px-5 pt-12 pb-8">
@@ -1275,7 +1355,6 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       </div>
     );
 
-    // Production done
     if (completedJob) return (
       <div className="min-h-full" style={{ background: "transparent" }}>
         <div className="px-5 pt-12 pb-8">
@@ -1289,7 +1368,6 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       </div>
     );
 
-    // Script ready — edit and produce
     return (
       <div className="min-h-full" style={{ background: "transparent" }}>
         <div className="px-5 pt-12 pb-8">
