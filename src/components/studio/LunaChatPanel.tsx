@@ -615,6 +615,16 @@ export default function LunaChatPanel({
                 </button>
               ))}
             </div>
+            <div className="mt-3">
+              <input type="range" min={1} max={10} step={1} value={durationMinutes}
+                onChange={(e) => setDurationMinutes(+e.target.value)}
+                className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
+              <div className="flex justify-between text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>
+                <span>1 min</span>
+                <span style={{ color: "rgba(255,255,255,0.12)" }}>· · · · · · · · ·</span>
+                <span>10 min</span>
+              </div>
+            </div>
           </div>
 
           {createError && (
