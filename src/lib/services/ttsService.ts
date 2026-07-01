@@ -459,8 +459,8 @@ export async function synthesizeLine(
     if (elKey) {
       const heVoiceId = HE_EL_VOICE_MAP[voiceId] ?? HE_EL_VOICE_MAP["Charon"]!;
       console.log(`[${ts()}][HE-EL] ${voiceId} → ${heVoiceId}`);
-      await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.5, style ?? 0.4, language, similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
-      return {};
+      await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.5, style ?? 0.4, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
+      return { mimeType: "audio/mpeg" };
     }
     // No EL key — fall through to GC TTS with WaveNet (degraded quality)
     console.warn(`[${ts()}][HE] ELEVENLABS_API_KEY not set — using WaveNet fallback for Hebrew`);
