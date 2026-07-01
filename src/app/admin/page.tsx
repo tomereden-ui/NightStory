@@ -573,8 +573,19 @@ export default function AdminPage() {
 
   // ── Production job ─────────────────────────────────────────────────────────
   const [jobId, setJobId]               = useState<string | null>(null);
-  const [job, setJob]                   = useState<{ status: string; step: string; progress: number; audioUrl?: string; coverUrl?: string; error?: string; title?: string } | null>(null);
+  const [job, setJob]                   = useState<{ status: string; step: string; progress: number; audioUrl?: string; coverUrl?: string; error?: string; title?: string; voiceAssignments?: Record<string, string>; storyId?: string } | null>(null);
   const pollRef                         = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Cover preview & story meta ────────────────────────────────────────────
+  const [storeCoverUrl, setStoreCoverUrl]         = useState(""); // base64 data URL from generate-cover
+  const [storeCoverLoading, setStoreCoverLoading] = useState(false);
+  const [storeCoverPrompt, setStoreCoverPrompt]   = useState("");
+  const [storeSummary, setStoreSummary]           = useState("");
+
+  // ── Explicit DB save (after production) ──────────────────────────────────
+  const [addSaving, setAddSaving]       = useState(false);
+  const [addSaveError, setAddSaveError] = useState("");
+  const [addSaved, setAddSaved]         = useState(false);
 
   // ── Classics list ─────────────────────────────────────────────────────────
   const [classics, setClassics]         = useState<ClassicMeta[]>([]);
@@ -621,7 +632,7 @@ export default function AdminPage() {
       try {
         const res = await fetch(`/api/drama-status/${jobId}`, { cache: "no-store" });
         if (!res.ok) return;
-        const j = await res.json();
+        const j = await res.json() as { status: string; step: string; progress: number; audioUrl?: string; coverUrl?: string; error?: string; title?: string; voiceAssignments?: Record<string, string>; storyId?: string };
         setJob(j);
         if (j.status === "done" || j.status === "error") {
           clearInterval(pollRef.current!);
@@ -670,6 +681,7 @@ export default function AdminPage() {
     setProcessState("processing");
     setProcessError("");
     setValidationIssues([]);
+    setStoreCoverUrl(""); setStoreCoverPrompt(""); setStoreSummary("");
     const blocks = parseScriptText(addScript);
     if (!blocks.length) {
       setProcessState("error");
@@ -678,10 +690,29 @@ export default function AdminPage() {
     }
     setParsedBlocks(blocks);
     const rawBlocks = blocks.map((b) => ({ characterName: b.characterName, textPayload: b.textPayload }));
-    const valRes = await fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks }) });
-    const valData = await valRes.json();
-    if (!valData.ok && Array.isArray(valData.issues)) setValidationIssues(valData.issues as string[]);
+
+    // Validate + fetch story meta in parallel
+    const [valRes, metaRes] = await Promise.all([
+      fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks }) }),
+      fetch("/api/admin/story-meta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks, title: addTitle }) }),
+    ]);
+    const [valData, metaData] = await Promise.all([valRes.json(), metaRes.json()]) as [
+      { ok: boolean; issues?: string[] },
+      { summary?: string; coverPrompt?: string }
+    ];
+    if (!valData.ok && Array.isArray(valData.issues)) setValidationIssues(valData.issues);
+    const coverPrompt = metaData.coverPrompt ?? `${addTitle || "Story"} — magical Pixar-style children's bedtime illustration`;
+    const summary     = metaData.summary ?? "";
+    setStoreSummary(summary); setStoreCoverPrompt(coverPrompt);
     setProcessState("done");
+
+    // Fetch cover image in the background (non-blocking)
+    setStoreCoverLoading(true);
+    fetch("/api/generate-cover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: coverPrompt, summary }) })
+      .then((r) => r.json())
+      .then((d: { coverUrl?: string }) => setStoreCoverUrl(d.coverUrl ?? ""))
+      .catch(() => {})
+      .finally(() => setStoreCoverLoading(false));
   };
 
   // ── Produce Story ──────────────────────────────────────────────────────────
@@ -692,6 +723,7 @@ export default function AdminPage() {
     setAddProducing(true);
     setAddProduceLog([]);
     setAddProduceError("");
+    setAddSaved(false); setAddSaveError("");
     setJob(null);
     setJobId(null);
     const log = (msg: string) => setAddProduceLog((p) => [...p, msg]);
@@ -701,32 +733,33 @@ export default function AdminPage() {
       const charNames = Array.from(new Set(blocks.map((b) => b.characterName)));
       const classifyRes = await fetch("/api/classify-characters", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characters: charNames, summary: addTitle }),
+        body: JSON.stringify({ characters: charNames, summary: storeSummary || addTitle }),
       });
       const classifyData = await classifyRes.json() as { types?: Record<string, string> };
       const characterTypes = classifyData.types ?? {};
 
-      // 2. Story metadata (summary + age group + cover prompt)
-      log("Generating story metadata…");
-      const metaRes = await fetch("/api/admin/story-meta", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks: blocks.map((b) => ({ characterName: b.characterName, textPayload: b.textPayload })), title: addTitle }),
-      });
-      const meta = await metaRes.json() as { summary?: string; ageGroup?: string; coverPrompt?: string };
-
-      // 3. Kick off production
+      // 2. Kick off production — use pre-generated cover if available
       log("Starting production (audio + cover)…");
+      const coverMatch = storeCoverUrl.match(/^data:([^;]+);base64,(.+)$/);
+      const produceBody: Record<string, unknown> = {
+        blocks,
+        summary: storeSummary || "",
+        isPublic: addIsPublic,
+        isClassic: addIsPublic && addCategory === "classics",
+        characterTypes,
+        durationMinutes: 5,
+        skipLibrarySave: true,
+      };
+      if (coverMatch) {
+        produceBody.coverImageMimeType = coverMatch[1];
+        produceBody.coverImageData     = coverMatch[2];
+      } else {
+        produceBody.coverPrompt = storeCoverPrompt || `${addTitle} — magical Pixar-style children's bedtime illustration`;
+      }
+
       const produceRes = await fetch("/api/produce-drama", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          blocks,
-          summary: meta.summary ?? "",
-          coverPrompt: meta.coverPrompt ?? `${addTitle} — magical Pixar-style children's bedtime illustration`,
-          isPublic: addIsPublic,
-          isClassic: addIsPublic && addCategory === "classics",
-          characterTypes,
-          durationMinutes: 5,
-        }),
+        body: JSON.stringify(produceBody),
       });
       const produceData = await produceRes.json() as { jobId?: string; error?: string };
       if (!produceRes.ok) throw new Error(produceData.error ?? "Production failed");
@@ -738,11 +771,46 @@ export default function AdminPage() {
     }
   };
 
+  // ── Explicit DB save ───────────────────────────────────────────────────────
+  const handleSaveStory = async () => {
+    if (!jobId) return;
+    setAddSaving(true); setAddSaveError("");
+    try {
+      const res = await fetch("/api/admin/save-story", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const d = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok) throw new Error(d.error ?? "Save failed");
+      setAddSaved(true);
+    } catch (e) {
+      setAddSaveError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setAddSaving(false);
+    }
+  };
+
   const resetAddStory = () => {
     setAddTitle(""); setAddScript(""); setAddIsPublic(true); setAddCategory("classics");
     setParsedBlocks([]); setValidationIssues([]);
     setProcessState("idle"); setProcessError(""); setAddProduceLog([]);
     setAddProducing(false); setAddProduceError(""); setJobId(null); setJob(null);
+    setStoreCoverUrl(""); setStoreCoverLoading(false); setStoreCoverPrompt(""); setStoreSummary("");
+    setAddSaving(false); setAddSaveError(""); setAddSaved(false);
+  };
+
+  const handleRegenerateCover = async () => {
+    if (!storeCoverPrompt) return;
+    setStoreCoverUrl(""); setStoreCoverLoading(true);
+    try {
+      const res = await fetch("/api/generate-cover", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: storeCoverPrompt, summary: storeSummary }),
+      });
+      const d = await res.json() as { coverUrl?: string };
+      setStoreCoverUrl(d.coverUrl ?? "");
+    } catch { /* silent */ }
+    setStoreCoverLoading(false);
   };
 
   // ── Auth gate ──────────────────────────────────────────────────────────────
@@ -765,6 +833,8 @@ export default function AdminPage() {
 
   const isDone  = job?.status === "done";
   const isError = job?.status === "error";
+  const CAST_COLORS = ["#4fc3f7", "#a78bfa", "#fbbf24", "#f87171", "#34d399", "#fb923c"];
+  const uniqueCast  = Array.from(new Set(parsedBlocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
 
   const [adminTab, setAdminTab] = useState<"factory" | "costs" | "services">("factory");
 
@@ -874,7 +944,7 @@ export default function AdminPage() {
         </p>
         <div className="rounded-xl px-3 py-2.5 mb-3 text-fs-body leading-relaxed"
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.35)", fontFamily: "monospace", fontSize: 12 }}>
-          [Narrator] Once upon a time…{"\n"}[Maya] Oh, what's out there?{"\n"}[Miss Cassandra] Stay safe inside, little bee.
+          [Narrator] Once upon a time…{"\n"}[Maya] Oh, what&apos;s out there?{"\n"}[Miss Cassandra] Stay safe inside, little bee.
         </div>
         <textarea
           value={addScript}
@@ -897,50 +967,80 @@ export default function AdminPage() {
           {processState === "processing" ? "Processing…" : "⚙️ Process Script"}
         </button>
 
-        {/* ── Process results ── */}
-        {processState === "done" && (
+        {/* ── Preview (after script processed) ── */}
+        {processState === "done" && !isDone && (
           <>
-            {/* Parsed blocks */}
-            <Divider title={`${parsedBlocks.length} Parsed Blocks`} />
-            <div className="flex flex-col gap-2">
-              {parsedBlocks.map((b) => (
-                <div key={b.id} className="rounded-xl px-3 py-2.5"
-                  style={{ background: b.characterName === "SFX" ? "rgba(167,139,250,0.07)" : "rgba(255,255,255,0.04)", border: b.characterName === "SFX" ? "1px solid rgba(167,139,250,0.2)" : "1px solid rgba(255,255,255,0.07)" }}>
-                  <p className="text-fs-body font-medium" style={{ color: b.characterName === "SFX" ? "#a78bfa" : "#4fc3f7" }}>
-                    {b.characterName === "SFX" ? "🔊 SFX" : b.characterName}
-                  </p>
-                  <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>{b.textPayload}</p>
-                  {b.characterName !== "SFX" && (
-                    <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.22)" }}>Voice: {b.assignedVoiceId}</p>
-                  )}
+            {/* Cover */}
+            <Divider title="Cover Image" />
+            <div className="relative w-full rounded-2xl overflow-hidden"
+              style={{ aspectRatio: "16/9", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              {storeCoverLoading ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                  <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
+                    style={{ borderColor: "#4fc3f7 transparent transparent transparent" }} />
+                  <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Painting cover…</p>
                 </div>
-              ))}
+              ) : storeCoverUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={storeCoverUrl} alt="Story cover" className="w-full h-full object-cover" />
+                  <button onClick={handleRegenerateCover}
+                    className="absolute top-2.5 right-2.5 px-3 py-1.5 rounded-lg text-fs-body font-medium transition-all active:scale-95"
+                    style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", backdropFilter: "blur(8px)" }}>
+                    ↻ Regenerate
+                  </button>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>Cover not generated</p>
+                </div>
+              )}
             </div>
 
-            {/* Validation issues */}
+            {/* Cast overview */}
+            {uniqueCast.length > 0 && (
+              <>
+                <Divider title="Cast & Voices" />
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {uniqueCast.map((char, i) => {
+                    const color = CAST_COLORS[i % CAST_COLORS.length];
+                    const voice = parsedBlocks.find((b) => b.characterName === char)?.assignedVoiceId ?? "";
+                    return (
+                      <div key={char} className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+                        style={{ background: `${color}14`, border: `1px solid ${color}33` }}>
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-fs-label font-bold flex-shrink-0"
+                          style={{ background: `${color}20`, color }}>
+                          {char[0].toUpperCase()}
+                        </div>
+                        <span className="text-white text-fs-body font-medium">{char}</span>
+                        {voice && <span className="text-fs-label" style={{ color: `${color}aa` }}>· {voice}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Editable block list */}
+            <Divider title={`Script — ${parsedBlocks.length} Blocks`} />
+            <BlockEditor blocks={parsedBlocks} onChange={setParsedBlocks} />
+
+            {/* Validation */}
             {validationIssues.length > 0 && (
               <div className="rounded-xl px-4 py-3 mt-3"
                 style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.25)" }}>
                 <p className="text-fs-body font-bold mb-1" style={{ color: "#fbbf24" }}>⚠️ Policy issues to fix</p>
-                {validationIssues.map((issue, i) => (
-                  <p key={i} className="text-fs-body leading-snug" style={{ color: "rgba(251,191,36,0.75)" }}>• {issue}</p>
+                {validationIssues.map((issue, idx) => (
+                  <p key={idx} className="text-fs-body leading-snug" style={{ color: "rgba(251,191,36,0.75)" }}>• {issue}</p>
                 ))}
               </div>
             )}
-
             {validationIssues.length === 0 && (
-              <p className="text-center text-fs-body mt-2" style={{ color: "rgba(79,195,247,0.6)" }}>
-                ✓ Script passes policy check
-              </p>
+              <p className="text-center text-fs-body mt-2" style={{ color: "rgba(79,195,247,0.6)" }}>✓ Script passes policy check</p>
             )}
-          </>
-        )}
 
-        {/* ── Produce Story ── */}
-        {processState === "done" && !isDone && (
-          <>
+            {/* Produce */}
             <Divider title="Produce Story" />
-
             {addProduceLog.length > 0 && (
               <div className="rounded-xl px-3 py-2.5 mb-3 flex flex-col gap-1"
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -949,43 +1049,97 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
-
             {job && (
               <div className="mb-4">
                 <JobProgress status={job.status} step={job.step} progress={job.progress} error={job.error} />
               </div>
             )}
-
             {addProduceError && (
               <p className="text-fs-body mb-3" style={{ color: "#EC4899" }}>{addProduceError}</p>
             )}
-
             <button
               onClick={handleProduceStory}
-              disabled={addProducing}
+              disabled={addProducing || storeCoverLoading}
               className="w-full py-4 rounded-2xl text-fs-subtitle font-bold transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ background: "linear-gradient(135deg,rgba(79,195,247,0.28),rgba(167,139,250,0.28))", border: "1px solid rgba(79,195,247,0.45)", color: "#fff", boxShadow: "0 4px 24px rgba(79,195,247,0.18)" }}>
-              {addProducing ? "Working…" : "🚀 Produce Story"}
+              {addProducing ? "Working…" : "🎙️ Produce Story"}
             </button>
           </>
         )}
 
-        {/* ── Done ── */}
+        {/* ── Done — rich review & explicit save ── */}
         {isDone && (
-          <div className="mt-4 rounded-xl p-4 flex flex-col gap-3"
-            style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.22)" }}>
-            <p className="text-white font-bold text-fs-body">✅ Story produced{job?.title ? ` — "${job.title}"` : ""}</p>
+          <div className="mt-4 flex flex-col gap-4">
+            {/* Cover */}
             {job?.coverUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={job.coverUrl} alt="Cover" className="w-28 rounded-xl" />
+              <div className="relative w-full rounded-2xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={job.coverUrl} alt="Story cover" className="w-full h-full object-cover" />
+                <div className="absolute inset-x-0 bottom-0 h-24"
+                  style={{ background: "linear-gradient(to top,rgba(4,6,18,0.9),transparent)" }} />
+                <p className="absolute bottom-3 left-4 font-bold text-white text-fs-subtitle"
+                  style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+                  {job.title || addTitle}
+                </p>
+              </div>
             )}
+
+            {/* Cast (from production voice assignments) */}
+            {job?.voiceAssignments && Object.keys(job.voiceAssignments).length > 0 && (
+              <div>
+                <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>CAST</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(job.voiceAssignments).map(([char, voice], i) => {
+                    const color = CAST_COLORS[i % CAST_COLORS.length];
+                    return (
+                      <div key={char} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                        style={{ background: `${color}14`, border: `1px solid ${color}33` }}>
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-fs-body flex-shrink-0"
+                          style={{ background: `${color}20`, color }}>
+                          {char[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-white text-fs-body font-medium leading-none">{char}</p>
+                          <p className="text-fs-label mt-0.5" style={{ color: `${color}aa` }}>{voice}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Audio player */}
             {job?.audioUrl && (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <audio controls src={job.audioUrl} className="w-full" style={{ height: 36 }} />
+              <div className="rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                <audio controls src={job.audioUrl} className="w-full" style={{ height: 40 }} />
+              </div>
             )}
+
+            {/* Add Story button */}
+            {!addSaved ? (
+              <div className="flex flex-col gap-2">
+                {addSaveError && (
+                  <p className="text-fs-body text-center" style={{ color: "#EC4899" }}>{addSaveError}</p>
+                )}
+                <button
+                  onClick={handleSaveStory}
+                  disabled={addSaving}
+                  className="w-full py-4 rounded-2xl text-fs-subtitle font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg,rgba(79,195,247,0.35),rgba(16,185,129,0.35))", border: "1px solid rgba(79,195,247,0.5)", color: "#fff", boxShadow: "0 4px 24px rgba(79,195,247,0.22)" }}>
+                  {addSaving ? "Saving…" : "✅ Add Story to Library"}
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-xl px-4 py-3 text-center" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)" }}>
+                <p className="text-fs-body font-bold" style={{ color: "#34d399" }}>✓ Story saved to library!</p>
+              </div>
+            )}
+
             <button onClick={resetAddStory}
-              className="text-fs-body px-4 py-2 rounded-xl font-medium transition-all active:scale-[0.98]"
-              style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.3)", color: "#4fc3f7" }}>
+              className="text-fs-body px-4 py-2 rounded-xl font-medium transition-all active:scale-[0.98] self-center"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
               Add another story
             </button>
           </div>
