@@ -13,25 +13,33 @@ export interface HebrewVoice {
 
 /**
  * Curated pool of ElevenLabs voices that render Hebrew well via the `eleven_v3`
- * multilingual model. These are the voice ids previously hard-mapped one-to-one
- * from Gemini presets in ttsService's HE_EL_VOICE_MAP — now tagged with their
- * own nature (gender / age / style) so a character can be cast to whichever
- * voice actually fits it, rather than a fixed per-preset slot.
+ * multilingual model. Tagged with their own nature (gender / age / style) so a
+ * character can be cast to whichever voice actually fits it.
  *
- * This is the pool used for server-side auto-casting of Hebrew stories. The
- * manual picker additionally offers the full live EL Hebrew library
- * (see fetchVoicePool → /api/el-voices?language=he).
+ * These must be voice ids this ElevenLabs account actually owns (check via
+ * GET /v1/voices). The original set here used ElevenLabs' legacy 2023 premade
+ * voice ids (Rachel, Bella, Elli, Domi, Adam, Arnold, Antoni, Josh, Sam) —
+ * those have since gone stale: querying them no longer errors, but silently
+ * returns unrelated voice data, and three of the nine (Charon/Fenrir/Puck)
+ * had collapsed onto the exact same underlying voice. Replaced 2026-07-03
+ * with ids verified against this account's live voice list.
+ *
+ * This is the pool used for both server-side auto-casting of Hebrew stories
+ * AND the manual picker (see voiceCatalog.fetchHebrewLibraryVoices) — EL's
+ * shared-voice-library search for language="he" reliably returns zero
+ * results (verified against 1000+ voices), so there is no broader "live
+ * Hebrew library" to browse; this curated set is the actual full pool.
  */
 export const HEBREW_VOICE_POOL: HebrewVoice[] = [
-  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel", gender: "female", ageGroup: "adult",   style: "warm" },
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Bella",  gender: "female", ageGroup: "young",   style: "gentle" },
-  { id: "MF3mGyEYCl7XYWbV9V6O", name: "Elli",   gender: "female", ageGroup: "young",   style: "playful" },
-  { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi",   gender: "female", ageGroup: "adult",   style: "dramatic" },
-  { id: "pNInz6obpgDQGcFmaJgB", name: "Adam",   gender: "male",   ageGroup: "adult",   style: "calm" },
-  { id: "VR6AewLTigWG4xSOukaG", name: "Arnold", gender: "male",   ageGroup: "elderly", style: "dramatic" },
-  { id: "ErXwobaYiN019PkySvjV", name: "Antoni", gender: "male",   ageGroup: "young",   style: "playful" },
-  { id: "TxGEqnHWrfWFTfGW9XjX", name: "Josh",   gender: "male",   ageGroup: "adult",   style: "warm" },
-  { id: "yoZ06aMxZJJ28mfd3POQ", name: "Sam",    gender: "male",   ageGroup: "young",   style: "calm" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah",   gender: "female", ageGroup: "adult",   style: "warm" },
+  { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica", gender: "female", ageGroup: "young",   style: "playful" },
+  { id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice",   gender: "female", ageGroup: "adult",   style: "calm" },
+  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", gender: "female", ageGroup: "adult",   style: "dramatic" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George",  gender: "male",   ageGroup: "adult",   style: "warm" },
+  { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie", gender: "male",   ageGroup: "adult",   style: "dramatic" },
+  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam",    gender: "male",   ageGroup: "young",   style: "playful" },
+  { id: "pqHfZKP75CvOlQylNhV4", name: "Bill",    gender: "male",   ageGroup: "elderly", style: "calm" },
+  { id: "nPczCjzI2devNBz1zQrb", name: "Brian",   gender: "male",   ageGroup: "adult",   style: "gentle" },
 ];
 
 export const HEBREW_VOICE_BY_ID: Record<string, HebrewVoice> = Object.fromEntries(

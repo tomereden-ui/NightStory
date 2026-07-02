@@ -6,15 +6,15 @@ import VoiceAvatar from "@/components/ui/VoiceAvatar";
 
 // Mirrors HE_EL_VOICE_MAP in ttsService.ts — name only (no IDs needed client-side)
 const HE_VOICE_NAMES: Record<string, string> = {
-  Aoede:   "Rachel",
-  Kore:    "Bella",
-  Leda:    "Elli",
-  Autonoe: "Domi",
-  Charon:  "Adam",
-  Fenrir:  "Arnold",
-  Puck:    "Antoni",
-  Orus:    "Josh",
-  Zephyr:  "Sam",
+  Aoede:   "Sarah",
+  Kore:    "Jessica",
+  Leda:    "Alice",
+  Autonoe: "Matilda",
+  Charon:  "George",
+  Fenrir:  "Charlie",
+  Puck:    "Liam",
+  Orus:    "Bill",
+  Zephyr:  "Brian",
 };
 
 interface VoicePickerProps {

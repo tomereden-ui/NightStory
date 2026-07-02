@@ -1,4 +1,5 @@
 import { PRESET_VOICES } from "@/config/presetVoices";
+import { HEBREW_VOICE_POOL, type HebrewVoice } from "@/config/hebrewVoices";
 import type { Voice, VoiceGender, VoiceStyle } from "@/types";
 
 interface FamilyVoiceRow {
@@ -40,57 +41,41 @@ function familyVoiceToVoice(row: FamilyVoiceRow): Voice {
   };
 }
 
-// ── ElevenLabs Hebrew library → Voice ───────────────────────────────────────────
-// Hebrew stories are voiced by ElevenLabs, so the picker lists real EL voices
-// verified for Hebrew. These carry language "he" (used to group them in the
-// picker) and elevenLabsId, so an assigned id resolves for display and plays
-// directly through the EL path.
+// ── Curated Hebrew voices → Voice ────────────────────────────────────────────
+// Hebrew stories are voiced by ElevenLabs. ElevenLabs' shared-voice-library
+// search reliably returns zero results for language="he" (verified against
+// 1000+ voices), so there's no broader "live Hebrew library" to browse —
+// HEBREW_VOICE_POOL (voices this account actually owns, hand-verified for
+// Hebrew via eleven_v3) is the real pool. Enriched here with each voice's
+// previewUrl from the account's own voice list, when available.
 
-interface ELLibraryVoice {
+interface ELPersonalVoice {
   id: string;
-  name: string;
-  labels?: Record<string, string>;
   previewUrl?: string | null;
 }
 
-function elGender(labels: Record<string, string> = {}): VoiceGender {
-  const g = (labels.gender ?? "").toLowerCase();
-  if (g.includes("female")) return "female";
-  if (g.includes("male")) return "male";
-  return "neutral";
-}
-
-function elStyle(labels: Record<string, string> = {}): VoiceStyle {
-  const tags = `${labels.descriptive ?? ""} ${labels.use_case ?? ""} ${labels.description ?? ""}`.toLowerCase();
-  if (/calm|meditat|soothing|relax/.test(tags)) return "calm";
-  if (/soft|gentle|whisper|tender/.test(tags)) return "gentle";
-  if (/character|animation|playful|energetic|excit/.test(tags)) return "playful";
-  if (/dramatic|deep|intense|bold|narration|narrative|audiobook/.test(tags)) return "dramatic";
-  return "warm";
-}
-
-function elLibraryToVoice(v: ELLibraryVoice): Voice {
-  const gender = elGender(v.labels);
+function hebrewVoiceToVoice(v: HebrewVoice, previewUrl?: string): Voice {
   return {
     id: v.id,
     name: v.name,
-    gender,
-    style: elStyle(v.labels),
+    gender: v.gender,
+    style: v.style,
     language: "he",
-    previewUrl: v.previewUrl ?? undefined,
-    avatarEmoji: gender === "female" ? "👩" : gender === "male" ? "👨" : "🎙",
+    previewUrl,
+    avatarEmoji: v.gender === "female" ? "👩" : v.gender === "male" ? "👨" : "🎙",
     elevenLabsId: v.id,
   };
 }
 
 async function fetchHebrewLibraryVoices(): Promise<Voice[]> {
   try {
-    const res = await fetch("/api/el-voices?mode=library&language=he&page_size=40", { cache: "no-store" });
-    if (!res.ok) return [];
-    const data = (await res.json()) as { voices?: ELLibraryVoice[] };
-    return (data.voices ?? []).map(elLibraryToVoice);
+    const res = await fetch("/api/el-voices?mode=personal", { cache: "no-store" });
+    if (!res.ok) return HEBREW_VOICE_POOL.map((v) => hebrewVoiceToVoice(v));
+    const data = (await res.json()) as { voices?: ELPersonalVoice[] };
+    const previewById = new Map((data.voices ?? []).map((v) => [v.id, v.previewUrl ?? undefined]));
+    return HEBREW_VOICE_POOL.map((v) => hebrewVoiceToVoice(v, previewById.get(v.id)));
   } catch {
-    return [];
+    return HEBREW_VOICE_POOL.map((v) => hebrewVoiceToVoice(v));
   }
 }
 

@@ -4,15 +4,15 @@ import { useEffect, useRef, useState } from "react";
 
 // Current HE_EL_VOICE_MAP from ttsService — shown for reference / copy-paste
 const CURRENT_MAP: Record<string, { elId: string; elName: string }> = {
-  Aoede:   { elId: "21m00Tcm4TlvDq8ikWAM", elName: "Rachel" },
-  Kore:    { elId: "EXAVITQu4vr4xnSDxMaL", elName: "Bella" },
-  Leda:    { elId: "MF3mGyEYCl7XYWbV9V6O", elName: "Elli" },
-  Autonoe: { elId: "AZnzlk1XvdvUeBnXmlld", elName: "Domi" },
-  Charon:  { elId: "pNInz6obpgDQGcFmaJgB", elName: "Adam" },
-  Fenrir:  { elId: "VR6AewLTigWG4xSOukaG", elName: "Arnold" },
-  Puck:    { elId: "ErXwobaYiN019PkySvjV", elName: "Antoni" },
-  Orus:    { elId: "TxGEqnHWrfWFTfGW9XjX", elName: "Josh" },
-  Zephyr:  { elId: "yoZ06aMxZJJ28mfd3POQ", elName: "Sam" },
+  Aoede:   { elId: "EXAVITQu4vr4xnSDxMaL", elName: "Sarah" },
+  Kore:    { elId: "cgSgspJ2msm6clMCkdW9", elName: "Jessica" },
+  Leda:    { elId: "Xb7hH8MSUJpSbSDYk0k2", elName: "Alice" },
+  Autonoe: { elId: "XrExE9yKIg1WjnnlVkGX", elName: "Matilda" },
+  Charon:  { elId: "JBFqnCBsd6RMkjVDRZzb", elName: "George" },
+  Fenrir:  { elId: "IKne3meq5aSn9XLyUdCD", elName: "Charlie" },
+  Puck:    { elId: "TX3LPaxmHKxFdv7VOQHJ", elName: "Liam" },
+  Orus:    { elId: "pqHfZKP75CvOlQylNhV4", elName: "Bill" },
+  Zephyr:  { elId: "nPczCjzI2devNBz1zQrb", elName: "Brian" },
 };
 
 interface ELVoice {

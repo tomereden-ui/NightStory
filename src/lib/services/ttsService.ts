@@ -410,16 +410,20 @@ async function synthesizeGemini(
 // ── Hebrew EL preset voice map ────────────────────────────────────────────────────────────────
 // WaveNet can't handle Hebrew pronunciation — EL eleven_v3 does.
 // Maps Gemini/Chirp voice names → EL preset voice IDs by character archetype.
+// These must be voice ids this account actually owns (GET /v1/voices) — the
+// original set used ElevenLabs' legacy premade voice ids, which have since
+// gone stale (silently resolve to unrelated voices; three of the original
+// nine had collapsed onto the same underlying voice). Replaced 2026-07-03.
 const HE_EL_VOICE_MAP: Record<string, string> = {
-  Aoede:         "21m00Tcm4TlvDq8ikWAM", // Rachel   — warm melodic female
-  Kore:          "EXAVITQu4vr4xnSDxMaL", // Bella    — soft gentle female
-  Leda:          "MF3mGyEYCl7XYWbV9V6O", // Elli     — clear youthful female
-  Autonoe:       "AZnzlk1XvdvUeBnXmlld", // Domi     — bright lively female
-  Charon:        "pNInz6obpgDQGcFmaJgB", // Adam     — deep authoritative male
-  Fenrir:        "VR6AewLTigWG4xSOukaG", // Arnold   — strong gruff male
-  Puck:          "ErXwobaYiN019PkySvjV", // Antoni   — playful upbeat
-  Orus:          "TxGEqnHWrfWFTfGW9XjX", // Josh     — steady rich male
-  Zephyr:        "yoZ06aMxZJJ28mfd3POQ", // Sam      — bright airy
+  Aoede:         "EXAVITQu4vr4xnSDxMaL", // Sarah    — warm reassuring female
+  Kore:          "cgSgspJ2msm6clMCkdW9", // Jessica  — playful bright female
+  Leda:          "Xb7hH8MSUJpSbSDYk0k2", // Alice    — clear calm female
+  Autonoe:       "XrExE9yKIg1WjnnlVkGX", // Matilda  — knowledgeable dramatic female
+  Charon:        "JBFqnCBsd6RMkjVDRZzb", // George   — warm storyteller male
+  Fenrir:        "IKne3meq5aSn9XLyUdCD", // Charlie  — deep dramatic male
+  Puck:          "TX3LPaxmHKxFdv7VOQHJ", // Liam     — energetic playful male
+  Orus:          "pqHfZKP75CvOlQylNhV4", // Bill     — wise calm male
+  Zephyr:        "nPczCjzI2devNBz1zQrb", // Brian    — deep gentle male
 };
 
 // ── Public API ────────────────────────────────────────────────────────────────────────────────
