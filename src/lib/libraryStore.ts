@@ -23,6 +23,7 @@ export interface LibraryEntry {
   isPublic?: boolean;
   isClassic?: boolean;
   childIds?: string[]; // which children this story belongs to (null = unscoped / pre-migration)
+  favoritedBy?: string[]; // child profile ids who've favorited this story ("My List")
   shareMessage?: string;
   viewCount?: number;
   shareCount?: number;
@@ -53,6 +54,7 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
     childIds: Array.isArray(row.child_ids) ? row.child_ids as string[]
              : row.child_id ? [row.child_id as string]   // migrate legacy single value
              : undefined,
+    favoritedBy: Array.isArray(row.favorited_by) ? row.favorited_by as string[] : undefined,
     shareMessage: row.share_message ?? undefined,
     viewCount: viewCounts?.[row.id] ?? 0,
     shareCount: shareCounts?.[row.id] ?? 0,
@@ -85,6 +87,7 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
     is_public: entry.isPublic ?? false,
     is_classic: entry.isClassic ?? false,
     child_ids: entry.childIds ?? null,
+    favorited_by: entry.favoritedBy ?? null,
     scenes: entry.scenes ?? null,
     character_profiles: entry.characterProfiles ?? null,
   });

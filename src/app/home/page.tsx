@@ -632,6 +632,13 @@ export default function HomePage() {
   // "Continue" — last 3 stories (simulate resume; no real progress tracking yet)
   const continueStories = stories.slice(0, 3);
 
+  // "My List" — stories the active child has favorited. Checked against
+  // familyStories (not just `stories`) so a favorite sticks even if the story
+  // was originally created under a different child profile.
+  const myList = activeChildId
+    ? familyStories.filter((s) => s.favoritedBy?.includes(activeChildId))
+    : [];
+
   const greetingText = greeting(hour, t);
   const greetingName = activeChild ? `, ${activeChild.name}` : "";
 
@@ -757,6 +764,24 @@ export default function HomePage() {
                   coverUrl={s.coverUrl}
                   href={`/library/${s.id}`}
                   progressPercent={[42, 68, 23][idx] ?? 30}
+                />
+              ))}
+            </Rail>
+          )}
+
+          {/* ── My List (favorited stories) ── */}
+          {myList.length > 0 && (
+            <Rail
+              title="My List"
+              action={{ label: t("viewAll"), href: "/library" }}
+            >
+              {myList.map((s) => (
+                <StoryCard
+                  key={s.id}
+                  title={s.title}
+                  summary={s.summary}
+                  coverUrl={s.coverUrl}
+                  href={`/library/${s.id}`}
                 />
               ))}
             </Rail>

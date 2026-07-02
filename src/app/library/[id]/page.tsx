@@ -123,6 +123,8 @@ export default function StoryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
   const [allChildren, setAllChildren] = useState<DBChildProfile[]>([]);
+  const [activeChildId, setActiveChildId] = useState<string | null>(null);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -194,6 +196,56 @@ export default function StoryDetailPage() {
       .catch(() => setEntry(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Same key the home page uses to track which child profile is active —
+  // favorites are scoped per-child, matching how child_ids scopes stories.
+  useEffect(() => {
+    setActiveChildId(typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null);
+  }, []);
+
+  const isFavorited = !!(activeChildId && entry?.favoritedBy?.includes(activeChildId));
+
+  const handleToggleFavorite = useCallback(async () => {
+    if (!entry || !activeChildId || favoriteBusy) return;
+    const nextFavorited = !isFavorited;
+    setFavoriteBusy(true);
+    // Optimistic update
+    setEntry((e) => e ? {
+      ...e,
+      favoritedBy: nextFavorited
+        ? [...(e.favoritedBy ?? []), activeChildId]
+        : (e.favoritedBy ?? []).filter((c) => c !== activeChildId),
+    } : e);
+    try {
+      const res = await fetch(`/api/library/${entry.id}/favorite`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId: activeChildId, favorited: nextFavorited }),
+      });
+      if (!res.ok) throw new Error("failed");
+      const { favoritedBy } = await res.json() as { favoritedBy: string[] };
+      setEntry((e) => e ? { ...e, favoritedBy } : e);
+    } catch {
+      // Revert on failure
+      setEntry((e) => e ? {
+        ...e,
+        favoritedBy: isFavorited
+          ? [...(e.favoritedBy ?? []), activeChildId]
+          : (e.favoritedBy ?? []).filter((c) => c !== activeChildId),
+      } : e);
+    } finally {
+      setFavoriteBusy(false);
+    }
+  }, [entry, activeChildId, favoriteBusy, isFavorited]);
+
+  const handleOpenShare = useCallback(() => {
+    if (allChildren.length === 0) {
+      fetch("/api/child-profiles").then((r) => r.json()).then((d) => {
+        if (Array.isArray(d)) setAllChildren(d as DBChildProfile[]);
+      }).catch(() => {});
+    }
+    setShareOpen(true);
+  }, [allChildren.length]);
 
   const handlePlayPause = useCallback(() => {
     const audio = audioRef.current;
@@ -387,6 +439,32 @@ export default function StoryDetailPage() {
           </div>
         )}
 
+        {/* Favorite + Share row */}
+        <div className="px-5 mb-1 flex items-center gap-3">
+          <button
+            onClick={handleToggleFavorite}
+            disabled={!activeChildId || favoriteBusy}
+            aria-label={isFavorited ? "Remove from My List" : "Add to My List"}
+            aria-pressed={isFavorited}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-90"
+            style={isFavorited
+              ? { background: "rgba(236,72,153,0.14)", border: "1px solid rgba(236,72,153,0.4)", color: "#ec4899" }
+              : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
+            }
+          >
+            <span style={{ fontSize: "var(--fs-heading)", lineHeight: 1 }}>{isFavorited ? "❤️" : "🤍"}</span>
+            <span>{isFavorited ? "In My List" : "Add to My List"}</span>
+          </button>
+          <button
+            onClick={handleOpenShare}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-90"
+            style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}
+          >
+            <span style={{ fontSize: "var(--fs-heading)", lineHeight: 1 }}>📤</span>
+            <span>Share</span>
+          </button>
+        </div>
+
         {/* Cast panel — read-only */}
         {entry.blocks.length > 0 && (
           <div className="mt-4 mb-1">
@@ -461,21 +539,6 @@ export default function StoryDetailPage() {
           >
             <span>🎬</span>
             <span>Open in Studio</span>
-          </button>
-          <button
-            onClick={() => {
-              if (allChildren.length === 0) {
-                fetch("/api/child-profiles").then((r) => r.json()).then((d) => {
-                  if (Array.isArray(d)) setAllChildren(d as DBChildProfile[]);
-                }).catch(() => {});
-              }
-              setShareOpen(true);
-            }}
-            className="py-3.5 px-4 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center gap-2 flex-shrink-0"
-            style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}
-          >
-            <span>📤</span>
-            <span>Share</span>
           </button>
         </div>
 
