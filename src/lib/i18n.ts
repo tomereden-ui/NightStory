@@ -36,7 +36,7 @@ export const translations = {
     tagline: "Magical stories for little dreamers",
     // Navigation
     home: "Home",
-    library: "Magic Tales",
+    library: "Stories",
     create: "Create",
     player: "Player",
     profile: "Profile",

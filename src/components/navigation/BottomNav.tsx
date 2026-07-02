@@ -26,20 +26,20 @@ const NAV: Array<{
     bg: "rgba(251,191,36,0.12)",
   },
   {
-    labelKey: "studioTitle",
-    iconName: "navCreate",
-    href: "/studio2",
-    color: "#c084fc",
-    glow: "rgba(192,132,252,0.4)",
-    bg: "rgba(192,132,252,0.12)",
-  },
-  {
     labelKey: "library",
     iconName: "navStories",
     href: "/library",
     color: "#4fc3f7",
     glow: "rgba(79,195,247,0.4)",
     bg: "rgba(79,195,247,0.12)",
+  },
+  {
+    labelKey: "studioTitle",
+    iconName: "navCreate",
+    href: "/studio2",
+    color: "#c084fc",
+    glow: "rgba(192,132,252,0.4)",
+    bg: "rgba(192,132,252,0.12)",
   },
   {
     labelKey: "profile",
