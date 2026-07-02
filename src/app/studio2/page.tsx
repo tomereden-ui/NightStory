@@ -1162,6 +1162,25 @@ export default function Studio2Page() {
 
   useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
 
+  // When a story ID becomes available for the first time and there's a pending
+  // uploaded cover (base64), persist it to the DB immediately.
+  useEffect(() => {
+    if (!editingStoryId) return;
+    const payload = coverBase64Ref.current;
+    if (!payload || !coverUrl.startsWith("data:")) return;
+    fetch(`/api/library/${editingStoryId}/cover`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mimeType: payload.mimeType, data: payload.data }),
+    }).then(async (r) => {
+      if (r.ok) {
+        const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
+        setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingStoryId]);
+
   // Mark dirty when lessons change after the clean snapshot
   useEffect(() => {
     if (!loaded || scriptBlocks.length === 0) return;
