@@ -4,10 +4,15 @@ import { geminiPost, geminiText } from "@/lib/geminiClient";
 // Module-level cache so repeated calls within a session don't re-fetch the bank
 let bankCache: Array<{ id: string; description: string; image_url: string }> | null = null;
 
+// Rows tagged "_generated" are one-off avatars auto-generated for a specific story
+// character's exact description (see /api/generate-avatar) — they're an exact-match
+// cache, not general-purpose portraits, so they're excluded from fallback matching
+// here to avoid surfacing a previous story's leftover character art.
 async function getBank() {
   if (bankCache) return bankCache;
-  const { data } = await supabase.from("avatar_bank").select("id, description, image_url");
-  bankCache = data ?? [];
+  const { data } = await supabase.from("avatar_bank").select("id, description, image_url, traits");
+  const rows = (data ?? []) as Array<{ id: string; description: string; image_url: string; traits: string[] | null }>;
+  bankCache = rows.filter((r) => !r.traits?.includes("_generated")).map(({ id, description, image_url }) => ({ id, description, image_url }));
   return bankCache;
 }
 

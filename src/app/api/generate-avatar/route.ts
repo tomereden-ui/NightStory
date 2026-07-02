@@ -92,12 +92,15 @@ export async function POST(req: NextRequest) {
   const avatarUrl = supabase.storage.from(BUCKET).getPublicUrl(storageKey).data.publicUrl;
 
   // ── Save to avatar_bank for future reuse ─────────────────────────────────────
+  // Tagged "_generated" so this one-off, story-specific avatar is excluded from
+  // the general curated fallback pool (avatar-bank-list, avatarBankService) —
+  // it's only ever meant to be reused via the exact-description cache lookup above.
   await supabase.from("avatar_bank").insert({
     description,
     image_url: avatarUrl,
     type: dbType,
     gender: "neutral",
-    traits: [],
+    traits: ["_generated"],
   });
 
   console.log("[AvatarGen] saved:", storageKey, "→", avatarUrl.slice(-40));
