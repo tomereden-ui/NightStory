@@ -5,6 +5,7 @@ import { LanguageProvider } from "@/context/LanguageContext";
 import { ViewModeProvider } from "@/context/ViewModeContext";
 import { FontSizeProvider } from "@/context/FontSizeContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { UnsavedChangesProvider } from "@/context/UnsavedChangesContext";
 import AppShell from "@/components/layout/AppShell";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -32,7 +33,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <LanguageProvider>
             <ViewModeProvider>
               <FontSizeProvider>
-                <AppShell>{children}</AppShell>
+                <UnsavedChangesProvider>
+                  <AppShell>{children}</AppShell>
+                </UnsavedChangesProvider>
               </FontSizeProvider>
             </ViewModeProvider>
           </LanguageProvider>

@@ -21,6 +21,8 @@ export interface DraftState {
   lessonImplementations?: { lesson: string; implemented: boolean; how: string }[];
   scenes?: StoryScene[];
   characterProfiles?: Record<string, CharacterProfile>;
+  /** Whether this story already has produced audio (entry.audioUrl) — read once at load time. */
+  audioUrl?: string;
 }
 
 export function readDraft(key = KEY): DraftState | null {

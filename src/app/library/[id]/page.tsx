@@ -221,6 +221,7 @@ export default function StoryDetailPage() {
       forkedFromTitle: isOwned ? undefined : entry.title,
       storyTitle: entry.title,
       language: entry.language,
+      audioUrl: isOwned ? entry.audioUrl : undefined,
     }, "nightstory_studio2_draft_v1");
     router.push("/studio2");
   }, [entry, router]);

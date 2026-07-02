@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useViewMode } from "@/context/ViewModeContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useUnsavedChanges } from "@/context/UnsavedChangesContext";
 import { t, type TranslationKey } from "@/lib/i18n";
 import Icon from "@/components/ui/Icon";
 
@@ -55,7 +56,15 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { effective } = useViewMode();
   const { language } = useLanguage();
+  const { guardedNavigate } = useUnsavedChanges();
   const isMobile = effective === "mobile";
+
+  // Route every nav click through the unsaved-changes guard — a no-op when no
+  // page has registered a guard, so this is safe/free in the common case.
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    guardedNavigate(href);
+  };
 
   if (!isMobile) {
     return (
@@ -74,7 +83,7 @@ export default function BottomNav() {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <li key={item.href}>
-                <Link href={item.href} className="flex flex-col items-center gap-1 group" aria-label={t(language, item.labelKey)}>
+                <Link href={item.href} onClick={(e) => handleNavClick(e, item.href)} className="flex flex-col items-center gap-1 group" aria-label={t(language, item.labelKey)}>
                   <span
                     className="relative flex items-center justify-center w-12 h-10 rounded-2xl transition-all duration-200"
                     style={isActive ? {
@@ -130,7 +139,7 @@ export default function BottomNav() {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <li key={item.href}>
-              <Link href={item.href} className="flex flex-col items-center gap-1 group" aria-label={t(language, item.labelKey)}>
+              <Link href={item.href} onClick={(e) => handleNavClick(e, item.href)} className="flex flex-col items-center gap-1 group" aria-label={t(language, item.labelKey)}>
                 <span
                   className="relative flex items-center justify-center w-14 h-11 rounded-2xl transition-all duration-200"
                   style={isActive ? {

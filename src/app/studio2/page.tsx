@@ -25,6 +25,7 @@ import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import Icon from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
+import { useUnsavedChanges } from "@/context/UnsavedChangesContext";
 import { assignVoicesToCharacters, assignHebrewVoicesToCharacters } from "@/lib/services/voiceAssignment";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
@@ -1106,6 +1107,7 @@ export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
+  const unsavedGuard = useUnsavedChanges();
   const router = useRouter();
 
   // ─── Active child profile ────────────────────────────────────────────────────
@@ -1169,20 +1171,29 @@ export default function Studio2Page() {
   const [characterDescriptions, setCharacterDescriptions] = useState<Record<string, string>>({});
   const [characterProfiles, setCharacterProfiles]         = useState<Record<string, CharacterProfile>>({});
 
-  // ─── Pending character directions ──────────────────────────────────────────
-  const [pendingDirections, setPendingDirections] = useState<string[]>([]);
-  const [showToast, setShowToast] = useState(false);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // ─── Saves ──────────────────────────────────────────────────────────────────
   const [savesRefreshKey, setSavesRefreshKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveLabel, setSaveLabel] = useState<"idle" | "saving" | "saved">("idle");
-  // Dirty flag: true when user has changes that haven't been applied/produced yet
+  // hasScriptChanges: blocks/voices differ from the last PRODUCED audio —
+  // cleared only by a successful production (Produce Audio button gate).
   const [hasScriptChanges, setHasScriptChanges] = useState(false);
+  // hasUnsavedChanges: blocks/voices differ from what's persisted in the DB —
+  // cleared by a successful save OR a successful production, since producing
+  // also persists blocks (Save version button gate).
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // Title/summary edits (admin-only) — tracked separately so editing just the
   // title/summary enables Save without needing an unrelated script edit resolved first.
   const [metaDirty, setMetaDirty] = useState(false);
+  // Whether this (existing) story already has produced audio — read once at load
+  // time from the draft. Drives whether Produce starts enabled or disabled.
+  const [storyHasAudio, setStoryHasAudio] = useState(false);
+  // Single entry point for "the script/voices changed" — keeps both dirty
+  // flags in sync so Save and Produce never drift apart.
+  const markScriptDirty = useCallback(() => {
+    setHasScriptChanges(true);
+    setHasUnsavedChanges(true);
+  }, []);
   const cleanLessonsRef = useRef<string[]>([]);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keeps the raw base64 payload from the last cover generation so production
@@ -1227,7 +1238,7 @@ export default function Studio2Page() {
     if (!loaded || scriptBlocks.length === 0) return;
     const clean = cleanLessonsRef.current;
     const changed = lessons.length !== clean.length || lessons.some((l, i) => l !== clean[i]);
-    if (changed) setHasScriptChanges(true);
+    if (changed) markScriptDirty();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessons]);
 
@@ -1243,6 +1254,7 @@ export default function Studio2Page() {
       setEditingStoryId(draft.editingStoryId ?? null);
       setForkedFromTitle(draft.forkedFromTitle ?? null);
       setStoryLang(draft.language ?? language);
+      setStoryHasAudio(!!draft.audioUrl);
       const savedAvatars = draft.characterAvatars ?? {};
       const hasStale = Object.values(savedAvatars).some((u) => (u as string).includes("dicebear.com"));
       setCharacterAvatars(hasStale ? {} : savedAvatars);
@@ -1437,6 +1449,7 @@ export default function Studio2Page() {
     setScriptBlocks([]);
     setSummary("");
     setCoverUrl("");
+    setStoryHasAudio(false);
     // Navigate to Script tab immediately so the user sees progress in context
     setActiveTab("script");
 
@@ -1473,6 +1486,7 @@ export default function Studio2Page() {
       setLessonImplementations(impls);
       setScenes(rawScenes);
       setHasScriptChanges(false);
+      setHasUnsavedChanges(false);
       cleanLessonsRef.current = selectedLessons;
       setCharacterAvatars({});
       setCharacterTypes({});
@@ -1563,7 +1577,9 @@ export default function Studio2Page() {
       if (!res.ok) throw new Error(data.error ?? "Revision failed");
       setScriptBlocks(data.blocks);
       setDirectorNote("");
-      setHasScriptChanges(false);
+      // The revision changed the script content, so it now differs from what's
+      // saved/produced — mark dirty (not clean) so Save/Produce reflect that.
+      markScriptDirty();
     } catch (err: unknown) {
       setReviseError(err instanceof Error ? err.message : "Revision failed");
     } finally {
@@ -1584,7 +1600,7 @@ export default function Studio2Page() {
       setScriptBlocks(data.blocks);
       if (data.lessonImplementations) setLessonImplementations(data.lessonImplementations);
       setDirectorNote("");
-      setHasScriptChanges(false);
+      markScriptDirty();
       cleanLessonsRef.current = lessons;
     } catch (err: unknown) {
       setReviseError(err instanceof Error ? err.message : "Revision failed");
@@ -1645,6 +1661,7 @@ export default function Studio2Page() {
       setSavesRefreshKey((k) => k + 1);
       setSaveLabel("saved");
       setMetaDirty(false);
+      setHasUnsavedChanges(false);
       setTimeout(() => setSaveLabel("idle"), 2500);
     } catch {
       setSaveLabel("idle");
@@ -1660,8 +1677,9 @@ export default function Studio2Page() {
     if (save.summary)     setSummary(save.summary);
     if (save.coverUrl)    setCoverUrl(save.coverUrl);
     if (save.coverPrompt) setCoverPrompt(save.coverPrompt);
-    setPendingDirections([]);
-    setHasScriptChanges(false);
+    // Restoring an older snapshot almost certainly differs from what's
+    // currently saved/produced — mark dirty so Save/Produce reflect that.
+    markScriptDirty();
     cleanLessonsRef.current = [];
     const uniqueChars = Array.from(new Set(save.blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
     const defaultTypes: Record<string, CharacterType> = {};
@@ -1689,7 +1707,7 @@ export default function Studio2Page() {
   // User-initiated block edits (text, SFX) — marks script dirty
   const handleBlocksChange = useCallback((blocks: ScriptBlock[]) => {
     setScriptBlocks(blocks);
-    setHasScriptChanges(true);
+    markScriptDirty();
   }, []);
 
   // Save a single block's updated text to the library DB immediately
@@ -1701,6 +1719,8 @@ export default function Studio2Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ blocks: scriptBlocks }),
       });
+      // The full current blocks array was just persisted — nothing left to save.
+      setHasUnsavedChanges(false);
     } catch { /* silent — autosave will catch it */ }
   }, [editingStoryId, scriptBlocks]);
 
@@ -1708,7 +1728,7 @@ export default function Studio2Page() {
     setScriptBlocks((prev) =>
       prev.map((b) => b.characterName === characterName ? { ...b, assignedVoiceId: voiceId } : b)
     );
-    setHasScriptChanges(true);
+    markScriptDirty();
   }, []);
 
   // ─── Admin-only: title/summary editing ───────────────────────────────────────
@@ -1735,35 +1755,8 @@ export default function Studio2Page() {
       const newVoice = voiceMap[b.characterName];
       return newVoice ? { ...b, assignedVoiceId: newVoice } : b;
     }));
-    setHasScriptChanges(true);
+    markScriptDirty();
   }, [scriptBlocks, characterProfiles, storyLang]);
-
-  // ─── Queue a character direction ─────────────────────────────────────────────
-
-  const handleQueueDirection = useCallback((instruction: string) => {
-    setPendingDirections((prev) => [...prev, instruction]);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setShowToast(true);
-    toastTimerRef.current = setTimeout(() => setShowToast(false), 4500);
-  }, []);
-
-  // ─── Apply all queued directions ─────────────────────────────────────────────
-
-  const handleUpdateScript = useCallback(async () => {
-    if (isRevising) return;
-    const parts = [
-      ...pendingDirections,
-      directorNote.trim() ? directorNote.trim() : "",
-    ].filter(Boolean);
-    if (parts.length > 0) {
-      setPendingDirections([]);
-      setShowToast(false);
-      await handleRevise(parts.join(". Also: "));
-    } else {
-      // Only manual edits — mark clean without regenerating
-      setHasScriptChanges(false);
-    }
-  }, [pendingDirections, directorNote, isRevising, handleRevise]);
 
   // ─── Fetch cover ─────────────────────────────────────────────────────────────
 
@@ -1861,6 +1854,12 @@ export default function Studio2Page() {
     // Record it so any subsequent re-produce updates the same story entry
     // instead of creating a duplicate.
     setEditingStoryId((prev) => prev ?? job.id);
+    // Producing persists blocks/title/summary to the DB (via addEntry) and now
+    // reflects the current script/voices as audio — clear all dirty flags.
+    setStoryHasAudio(true);
+    setHasScriptChanges(false);
+    setHasUnsavedChanges(false);
+    setMetaDirty(false);
   }, []);
 
   const handleProductionError = useCallback((msg: string) => {
@@ -1869,6 +1868,30 @@ export default function Studio2Page() {
     setProductionJobId(null);
     setActiveTab("script");
   }, []);
+
+  // ─── Derived dirty state — shared by the Produce/Save buttons and the
+  // leave-without-saving guard below, so they never drift out of sync ────────
+  const needsProduce = scriptBlocks.length > 0 && (!storyHasAudio || hasScriptChanges);
+  const needsSave = scriptBlocks.length > 0 && (metaDirty || hasUnsavedChanges);
+  const hasUnsavedWork = needsProduce || needsSave;
+
+  // ─── Warn before leaving the screen with unsaved/unproduced work ───────────
+  useEffect(() => {
+    unsavedGuard.setGuard(
+      hasUnsavedWork,
+      "You have changes that haven't been saved or turned into audio yet. If you leave now, they'll be lost.",
+    );
+  }, [hasUnsavedWork, unsavedGuard]);
+
+  // Best-effort coverage for tab close/refresh/typing a new URL — the browser
+  // shows its own generic prompt here (text/buttons can't be customized), but
+  // it's the only way to warn on non-in-app navigation.
+  useEffect(() => {
+    if (!hasUnsavedWork) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedWork]);
 
   // ─── Early returns ──────────────────────────────────────────────────────────
 
@@ -2269,7 +2292,7 @@ export default function Studio2Page() {
                     storyLanguage={storyLang}
                     avatars={characterAvatars}
                     characterTypes={characterTypes}
-                    onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
+                    onDirectCharacter={(_, instruction) => handleRevise(instruction)}
                     onAvatarChange={handleAvatarChange}
                     onVoiceChange={handleCharacterVoiceChange}
                     isAdmin={isAdmin}
@@ -2287,7 +2310,7 @@ export default function Studio2Page() {
 
             {/* Director's Note */}
             {(() => {
-              const hasPending = pendingDirections.length > 0 || directorNote.trim().length > 0;
+              const hasPending = directorNote.trim().length > 0;
               return (
               <div
                 className="mt-2 mb-3 rounded-2xl p-4 flex flex-col gap-3"
@@ -2306,7 +2329,7 @@ export default function Studio2Page() {
                   )}
                   {hasPending && !isRevising && (
                     <button
-                      onClick={() => { setDirectorNote(""); setPendingDirections([]); setShowToast(false); }}
+                      onClick={() => setDirectorNote("")}
                       className="ml-auto text-fs-body font-medium transition-colors"
                       style={{ color: "rgba(255,255,255,0.25)" }}
                     >
@@ -2377,51 +2400,10 @@ export default function Studio2Page() {
               );
             })()}
 
-            {/* Update Script */}
+            {/* Produce Audio — enabled when there's no audio yet, or once something
+                that affects the audio (cast/voice or a speech/SFX block) changed. */}
             {(() => {
-              const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
-              const dirCount = pendingDirections.length + (directorNote.trim() ? 1 : 0);
-              return (
-                <button
-                  onClick={handleUpdateScript}
-                  disabled={!hasPending || isRevising}
-                  className="w-full py-3.5 rounded-full font-semibold text-fs-body transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-2 mb-3"
-                  style={hasPending && !isRevising ? {
-                    background: "linear-gradient(135deg, rgba(6,182,212,0.22) 0%, rgba(56,189,248,0.18) 100%)",
-                    border: "1.5px solid rgba(103,232,249,0.5)",
-                    color: "#a5f3fc",
-                    boxShadow: "0 0 28px rgba(6,182,212,0.22), 0 4px 16px rgba(0,0,0,0.25)",
-                  } : {
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    color: "rgba(255,255,255,0.18)",
-                    cursor: "not-allowed",
-                  }}
-                >
-                  {isRevising ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(165,243,252,0.2)", borderTopColor: "#a5f3fc" }} />
-                      {i18nT(language, "updatingScript")}
-                    </>
-                  ) : hasPending && dirCount > 0 ? (
-                    <span className="flex items-center gap-2">
-                      <span className="text-fs-heading leading-none">✨</span>
-                      {i18nT(language, "updateScript")}
-                      <span className="px-1.5 py-0.5 rounded-full text-fs-body font-bold" style={{ background: "rgba(103,232,249,0.2)", color: "#67e8f9" }}>
-                        {dirCount}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2"><span className="text-fs-heading leading-none">✨</span>{i18nT(language, "updateScript")}</span>
-                  )}
-                </button>
-              );
-            })()}
-
-            {/* Produce Audio */}
-            {(() => {
-              const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
-              const blocked = isProducing || hasPending || isValidating || generating || isFetchingCover;
+              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover;
               return (
                 <button
                   onClick={() => !blocked && handleProduce(scriptBlocks, durationMinutes)}
@@ -2465,13 +2447,10 @@ export default function Studio2Page() {
               );
             })()}
 
-            {/* Save script version */}
+            {/* Save script version — enabled whenever anything about the story changed
+                (title, summary, cast/voice, or a speech/SFX block). */}
             {(() => {
-              const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
-              // metaDirty (title/summary edit) bypasses the pending-script-change gate —
-              // editing just the title/summary shouldn't require resolving an unrelated
-              // director's-note revision first.
-              const canSave = (metaDirty || !hasPending) && !isProducing && scriptBlocks.length > 0;
+              const canSave = needsSave && !isProducing;
               return (
                 <button
                   onClick={handleManualSave}
@@ -2507,23 +2486,6 @@ export default function Studio2Page() {
                 </button>
               );
             })()}
-
-
-            {/* Toast */}
-            <div
-              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 pointer-events-none"
-              style={{
-                opacity: showToast ? 1 : 0,
-                transform: showToast ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(8px)",
-              }}
-            >
-              <div
-                className="px-4 py-2.5 rounded-2xl text-fs-body font-semibold whitespace-nowrap"
-                style={{ background: "rgba(139,92,246,0.92)", color: "#fff", boxShadow: "0 4px 20px rgba(139,92,246,0.45)", backdropFilter: "blur(8px)" }}
-              >
-                ✏️ {i18nT(language, "updateScriptToast")}
-              </div>
-            </div>
           </>) /* end !generating */}
           </>
         )}
