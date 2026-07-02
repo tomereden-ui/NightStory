@@ -331,6 +331,9 @@ export default function StoryDetailPage() {
           >
             {entry.title}
           </h1>
+          <p className="text-fs-micro font-mono mb-1" style={{ color: "rgba(255,255,255,0.2)" }}>
+            Id = {entry.id}
+          </p>
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
               {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
