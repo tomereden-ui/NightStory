@@ -332,7 +332,7 @@ export default function StoryDetailPage() {
           >
             {entry.title}
           </h1>
-          <p className="text-fs-micro font-mono mb-1" style={{ color: "rgba(255,255,255,0.2)" }}>
+          <p className="text-fs-caption font-mono mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
             Id = {entry.id}
           </p>
           <div className="flex items-center gap-2 flex-wrap">

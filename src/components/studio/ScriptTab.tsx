@@ -857,6 +857,11 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 >
                   {title}
                 </h2>
+                {storyId && (
+                  <p className="text-fs-caption font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    Id = {storyId}
+                  </p>
+                )}
               </div>
             )}
             {/* Summary text */}
