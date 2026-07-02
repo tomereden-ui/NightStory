@@ -459,7 +459,9 @@ export async function synthesizeLine(
     if (elKey) {
       const heVoiceId = HE_EL_VOICE_MAP[voiceId] ?? HE_EL_VOICE_MAP["Charon"]!;
       console.log(`[${ts()}][HE-EL] ${voiceId} → ${heVoiceId}`);
-      await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.5, style ?? 0.4, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
+      // Hebrew prosody tuning: lower stability allows natural intonation variance;
+      // higher style exaggeration pushes the voice away from flat/robotic delivery.
+      await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.30, style ?? 0.60, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
       return { mimeType: "audio/mpeg" };
     }
     // No EL key — fall through to GC TTS with WaveNet (degraded quality)
