@@ -153,6 +153,7 @@ export default function ClassicDetailPage() {
       setMeta(m);
       setImgFailed(false);
       if (full?.blocks) setBlocks(full.blocks);
+      if (full?.audioUrl) setStoryAudioUrl(full.audioUrl);
     }).finally(() => setLoading(false));
   }, [id]);
 

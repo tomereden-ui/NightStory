@@ -36,7 +36,7 @@ export async function GET(
   // Admin-added classic: fetch blocks directly from the stories table
   const { data: row, error: dbErr } = await supabase
     .from("stories")
-    .select("blocks, duration_seconds")
+    .select("blocks, duration_seconds, audio_url")
     .eq("id", id)
     .eq("is_classic", true)
     .maybeSingle();
@@ -45,5 +45,5 @@ export async function GET(
     return NextResponse.json({ error: "Classic not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ blocks: row.blocks ?? [], durationSeconds: row.duration_seconds ?? 0 });
+  return NextResponse.json({ blocks: row.blocks ?? [], durationSeconds: row.duration_seconds ?? 0, audioUrl: row.audio_url ?? null });
 }
