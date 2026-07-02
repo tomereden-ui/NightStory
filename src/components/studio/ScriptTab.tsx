@@ -33,6 +33,10 @@ interface ScriptTabProps {
   /** Total block count including blocks still being validated (not yet in `blocks`) */
   totalExpectedBlocks?: number;
   scenes?: StoryScene[];
+  /** Story ID for per-block audio caching */
+  storyId?: string;
+  /** Called when user saves a specific block's text edit to the DB */
+  onSaveBlock?: (blockId: string) => void;
 }
 
 function makeId() {
@@ -395,7 +399,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -413,6 +417,9 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
   const audioRef     = useRef<HTMLAudioElement | null>(null);
   const audioBlobUrl = useRef<string | null>(null);
+  // Track which block IDs have unsaved text edits (ref for startSpeech, state for rendering)
+  const dirtyBlockIdsRef = useRef(new Set<string>());
+  const [dirtyBlockIds, setDirtyBlockIds] = useState(new Set<string>());
 
   // ─── Summary narration (Gemini TTS) ───────────────────────────────────────
   const [summaryPlaying, setSummaryPlaying] = useState(false);
@@ -479,16 +486,40 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     stopAudio();
     setSpeechError(null); setIsLoading(true); setIsPlaying(false); setIsPaused(false);
     try {
-      const res  = await fetch("/api/synthesize-speech", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: block.textPayload, characterName: block.characterName, assignedVoiceId: block.assignedVoiceId, language }) });
-      const data = await res.json();
+      const forceRegenerate = dirtyBlockIdsRef.current.has(block.id);
+      const res = await fetch("/api/synthesize-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: block.textPayload,
+          characterName: block.characterName,
+          assignedVoiceId: block.assignedVoiceId,
+          language,
+          storyId,
+          forceRegenerate,
+        }),
+      });
+      const data = await res.json() as { audioData?: string; mimeType?: string; voiceName?: string; cachedUrl?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Speech generation failed");
-      const url = await base64ToAudioUrl(data.audioData, data.mimeType ?? "audio/wav");
-      audioBlobUrl.current = url;
+
+      let url: string;
+      let isBlobUrl = false;
+      if (data.cachedUrl) {
+        url = data.cachedUrl;
+      } else {
+        url = await base64ToAudioUrl(data.audioData!, data.mimeType ?? "audio/wav");
+        audioBlobUrl.current = url;
+        isBlobUrl = true;
+      }
+
       const audio = new Audio(url);
       audioRef.current = audio;
       audio.onplay  = () => { setIsLoading(false); setIsPlaying(true); setIsPaused(false); };
       audio.onpause = () => { setIsPlaying(false); setIsPaused(true); };
-      audio.onended = () => { setIsPlaying(false); setIsPaused(false); setActiveBlockId(null); URL.revokeObjectURL(url); audioBlobUrl.current = null; };
+      audio.onended = () => {
+        setIsPlaying(false); setIsPaused(false); setActiveBlockId(null);
+        if (isBlobUrl) { URL.revokeObjectURL(url); audioBlobUrl.current = null; }
+      };
       audio.onerror = () => { setSpeechError("Playback failed"); setIsLoading(false); setIsPlaying(false); };
       await audio.play();
     } catch (err: unknown) {
@@ -499,7 +530,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
       setSpeechError(friendly);
       setIsLoading(false);
     }
-  }, [stopAudio, language]);
+  }, [stopAudio, language, storyId]);
 
   const handleOpenPlayer = useCallback((id: string) => {
     const block = blocks.find((b) => b.id === id);
@@ -522,8 +553,19 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
   const markDirty = useCallback(() => { setIsDirty(true); setValidationIssues(null); }, []);
 
+  const handleSaveBlock = useCallback((blockId: string) => {
+    dirtyBlockIdsRef.current.delete(blockId);
+    setDirtyBlockIds((prev) => { const next = new Set(prev); next.delete(blockId); return next; });
+    onSaveBlock?.(blockId);
+  }, [onSaveBlock]);
+
   const handleTextChange = useCallback(
-    (id: string, text: string) => { onBlocksChange(blocks.map((b) => b.id === id ? { ...b, textPayload: text } : b)); markDirty(); },
+    (id: string, text: string) => {
+      onBlocksChange(blocks.map((b) => b.id === id ? { ...b, textPayload: text } : b));
+      markDirty();
+      dirtyBlockIdsRef.current.add(id);
+      setDirtyBlockIds((prev) => { const next = new Set(prev); next.add(id); return next; });
+    },
     [blocks, onBlocksChange, markDirty],
   );
 
@@ -967,6 +1009,8 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 onReviseBlock={handleReviseBlock}
                 isRevising={isRevising}
                 characterAvatarUrl={block.characterName !== "SFX" ? characterAvatars?.[block.characterName] : undefined}
+                isDirty={dirtyBlockIds.has(block.id)}
+                onSave={onSaveBlock ? () => handleSaveBlock(block.id) : undefined}
               />
             </div>
           </div>
