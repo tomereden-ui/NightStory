@@ -330,9 +330,27 @@ async function runProduction(
 
     // The cover was already generated once right after the script (shown in the
     // create-story UI) — reuse that image instead of generating a brand new one here.
+    //
+    // SSRF guard: only fetch existingCoverUrl if it points to our own Supabase
+    // storage bucket. Any other hostname is rejected to prevent server-side
+    // requests to internal network endpoints or cloud metadata services.
+    const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+      : null;
+    const isSafeStorageUrl = (url: string) => {
+      try {
+        const { hostname, protocol } = new URL(url);
+        return (protocol === "https:" || protocol === "http:") &&
+          supabaseHost !== null &&
+          hostname === supabaseHost;
+      } catch {
+        return false;
+      }
+    };
+
     const coverPromise: Promise<{ buf: Buffer; mimeType: string } | null> = existingCover
       ? Promise.resolve({ buf: Buffer.from(existingCover.data, "base64"), mimeType: existingCover.mimeType })
-      : existingCoverUrl
+      : existingCoverUrl && isSafeStorageUrl(existingCoverUrl)
         ? fetch(existingCoverUrl).then(async (r) => {
             if (!r.ok) return generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
             const buf = Buffer.from(await r.arrayBuffer());
