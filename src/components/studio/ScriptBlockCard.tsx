@@ -32,6 +32,8 @@ interface ScriptBlockCardProps {
   onReviseBlock?: (id: string, instruction: string) => void;
   isRevising?: boolean;
   characterAvatarUrl?: string;
+  isDirty?: boolean;
+  onSave?: () => void;
 }
 
 // ─── Validated badge ──────────────────────────────────────────────────────────
@@ -295,6 +297,8 @@ function SpeechCard({
   onReviseBlock,
   isRevising,
   characterAvatarUrl,
+  isDirty,
+  onSave,
 }: ScriptBlockCardProps) {
   const { t } = useLanguage();
   const textareaRef   = useRef<HTMLTextAreaElement>(null);
@@ -392,7 +396,16 @@ function SpeechCard({
           {assignedVoice && (
             <span className="text-white/25 text-fs-body">· {assignedVoice.name}</span>
           )}
-          <span className="ml-auto text-fs-body text-white/25 italic">{t("tapToEdit")}</span>
+          {!isDirty && <span className="ml-auto text-fs-body text-white/25 italic">{t("tapToEdit")}</span>}
+          {isDirty && onSave && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSave(); }}
+              className="ml-auto flex items-center gap-1 text-fs-body font-semibold rounded-lg px-2.5 py-0.5 transition-all active:scale-95 animate-[fadeIn_0.15s_ease-out]"
+              style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}
+            >
+              <span>✓</span><span>Save</span>
+            </button>
+          )}
         </div>
         <textarea
           ref={textareaRef}
@@ -406,7 +419,9 @@ function SpeechCard({
           style={{
             minHeight: "22px",
             background: isFocused ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
-            border: isFocused ? "1px solid rgba(79,195,247,0.25)" : "1px solid rgba(255,255,255,0.05)",
+            border: isDirty
+              ? "1px solid rgba(79,195,247,0.35)"
+              : isFocused ? "1px solid rgba(79,195,247,0.25)" : "1px solid rgba(255,255,255,0.05)",
           }}
         />
       </div>

@@ -131,6 +131,56 @@ export async function saveStoryElements(elements: StoryElement[]): Promise<void>
   if (error) console.warn("[ElementStore] saveStoryElements:", error.message);
 }
 
+// ─── Single-element lookup + save (used by interactive preview) ───────────────
+
+/** Check if an element already exists in the DB for a given story + hash. Returns audio URL or null. */
+export async function lookupElementByHash(storyId: string, contentHash: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("story_elements")
+      .select("audio_url")
+      .eq("story_id", storyId)
+      .eq("content_hash", contentHash)
+      .limit(1)
+      .maybeSingle();
+    return data?.audio_url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Upload an in-memory audio buffer to storage and save the element record. Returns public URL. */
+export async function saveElementFromBuffer(
+  storyId: string,
+  contentHash: string,
+  audioBuf: Buffer,
+  mimeType: string,
+  character: string,
+  text: string,
+): Promise<string> {
+  await ensureElementsBucket();
+  const ext = mimeType.includes("mpeg") || mimeType.includes("mp3") ? "mp3" : mimeType.includes("ogg") ? "ogg" : "wav";
+  const storageKey = `${storyId}/${contentHash}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(storageKey, audioBuf, { contentType: mimeType, upsert: true });
+  if (uploadErr) throw new Error(`saveElementFromBuffer upload: ${uploadErr.message}`);
+  const audioUrl = supabase.storage.from(BUCKET).getPublicUrl(storageKey).data.publicUrl;
+  const { error: dbErr } = await supabase.from("story_elements").upsert({
+    id: `el-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    story_id: storyId,
+    element_type: "dialogue",
+    content_hash: contentHash,
+    audio_url: audioUrl,
+    duration_ms: 0,
+    character_name: character,
+    text_payload: text,
+    created_at: Date.now(),
+  }, { onConflict: "id" });
+  if (dbErr) console.warn("[ElementStore] saveElementFromBuffer db:", dbErr.message);
+  return audioUrl;
+}
+
 // ─── Download helper ──────────────────────────────────────────────────────────
 
 /**

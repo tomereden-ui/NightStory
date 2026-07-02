@@ -1648,6 +1648,18 @@ export default function Studio2Page() {
     setHasScriptChanges(true);
   }, []);
 
+  // Save a single block's updated text to the library DB immediately
+  const handleSaveBlock = useCallback(async (_blockId: string) => {
+    if (!editingStoryId) return;
+    try {
+      await fetch(`/api/library/${editingStoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks: scriptBlocks }),
+      });
+    } catch { /* silent — autosave will catch it */ }
+  }, [editingStoryId, scriptBlocks]);
+
   const handleCharacterVoiceChange = useCallback((characterName: string, voiceId: string) => {
     setScriptBlocks((prev) =>
       prev.map((b) => b.characterName === characterName ? { ...b, assignedVoiceId: voiceId } : b)
@@ -2171,6 +2183,8 @@ export default function Studio2Page() {
               characterAvatars={characterAvatars}
               totalExpectedBlocks={totalExpectedBlocks}
               scenes={scenes}
+              storyId={editingStoryId ?? undefined}
+              onSaveBlock={editingStoryId ? handleSaveBlock : undefined}
               belowCover={
                 <>
                   <CharacterCards

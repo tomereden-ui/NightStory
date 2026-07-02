@@ -10,6 +10,10 @@ export interface SynthesizeRequest {
   characterName: string;
   assignedVoiceId?: string;
   language?: string;
+  /** If set, check/save audio in the element store so repeat plays skip TTS */
+  storyId?: string;
+  /** If true, bypass element cache (e.g. after the user edited the block text) */
+  forceRegenerate?: boolean;
 }
 
 const PRESET_VOICE_NAMES = new Set(PRESET_VOICES.map((p) => p.geminiVoiceName));
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "Invalid request body." }, { status: 400 }); }
 
-  const { text, characterName, assignedVoiceId, language = "en" } = body;
+  const { text, characterName, assignedVoiceId, language = "en", storyId, forceRegenerate } = body;
   if (!text?.trim()) return NextResponse.json({ error: "text is required." }, { status: 400 });
 
   // Resolve voice: preset names go directly to Gemini; anything else
@@ -90,6 +94,31 @@ export async function POST(req: NextRequest) {
 
   console.log(`[synthesize-speech] assignedVoiceId=${assignedVoiceId} → useEL=${useEL} voice=${voice} lang=${language} savedSettings=${JSON.stringify(savedVoiceSettings ?? null)}`);
 
+  // ── Element cache lookup (skip if forceRegenerate or no storyId) ─────────────
+  const voiceKey = `${useEL ? "el" : "gm"}:${voice}`;
+  let contentHash: string | null = null;
+  if (storyId && !forceRegenerate) {
+    try {
+      const { hashDialogue, lookupElementByHash } = await import("@/lib/elementStore");
+      contentHash = hashDialogue(characterName, text.trim(), voiceKey);
+      const cachedUrl = await lookupElementByHash(storyId, contentHash);
+      if (cachedUrl) {
+        console.log(`[synthesize-speech] cache HIT for story=${storyId} hash=${contentHash.slice(0, 8)}`);
+        const cachedMime = cachedUrl.includes(".ogg") ? "audio/ogg" : cachedUrl.includes(".wav") ? "audio/wav" : "audio/mpeg";
+        return NextResponse.json({ cachedUrl, mimeType: cachedMime, voiceName: voice });
+      }
+      console.log(`[synthesize-speech] cache MISS for story=${storyId} hash=${contentHash.slice(0, 8)}`);
+    } catch (cacheErr) {
+      console.warn("[synthesize-speech] cache lookup failed:", cacheErr);
+    }
+  } else if (storyId && forceRegenerate) {
+    // Still compute hash so we can overwrite the old element after synthesis
+    try {
+      const { hashDialogue } = await import("@/lib/elementStore");
+      contentHash = hashDialogue(characterName, text.trim(), voiceKey);
+    } catch { /* non-fatal */ }
+  }
+
   const tmpBase = path.join(os.tmpdir(), `speech-${crypto.randomUUID().slice(0, 8)}`);
   const tmpPath = `${tmpBase}.${ext}`;
 
@@ -131,6 +160,15 @@ export async function POST(req: NextRequest) {
     }
 
     const audio = fs.readFileSync(actualPath);
+
+    // ── Save to element store for future cache hits ──────────────────────────
+    if (storyId && contentHash) {
+      import("@/lib/elementStore").then(({ saveElementFromBuffer }) =>
+        saveElementFromBuffer(storyId!, contentHash!, Buffer.from(audio), mimeType, characterName, text.trim())
+          .catch((e) => console.warn("[synthesize-speech] element cache save failed:", e))
+      );
+    }
+
     return NextResponse.json({ audioData: audio.toString("base64"), mimeType, voiceName: voice });
   } catch (err) {
     console.error(`[synthesize-speech] error:`, err instanceof Error ? err.message : String(err));
