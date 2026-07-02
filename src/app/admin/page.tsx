@@ -1291,10 +1291,6 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* ── Title ── */}
-        <Divider title="Story Title" />
-        <TextInput value={addTitle} onChange={setAddTitle} placeholder="Maya the Bee" />
-
         {/* ── Script ── */}
         <Divider title="Script" />
         <p className="text-fs-body mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
@@ -1312,6 +1308,10 @@ export default function AdminPage() {
           className="w-full px-3 py-2.5 rounded-xl text-white text-fs-body outline-none resize-none"
           style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "monospace" }}
         />
+
+        {/* ── Title ── */}
+        <Divider title="Story Title" />
+        <TextInput value={addTitle} onChange={setAddTitle} placeholder="Maya the Bee" />
 
         {processError && (
           <p className="text-fs-body mt-2" style={{ color: "#EC4899" }}>{processError}</p>
@@ -1339,6 +1339,11 @@ export default function AdminPage() {
               coverUrl={storeCoverUrl}
               isFetchingCover={storeCoverLoading}
               onRegenerateCover={handleRegenerateCover}
+              onUploadCover={(file: File) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => { const d = ev.target?.result as string; if (d) setStoreCoverUrl(d); };
+                reader.readAsDataURL(file);
+              }}
               hideDurationPicker
               hideProduceButton
               characterAvatars={characterAvatars}
@@ -1356,15 +1361,6 @@ export default function AdminPage() {
                 />
               }
             />
-
-            {/* Cover upload */}
-            <input ref={coverUploadRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
-            <button
-              onClick={() => coverUploadRef.current?.click()}
-              className="w-full mt-2 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}>
-              📷 Upload cover image
-            </button>
 
             {/* Validation */}
             {validationIssues.length > 0 && (
@@ -1437,29 +1433,19 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Cast (from production voice assignments) */}
-            {job?.voiceAssignments && Object.keys(job.voiceAssignments).length > 0 && (
-              <div>
-                <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>CAST</p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(job.voiceAssignments).map(([char, voice], i) => {
-                    const color = CAST_COLORS[i % CAST_COLORS.length];
-                    return (
-                      <div key={char} className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                        style={{ background: `${color}14`, border: `1px solid ${color}33` }}>
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-fs-body flex-shrink-0"
-                          style={{ background: `${color}20`, color }}>
-                          {char[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-white text-fs-body font-medium leading-none">{char}</p>
-                          <p className="text-fs-label mt-0.5" style={{ color: `${color}aa` }}>{voice}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            {/* Cast — same CharacterCards as the script editing phase */}
+            {parsedBlocks.length > 0 && (
+              <CharacterCards
+                blocks={parsedBlocks}
+                voicePool={voicePool}
+                avatars={characterAvatars}
+                characterTypes={characterTypes}
+                openCharacter={openDirectSheet}
+                onOpen={setOpenDirectSheet}
+                onClose={() => setOpenDirectSheet(null)}
+                onAvatarChange={handleAvatarChange}
+                onVoiceChange={handleVoiceChangeForChar}
+              />
             )}
 
             {/* Audio player */}

@@ -207,16 +207,9 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
             <div className="px-2 pt-2 pb-2.5">
               <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{meta.title}</p>
               <p className="text-white/40 text-fs-body mt-0.5 leading-snug line-clamp-1">{meta.tagline}</p>
-              <div className="flex items-center gap-1.5 mt-1.5">
-                {meta.durationSeconds ? (
-                  <span className="text-fs-body font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-full"
-                    style={{ background: `${c1}18`, border: `1px solid ${c1}44`, color: c1 }}>
-                    {durationLabel(meta.durationSeconds)}
-                  </span>
-                ) : meta.status === "pending" ? (
-                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>{t("pending")}</span>
-                ) : null}
-              </div>
+              {meta.status === "pending" && (
+                <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.2)" }}>{t("pending")}</p>
+              )}
             </div>
           </Link>
         );

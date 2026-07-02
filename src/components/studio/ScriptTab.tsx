@@ -21,6 +21,7 @@ interface ScriptTabProps {
   coverUrl?: string;
   isFetchingCover?: boolean;
   onRegenerateCover?: () => void;
+  onUploadCover?: (file: File) => void;
   durationMinutes?: number;
   onDurationChange?: (v: number) => void;
   hideDirectorsNote?: boolean;
@@ -394,7 +395,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -733,22 +734,53 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none"
                 style={{ background: "linear-gradient(to top, rgba(10,12,20,1) 0%, rgba(10,12,20,0.6) 40%, transparent 100%)" }}
               />
-              {/* Regenerate cover button */}
-              {onRegenerateCover && !isFetchingCover && (
-                <button
-                  onClick={onRegenerateCover}
-                  className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-body font-semibold transition-all active:scale-95 hover:brightness-110"
-                  style={{
-                    background: "rgba(5,8,20,0.75)",
-                    border: "1px solid rgba(79,195,247,0.35)",
-                    color: "rgba(79,195,247,0.9)",
-                    backdropFilter: "blur(10px)",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
-                  }}
-                >
-                  <Icon name="restore" size={13} />
-                  <span>{t("newCover")}</span>
-                </button>
+              {/* Cover action buttons — regenerate + upload */}
+              {!isFetchingCover && (onRegenerateCover || onUploadCover) && (
+                <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                  {onUploadCover && (
+                    <>
+                      <input
+                        type="file" accept="image/*"
+                        className="hidden"
+                        id="cover-upload-input"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) { onUploadCover(file); e.target.value = ""; }
+                        }}
+                      />
+                      <label
+                        htmlFor="cover-upload-input"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-body font-semibold cursor-pointer transition-all active:scale-95 hover:brightness-110"
+                        style={{
+                          background: "rgba(5,8,20,0.75)",
+                          border: "1px solid rgba(167,139,250,0.35)",
+                          color: "rgba(167,139,250,0.9)",
+                          backdropFilter: "blur(10px)",
+                          boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        <span style={{ fontSize: 13 }}>📷</span>
+                        <span>Upload</span>
+                      </label>
+                    </>
+                  )}
+                  {onRegenerateCover && (
+                    <button
+                      onClick={onRegenerateCover}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-body font-semibold transition-all active:scale-95 hover:brightness-110"
+                      style={{
+                        background: "rgba(5,8,20,0.75)",
+                        border: "1px solid rgba(79,195,247,0.35)",
+                        color: "rgba(79,195,247,0.9)",
+                        backdropFilter: "blur(10px)",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+                      }}
+                    >
+                      <Icon name="restore" size={13} />
+                      <span>{t("newCover")}</span>
+                    </button>
+                  )}
+                </div>
               )}
               {isFetchingCover && (
                 <div
