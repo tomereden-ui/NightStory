@@ -1175,7 +1175,7 @@ export default function Studio2Page() {
     }).then(async (r) => {
       if (r.ok) {
         const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
-        setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
+        setCoverUrl(persistedUrl);
       }
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2155,7 +2155,7 @@ export default function Studio2Page() {
                     }).then(async (r) => {
                       if (r.ok) {
                         const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
-                        setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
+                        setCoverUrl(persistedUrl);
                       }
                     }).catch(() => {});
                   }
