@@ -697,6 +697,7 @@ function DirectionSheet({
                   selectedVoiceId={voice?.id ?? ""}
                   onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
                   onClose={() => setShowVoicePicker(false)}
+                  storyLanguage={language}
                 />
               </div>
             )}

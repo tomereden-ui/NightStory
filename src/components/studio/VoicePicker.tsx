@@ -4,6 +4,19 @@ import { useEffect, useRef } from "react";
 import type { Voice } from "@/types";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
 
+// Mirrors HE_EL_VOICE_MAP in ttsService.ts — name only (no IDs needed client-side)
+const HE_VOICE_NAMES: Record<string, string> = {
+  Aoede:   "Rachel",
+  Kore:    "Bella",
+  Leda:    "Elli",
+  Autonoe: "Domi",
+  Charon:  "Adam",
+  Fenrir:  "Arnold",
+  Puck:    "Antoni",
+  Orus:    "Josh",
+  Zephyr:  "Sam",
+};
+
 interface VoicePickerProps {
   voices: Voice[];
   selectedVoiceId: string;
@@ -11,6 +24,8 @@ interface VoicePickerProps {
   onClose: () => void;
   /** Render as a static inline block (e.g. inside an expandable section) instead of a floating dropdown */
   inline?: boolean;
+  /** ISO 639-1 language code of the story script — used to show which EL voice will actually play */
+  storyLanguage?: string;
 }
 
 export default function VoicePicker({
@@ -19,8 +34,10 @@ export default function VoicePicker({
   onSelect,
   onClose,
   inline = false,
+  storyLanguage,
 }: VoicePickerProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const isHebrew = storyLanguage === "he";
 
   useEffect(() => {
     if (inline) return;
@@ -36,6 +53,8 @@ export default function VoicePicker({
 
   function renderVoiceItem(voice: Voice) {
     const isSelected = voice.id === selectedVoiceId;
+    const heElName = isHebrew ? (HE_VOICE_NAMES[voice.id] ?? null) : null;
+
     return (
       <li key={voice.id}>
         <button
@@ -50,6 +69,11 @@ export default function VoicePicker({
               {voice.name}
             </p>
             <p className="text-fs-body text-white/25 capitalize">{voice.style}</p>
+            {heElName && (
+              <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.7)" }}>
+                עב: {heElName}
+              </p>
+            )}
           </div>
           {isSelected && (
             <span className="text-teal text-fs-body flex-shrink-0">✓</span>
@@ -60,17 +84,36 @@ export default function VoicePicker({
   }
 
   const listContent = (
-    <ul className="py-1 overflow-y-auto" style={{ maxHeight: inline ? 280 : "60vh" }}>
-      {presetVoices.map(renderVoiceItem)}
-      {familyVoices.length > 0 && (
-        <>
-          <li className="px-3 pt-3 pb-1">
-            <p className="text-white/20 text-fs-body uppercase tracking-widest">Family Voices</p>
-          </li>
-          {familyVoices.map(renderVoiceItem)}
-        </>
+    <>
+      {isHebrew && (
+        <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
+          <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.8)" }}>
+            🇮🇱 עב = קול ElevenLabs בפועל
+          </p>
+          <a
+            href="/admin/hebrew-voices"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-fs-body"
+            style={{ color: "rgba(79,195,247,0.7)", textDecoration: "underline" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            שנה מיפוי
+          </a>
+        </div>
       )}
-    </ul>
+      <ul className="py-1 overflow-y-auto" style={{ maxHeight: inline ? 280 : "60vh" }}>
+        {presetVoices.map(renderVoiceItem)}
+        {familyVoices.length > 0 && (
+          <>
+            <li className="px-3 pt-3 pb-1">
+              <p className="text-white/20 text-fs-body uppercase tracking-widest">Family Voices</p>
+            </li>
+            {familyVoices.map(renderVoiceItem)}
+          </>
+        )}
+      </ul>
+    </>
   );
 
   if (inline) {
