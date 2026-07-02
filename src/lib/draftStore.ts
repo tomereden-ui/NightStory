@@ -11,6 +11,8 @@ export interface DraftState {
   coverUrl: string;
   editingStoryId?: string;
   forkedFromTitle?: string;
+  /** The story's actual content language (ISO 639-1) — distinct from the app's UI display language. */
+  language?: string;
   characterAvatars?: Record<string, string>;
   characterTypes?: Record<string, string>;
   storyTitle?: string;

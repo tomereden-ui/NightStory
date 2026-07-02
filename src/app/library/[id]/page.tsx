@@ -220,6 +220,7 @@ export default function StoryDetailPage() {
       editingStoryId: isOwned ? entry.id : undefined,
       forkedFromTitle: isOwned ? undefined : entry.title,
       storyTitle: entry.title,
+      language: entry.language,
     }, "nightstory_studio2_draft_v1");
     router.push("/studio2");
   }, [entry, router]);

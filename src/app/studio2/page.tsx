@@ -337,6 +337,7 @@ function CharacterCards({
   onDirectCharacter,
   onAvatarChange,
   onVoiceChange,
+  storyLanguage,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
@@ -345,6 +346,8 @@ function CharacterCards({
   onDirectCharacter: (characterName: string, instruction: string) => void;
   onAvatarChange: (characterName: string, url: string, type: CharacterType) => void;
   onVoiceChange: (characterName: string, voiceId: string) => void;
+  /** The story's actual content language — falls back to UI language if not provided. */
+  storyLanguage?: string;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
   const { language } = useLanguage();
@@ -397,6 +400,7 @@ function CharacterCards({
           onAvatarChange={(url, type) => onAvatarChange(openCharacter, url, type)}
           onVoiceChange={(voiceId) => onVoiceChange(openCharacter, voiceId)}
           onClose={() => setOpenCharacter(null)}
+          storyLanguage={storyLanguage}
         />
       )}
     </div>
@@ -507,6 +511,7 @@ function DirectionSheet({
   onAvatarChange,
   onVoiceChange,
   onClose,
+  storyLanguage,
 }: {
   characterName: string;
   voice: Voice | undefined;
@@ -517,6 +522,8 @@ function DirectionSheet({
   onAvatarChange: (url: string, type: CharacterType) => void;
   onVoiceChange: (voiceId: string) => void;
   onClose: () => void;
+  /** The story's actual content language — falls back to UI language if not provided. */
+  storyLanguage?: string;
 }) {
   const { language } = useLanguage();
   const [note, setNote] = useState("");
@@ -697,7 +704,7 @@ function DirectionSheet({
                   selectedVoiceId={voice?.id ?? ""}
                   onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
                   onClose={() => setShowVoicePicker(false)}
-                  storyLanguage={language}
+                  storyLanguage={storyLanguage ?? language}
                 />
               </div>
             )}
@@ -1100,6 +1107,13 @@ export default function Studio2Page() {
   const [durationMinutes, setDurationMinutes] = useState(3);
   const [voicePool, setVoicePool]           = useState<Voice[]>(PRESET_VOICE_POOL);
   const [loaded, setLoaded]                 = useState(false);
+  // The story's actual content language — distinct from `language` (UI display
+  // language above). They coincide right after generating a NEW story (it's
+  // generated in whatever language the UI was set to at that moment), but can
+  // diverge when editing an EXISTING story while the UI is set to something
+  // else. Used to decide whether to show Hebrew EL voices, so it must reflect
+  // the real story, not just whatever language the UI happens to show now.
+  const [storyLang, setStoryLang]           = useState<string>(language);
 
   // ─── Lesson state ───────────────────────────────────────────────────────────
   const [lessons, setLessons]               = useState<string[]>([]);
@@ -1161,7 +1175,7 @@ export default function Studio2Page() {
       .catch(() => {});
   }, [savesRefreshKey]);
 
-  useEffect(() => { fetchVoicePool(language).then(setVoicePool); }, [language]);
+  useEffect(() => { fetchVoicePool(storyLang).then(setVoicePool); }, [storyLang]);
 
   // When a story ID becomes available for the first time and there's a pending
   // uploaded cover (base64), persist it to the DB immediately.
@@ -1202,6 +1216,7 @@ export default function Studio2Page() {
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
       setForkedFromTitle(draft.forkedFromTitle ?? null);
+      setStoryLang(draft.language ?? language);
       const savedAvatars = draft.characterAvatars ?? {};
       const hasStale = Object.values(savedAvatars).some((u) => (u as string).includes("dicebear.com"));
       setCharacterAvatars(hasStale ? {} : savedAvatars);
@@ -1222,8 +1237,8 @@ export default function Studio2Page() {
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, scenes }, DRAFT_KEY);
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, scenes, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, scenes, language: storyLang }, DRAFT_KEY);
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, scenes, storyLang, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -1428,6 +1443,7 @@ export default function Studio2Page() {
       setSummary(sm);
       setCoverPrompt(cp);
       setStoryTitle(title);
+      setStoryLang(language);
       setLessonImplementations(impls);
       setScenes(rawScenes);
       setHasScriptChanges(false);
@@ -2034,6 +2050,7 @@ export default function Studio2Page() {
                 setCoverPrompt(cp);
                 setCoverUrl("");
                 setStoryTitle("");
+                setStoryLang(language);
                 setLessons([]);
                 setLessonImplementations([]);
                 setScenes(fqScenes ?? []);
@@ -2059,7 +2076,7 @@ export default function Studio2Page() {
                         if (i === blocks.length - 1) {
                           setIsValidating(false);
                           setTotalExpectedBlocks(undefined);
-                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
+                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language }, DRAFT_KEY);
                         }
                       }, i * 65);
                     });
@@ -2144,6 +2161,7 @@ export default function Studio2Page() {
             {!generating && (<><ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
+              storyLanguage={storyLang}
               onBlocksChange={handleBlocksChange}
               onProduce={handleProduce}
               isProducing={isProducing}
@@ -2191,6 +2209,7 @@ export default function Studio2Page() {
                   <CharacterCards
                     blocks={scriptBlocks}
                     voicePool={voicePool}
+                    storyLanguage={storyLang}
                     avatars={characterAvatars}
                     characterTypes={characterTypes}
                     onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}

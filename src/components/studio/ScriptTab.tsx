@@ -37,6 +37,8 @@ interface ScriptTabProps {
   storyId?: string;
   /** Called when user saves a specific block's text edit to the DB */
   onSaveBlock?: (blockId: string) => void;
+  /** The story's actual content language — falls back to UI language if not provided. */
+  storyLanguage?: string;
 }
 
 function makeId() {
@@ -399,7 +401,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock, storyLanguage }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -1011,6 +1013,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 characterAvatarUrl={block.characterName !== "SFX" ? characterAvatars?.[block.characterName] : undefined}
                 isDirty={dirtyBlockIds.has(block.id)}
                 onSave={onSaveBlock ? () => handleSaveBlock(block.id) : undefined}
+                storyLanguage={storyLanguage}
               />
             </div>
           </div>

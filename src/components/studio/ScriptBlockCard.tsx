@@ -34,6 +34,8 @@ interface ScriptBlockCardProps {
   characterAvatarUrl?: string;
   isDirty?: boolean;
   onSave?: () => void;
+  /** The story's actual content language — falls back to UI language if not provided. */
+  storyLanguage?: string;
 }
 
 // ─── Validated badge ──────────────────────────────────────────────────────────
@@ -299,6 +301,7 @@ function SpeechCard({
   characterAvatarUrl,
   isDirty,
   onSave,
+  storyLanguage,
 }: ScriptBlockCardProps) {
   const { t, language } = useLanguage();
   const textareaRef   = useRef<HTMLTextAreaElement>(null);
@@ -382,7 +385,7 @@ function SpeechCard({
             selectedVoiceId={block.assignedVoiceId}
             onSelect={(voiceId) => { onVoiceChange(block.id, voiceId); setShowPicker(false); }}
             onClose={() => setShowPicker(false)}
-            storyLanguage={language}
+            storyLanguage={storyLanguage ?? language}
           />
         )}
       </div>
