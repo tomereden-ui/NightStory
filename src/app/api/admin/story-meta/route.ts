@@ -28,7 +28,7 @@ ${scriptText}
 
 Return ONLY valid JSON (no markdown):
 {
-  "summary": "1-2 sentence summary for parents (what the story is about)",
+  "summary": "1-2 sentence summary for parents (what the story is about) — write it in the SAME language as the script above",
   "ageGroup": "one of: 2-4, 4-6, 6-8, 8-10, 10-12",
   "coverPrompt": "a vivid Pixar-style 3D illustration for the story cover — you MUST name the main characters by name with a brief visual description (hair, clothing, species if animal), then describe the key scene or setting. 2-3 sentences, child-safe, magical. Do NOT use generic phrases like 'a child' or 'a character' — use the actual names from this script."
 }

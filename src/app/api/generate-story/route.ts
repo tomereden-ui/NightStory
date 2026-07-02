@@ -175,7 +175,7 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, child
     : "";
 
   const langPart = language && language !== "en"
-    ? `\n\nLANGUAGE\n--------\nWrite all DIALOGUE and NARRATION in ${language} (ISO 639-1: "${language}"). Character names and the story title must also be in this language.\nEXCEPTIONS — keep these fields in English regardless of story language:\n  • SFX textPayload descriptions (sent to ElevenLabs sound generator — non-English produces garbled audio)\n  • visualDescription in the characters map (sent to Imagen avatar generator — non-English produces wrong images)\n  • coverPrompt (sent to Imagen image generator)`
+    ? `\n\nLANGUAGE\n--------\nWrite all DIALOGUE and NARRATION in ${language} (ISO 639-1: "${language}"). Character names, the story title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) must also be in this language — these are shown directly to the listener, so they must match the story's language exactly like the dialogue does.\nEXCEPTIONS — keep these fields in English regardless of story language:\n  • SFX textPayload descriptions (sent to ElevenLabs sound generator — non-English produces garbled audio)\n  • visualDescription in the characters map (sent to Imagen avatar generator — non-English produces wrong images)\n  • coverPrompt (sent to Imagen image generator)`
     : "";
 
   const avoidPart = avoid
