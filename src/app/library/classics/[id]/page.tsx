@@ -8,6 +8,10 @@ import type { ClassicMeta } from "@/lib/classicStories";
 import { CLASSIC_STORIES } from "@/lib/classicStories";
 import type { ScriptBlock } from "@/types";
 import Icon from "@/components/ui/Icon";
+import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
+import ShareSheet from "@/components/ShareSheet";
+import type { LibraryEntry } from "@/lib/libraryStore";
+import type { DBChildProfile } from "@/app/api/child-profiles/route";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -19,8 +23,19 @@ function formatTime(seconds: number): string {
 }
 
 function deriveClassicSummary(blocks: ScriptBlock[]): string {
-  return blocks
-    .filter((b) => b.characterName.toLowerCase().includes("narrat"))
+  const speechBlocks = blocks.filter((b) => b.characterName !== "SFX");
+  // The Narrator's name is always translated into the story's language (see
+  // story-guidance.txt), so an English-only "narrat" match silently finds
+  // nothing for non-English classics. "קריין" is the one translation we can
+  // state with certainty (from the guidance file itself); for every other
+  // language, fall back to the opening lines regardless of character name so
+  // the summary card never silently disappears.
+  const narratorLines = speechBlocks.filter((b) => {
+    const name = b.characterName.toLowerCase();
+    return name.includes("narrat") || b.characterName.includes("קריין");
+  });
+  const source = narratorLines.length > 0 ? narratorLines : speechBlocks;
+  return source
     .slice(0, 3)
     .map((b) => b.textPayload.replace(/^\[.*?\]\s*/, ""))
     .join(" ");
@@ -49,6 +64,16 @@ export default function ClassicDetailPage() {
   const [meta, setMeta] = useState<ClassicMeta | null>(null);
   const [blocks, setBlocks] = useState<ScriptBlock[] | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Only admin-added classics have a real `stories` row to favorite/share
+  // against — hardcoded ones (CLASSIC_STORIES) serve their script from
+  // Storage and don't exist as a row until first forked via "Open in Studio".
+  const isHardcoded = CLASSIC_STORIES.some((s) => s.id === id);
+  const [favoritedBy, setFavoritedBy] = useState<string[]>([]);
+  const [activeChildId, setActiveChildId] = useState<string | null>(null);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [allChildren, setAllChildren] = useState<DBChildProfile[]>([]);
   const [openingInStudio, setOpeningInStudio] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
@@ -150,15 +175,53 @@ export default function ClassicDetailPage() {
       setImgFailed(false);
       if (full?.blocks) setBlocks(full.blocks);
       if (full?.audioUrl) setStoryAudioUrl(full.audioUrl);
+      if (Array.isArray(full?.favoritedBy)) setFavoritedBy(full.favoritedBy);
     }).finally(() => setLoading(false));
   }, [id]);
+
+  // Same key the home page uses to track which child profile is active —
+  // favorites are scoped per-child, matching how child_ids scopes stories.
+  useEffect(() => {
+    setActiveChildId(typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null);
+  }, []);
+
+  const isFavorited = !!(activeChildId && favoritedBy.includes(activeChildId));
+
+  const handleToggleFavorite = useCallback(async () => {
+    if (isHardcoded || !activeChildId || favoriteBusy) return;
+    const nextFavorited = !isFavorited;
+    setFavoriteBusy(true);
+    setFavoritedBy((prev) => nextFavorited ? [...prev, activeChildId] : prev.filter((c) => c !== activeChildId));
+    try {
+      const res = await fetch(`/api/library/${id}/favorite`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childId: activeChildId, favorited: nextFavorited }),
+      });
+      if (!res.ok) throw new Error("failed");
+      const { favoritedBy: updated } = await res.json() as { favoritedBy: string[] };
+      setFavoritedBy(updated);
+    } catch {
+      setFavoritedBy((prev) => isFavorited ? [...prev, activeChildId] : prev.filter((c) => c !== activeChildId));
+    } finally {
+      setFavoriteBusy(false);
+    }
+  }, [isHardcoded, activeChildId, favoriteBusy, isFavorited, id]);
+
+  const handleOpenShare = useCallback(() => {
+    if (allChildren.length === 0) {
+      fetch("/api/child-profiles").then((r) => r.json()).then((d) => {
+        if (Array.isArray(d)) setAllChildren(d as DBChildProfile[]);
+      }).catch(() => {});
+    }
+    setShareOpen(true);
+  }, [allChildren.length]);
 
   const handleOpenInStudio = useCallback(async () => {
     if (!meta || !blocks) return;
     setOpeningInStudio(true);
     const summary = deriveClassicSummary(blocks) || meta.tagline;
     // Admin-added classics (UUID IDs) are editable in-place; hardcoded classics fork.
-    const isHardcoded = CLASSIC_STORIES.some((s) => s.id === id);
     writeDraft({
       promptText: `${meta.title} — ${meta.tagline}`,
       scriptBlocks: blocks,
@@ -390,6 +453,9 @@ export default function ClassicDetailPage() {
             {meta.tagline}
           </p>
 
+          <p className="text-fs-caption font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
+            Id = {id}
+          </p>
         </div>
 
         {/* Divider */}
@@ -445,6 +511,60 @@ export default function ClassicDetailPage() {
             </div>
           );
         })()}
+
+        {/* Favorite + Share row — only for admin-added classics, which have a
+            real stories row to persist against. Hardcoded classics have none
+            until first opened in Studio (which forks a real copy). */}
+        {!isHardcoded && (
+          <div className="px-5 mb-1 flex items-center gap-3">
+            <button
+              onClick={handleToggleFavorite}
+              disabled={!activeChildId || favoriteBusy}
+              aria-label={isFavorited ? "Remove from My List" : "Add to My List"}
+              aria-pressed={isFavorited}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-90"
+              style={isFavorited
+                ? { background: "rgba(236,72,153,0.14)", border: "1px solid rgba(236,72,153,0.4)", color: "#ec4899" }
+                : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
+              }
+            >
+              <span style={{ fontSize: "var(--fs-heading)", lineHeight: 1 }}>{isFavorited ? "❤️" : "🤍"}</span>
+              <span>{isFavorited ? "In My List" : "Add to My List"}</span>
+            </button>
+            <button
+              onClick={handleOpenShare}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-90"
+              style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}
+            >
+              <span style={{ fontSize: "var(--fs-heading)", lineHeight: 1 }}>📤</span>
+              <span>Share</span>
+            </button>
+          </div>
+        )}
+
+        {shareOpen && meta && (
+          <ShareSheet
+            story={{
+              id,
+              title: meta.title,
+              summary: blocks ? deriveClassicSummary(blocks) : meta.tagline,
+              coverUrl: meta.coverUrl,
+              durationSeconds: meta.durationSeconds ?? 0,
+              createdAt: 0,
+              blocks: blocks ?? [],
+              isClassic: true,
+            } as LibraryEntry}
+            children={allChildren}
+            onClose={() => setShareOpen(false)}
+          />
+        )}
+
+        {/* Cast panel — read-only */}
+        {isReady && blocks!.length > 0 && (
+          <div className="mt-4 mb-1">
+            <ReadOnlyCastPanel blocks={blocks!} />
+          </div>
+        )}
 
         {/* Script toggle */}
         {isReady && (

@@ -45,5 +45,16 @@ export async function GET(
     return NextResponse.json({ error: "Classic not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ blocks: row.blocks ?? [], durationSeconds: row.duration_seconds ?? 0, audioUrl: row.audio_url ?? null });
+  // Fetched separately and tolerantly — favorited_by may not exist yet if the
+  // favorites migration (supabase/favorites-migration.sql) hasn't been run.
+  // A missing column here must never 404 the classic itself.
+  let favoritedBy: string[] | undefined;
+  const { data: favRow, error: favErr } = await supabase
+    .from("stories")
+    .select("favorited_by")
+    .eq("id", id)
+    .maybeSingle();
+  if (!favErr && Array.isArray(favRow?.favorited_by)) favoritedBy = favRow.favorited_by;
+
+  return NextResponse.json({ blocks: row.blocks ?? [], durationSeconds: row.duration_seconds ?? 0, audioUrl: row.audio_url ?? null, favoritedBy });
 }
