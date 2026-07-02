@@ -12,11 +12,6 @@ import Icon from "@/components/ui/Icon";
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
 
-function durationLabel(seconds: number): string {
-  const m = Math.round(seconds / 60);
-  return m <= 1 ? "1 min" : `${m} min`;
-}
-
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -395,18 +390,6 @@ export default function ClassicDetailPage() {
             {meta.tagline}
           </p>
 
-          {meta.durationSeconds && (
-            <span
-              className="inline-block text-fs-body font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full"
-              style={{
-                background: `linear-gradient(90deg, ${c1}22, ${c2}22)`,
-                border: `1px solid ${c1}44`,
-                color: c1,
-              }}
-            >
-              {durationLabel(meta.durationSeconds)}
-            </span>
-          )}
         </div>
 
         {/* Divider */}

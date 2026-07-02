@@ -23,10 +23,6 @@ function timeAgo(ts: number, tFn: (key: string) => string): string {
   return `${days}${tFn("daysAgo")}`;
 }
 
-function durationLabel(seconds: number): string {
-  const m = Math.round(seconds / 60);
-  return m <= 1 ? "1 min" : `${m} min`;
-}
 
 type DurationFilter = "all" | "short" | "medium" | "long";
 
@@ -312,9 +308,6 @@ function FamilyStoriesGrid({
               <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
                 <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  {entry.durationSeconds > 0 && (
-                    <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>{durationLabel(entry.durationSeconds)}</p>
-                  )}
                   {(entry.viewCount ?? 0) > 0 && (
                     <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
                   )}
@@ -657,14 +650,12 @@ export default function LibraryPage() {
                   href: `/library/${e.id}`,
                   title: e.title,
                   coverUrl: e.coverUrl ?? null,
-                  duration: durationLabel(e.durationSeconds),
                 })),
                 ...recentClassics.slice(0, 3).map((c) => ({
                   key: `c-${c.id}`,
                   href: `/library/classics/${c.id}`,
                   title: c.title,
                   coverUrl: c.coverUrl ?? null,
-                  duration: durationLabel(c.durationSeconds ?? 0),
                 })),
               ].slice(0, 5).map((item) => {
                 const [c1, c2] = cardPalette(item.title);
@@ -685,10 +676,6 @@ export default function LibraryPage() {
                       </div>
                     )}
                     <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
-                    <span className="absolute top-2 right-2 text-fs-body font-bold tracking-widest px-1.5 py-0.5 rounded-full"
-                      style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
-                      {item.duration}
-                    </span>
                     <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
                       <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
                     </div>
@@ -825,11 +812,6 @@ export default function LibraryPage() {
                     </div>
                     <div className="p-2">
                       <p className="text-white font-medium leading-tight" style={{ fontSize: "var(--fs-label)" }}>{s.title}</p>
-                      {s.duration_seconds ? (
-                        <p style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.3)" }}>
-                          {Math.round(s.duration_seconds / 60)} min
-                        </p>
-                      ) : null}
                     </div>
                   </a>
                 ))}
@@ -920,11 +902,6 @@ export default function LibraryPage() {
                           <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                         </div>
                       )}
-                      {/* Duration badge — overlaid on image, matching Recently Played style */}
-                      <span className="absolute top-2 right-2 text-fs-body font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: "rgba(4,6,18,0.72)", backdropFilter: "blur(6px)", color: c1, border: `1px solid ${c1}55` }}>
-                        {durationLabel(entry.durationSeconds)}
-                      </span>
                     </Link>
 
                     {/* Info row */}

@@ -203,7 +203,6 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
     : childNames.length === 1 ? childNames[0]
     : childNames.slice(0, -1).join(", ") + " & " + childNames[childNames.length - 1];
 
-  const durationMin = Math.round(story.durationSeconds / 60);
   const singleChild = story.children.length === 1;
 
   return (
@@ -334,11 +333,6 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         >
           {story.title}
         </h1>
-
-        {/* Duration */}
-        <p style={{ color: "rgba(255,255,255,0.28)", fontSize: "var(--fs-body)", marginBottom: story.shareMessage ? 20 : 28 }}>
-          ◷ {durationMin} min
-        </p>
 
         {/* Personal message */}
         {story.shareMessage && (

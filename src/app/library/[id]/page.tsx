@@ -337,7 +337,7 @@ export default function StoryDetailPage() {
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
-              {timeAgo(entry.createdAt)} · {Math.round(entry.durationSeconds / 60)} min
+              {timeAgo(entry.createdAt)}
             </p>
             {(entry.viewCount ?? 0) > 0 && (
               <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>

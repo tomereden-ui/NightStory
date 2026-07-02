@@ -45,17 +45,13 @@ function greeting(hour: number, tFn: (key: string) => string): string {
 function StoryCard({
   title,
   coverUrl,
-  durationSeconds,
   href,
-  showDuration = false,
   progressPercent,
 }: {
   title: string;
   summary?: string;
   coverUrl?: string | null;
-  durationSeconds: number;
   href: string;
-  showDuration?: boolean;
   progressPercent?: number;
 }) {
   const [c1, c2] = cardPalette(title);
@@ -88,21 +84,6 @@ function StoryCard({
         className="absolute inset-0"
         style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.98) 100%)" }}
       />
-
-      {/* Duration badge — top right (Continue Listening only) */}
-      {showDuration && (
-        <span
-          className="absolute top-2 right-2 text-fs-body font-bold tracking-widest px-1.5 py-0.5 rounded-full"
-          style={{
-            background: "rgba(4,6,18,0.72)",
-            backdropFilter: "blur(6px)",
-            color: c1,
-            border: `1px solid ${c1}55`,
-          }}
-        >
-          {durationLabel(durationSeconds)}
-        </span>
-      )}
 
       {/* Title — bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
@@ -774,9 +755,7 @@ export default function HomePage() {
                   title={s.title}
                   summary={s.summary}
                   coverUrl={s.coverUrl}
-                  durationSeconds={s.durationSeconds}
                   href={`/library/${s.id}`}
-                  showDuration
                   progressPercent={[42, 68, 23][idx] ?? 30}
                 />
               ))}
@@ -795,7 +774,6 @@ export default function HomePage() {
                   title={s.title}
                   summary={s.summary}
                   coverUrl={s.coverUrl}
-                  durationSeconds={s.durationSeconds}
                   href={`/library/${s.id}`}
                 />
               ))}
@@ -814,7 +792,6 @@ export default function HomePage() {
                   title={s.title}
                   summary={s.summary}
                   coverUrl={s.coverUrl}
-                  durationSeconds={s.durationSeconds}
                   href={`/library/${s.id}`}
                 />
               ))}
@@ -841,7 +818,6 @@ export default function HomePage() {
                   title={c.title}
                   summary={"tagline" in c ? (c as ClassicMeta).tagline : ""}
                   coverUrl={c.coverUrl}
-                  durationSeconds={c.durationSeconds ?? 0}
                   href={`/library/classics/${c.id}`}
                 />
               ))}

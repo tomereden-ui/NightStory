@@ -12,10 +12,6 @@ function daysRemaining(deletedAt: number): number {
   return Math.max(0, Math.ceil((deletedAt + TRASH_TTL_MS - Date.now()) / 86_400_000));
 }
 
-function durationLabel(seconds: number): string {
-  return `${Math.round(seconds / 60)} min`;
-}
-
 export default function TrashPage() {
   const { t } = useLanguage();
   const [entries, setEntries] = useState<TrashEntry[]>([]);
@@ -193,7 +189,6 @@ export default function TrashPage() {
                         {entry.title}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-white/25 text-fs-body">{durationLabel(entry.durationSeconds)}</span>
                         <span
                           className="text-fs-body px-1.5 py-0.5 rounded-full font-semibold"
                           style={
