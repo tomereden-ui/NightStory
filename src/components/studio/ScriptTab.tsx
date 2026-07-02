@@ -39,6 +39,10 @@ interface ScriptTabProps {
   onSaveBlock?: (blockId: string) => void;
   /** The story's actual content language — falls back to UI language if not provided. */
   storyLanguage?: string;
+  /** When true (and the change handlers below are supplied), title/summary render as editable fields. */
+  isAdmin?: boolean;
+  onTitleChange?: (title: string) => void;
+  onSummaryChange?: (summary: string) => void;
 }
 
 function makeId() {
@@ -401,7 +405,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock, storyLanguage }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, onSummaryChange }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -845,18 +849,27 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             {/* Story title */}
             {title && (
               <div className="px-4 pt-4 pb-0" style={{ background: "rgba(10,12,20,1)" }}>
-                <h2
-                  className="text-fs-title font-bold tracking-tight leading-tight"
-                  style={{
-                    background: "linear-gradient(135deg, #ffffff 0%, #4fc3f7 60%, #a78bfa 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                    filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))",
-                  }}
-                >
-                  {title}
-                </h2>
+                {isAdmin && onTitleChange ? (
+                  <input
+                    value={title}
+                    onChange={(e) => onTitleChange(e.target.value)}
+                    className="w-full bg-transparent outline-none text-fs-title font-bold tracking-tight leading-tight"
+                    style={{ color: "#fff", border: "1px solid rgba(79,195,247,0.25)", borderRadius: 8, padding: "4px 8px", marginLeft: -8 }}
+                  />
+                ) : (
+                  <h2
+                    className="text-fs-title font-bold tracking-tight leading-tight"
+                    style={{
+                      background: "linear-gradient(135deg, #ffffff 0%, #4fc3f7 60%, #a78bfa 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))",
+                    }}
+                  >
+                    {title}
+                  </h2>
+                )}
                 {storyId && (
                   <p className="text-fs-caption font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
                     Id = {storyId}
@@ -884,7 +897,15 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                     <span>{summaryLoading ? "Loading…" : summaryPlaying ? "Stop" : "Play"}</span>
                   </button>
                 </div>
-                {(() => {
+                {isAdmin && onSummaryChange ? (
+                  <textarea
+                    value={summary}
+                    onChange={(e) => onSummaryChange(e.target.value)}
+                    rows={4}
+                    className="w-full bg-transparent outline-none resize-none"
+                    style={{ fontSize: "var(--fs-body)", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400, border: "1px solid rgba(79,195,247,0.25)", borderRadius: 8, padding: 8 }}
+                  />
+                ) : (() => {
                   const LIMIT = 220;
                   const long = summary.length > LIMIT;
                   const shown = !summaryExpanded && long ? summary.slice(0, LIMIT).trimEnd() : summary;

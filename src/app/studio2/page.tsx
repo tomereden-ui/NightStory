@@ -24,9 +24,14 @@ import LunaChatPanel from "@/components/studio/LunaChatPanel";
 import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import Icon from "@/components/ui/Icon";
+import { useAuth } from "@/context/AuthContext";
+import { assignVoicesToCharacters, assignHebrewVoicesToCharacters } from "@/lib/services/voiceAssignment";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
+
+// Same admin gate used by /admin — see src/app/admin/page.tsx
+const ADMIN_EMAIL = "tomereden@gmail.com";
 
 // ─── Script saves browser ─────────────────────────────────────────────────────
 
@@ -338,6 +343,8 @@ function CharacterCards({
   onAvatarChange,
   onVoiceChange,
   storyLanguage,
+  isAdmin,
+  onReassignCast,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
@@ -348,6 +355,8 @@ function CharacterCards({
   onVoiceChange: (characterName: string, voiceId: string) => void;
   /** The story's actual content language — falls back to UI language if not provided. */
   storyLanguage?: string;
+  isAdmin?: boolean;
+  onReassignCast?: () => void;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
   const { language } = useLanguage();
@@ -373,9 +382,21 @@ function CharacterCards({
 
   return (
     <div className="mb-5">
-      <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.45)" }}>
-        {i18nT(language, "castSection")}
-      </p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>
+          {i18nT(language, "castSection")}
+        </p>
+        {isAdmin && onReassignCast && (
+          <button
+            onClick={onReassignCast}
+            className="text-fs-body font-semibold px-2.5 py-1 rounded-full transition-all active:scale-95"
+            style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(167,139,250,0.35)", color: "#c4b5fd" }}
+            title="Re-run nature-based voice matching for every character"
+          >
+            🎭 Assign Cast
+          </button>
+        )}
+      </div>
       <div className="flex gap-3 pb-2 -mx-5 px-5" style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
         {cast.map(({ characterName, voice }) => (
           <CharacterCard
@@ -1083,6 +1104,8 @@ type StudioTab = "chat" | "step-by-step" | "lesson" | "script" | "producing" | "
 
 export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const router = useRouter();
 
   // ─── Active child profile ────────────────────────────────────────────────────
@@ -1157,6 +1180,9 @@ export default function Studio2Page() {
   const [saveLabel, setSaveLabel] = useState<"idle" | "saving" | "saved">("idle");
   // Dirty flag: true when user has changes that haven't been applied/produced yet
   const [hasScriptChanges, setHasScriptChanges] = useState(false);
+  // Title/summary edits (admin-only) — tracked separately so editing just the
+  // title/summary enables Save without needing an unrelated script edit resolved first.
+  const [metaDirty, setMetaDirty] = useState(false);
   const cleanLessonsRef = useRef<string[]>([]);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keeps the raw base64 payload from the last cover generation so production
@@ -1618,6 +1644,7 @@ export default function Studio2Page() {
       await Promise.all(saves);
       setSavesRefreshKey((k) => k + 1);
       setSaveLabel("saved");
+      setMetaDirty(false);
       setTimeout(() => setSaveLabel("idle"), 2500);
     } catch {
       setSaveLabel("idle");
@@ -1683,6 +1710,33 @@ export default function Studio2Page() {
     );
     setHasScriptChanges(true);
   }, []);
+
+  // ─── Admin-only: title/summary editing ───────────────────────────────────────
+
+  const handleTitleChange = useCallback((next: string) => {
+    setStoryTitle(next);
+    setMetaDirty(true);
+  }, []);
+
+  const handleSummaryChange = useCallback((next: string) => {
+    setSummary(next);
+    setMetaDirty(true);
+  }, []);
+
+  // ─── Admin-only: re-run nature-based voice assignment for every cast member ──
+
+  const handleReassignCast = useCallback(() => {
+    const assignFn = storyLang === "he" ? assignHebrewVoicesToCharacters : assignVoicesToCharacters;
+    // heroName="" disables the hero-lock so every character is (re)cast by
+    // nature — same approach as the admin "Reassign Cast Voices" tool.
+    const voiceMap = assignFn(scriptBlocks, "", undefined, characterProfiles);
+    setScriptBlocks((prev) => prev.map((b) => {
+      if (b.characterName === "SFX") return b;
+      const newVoice = voiceMap[b.characterName];
+      return newVoice ? { ...b, assignedVoiceId: newVoice } : b;
+    }));
+    setHasScriptChanges(true);
+  }, [scriptBlocks, characterProfiles, storyLang]);
 
   // ─── Queue a character direction ─────────────────────────────────────────────
 
@@ -2167,6 +2221,9 @@ export default function Studio2Page() {
               isProducing={isProducing}
               summary={summary}
               title={storyTitle}
+              isAdmin={isAdmin}
+              onTitleChange={handleTitleChange}
+              onSummaryChange={handleSummaryChange}
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
               onRegenerateCover={scriptBlocks.length > 0 ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
@@ -2215,6 +2272,8 @@ export default function Studio2Page() {
                     onDirectCharacter={(_, instruction) => handleQueueDirection(instruction)}
                     onAvatarChange={handleAvatarChange}
                     onVoiceChange={handleCharacterVoiceChange}
+                    isAdmin={isAdmin}
+                    onReassignCast={handleReassignCast}
                   />
                   <LessonEditor
                     lessons={lessons}
@@ -2409,7 +2468,10 @@ export default function Studio2Page() {
             {/* Save script version */}
             {(() => {
               const hasPending = hasScriptChanges || pendingDirections.length > 0 || directorNote.trim().length > 0;
-              const canSave = !hasPending && !isProducing && scriptBlocks.length > 0;
+              // metaDirty (title/summary edit) bypasses the pending-script-change gate —
+              // editing just the title/summary shouldn't require resolving an unrelated
+              // director's-note revision first.
+              const canSave = (metaDirty || !hasPending) && !isProducing && scriptBlocks.length > 0;
               return (
                 <button
                   onClick={handleManualSave}
