@@ -66,6 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      // Mirror the access token into a cookie so Next.js middleware can read
+      // it for route-level auth protection (localStorage isn't accessible
+      // server-side). Cookie is Strict + Secure; httpOnly is intentionally
+      // omitted so the client can clear it on sign-out.
+      if (session?.access_token) {
+        const maxAge = session.expires_in ?? 3600;
+        document.cookie = `ns-session=${session.access_token}; path=/; max-age=${maxAge}; SameSite=Strict`;
+      } else {
+        document.cookie = "ns-session=; path=/; max-age=0; SameSite=Strict";
+      }
     });
 
     return () => subscription.unsubscribe();
