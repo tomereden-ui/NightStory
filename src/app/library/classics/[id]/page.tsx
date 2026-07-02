@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { ClassicMeta } from "@/lib/classicStories";
+import { CLASSIC_STORIES } from "@/lib/classicStories";
 import type { ScriptBlock } from "@/types";
 import Icon from "@/components/ui/Icon";
 
@@ -161,13 +162,15 @@ export default function ClassicDetailPage() {
     if (!meta || !blocks) return;
     setOpeningInStudio(true);
     const summary = deriveClassicSummary(blocks) || meta.tagline;
+    // Admin-added classics (UUID IDs) are editable in-place; hardcoded classics fork.
+    const isHardcoded = CLASSIC_STORIES.some((s) => s.id === id);
     writeDraft({
       promptText: `${meta.title} — ${meta.tagline}`,
       scriptBlocks: blocks,
       summary,
       coverPrompt: "",
       coverUrl: meta.coverUrl ?? "",
-      editingStoryId: undefined,
+      editingStoryId: isHardcoded ? undefined : id,
       characterAvatars: {},
       storyTitle: meta.title,
     }, "nightstory_studio2_draft_v1");

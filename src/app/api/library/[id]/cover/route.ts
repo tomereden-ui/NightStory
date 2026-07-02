@@ -17,12 +17,13 @@ export async function PATCH(
   if (!mimeType || !data) return NextResponse.json({ error: "mimeType and data required" }, { status: 400 });
 
   const ext = mimeType.includes("png") ? "png" : "jpg";
-  const storageKey = `${id}.${ext}`;
+  // Use a timestamped key so every upload produces a unique URL, bypassing CDN caches
+  const storageKey = `${id}-${Date.now()}.${ext}`;
 
   const buf = Buffer.from(data, "base64");
   const { error: uploadErr } = await supabase.storage
     .from("covers")
-    .upload(storageKey, buf, { contentType: mimeType, upsert: true });
+    .upload(storageKey, buf, { contentType: mimeType, upsert: false });
 
   if (uploadErr) {
     console.error("[cover PATCH] upload failed:", uploadErr.message);
