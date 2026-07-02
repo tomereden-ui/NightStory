@@ -1227,6 +1227,48 @@ export default function AdminPage() {
     }
   };
 
+  // ── Admin Services: Reassign cast voices (nature-based matching) ─────────
+  const [reassignStoryId, setReassignStoryId] = useState("");
+  const [reassignRunning, setReassignRunning] = useState(false);
+  const [reassignLog, setReassignLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const runReassignVoices = async (body: { storyId?: string } | { applyAll: true }) => {
+    setReassignRunning(true);
+    setReassignLog([{ type: "info", text: "applyAll" in body ? "Scanning every story in the library…" : `Reassigning story ${(body as { storyId: string }).storyId}…` }]);
+    try {
+      const res = await fetch("/api/admin/reassign-voices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReassignLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      const d = data as { totalStories: number; storiesChanged: number; storiesSkipped: number; totalBlocksChanged: number; results: Array<{ storyId: string; title: string; blocksChanged: number; skippedReason?: string }> };
+      setReassignLog((l) => [
+        ...l,
+        { type: "success", text: `✅ Done — ${d.storiesChanged}/${d.totalStories} stories updated, ${d.totalBlocksChanged} block${d.totalBlocksChanged === 1 ? "" : "s"} recast (${d.storiesSkipped} skipped — no character profile data)` },
+        ...d.results.filter((r) => r.blocksChanged > 0).map((r) => ({ type: "info" as const, text: `  · "${r.title}" — ${r.blocksChanged} block(s) recast` })),
+      ]);
+    } catch (e) {
+      setReassignLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setReassignRunning(false);
+    }
+  };
+
+  const handleReassignOneStory = () => {
+    if (!reassignStoryId.trim()) return;
+    runReassignVoices({ storyId: reassignStoryId.trim() });
+  };
+
+  const handleReassignAllStories = () => {
+    if (!confirm("Reassign cast voices for EVERY story in the library (public + private)? This only updates each block's assigned voice id — already-produced audio is unaffected until the story is re-produced.")) return;
+    runReassignVoices({ applyAll: true });
+  };
+
   return (
     <div className="cosmic-page min-h-full pb-40">
       <div className="px-5 pt-12">
@@ -1552,6 +1594,67 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {sfxLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Reassign Cast Voices Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🎭 Reassign Cast Voices</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Recomputes each character&apos;s assigned voice using nature-based matching (gender/style/age)
+                    from the story&apos;s saved character profiles. Only updates the voice id on each block —
+                    already-produced audio is unaffected until the story is re-produced. Stories without
+                    saved character profiles are skipped.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={reassignStoryId}
+                  onChange={(e) => setReassignStoryId(e.target.value)}
+                  placeholder="Story ID"
+                  disabled={reassignRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+                <button
+                  onClick={handleReassignOneStory}
+                  disabled={reassignRunning || !reassignStoryId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Reassign This Story
+                </button>
+              </div>
+
+              <button
+                onClick={handleReassignAllStories}
+                disabled={reassignRunning}
+                className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {reassignRunning ? "Working…" : "Reassign ALL Stories"}
+              </button>
+
+              {/* Log output */}
+              {reassignLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {reassignLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"

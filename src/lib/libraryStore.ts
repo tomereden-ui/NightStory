@@ -1,9 +1,12 @@
 import { supabase, ensureBuckets } from "./supabase";
-import type { ScriptBlock, StoryScene } from "@/types";
+import type { ScriptBlock, StoryScene, VoiceGender, VoiceStyle } from "@/types";
 
 export interface CharacterProfile {
   type: "child" | "adult" | "animal" | "narrator";
   visualDescription: string;
+  /** Voice-casting nature — present on stories generated since nature-based voice matching shipped. */
+  gender?: VoiceGender;
+  voicePersona?: VoiceStyle;
 }
 
 export interface LibraryEntry {

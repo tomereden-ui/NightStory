@@ -61,6 +61,16 @@ const DESC_AGE: [RegExp, VoiceAgeGroup][] = [
   [/teen|youth|young (?:woman|man)|adolescent/i, "young"],
 ];
 
+// Gender keywords scraped from visualDescription — used when `gender` wasn't
+// supplied directly (e.g. older stories generated before that field existed).
+// Deliberately excludes bare pronouns (he/she/his/her): visualDescription is a
+// noun-phrase fragment, not prose, so pronouns rarely appear and are too weak
+// a signal relative to false-positive risk.
+const DESC_GENDER: [RegExp, VoiceGender][] = [
+  [/\b(girl|woman|female|mother|mom|grandmother|grandma|queen|princess|sister|daughter|witch|aunt|lady|granddaughter|niece)\b/i, "female"],
+  [/\b(boy|man|male|father|dad|grandfather|grandpa|king|prince|brother|son|wizard|uncle|gentleman|grandson|nephew)\b/i, "male"],
+];
+
 // Keyword → style hints scraped from visualDescription as a last resort.
 const DESC_STYLE: [RegExp, VoiceStyle][] = [
   [/gruff|deep|booming|grizzled|weathered|giant|mighty|bold|brave/i, "dramatic"],
@@ -72,7 +82,12 @@ const DESC_STYLE: [RegExp, VoiceStyle][] = [
 
 function deriveNeed(profile: CharacterProfile | undefined): VoiceNeed {
   if (!profile) return {};
-  const gender = profile.gender;
+  let gender = profile.gender;
+  if (!gender && profile.visualDescription) {
+    for (const [re, g] of DESC_GENDER) {
+      if (re.test(profile.visualDescription)) { gender = g; break; }
+    }
+  }
 
   let style: VoiceStyle | undefined = profile.voicePersona;
   if (!style && profile.visualDescription) {
