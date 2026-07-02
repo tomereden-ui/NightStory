@@ -300,7 +300,7 @@ function SpeechCard({
   isDirty,
   onSave,
 }: ScriptBlockCardProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const textareaRef   = useRef<HTMLTextAreaElement>(null);
   const directRef     = useRef<HTMLInputElement>(null);
   const [showPicker, setShowPicker]         = useState(false);
@@ -382,6 +382,7 @@ function SpeechCard({
             selectedVoiceId={block.assignedVoiceId}
             onSelect={(voiceId) => { onVoiceChange(block.id, voiceId); setShowPicker(false); }}
             onClose={() => setShowPicker(false)}
+            storyLanguage={language}
           />
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Voice } from "@/types";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
 
@@ -37,6 +37,8 @@ export default function VoicePicker({
   storyLanguage,
 }: VoicePickerProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const isHebrew = storyLanguage === "he";
 
   useEffect(() => {
@@ -48,12 +50,33 @@ export default function VoicePicker({
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose, inline]);
 
+  // Stop any preview when the picker unmounts
+  useEffect(() => () => { audioRef.current?.pause(); }, []);
+
+  function togglePreview(e: React.MouseEvent, voice: Voice) {
+    e.stopPropagation();
+    if (!voice.previewUrl) return;
+    if (playingId === voice.id) {
+      audioRef.current?.pause();
+      setPlayingId(null);
+      return;
+    }
+    if (!audioRef.current) audioRef.current = new Audio();
+    audioRef.current.src = voice.previewUrl;
+    audioRef.current.onended = () => setPlayingId(null);
+    audioRef.current.play().catch(() => setPlayingId(null));
+    setPlayingId(voice.id);
+  }
+
+  // EL Hebrew-library voices are grouped separately from Gemini presets and the
+  // user's cloned family voices.
+  const hebrewVoices = voices.filter((v) => v.language === "he" && v.elevenLabsId);
+  const familyVoices = voices.filter((v) => v.elevenLabsId && v.language !== "he");
   const presetVoices = voices.filter((v) => !v.elevenLabsId);
-  const familyVoices = voices.filter((v) => v.elevenLabsId);
 
   function renderVoiceItem(voice: Voice) {
     const isSelected = voice.id === selectedVoiceId;
-    const heElName = isHebrew ? (HE_VOICE_NAMES[voice.id] ?? null) : null;
+    const heElName = isHebrew && !voice.elevenLabsId ? (HE_VOICE_NAMES[voice.id] ?? null) : null;
 
     return (
       <li key={voice.id}>
@@ -75,6 +98,18 @@ export default function VoicePicker({
               </p>
             )}
           </div>
+          {voice.previewUrl && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => togglePreview(e, voice)}
+              className="flex-shrink-0 text-fs-body px-1.5 cursor-pointer"
+              style={{ color: playingId === voice.id ? "#4fc3f7" : "rgba(255,255,255,0.35)" }}
+              title="Preview voice"
+            >
+              {playingId === voice.id ? "⏸" : "▶"}
+            </span>
+          )}
           {isSelected && (
             <span className="text-teal text-fs-body flex-shrink-0">✓</span>
           )}
@@ -103,6 +138,17 @@ export default function VoicePicker({
         </div>
       )}
       <ul className="py-1 overflow-y-auto" style={{ maxHeight: inline ? 280 : "60vh" }}>
+        {isHebrew && hebrewVoices.length > 0 && (
+          <>
+            <li className="px-3 pt-2 pb-1">
+              <p className="text-fs-body uppercase tracking-widest" style={{ color: "rgba(167,139,250,0.6)" }}>קולות עברית · ElevenLabs</p>
+            </li>
+            {hebrewVoices.map(renderVoiceItem)}
+            <li className="px-3 pt-3 pb-1">
+              <p className="text-white/20 text-fs-body uppercase tracking-widest">General</p>
+            </li>
+          </>
+        )}
         {presetVoices.map(renderVoiceItem)}
         {familyVoices.length > 0 && (
           <>

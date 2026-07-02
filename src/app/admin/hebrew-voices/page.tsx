@@ -38,9 +38,10 @@ export default function HebrewVoicesPage() {
   const [copied, setCopied] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [remapping, setRemapping] = useState<Record<string, string>>(
-    () => Object.fromEntries(Object.entries(CURRENT_MAP).map(([k, v]) => [k, v.elId]))
-  );
+  const initialMap = () => Object.fromEntries(Object.entries(CURRENT_MAP).map(([k, v]) => [k, v.elId]));
+  const [remapping, setRemapping] = useState<Record<string, string>>(initialMap);
+
+  const isDirty = Object.entries(CURRENT_MAP).some(([k, v]) => remapping[k] !== v.elId);
 
   async function load(pg = 1, lang = filter) {
     setLoading(true);
@@ -80,7 +81,17 @@ export default function HebrewVoicesPage() {
   }
 
   function assign(geminiVoice: string, elId: string) {
-    setRemapping((prev) => ({ ...prev, [geminiVoice]: elId }));
+    setRemapping((prev) => {
+      // Clicking the already-assigned voice resets this slot back to its original mapping
+      if (prev[geminiVoice] === elId) {
+        return { ...prev, [geminiVoice]: CURRENT_MAP[geminiVoice].elId };
+      }
+      return { ...prev, [geminiVoice]: elId };
+    });
+  }
+
+  function resetAll() {
+    setRemapping(initialMap());
   }
 
   function generateCode() {
@@ -134,6 +145,13 @@ export default function HebrewVoicesPage() {
           <h2 style={{ fontSize: 15, fontWeight: 600, color: "#a78bfa", margin: 0 }}>Generated Code</h2>
           <button onClick={copyCode} style={{ fontSize: 12, background: copied ? "#059669" : "#1e293b", color: "#e2e8f0", border: "none", borderRadius: 6, padding: "4px 12px", cursor: "pointer" }}>
             {copied ? "Copied!" : "Copy"}
+          </button>
+          <button
+            onClick={resetAll}
+            disabled={!isDirty}
+            style={{ fontSize: 12, background: "transparent", color: isDirty ? "#f87171" : "#475569", border: `1px solid ${isDirty ? "#f8717166" : "#334155"}`, borderRadius: 6, padding: "4px 12px", cursor: isDirty ? "pointer" : "default" }}
+          >
+            Reset all
           </button>
         </div>
         <pre style={{ background: "#0f172a", borderRadius: 8, padding: 14, fontSize: 12, overflowX: "auto", border: "1px solid #1e293b", color: "#94a3b8" }}>
@@ -193,6 +211,7 @@ export default function HebrewVoicesPage() {
                     <button
                       key={gem}
                       onClick={() => assign(gem, voice.id)}
+                      title={remapping[gem] === voice.id ? `Click to reset ${gem} to default (${CURRENT_MAP[gem].elName})` : `Assign ${gem} to ${voice.name}`}
                       style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, border: "1px solid", cursor: "pointer",
                         background: remapping[gem] === voice.id ? "#4fc3f7" : "transparent",
                         color: remapping[gem] === voice.id ? "#040612" : "#94a3b8",

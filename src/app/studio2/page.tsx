@@ -1161,7 +1161,7 @@ export default function Studio2Page() {
       .catch(() => {});
   }, [savesRefreshKey]);
 
-  useEffect(() => { fetchVoicePool().then(setVoicePool); }, []);
+  useEffect(() => { fetchVoicePool(language).then(setVoicePool); }, [language]);
 
   // When a story ID becomes available for the first time and there's a pending
   // uploaded cover (base64), persist it to the DB immediately.

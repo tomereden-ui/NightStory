@@ -449,7 +449,19 @@ export async function synthesizeLine(
 
   if (useElevenLabs) {
     console.log(`[${ts()}][EL TTS] text →`, JSON.stringify(spokenText || line));
-    await synthesizeEL(spokenText || line, voiceId, primaryKey, outputPath, stability, style, effectiveLang, similarityBoost, useSpeakerBoost, speed);
+    // Hebrew prosody tuning: lower stability + higher style push the voice away
+    // from a flat/robotic delivery. Applied only when the caller didn't already
+    // supply settings (e.g. a raw EL voice id assigned to a Hebrew character).
+    const heTuned = effectiveLang === "he";
+    await synthesizeEL(
+      spokenText || line, voiceId, primaryKey, outputPath,
+      stability ?? (heTuned ? 0.30 : undefined),
+      style ?? (heTuned ? 0.60 : undefined),
+      effectiveLang,
+      similarityBoost ?? (heTuned ? 0.75 : undefined),
+      useSpeakerBoost,
+      speed,
+    );
     return {};
   }
 

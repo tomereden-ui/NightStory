@@ -28,13 +28,24 @@ async function buildVoiceOverrides(
     new Set(blocks.map((b) => b.assignedVoiceId).filter((id) => id && !presetById[id])),
   );
 
-  // Real ElevenLabs voice IDs are 20-char alphanumeric strings; reject anything shorter
+  // Real ElevenLabs voice IDs are 20-char alphanumeric strings; reject anything shorter.
+  // (UUIDs and "voice-…" DB row ids contain dashes, so they never match this.)
   const isValidElId = (id: string | null | undefined): id is string =>
     typeof id === "string" && id.length >= 15 && /^[a-zA-Z0-9]+$/.test(id);
 
+  // Hebrew stories (and manual EL picks) assign a raw EL voice id directly — use
+  // it as the cloned voice without a DB lookup. Keeping these out of the DB query
+  // also avoids "invalid input syntax for type uuid" errors that would otherwise
+  // fail the whole family-voice resolution when one raw id is present.
+  const rawElIds = unresolvedIds.filter(isValidElId);
+  const dbIds = unresolvedIds.filter((id) => !isValidElId(id));
+  const elById: Record<string, { elevenLabsId: string }> = Object.fromEntries(
+    rawElIds.map((id) => [id, { elevenLabsId: id }]),
+  );
+
   const familyById: Record<string, { elevenLabsId?: string; geminiVoiceName?: string; voiceSettings?: { stability?: number; similarity_boost?: number; style?: number; use_speaker_boost?: boolean; speed?: number } }> = {};
-  if (unresolvedIds.length > 0) {
-    const { data, error } = await supabase.from("voices").select("*").in("id", unresolvedIds);
+  if (dbIds.length > 0) {
+    const { data, error } = await supabase.from("voices").select("*").in("id", dbIds);
     if (error) {
       console.warn(`[${ts()}][produce-drama] Failed to resolve family voices:`, error.message);
     } else {
@@ -51,7 +62,7 @@ async function buildVoiceOverrides(
   const overrides: Record<string, { elevenLabsId?: string; geminiVoiceName?: string; voiceSettings?: { stability?: number; similarity_boost?: number; style?: number; use_speaker_boost?: boolean; speed?: number } }> = {};
   for (const block of blocks) {
     if (overrides[block.characterName]) continue;
-    const voice = presetById[block.assignedVoiceId] ?? familyById[block.assignedVoiceId];
+    const voice = presetById[block.assignedVoiceId] ?? familyById[block.assignedVoiceId] ?? elById[block.assignedVoiceId];
     if (voice) overrides[block.characterName] = voice;
   }
   return overrides;

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
-import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import { assignVoicesToCharacters, assignHebrewVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
 import { getEntries } from "@/lib/libraryStore";
 import type { ScriptBlock } from "@/types";
@@ -47,6 +47,8 @@ interface RawLessonImpl {
 
 export interface RawCharacter {
   type: "child" | "adult" | "animal" | "narrator";
+  gender?: "male" | "female" | "neutral";
+  voicePersona?: "warm" | "playful" | "calm" | "dramatic" | "gentle";
   visualDescription: string;
 }
 
@@ -264,7 +266,10 @@ export async function POST(req: NextRequest) {
     }
 
     const heroName = body.hero ?? "";
-    const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], heroName, body.primaryVoiceId);
+    // Hebrew stories are voiced entirely by ElevenLabs, so cast characters
+    // straight to EL voice ids by nature; other languages use Gemini presets.
+    const assignVoices = body.language === "he" ? assignHebrewVoicesToCharacters : assignVoicesToCharacters;
+    const characterVoiceMap = assignVoices(raw.blocks ?? [], heroName, body.primaryVoiceId, raw.characters ?? {});
     const blocks: ScriptBlock[] = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,
