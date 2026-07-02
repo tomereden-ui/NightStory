@@ -1339,6 +1339,11 @@ export default function AdminPage() {
               coverUrl={storeCoverUrl}
               isFetchingCover={storeCoverLoading}
               onRegenerateCover={handleRegenerateCover}
+              onUploadCover={(file: File) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => { const d = ev.target?.result as string; if (d) setStoreCoverUrl(d); };
+                reader.readAsDataURL(file);
+              }}
               hideDurationPicker
               hideProduceButton
               characterAvatars={characterAvatars}
@@ -1356,15 +1361,6 @@ export default function AdminPage() {
                 />
               }
             />
-
-            {/* Cover upload */}
-            <input ref={coverUploadRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
-            <button
-              onClick={() => coverUploadRef.current?.click()}
-              className="w-full mt-2 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}>
-              📷 Upload cover image
-            </button>
 
             {/* Validation */}
             {validationIssues.length > 0 && (

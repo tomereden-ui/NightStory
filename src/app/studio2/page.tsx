@@ -2120,6 +2120,29 @@ export default function Studio2Page() {
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
               onRegenerateCover={scriptBlocks.length > 0 ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
+              onUploadCover={scriptBlocks.length > 0 ? (file: File) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const dataUrl = e.target?.result as string;
+                  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+                  if (!match) return;
+                  coverBase64Ref.current = { mimeType: match[1], data: match[2] };
+                  setCoverUrl(dataUrl);
+                  if (editingStoryId) {
+                    fetch(`/api/library/${editingStoryId}/cover`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ mimeType: match[1], data: match[2] }),
+                    }).then(async (r) => {
+                      if (r.ok) {
+                        const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
+                        setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
+                      }
+                    }).catch(() => {});
+                  }
+                };
+                reader.readAsDataURL(file);
+              } : undefined}
               durationMinutes={durationMinutes}
               onDurationChange={setDurationMinutes}
               hideDirectorsNote
