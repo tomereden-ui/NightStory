@@ -1158,6 +1158,10 @@ export default function Studio2Page() {
   // ─── Content validation state ───────────────────────────────────────────────
   const [isValidating, setIsValidating]     = useState(false);
   const [totalExpectedBlocks, setTotalExpectedBlocks] = useState<number | undefined>(undefined);
+  // Issues found by re-running the policy check (validate-script) after a
+  // manual save — cleared at the start of every Save Version click so a
+  // stale list never lingers from a previous check.
+  const [saveValidationIssues, setSaveValidationIssues] = useState<string[]>([]);
 
   // ─── Director's Note state ──────────────────────────────────────────────────
   const [directorNote, setDirectorNote]     = useState("");
@@ -1615,6 +1619,9 @@ export default function Studio2Page() {
     if (scriptBlocks.length === 0 || isSaving) return;
     setIsSaving(true);
     setSaveLabel("saving");
+    // Clear any issues surfaced by a previous save's check — the list below
+    // the script panel should only ever reflect the check that just ran.
+    setSaveValidationIssues([]);
     try {
       const saves: Promise<unknown>[] = [];
 
@@ -1667,6 +1674,29 @@ export default function Studio2Page() {
       setSaveLabel("idle");
     } finally {
       setIsSaving(false);
+    }
+
+    // Re-run the same policy check used at creation time, against what the
+    // user just edited and saved. Unlike the creation-time pass, this does
+    // NOT silently apply Gemini's rewrite — the user already chose this
+    // wording deliberately; we only surface what it flagged so they can
+    // decide whether to fix it themselves.
+    setIsValidating(true);
+    try {
+      const res = await fetch("/api/validate-script", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks: scriptBlocks }),
+      });
+      const data = await res.json();
+      if (res.ok && !data.ok && Array.isArray(data.issues) && data.issues.length > 0) {
+        setSaveValidationIssues(data.issues as string[]);
+      }
+    } catch {
+      // Network/parse failure — say nothing rather than a false "all clear"
+      // or a confusing error; the user can retry by saving again.
+    } finally {
+      setIsValidating(false);
     }
   }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving, editingStoryId, storyTitle]);
 
@@ -2307,6 +2337,40 @@ export default function Studio2Page() {
                 </>
               }
             />
+
+            {/* Content check results — from re-validating the script against
+                story-guidance.txt right after a manual save. Informational
+                only: the save already persisted exactly what was written;
+                this just flags anything worth a second look. */}
+            {saveValidationIssues.length > 0 && (
+              <div
+                className="mt-2 mb-3 rounded-2xl p-4 flex flex-col gap-2"
+                style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-fs-body">⚠️</span>
+                  <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(252,165,165,0.85)" }}>
+                    Content check found {saveValidationIssues.length === 1 ? "an issue" : `${saveValidationIssues.length} issues`}
+                  </span>
+                  <button
+                    onClick={() => setSaveValidationIssues([])}
+                    className="ml-auto text-fs-body px-1"
+                    style={{ color: "rgba(255,255,255,0.35)" }}
+                    aria-label="Dismiss"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {saveValidationIssues.map((issue, i) => (
+                    <li key={i} className="text-fs-body leading-relaxed flex gap-1.5" style={{ color: "rgba(255,255,255,0.65)" }}>
+                      <span style={{ color: "rgba(252,165,165,0.6)" }}>•</span>
+                      <span>{issue}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Director's Note */}
             {(() => {
