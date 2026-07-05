@@ -125,10 +125,24 @@ const LANG_TO_LOCALE: Record<string, string> = {
   hi: "hi-IN", sv: "sv-SE", da: "da-DK", fi: "fi-FI", no: "nb-NO",
 };
 
-// Chirp 3 HD voice names — same as Gemini TTS prebuilt voices
-const CHIRP3_VOICES = new Set([
-  "Aoede", "Puck", "Kore", "Charon", "Fenrir", "Leda", "Orus", "Zephyr", "Autonoe",
-]);
+// Preset voice id → real Google Cloud Chirp3-HD voice name for en-US.
+// Verified live against the Chirp3-HD voices Google actually offers for
+// en-US (GET https://texttospeech.googleapis.com/v1/voices?languageCode=en-US) —
+// most preset ids already match a real Chirp3-HD name 1:1. "Isonoe" and
+// "Altair" don't exist under those names in Google's catalog, so they're
+// aliased to real, otherwise-unused Chirp3-HD voices matching their
+// intended gender (Isonoe: female/gentle → Pulcherrima; Altair: male/calm →
+// Iapetus) instead of silently collapsing to Aoede.
+const CHIRP3_VOICE_MAP: Record<string, string> = {
+  Aoede: "Aoede", Puck: "Puck", Kore: "Kore", Charon: "Charon", Fenrir: "Fenrir",
+  Leda: "Leda", Orus: "Orus", Zephyr: "Zephyr", Autonoe: "Autonoe",
+  Callirrhoe: "Callirrhoe", Despina: "Despina", Erinome: "Erinome", Gacrux: "Gacrux",
+  Laomedeia: "Laomedeia", Rasalgethi: "Rasalgethi", Sadachbia: "Sadachbia",
+  Sadaltager: "Sadaltager", Schedar: "Schedar", Sulafat: "Sulafat", Umbriel: "Umbriel",
+  Vindemiatrix: "Vindemiatrix", Zubenelgenubi: "Zubenelgenubi",
+  Isonoe: "Pulcherrima",
+  Altair: "Iapetus",
+};
 
 // Locales where Chirp 3 HD quality is poor — route to WaveNet instead.
 // Each entry maps Chirp voice name → { voice, pitch } so all 4 WaveNet
@@ -149,12 +163,13 @@ const WAVENET_VOICE_MAP: Record<string, Record<string, { voice: string; pitch?: 
   },
 };
 
-function resolveGCVoiceName(locale: string, chirpVoice: string): { name: string; pitchOverride?: string } {
+function resolveGCVoiceName(locale: string, presetVoiceId: string): { name: string; pitchOverride?: string } {
   const localeMap = WAVENET_VOICE_MAP[locale];
   if (localeMap) {
-    const entry = localeMap[chirpVoice] ?? localeMap["Aoede"] ?? { voice: `${locale}-Wavenet-A` };
+    const entry = localeMap[presetVoiceId] ?? localeMap["Aoede"] ?? { voice: `${locale}-Wavenet-A` };
     return { name: entry.voice, pitchOverride: entry.pitch };
   }
+  const chirpVoice = CHIRP3_VOICE_MAP[presetVoiceId] ?? "Aoede";
   return { name: `${locale}-Chirp3-HD-${chirpVoice}` };
 }
 
@@ -221,8 +236,7 @@ async function synthesizeChirp3HD(
   const maxAttempts = opts?.maxAttempts ?? 5;
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const locale = LANG_TO_LOCALE[language] ?? "en-US";
-  const chirpVoice = CHIRP3_VOICES.has(voiceName) ? voiceName : "Aoede";
-  const { name: fullVoiceName, pitchOverride } = resolveGCVoiceName(locale, chirpVoice);
+  const { name: fullVoiceName, pitchOverride } = resolveGCVoiceName(locale, voiceName);
   const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
 
   const ssml = lineToSSML(line, pitchOverride);
