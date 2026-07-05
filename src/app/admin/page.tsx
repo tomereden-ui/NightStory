@@ -1350,7 +1350,7 @@ export default function AdminPage() {
   };
 
   const handleGenerateAllVoices = () => {
-    if (!confirm("Generate preview samples for EVERY voice × all 4 languages (~130 TTS calls across Gemini + ElevenLabs)? This will take a while and use real API quota.")) return;
+    if (!confirm("Generate preview samples for EVERY voice × English + Hebrew (~66 TTS calls across Gemini + ElevenLabs)? This will take a while and use real API quota.")) return;
     runGenerateVoiceSamples({ applyAll: true });
   };
 
@@ -1822,9 +1822,9 @@ export default function AdminPage() {
                 <div>
                   <p className="text-white font-bold text-fs-body">🔊 Generate Voice Preview Samples</p>
                   <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
-                    Synthesizes a bedtime-story sample sentence for every voice (Gemini presets + curated
-                    ElevenLabs Hebrew pool), in English, Hebrew, French, and Spanish, so the Studio voice
-                    picker can preview a voice in the story's own language instead of one fixed generic clip.
+                    Synthesizes the sample line "Hello. This is my voice." for every voice (Gemini presets +
+                    curated ElevenLabs Hebrew pool), in English and Hebrew, so the Studio voice picker can
+                    preview a voice in the story's own language instead of one fixed generic clip.
                     Voice ID here is the preset name (e.g. "Charon") or the ElevenLabs voice id.
                   </p>
                 </div>
