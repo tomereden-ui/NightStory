@@ -46,6 +46,8 @@ export default function StoryDetailPage() {
   const [allChildren, setAllChildren] = useState<DBChildProfile[]>([]);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -207,6 +209,19 @@ export default function StoryDetailPage() {
     router.push("/studio2");
   }, [entry, router]);
 
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!entry) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/library/${entry.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      router.push("/library");
+    } catch {
+      setIsDeleting(false);
+      setConfirmingDelete(false);
+    }
+  }, [entry, router]);
+
   if (loading) {
     return (
       <div className="cosmic-page min-h-full flex items-center justify-center">
@@ -224,6 +239,9 @@ export default function StoryDetailPage() {
       </div>
     );
   }
+
+  // Only the owner can delete — public/community/classic entries aren't theirs to remove.
+  const isOwned = !entry.isPublic && !entry.isClassic;
 
   return (
     <div className="cosmic-page min-h-full">
@@ -479,16 +497,56 @@ export default function StoryDetailPage() {
         )}
 
         {/* Actions row */}
-        <div className="px-5 mt-8 mb-4 flex gap-3">
-          <button
-            onClick={handleEdit}
-            className="flex-1 py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-            style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.3)", color: "rgba(79,195,247,0.9)" }}
-          >
-            <span>🎬</span>
-            <span>Open in Studio</span>
-          </button>
-        </div>
+        {confirmingDelete ? (
+          <div className="mx-5 mt-8 mb-4 rounded-2xl px-4 py-4 flex flex-col gap-3"
+            style={{ background: "rgba(236,72,153,0.06)", border: "1px solid rgba(236,72,153,0.35)" }}>
+            <p className="text-fs-body text-white/70">
+              Move to trash <span className="text-white font-medium">"{entry.title}"</span>?
+            </p>
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Kept for 30 days — you can restore it from Trash.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 rounded-xl text-fs-body transition-all active:scale-[0.98]"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
+                style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.4)", color: "#EC4899" }}
+              >
+                {isDeleting ? "…" : "Move to trash"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="px-5 mt-8 mb-4 flex gap-3">
+            <button
+              onClick={handleEdit}
+              className="flex-1 py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.3)", color: "rgba(79,195,247,0.9)" }}
+            >
+              <span>🎬</span>
+              <span>Open in Studio</span>
+            </button>
+            {isOwned && (
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                aria-label="Delete story"
+                className="w-14 flex-shrink-0 rounded-2xl flex items-center justify-center transition-all active:scale-[0.98]"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
+              >
+                <Icon name="delete" size={16} />
+              </button>
+            )}
+          </div>
+        )}
 
         {shareOpen && entry && (
           <ShareSheet
