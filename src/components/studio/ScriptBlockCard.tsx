@@ -36,6 +36,9 @@ interface ScriptBlockCardProps {
   onSave?: () => void;
   /** The story's actual content language — falls back to UI language if not provided. */
   storyLanguage?: string;
+  /** Disables raw text editing and block deletion — casting, "Direct this
+   *  line" AI-revise, and preview playback stay available. */
+  readOnly?: boolean;
 }
 
 // ─── Validated badge ──────────────────────────────────────────────────────────
@@ -65,7 +68,7 @@ function ValidatedBadge() {
 
 // ─── SFX card ─────────────────────────────────────────────────────────────────
 
-function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "block" | "onTextChange" | "onDelete">) {
+function SfxCard({ block, onTextChange, onDelete, readOnly }: Pick<ScriptBlockCardProps, "block" | "onTextChange" | "onDelete" | "readOnly">) {
   const { t } = useLanguage();
   const sfx = parseSfxPayload(block.textPayload);
   const [desc, setDesc]           = useState(sfx?.description ?? "");
@@ -180,7 +183,11 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
           </span>
           {block.validated && <ValidatedBadge />}
 
-          {editingDur ? (
+          {readOnly ? (
+            <span className="text-fs-body px-2 py-0.5 rounded-full ml-auto" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "rgba(245,158,11,0.7)" }}>
+              {dur}s
+            </span>
+          ) : editingDur ? (
             <div className="flex items-center gap-1 ml-auto">
               <button
                 onClick={() => { const v = Math.max(0.5, dur - 0.5); setDur(v); commit(desc, v); }}
@@ -210,21 +217,25 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
           )}
         </div>
 
-        {/* Description textarea */}
-        <textarea
-          ref={textareaRef}
-          value={desc}
-          onChange={(e) => {
-            setDesc(e.target.value);
-            commit(e.target.value, dur);
-            if (sfxWarning) setSfxWarning(null);
-          }}
-          onBlur={() => validateSfx(desc)}
-          rows={1}
-          placeholder={t("sfxPlaceholder")}
-          className="w-full bg-transparent text-fs-body leading-relaxed resize-none outline-none text-white/75 overflow-hidden"
-          style={{ minHeight: "22px" }}
-        />
+        {/* Description — read-only text, or editable textarea */}
+        {readOnly ? (
+          <p className="text-fs-body leading-relaxed text-white/75" style={{ minHeight: "22px" }}>{desc}</p>
+        ) : (
+          <textarea
+            ref={textareaRef}
+            value={desc}
+            onChange={(e) => {
+              setDesc(e.target.value);
+              commit(e.target.value, dur);
+              if (sfxWarning) setSfxWarning(null);
+            }}
+            onBlur={() => validateSfx(desc)}
+            rows={1}
+            placeholder={t("sfxPlaceholder")}
+            className="w-full bg-transparent text-fs-body leading-relaxed resize-none outline-none text-white/75 overflow-hidden"
+            style={{ minHeight: "22px" }}
+          />
+        )}
 
         {/* Validation states */}
         {isValidating && (
@@ -273,14 +284,16 @@ function SfxCard({ block, onTextChange, onDelete }: Pick<ScriptBlockCardProps, "
         </button>
 
         {/* Delete */}
-        <button
-          onClick={() => onDelete(block.id)}
-          className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 transition-colors"
-          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
-          title="Remove SFX"
-        >
-          <Icon name="close" size={10} />
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => onDelete(block.id)}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 transition-colors"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
+            title="Remove SFX"
+          >
+            <Icon name="close" size={10} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -302,6 +315,7 @@ function SpeechCard({
   isDirty,
   onSave,
   storyLanguage,
+  readOnly,
 }: ScriptBlockCardProps) {
   const { t, language } = useLanguage();
   const textareaRef   = useRef<HTMLTextAreaElement>(null);
@@ -400,8 +414,8 @@ function SpeechCard({
           {assignedVoice && (
             <span className="text-white/25 text-fs-body">· {assignedVoice.name}</span>
           )}
-          {!isDirty && <span className="ml-auto text-fs-body text-white/25 italic">{t("tapToEdit")}</span>}
-          {isDirty && onSave && (
+          {!readOnly && !isDirty && <span className="ml-auto text-fs-body text-white/25 italic">{t("tapToEdit")}</span>}
+          {!readOnly && isDirty && onSave && (
             <button
               onClick={(e) => { e.stopPropagation(); onSave(); }}
               className="ml-auto flex items-center gap-1 text-fs-body font-semibold rounded-lg px-2.5 py-0.5 transition-all active:scale-95 animate-[fadeIn_0.15s_ease-out]"
@@ -411,23 +425,29 @@ function SpeechCard({
             </button>
           )}
         </div>
-        <textarea
-          ref={textareaRef}
-          value={block.textPayload}
-          onChange={(e) => onTextChange(block.id, e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          rows={1}
-          placeholder="Enter dialogue or narration…"
-          className="w-full text-white/85 text-fs-body leading-relaxed resize-none outline-none placeholder-white/15 overflow-hidden rounded-lg px-2 py-1 transition-all"
-          style={{
-            minHeight: "22px",
-            background: isFocused ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
-            border: isDirty
-              ? "1px solid rgba(79,195,247,0.35)"
-              : isFocused ? "1px solid rgba(79,195,247,0.25)" : "1px solid rgba(255,255,255,0.05)",
-          }}
-        />
+        {readOnly ? (
+          <p className="w-full text-white/85 text-fs-body leading-relaxed rounded-lg px-2 py-1" style={{ minHeight: "22px" }}>
+            {block.textPayload}
+          </p>
+        ) : (
+          <textarea
+            ref={textareaRef}
+            value={block.textPayload}
+            onChange={(e) => onTextChange(block.id, e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            rows={1}
+            placeholder="Enter dialogue or narration…"
+            className="w-full text-white/85 text-fs-body leading-relaxed resize-none outline-none placeholder-white/15 overflow-hidden rounded-lg px-2 py-1 transition-all"
+            style={{
+              minHeight: "22px",
+              background: isFocused ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
+              border: isDirty
+                ? "1px solid rgba(79,195,247,0.35)"
+                : isFocused ? "1px solid rgba(79,195,247,0.25)" : "1px solid rgba(255,255,255,0.05)",
+            }}
+          />
+        )}
       </div>
 
       {/* Right-side controls */}
@@ -469,14 +489,16 @@ function SpeechCard({
         )}
 
         {/* Delete */}
-        <button
-          onClick={() => onDelete(block.id)}
-          className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 transition-colors"
-          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
-          title="Delete block"
-        >
-          <Icon name="close" size={10} />
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => onDelete(block.id)}
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 transition-colors"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
+            title="Delete block"
+          >
+            <Icon name="close" size={10} />
+          </button>
+        )}
       </div>
 
     </div>
@@ -537,7 +559,7 @@ function SpeechCard({
 
 export default function ScriptBlockCard(props: ScriptBlockCardProps) {
   if (props.block.characterName === "SFX") {
-    return <SfxCard block={props.block} onTextChange={props.onTextChange} onDelete={props.onDelete} />;
+    return <SfxCard block={props.block} onTextChange={props.onTextChange} onDelete={props.onDelete} readOnly={props.readOnly} />;
   }
   return <SpeechCard {...props} />;
 }

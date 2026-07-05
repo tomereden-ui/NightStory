@@ -2314,6 +2314,7 @@ export default function Studio2Page() {
               scenes={scenes}
               storyId={editingStoryId ?? undefined}
               onSaveBlock={editingStoryId ? handleSaveBlock : undefined}
+              readOnlyScript
               belowCover={
                 <>
                   <CharacterCards

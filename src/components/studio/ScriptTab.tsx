@@ -43,6 +43,9 @@ interface ScriptTabProps {
   isAdmin?: boolean;
   onTitleChange?: (title: string) => void;
   onSummaryChange?: (summary: string) => void;
+  /** Disables raw per-line text editing, block deletion, and manual/AI block
+   *  insertion — voice/cast changes and AI-assisted revise tools stay available. */
+  readOnlyScript?: boolean;
 }
 
 function makeId() {
@@ -405,7 +408,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, onSummaryChange }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, onSummaryChange, readOnlyScript = false }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -996,7 +999,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {scriptExpanded && blocks.map((block, idx) => (
           <div key={block.id} id={`block-${block.id}`}>
             {/* Separator BEFORE this block */}
-            {studioMode ? (
+            {readOnlyScript ? null : studioMode ? (
               <AIBlockSeparator
                 onInsert={(instruction) => handleAIInsert(idx - 1, instruction)}
                 isInserting={aiInsertingAt === idx - 1}
@@ -1040,6 +1043,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                 isDirty={dirtyBlockIds.has(block.id)}
                 onSave={onSaveBlock ? () => handleSaveBlock(block.id) : undefined}
                 storyLanguage={storyLanguage}
+                readOnly={readOnlyScript}
               />
             </div>
           </div>
@@ -1070,7 +1074,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         {scriptExpanded && (
           <>
             {/* After last block */}
-            {studioMode ? (
+            {readOnlyScript ? null : studioMode ? (
               <AIBlockSeparator
                 onInsert={(instruction) => handleAIInsert(blocks.length - 1, instruction)}
                 isInserting={aiInsertingAt === blocks.length - 1}
