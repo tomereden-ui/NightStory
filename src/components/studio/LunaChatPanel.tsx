@@ -362,26 +362,36 @@ export default function LunaChatPanel({
     const ctrl = new AbortController();
     greetAbortRef.current = ctrl;
 
-    fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: [], childProfile: activeChild, language }),
-      signal: ctrl.signal,
-    })
-      .then(async (r) => {
-        const data: ChatResponse = await r.json();
-        if (!r.ok || !data.reply) throw new Error("no reply");
+    // Retries once before falling back — transient failures (rate limiting,
+    // a network blip) are common and shouldn't force an English fallback
+    // greeting onto a chat that was just set to a different language.
+    const attemptGreeting = async (isRetry = false): Promise<void> => {
+      try {
+        const r = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: [], childProfile: activeChild, language }),
+          signal: ctrl.signal,
+        });
+        const data: ChatResponse & { error?: string } = await r.json();
+        if (!r.ok || !data.reply) throw new Error(data.error ?? `Chat greeting failed (HTTP ${r.status})`);
         setMessages([{ role: "model", content: data.reply }]);
-      })
-      .catch((err) => {
+      } catch (err) {
         if ((err as Error).name === "AbortError") return;
+        console.error(`[Luna] Greeting fetch failed${isRetry ? " (after retry)" : " — retrying once"}:`, err);
+        if (!isRetry) {
+          await attemptGreeting(true);
+          return;
+        }
         setMessages([{
           role: "model",
           content: "Hello! 🌙 I'm Luna.\nYour magical story guide.\n\nWho's our hero tonight? 🌟",
         }]);
-      })
-      .finally(() => setLoading(false));
-  }, [greeted, activeChild]);
+      }
+    };
+
+    attemptGreeting().finally(() => setLoading(false));
+  }, [greeted, activeChild, language]);
 
   // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -434,14 +444,25 @@ export default function LunaChatPanel({
     setLoading(true);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    try {
+    const sendOnce = async () => {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next, childProfile: activeChild, language }),
       });
-      const data: ChatResponse = await res.json();
-      if (!res.ok || !data.reply) throw new Error((data as { error?: string }).error ?? "no reply");
+      const data: ChatResponse & { error?: string } = await res.json();
+      if (!res.ok || !data.reply) throw new Error(data.error ?? `Chat reply failed (HTTP ${res.status})`);
+      return data;
+    };
+
+    try {
+      let data: ChatResponse;
+      try {
+        data = await sendOnce();
+      } catch (err) {
+        console.error("[Luna] Send failed — retrying once:", err);
+        data = await sendOnce();
+      }
       setMessages((prev) => [...prev, { role: "model", content: data.reply }]);
       if (data.storyReady && data.storyParams) {
         setStoryReady(true);
@@ -451,7 +472,8 @@ export default function LunaChatPanel({
           setMessages((prev) => [...prev, { role: "model", content: "We're all set! ✨\nAnything else to add?" }]);
         }, 600);
       }
-    } catch {
+    } catch (err) {
+      console.error("[Luna] Send failed (after retry):", err);
       setMessages((prev) => [...prev, { role: "model", content: "Hmm, something went sideways. ✨\nCan you say that again?" }]);
     } finally {
       setLoading(false);
