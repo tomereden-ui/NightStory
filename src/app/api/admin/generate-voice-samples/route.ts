@@ -29,8 +29,13 @@ async function generateOne(voiceId: string, language: PreviewLanguage): Promise<
   }
 
   const text = PREVIEW_SAMPLE_TEXT[language];
-  const ext = isElPool ? "mp3" : "wav";
-  const tmpPath = path.join(os.tmpdir(), `voice_preview_${voiceId}_${language}_${Date.now()}.${ext}`);
+  const requestedPath = path.join(os.tmpdir(), `voice_preview_${voiceId}_${language}_${Date.now()}.wav`);
+  // synthesizeGemini/synthesizeChirp3HD may silently write to a different
+  // extension than the one requested, depending on the audio format the
+  // provider actually returns (see ttsService.ts) — check every variant
+  // instead of assuming the exact requested path exists.
+  const candidateExts = ["wav", "mp3", "ogg", "bin"];
+  const pathFor = (ext: string) => requestedPath.replace(/\.wav$/, `.${ext}`);
 
   try {
     if (isElPool) {
@@ -38,21 +43,28 @@ async function generateOne(voiceId: string, language: PreviewLanguage): Promise<
       if (!elKey) return { voiceId, language, ok: false, error: "ELEVENLABS_API_KEY not configured" };
       // Raw EL voice id — force straight through ElevenLabs regardless of
       // language, since this pool's whole purpose is being played via EL.
-      await synthesizeLine(text, voiceId, elKey, tmpPath, undefined, true, undefined, undefined, language);
+      await synthesizeLine(text, voiceId, elKey, requestedPath, undefined, true, undefined, undefined, language);
     } else {
       const geminiKey = process.env.GEMINI_API_KEY;
       if (!geminiKey) return { voiceId, language, ok: false, error: "GEMINI_API_KEY not configured" };
       // Same dispatch real production uses: for "he" this auto-substitutes
       // the mapped EL voice (HE_EL_VOICE_MAP), matching what a real Hebrew
       // story would actually sound like with this preset assigned.
-      await synthesizeLine(text, voiceId, geminiKey, tmpPath, undefined, false, undefined, undefined, language);
+      await synthesizeLine(text, voiceId, geminiKey, requestedPath, undefined, false, undefined, undefined, language);
     }
 
-    const buf = fs.readFileSync(tmpPath);
-    const key = `voice-preview-samples/${voiceId}_${language}.${ext}`;
+    const actualPath = candidateExts.map(pathFor).find((p) => fs.existsSync(p));
+    if (!actualPath) {
+      return { voiceId, language, ok: false, error: "Synthesis completed but no output file was found" };
+    }
+    const actualExt = path.extname(actualPath).slice(1);
+    const contentType = actualExt === "mp3" ? "audio/mpeg" : actualExt === "ogg" ? "audio/ogg" : actualExt === "wav" ? "audio/wav" : "application/octet-stream";
+
+    const buf = fs.readFileSync(actualPath);
+    const key = `voice-preview-samples/${voiceId}_${language}.${actualExt}`;
     const { error: uploadErr } = await supabase.storage
       .from("audio")
-      .upload(key, buf, { contentType: isElPool ? "audio/mpeg" : "audio/wav", upsert: true });
+      .upload(key, buf, { contentType, upsert: true });
     if (uploadErr) return { voiceId, language, ok: false, error: `Upload failed: ${uploadErr.message}` };
 
     const audioUrl = supabase.storage.from("audio").getPublicUrl(key).data.publicUrl;
@@ -65,7 +77,9 @@ async function generateOne(voiceId: string, language: PreviewLanguage): Promise<
   } catch (err) {
     return { voiceId, language, ok: false, error: err instanceof Error ? err.message : String(err) };
   } finally {
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    for (const ext of candidateExts) {
+      try { fs.unlinkSync(pathFor(ext)); } catch { /* ignore */ }
+    }
   }
 }
 
