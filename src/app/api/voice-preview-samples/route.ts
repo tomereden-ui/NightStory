@@ -11,11 +11,14 @@ export async function GET() {
     .from("voice_preview_samples")
     .select("voice_id, language, audio_url");
 
-  if (error || !data) return NextResponse.json({});
+  if (error || !data) return NextResponse.json({}, { headers: { "Cache-Control": "no-store" } });
 
   const map: Record<string, Record<string, string>> = {};
   for (const row of data) {
     (map[row.voice_id] ??= {})[row.language] = row.audio_url;
   }
-  return NextResponse.json(map);
+  // Explicit no-store — this list grows every time the admin regenerates
+  // samples, and without this header a browser can silently keep serving an
+  // old cached response (e.g. the very first 9-voice batch) indefinitely.
+  return NextResponse.json(map, { headers: { "Cache-Control": "no-store" } });
 }

@@ -49,7 +49,7 @@ export default function VoicePicker({
   // generated via the admin "Generate Voice Preview Samples" tool.
   const [sampleMap, setSampleMap] = useState<Record<string, Record<string, string>>>({});
   useEffect(() => {
-    fetch("/api/voice-preview-samples")
+    fetch("/api/voice-preview-samples", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : {}))
       .then((m) => setSampleMap(m ?? {}))
       .catch(() => {});
