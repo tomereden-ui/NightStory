@@ -7,6 +7,7 @@ import type { ScriptBlock } from "@/types";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { useLanguage } from "@/context/LanguageContext";
 import Icon from "@/components/ui/Icon";
+import LanguageToggle from "@/components/ui/LanguageToggle";
 
 interface Message {
   role: "user" | "model";
@@ -183,6 +184,7 @@ export default function LunaChatPanel({
   const [createError, setCreateError]       = useState<string | null>(null);
   const [greeted, setGreeted]               = useState(false);
   const [discardConfirm, setDiscardConfirm] = useState(false);
+  const [topResetConfirm, setTopResetConfirm] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(5);
   const [readyConfirmed, setReadyConfirmed] = useState(false);
 
@@ -357,7 +359,7 @@ export default function LunaChatPanel({
     fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: [], childProfile: activeChild }),
+      body: JSON.stringify({ messages: [], childProfile: activeChild, language }),
       signal: ctrl.signal,
     })
       .then(async (r) => {
@@ -430,7 +432,7 @@ export default function LunaChatPanel({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next, childProfile: activeChild }),
+        body: JSON.stringify({ messages: next, childProfile: activeChild, language }),
       });
       const data: ChatResponse = await res.json();
       if (!res.ok || !data.reply) throw new Error((data as { error?: string }).error ?? "no reply");
@@ -474,6 +476,14 @@ export default function LunaChatPanel({
     setReadyConfirmed(false);
     firstMsgSent.current = false;
     onDiscard?.();
+  }
+
+  // Selecting a language mid-chat would leave old messages in one language
+  // and new ones in another — restart fresh so the whole conversation (including
+  // the greeting, which has no user text yet to "mirror") is in the new language.
+  function handleLanguageChange() {
+    setTopResetConfirm(false);
+    handleDiscard();
   }
 
   async function handleCreateStory() {
@@ -527,6 +537,39 @@ export default function LunaChatPanel({
 
   return (
     <div className="flex flex-col gap-4">
+
+      {/* Reset + language — always visible, independent of chat progress */}
+      <div className="flex items-center gap-2">
+        {topResetConfirm ? (
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
+            <button
+              onClick={handleDiscard}
+              className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+              style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
+            >
+              Yes, start over
+            </button>
+            <button
+              onClick={() => setTopResetConfirm(false)}
+              className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => hasUserMessages ? setTopResetConfirm(true) : handleDiscard()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
+          >
+            <Icon name="submit" size={12} />
+            <span>Start over</span>
+          </button>
+        )}
+        <LanguageToggle onLanguageChange={handleLanguageChange} />
+      </div>
 
       {/* Luna header */}
       <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"

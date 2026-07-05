@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 import { trackGemini } from "@/lib/usageTracker";
+import { LANGUAGE_META } from "@/lib/i18n";
+import type { Language } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,17 @@ function loadChatGuide(): string {
   }
 }
 
+// When the user has explicitly picked a language (via the reset+language
+// control in the chat panel), that choice must win over the guide's default
+// "mirror the user's language" rule — otherwise the greeting (which has no
+// user text yet to mirror) can't be steered at all.
+function languageOverride(language?: string): string {
+  if (!language) return "";
+  const meta = LANGUAGE_META[language as Language];
+  if (!meta) return "";
+  return `\n\nLANGUAGE OVERRIDE\n=================\nAlways respond in ${meta.label} (${meta.nativeName}), regardless of what language the user writes in. This takes priority over the "mirror the user's language" rule above.`;
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === "your_gemini_api_key_here") {
@@ -48,10 +61,12 @@ export async function POST(req: NextRequest) {
 
   let messages: ChatMessage[];
   let childProfile: ChildProfileCtx | null = null;
+  let language: string | undefined;
   try {
     const body = await req.json();
     messages = body.messages ?? [];
     childProfile = body.childProfile ?? null;
+    language = body.language ?? undefined;
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -60,7 +75,7 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      systemInstruction: loadChatGuide() + buildChildContext(childProfile),
+      systemInstruction: loadChatGuide() + buildChildContext(childProfile) + languageOverride(language),
     });
 
     // Empty messages = initial greeting trigger

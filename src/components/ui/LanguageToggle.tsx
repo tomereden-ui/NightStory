@@ -20,7 +20,7 @@ function FlagImg({ countryCode, label }: { countryCode: string; label: string })
   );
 }
 
-export default function LanguageToggle() {
+export default function LanguageToggle({ onLanguageChange }: { onLanguageChange?: (lang: Language) => void } = {}) {
   const { language, setLanguage } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -66,7 +66,7 @@ export default function LanguageToggle() {
               return (
                 <li key={lang}>
                   <button
-                    onClick={() => { setLanguage(lang); setOpen(false); }}
+                    onClick={() => { setLanguage(lang); setOpen(false); onLanguageChange?.(lang); }}
                     className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left ${
                       isSelected ? "bg-purple/10" : "hover:bg-white/5"
                     }`}
