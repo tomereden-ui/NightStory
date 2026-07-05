@@ -103,4 +103,5 @@ export interface ClassicMeta {
   coverUrl?: string;
   durationSeconds?: number;
   status: ClassicStatus;
+  favoritedBy?: string[];
 }

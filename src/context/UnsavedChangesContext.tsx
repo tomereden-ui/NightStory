@@ -26,11 +26,10 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
   }, []);
 
   const guardedNavigate = useCallback((href: string) => {
-    if (guardRef.current.active) {
-      setModal({ open: true, message: guardRef.current.message, href });
-    } else {
-      router.push(href);
-    }
+    // Temporarily disabled — the guard was going stale after leaving Studio
+    // (nothing cleared it on unmount), so it kept blocking navigation on
+    // unrelated tabs like Library. Re-enable once that's fixed.
+    router.push(href);
   }, [router]);
 
   const confirmLeave = useCallback(() => {

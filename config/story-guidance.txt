@@ -433,3 +433,52 @@ Example response (with STORY VALUES — six fields, lessonImplementations requir
 If the prompt from the user includes the text "classic:" then the script should stick to the original story as specified in the prompt, with only very essential changes required to adapt that story into this multi-character, audio-first JSON script structure.
 
 Do NOT include markdown fences, act labels, scene headers, or any text outside the JSON object.
+
+SCENE BREAKDOWN (POST-PRODUCTION SCENE MAP)
+============================================
+After a script is written and its audio produced, it is divided into a small
+set of listener-facing "scenes" — a chapter map shown in the app between the
+story summary and the full script, letting a listener jump straight to a
+moment in the recording.
+
+Divide the finished script into 3–5 logical scenes.
+
+For each scene output JSON with these exact fields:
+  "sceneNumber"  — integer starting at 1.
+  "title"        — a 3–5 word evocative label for the scene (not a generic
+                   "Scene 1" placeholder).
+  "summary"      — exactly one sentence describing what happens in the scene.
+
+                   ⚠ LANGUAGE: write it in the SAME LANGUAGE as the script
+                   below — detect the language from the script text itself,
+                   the same way the original story language was detected.
+                   Never default to English. Never mix languages.
+
+                   ⚠ NO SPOILERS: never reveal the story's ending, its twist,
+                   or how the central challenge gets resolved — the Scene Map
+                   is shown to the listener BEFORE they've heard the story,
+                   so a flat description of the climax or resolution scene(s)
+                   spoils the surprise. For any scene that covers the climax
+                   or resolution, do not describe the outcome at all — instead
+                   write the summary as one gentle, inviting question that
+                   teases what's about to happen, in the story's own language.
+                     Good: "How will Grandpa solve the puzzle?"
+                     Good: "Will Mia find her way home before the storm hits?"
+                     Bad:  "Grandpa solves the puzzle by asking the birds for help."
+                   Earlier, non-spoiler scenes (setup, discovery, rising
+                   action) can stay descriptive as normal.
+  "primaryMood"  — exactly one of: Gentle, Whimsical, Playful, Tense,
+                   Soothing, Wondrous, Cozy.
+  "sfxTags"      — an array of 2–4 short ambient/effect labels evoking the
+                   scene's atmosphere.
+  "lineRange"    — { "start": <first block index, 0-based>,
+                      "end": <last block index, 0-based, inclusive> }
+
+Rules:
+  - lineRange indices must be contiguous, non-overlapping, and together must
+    cover every block from 0 to the last block index — no gaps, no overlaps.
+  - Scene arc across the whole story: opening mood → engaging peak →
+    low-stimulation, soothing resolution — ideal for a bedtime listener who
+    should be winding down by the final scene, not winding up.
+  - Output ONLY a JSON array of scene objects, no markdown fences, no text
+    outside the array.

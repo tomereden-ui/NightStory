@@ -29,12 +29,15 @@ const ZERO: UsageTotals = {
   pollinations_calls: 0,
 };
 
+let usageBucketReady = false;
 async function ensureUsageBucket() {
   await ensureBuckets();
+  if (usageBucketReady) return;
   const { error } = await supabase.storage.createBucket(BUCKET, { public: false });
   if (error && !error.message.toLowerCase().includes("already exists")) {
     console.warn("[Usage] bucket error:", error.message);
   }
+  usageBucketReady = true;
 }
 
 export async function readTotals(): Promise<UsageTotals> {

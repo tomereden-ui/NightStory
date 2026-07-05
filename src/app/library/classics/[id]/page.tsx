@@ -6,12 +6,14 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { ClassicMeta } from "@/lib/classicStories";
 import { CLASSIC_STORIES } from "@/lib/classicStories";
-import type { ScriptBlock } from "@/types";
+import type { ScriptBlock, StoryScene } from "@/types";
 import Icon from "@/components/ui/Icon";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
+import SceneMap from "@/components/studio/SceneMap";
 import ShareSheet from "@/components/ShareSheet";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
+import { useListeningProgress } from "@/hooks/useListeningProgress";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -63,11 +65,12 @@ export default function ClassicDetailPage() {
 
   const [meta, setMeta] = useState<ClassicMeta | null>(null);
   const [blocks, setBlocks] = useState<ScriptBlock[] | null>(null);
+  const [scenes, setScenes] = useState<StoryScene[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Only admin-added classics have a real `stories` row to favorite/share
-  // against — hardcoded ones (CLASSIC_STORIES) serve their script from
-  // Storage and don't exist as a row until first forked via "Open in Studio".
+  // Used only to decide Studio-open behavior (fork vs edit-in-place) — every
+  // hardcoded classic already has its own `stories` row (created the moment
+  // its script is generated), so favorite/share work for it regardless.
   const isHardcoded = CLASSIC_STORIES.some((s) => s.id === id);
   const [favoritedBy, setFavoritedBy] = useState<string[]>([]);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
@@ -94,6 +97,8 @@ export default function ClassicDetailPage() {
   const [produceProgress, setProduceProgress] = useState(0);
   const [produceStep, setProduceStep] = useState("");
   const produceCancelRef = useRef(false);
+  const { resumeFrom, markTick, markPause, markEnded, applyResumeSeek, clearResumePrompt } =
+    useListeningProgress({ storyId: id, audioRef: storyAudioRef });
 
   useEffect(() => {
     return () => {
@@ -119,6 +124,12 @@ export default function ClassicDetailPage() {
     audio.currentTime = Number(e.target.value);
   };
 
+  const handleStartOver = () => {
+    const audio = storyAudioRef.current;
+    if (audio) audio.currentTime = 0;
+    clearResumePrompt();
+  };
+
   const handleProduceAudio = useCallback(async () => {
     if (!blocks || !meta || producing) return;
     produceCancelRef.current = false;
@@ -129,10 +140,12 @@ export default function ClassicDetailPage() {
     try {
       const summary = deriveClassicSummary(blocks);
       const durationMinutes = meta.durationSeconds ? Math.max(1, Math.round(meta.durationSeconds / 60)) : 3;
+      // Persist to this classic's own id (not a fresh random one) so replaying
+      // it later never re-generates audio, and favorite/share keep working.
       const res = await fetch("/api/produce-drama", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks, durationMinutes, summary }),
+        body: JSON.stringify({ blocks, durationMinutes, summary, editingStoryId: id, isClassic: true, isPublic: true }),
       });
       const { jobId, error } = await res.json() as { jobId?: string; error?: string };
       if (error || !jobId) throw new Error(error ?? "Production failed");
@@ -176,6 +189,7 @@ export default function ClassicDetailPage() {
       if (full?.blocks) setBlocks(full.blocks);
       if (full?.audioUrl) setStoryAudioUrl(full.audioUrl);
       if (Array.isArray(full?.favoritedBy)) setFavoritedBy(full.favoritedBy);
+      if (Array.isArray(full?.scenes)) setScenes(full.scenes);
     }).finally(() => setLoading(false));
   }, [id]);
 
@@ -188,7 +202,7 @@ export default function ClassicDetailPage() {
   const isFavorited = !!(activeChildId && favoritedBy.includes(activeChildId));
 
   const handleToggleFavorite = useCallback(async () => {
-    if (isHardcoded || !activeChildId || favoriteBusy) return;
+    if (!activeChildId || favoriteBusy) return;
     const nextFavorited = !isFavorited;
     setFavoriteBusy(true);
     setFavoritedBy((prev) => nextFavorited ? [...prev, activeChildId] : prev.filter((c) => c !== activeChildId));
@@ -206,7 +220,7 @@ export default function ClassicDetailPage() {
     } finally {
       setFavoriteBusy(false);
     }
-  }, [isHardcoded, activeChildId, favoriteBusy, isFavorited, id]);
+  }, [activeChildId, favoriteBusy, isFavorited, id]);
 
   const handleOpenShare = useCallback(() => {
     if (allChildren.length === 0) {
@@ -335,10 +349,10 @@ export default function ClassicDetailPage() {
           ref={storyAudioRef}
           src={storyAudioUrl}
           onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onEnded={() => { setPlaying(false); setCurrentTime(0); }}
-          onTimeUpdate={() => setCurrentTime(storyAudioRef.current?.currentTime ?? 0)}
-          onLoadedMetadata={() => setAudioDuration(storyAudioRef.current?.duration ?? 0)}
+          onPause={() => { setPlaying(false); markPause(); }}
+          onEnded={() => { setPlaying(false); setCurrentTime(0); markEnded(); }}
+          onTimeUpdate={() => { setCurrentTime(storyAudioRef.current?.currentTime ?? 0); markTick(); }}
+          onLoadedMetadata={() => { setAudioDuration(storyAudioRef.current?.duration ?? 0); applyResumeSeek(); }}
         />
       )}
 
@@ -512,10 +526,11 @@ export default function ClassicDetailPage() {
           );
         })()}
 
-        {/* Favorite + Share row — only for admin-added classics, which have a
-            real stories row to persist against. Hardcoded classics have none
-            until first opened in Studio (which forks a real copy). */}
-        {!isHardcoded && (
+        {/* Favorite + Share row — every classic has a real stories row (created
+            the moment its script is generated), so this works the same for
+            hardcoded and admin-added classics. Share needs actual audio to
+            point to, so it only appears once the story has been produced. */}
+        {isReady && (
           <div className="px-5 mb-1 flex items-center gap-3">
             <button
               onClick={handleToggleFavorite}
@@ -531,14 +546,16 @@ export default function ClassicDetailPage() {
               <span style={{ fontSize: "var(--fs-heading)", lineHeight: 1 }}>{isFavorited ? "❤️" : "🤍"}</span>
               <span>{isFavorited ? "In My List" : "Add to My List"}</span>
             </button>
-            <button
-              onClick={handleOpenShare}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-90"
-              style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}
-            >
-              <span style={{ fontSize: "var(--fs-heading)", lineHeight: 1 }}>📤</span>
-              <span>Share</span>
-            </button>
+            {storyAudioUrl && (
+              <button
+                onClick={handleOpenShare}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-90"
+                style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}
+              >
+                <span style={{ fontSize: "var(--fs-heading)", lineHeight: 1 }}>📤</span>
+                <span>Share</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -563,6 +580,25 @@ export default function ClassicDetailPage() {
         {isReady && blocks!.length > 0 && (
           <div className="mt-4 mb-1">
             <ReadOnlyCastPanel blocks={blocks!} />
+          </div>
+        )}
+
+        {/* Scene-by-scene outline */}
+        {isReady && scenes.length > 0 && (
+          <div className="px-5 mt-4">
+            <SceneMap
+              scenes={scenes}
+              blocks={blocks!}
+              onSceneClick={(blockIdx) => {
+                setScriptExpanded(true);
+                setTimeout(() => {
+                  const targetId = blocks![blockIdx]?.id;
+                  if (targetId) {
+                    document.getElementById(`block-${targetId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }, 120);
+              }}
+            />
           </div>
         )}
 
@@ -593,7 +629,7 @@ export default function ClassicDetailPage() {
                 const isSfx = block.characterName === "SFX";
                 if (isSfx) return null;
                 return (
-                  <div key={block.id}>
+                  <div key={block.id} id={`block-${block.id}`}>
                     <p
                       className="text-fs-body font-semibold uppercase tracking-widest mb-1 ml-3"
                       style={{ color: isNarrator ? "rgba(255,255,255,0.25)" : "rgba(79,195,247,0.72)" }}
@@ -687,6 +723,22 @@ export default function ClassicDetailPage() {
                   <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.3)" }}>✨ Classic story</p>
                 </div>
               </div>
+
+              {resumeFrom != null && (
+                <div className="flex items-center justify-between mb-2 px-0.5">
+                  <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.6)" }}>
+                    ▶ Resumed from {formatTime(resumeFrom)}
+                  </p>
+                  <button
+                    onClick={handleStartOver}
+                    className="text-fs-body font-semibold"
+                    style={{ color: "rgba(255,255,255,0.35)" }}
+                  >
+                    Start over
+                  </button>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <span className="text-fs-body w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                   {formatTime(currentTime)}

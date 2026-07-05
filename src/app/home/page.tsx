@@ -632,11 +632,21 @@ export default function HomePage() {
   // "Continue" — last 3 stories (simulate resume; no real progress tracking yet)
   const continueStories = stories.slice(0, 3);
 
-  // "My List" — stories the active child has favorited. Checked against
-  // familyStories (not just `stories`) so a favorite sticks even if the story
-  // was originally created under a different child profile.
-  const myList = activeChildId
-    ? familyStories.filter((s) => s.favoritedBy?.includes(activeChildId))
+  // "My List" — stories + classics the active child has favorited. Checked
+  // against familyStories (not just `stories`) so a favorite sticks even if
+  // the story was originally created under a different child profile.
+  // Classics are public (is_public: true) so they never show up in
+  // familyStories — merged in separately from the classics feed instead.
+  type MyListItem = { id: string; title: string; summary: string; coverUrl?: string; href: string };
+  const myList: MyListItem[] = activeChildId
+    ? [
+        ...familyStories
+          .filter((s) => s.favoritedBy?.includes(activeChildId))
+          .map((s) => ({ id: s.id, title: s.title, summary: s.summary ?? "", coverUrl: s.coverUrl, href: `/library/${s.id}` })),
+        ...classics
+          .filter((c) => c.favoritedBy?.includes(activeChildId))
+          .map((c) => ({ id: c.id, title: c.title, summary: c.tagline, coverUrl: c.coverUrl, href: `/library/classics/${c.id}` })),
+      ]
     : [];
 
   const greetingText = greeting(hour, t);
@@ -781,7 +791,7 @@ export default function HomePage() {
                   title={s.title}
                   summary={s.summary}
                   coverUrl={s.coverUrl}
-                  href={`/library/${s.id}`}
+                  href={s.href}
                 />
               ))}
             </Rail>

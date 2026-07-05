@@ -37,11 +37,14 @@ export function hashSfx(description: string): string {
 
 const BUCKET = "element-audio";
 
+let elementsBucketReady = false;
 export async function ensureElementsBucket(): Promise<void> {
+  if (elementsBucketReady) return;
   const { error } = await supabase.storage.createBucket(BUCKET, { public: true });
   if (error && !error.message.toLowerCase().includes("already exists")) {
     console.warn("[ElementStore] bucket create:", error.message);
   }
+  elementsBucketReady = true;
 }
 
 // ─── Cache lookup ─────────────────────────────────────────────────────────────

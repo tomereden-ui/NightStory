@@ -10,11 +10,14 @@ export const dynamic = "force-dynamic";
 
 const BUCKET = "classics";
 
+let classicsBucketReady = false;
 async function ensureClassicsBucket() {
+  if (classicsBucketReady) return;
   const { error } = await supabase.storage.createBucket(BUCKET, { public: true });
   if (error && !error.message.toLowerCase().includes("already exists")) {
     console.warn("[Classics] bucket error:", error.message);
   }
+  classicsBucketReady = true;
 }
 
 function coverPath(id: string) { return `${id}/cover.jpg`; }
@@ -32,7 +35,7 @@ export async function GET() {
   // Load DB rows for classics that have been generated (is_classic=true)
   const { data: dbRows } = await supabase
     .from("stories")
-    .select("id, title, emoji, summary, cover_url, duration_seconds")
+    .select("id, title, emoji, summary, cover_url, duration_seconds, favorited_by")
     .eq("is_public", true)
     .eq("is_classic", true);
 
@@ -50,6 +53,7 @@ export async function GET() {
           coverUrl: row.cover_url ?? undefined,
           durationSeconds: row.duration_seconds ?? undefined,
           status: "ready",
+          favoritedBy: Array.isArray(row.favorited_by) ? row.favorited_by : undefined,
         } satisfies ClassicMeta;
       }
 
@@ -96,6 +100,7 @@ export async function GET() {
       coverUrl: r.cover_url ?? undefined,
       durationSeconds: r.duration_seconds ?? undefined,
       status: "ready" as const,
+      favoritedBy: Array.isArray(r.favorited_by) ? r.favorited_by : undefined,
     }));
 
   return NextResponse.json([...metas, ...adminClassics]);
@@ -218,6 +223,7 @@ RULES:
     blocks,
     emoji: def.emoji,
     isPublic: true,
+    isClassic: true,
   });
 
   return NextResponse.json({ ok: true, meta, blockCount: blocks.length });

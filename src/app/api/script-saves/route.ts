@@ -14,11 +14,14 @@ const SAVES_INDEX   = "saves-index.json";   // list of manual saves only
 
 const MAX_MANUAL_SAVES = 10;
 
+let bucketReady = false;
 async function ensureBucket() {
+  if (bucketReady) return;
   const { error } = await supabase.storage.createBucket(BUCKET, { public: true });
   if (error && !error.message.toLowerCase().includes("already exists")) {
     console.warn("[ScriptSaves] bucket:", error.message);
   }
+  bucketReady = true;
 }
 
 async function readAutosaveMeta(): Promise<ScriptSaveMeta | null> {

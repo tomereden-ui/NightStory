@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { Voice } from "@/types";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
+import { PREVIEW_LANGUAGES } from "@/config/voicePreviewSamples";
+
+const PREVIEW_LANGUAGE_SET = new Set<string>(PREVIEW_LANGUAGES);
 
 // Mirrors HE_EL_VOICE_MAP in ttsService.ts — name only (no IDs needed client-side)
 const HE_VOICE_NAMES: Record<string, string> = {
@@ -41,6 +44,22 @@ export default function VoicePicker({
   const [playingId, setPlayingId] = useState<string | null>(null);
   const isHebrew = storyLanguage === "he";
 
+  // Per-(voice, language) preview samples — falls back to voice.previewUrl
+  // (EL's own generic account preview) for any voice/language not yet
+  // generated via the admin "Generate Voice Preview Samples" tool.
+  const [sampleMap, setSampleMap] = useState<Record<string, Record<string, string>>>({});
+  useEffect(() => {
+    fetch("/api/voice-preview-samples")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((m) => setSampleMap(m ?? {}))
+      .catch(() => {});
+  }, []);
+
+  function resolvePreviewUrl(voice: Voice): string | undefined {
+    const lang = storyLanguage && PREVIEW_LANGUAGE_SET.has(storyLanguage) ? storyLanguage : "en";
+    return sampleMap[voice.id]?.[lang] ?? voice.previewUrl;
+  }
+
   useEffect(() => {
     if (inline) return;
     const handler = (e: MouseEvent) => {
@@ -55,14 +74,15 @@ export default function VoicePicker({
 
   function togglePreview(e: React.MouseEvent, voice: Voice) {
     e.stopPropagation();
-    if (!voice.previewUrl) return;
+    const url = resolvePreviewUrl(voice);
+    if (!url) return;
     if (playingId === voice.id) {
       audioRef.current?.pause();
       setPlayingId(null);
       return;
     }
     if (!audioRef.current) audioRef.current = new Audio();
-    audioRef.current.src = voice.previewUrl;
+    audioRef.current.src = url;
     audioRef.current.onended = () => setPlayingId(null);
     audioRef.current.play().catch(() => setPlayingId(null));
     setPlayingId(voice.id);
@@ -77,6 +97,7 @@ export default function VoicePicker({
   function renderVoiceItem(voice: Voice) {
     const isSelected = voice.id === selectedVoiceId;
     const heElName = isHebrew && !voice.elevenLabsId ? (HE_VOICE_NAMES[voice.id] ?? null) : null;
+    const previewUrl = resolvePreviewUrl(voice);
 
     return (
       <li key={voice.id}>
@@ -98,7 +119,7 @@ export default function VoicePicker({
               </p>
             )}
           </div>
-          {voice.previewUrl && (
+          {previewUrl && (
             <span
               role="button"
               tabIndex={0}

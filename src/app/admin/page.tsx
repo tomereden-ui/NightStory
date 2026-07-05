@@ -1269,6 +1269,91 @@ export default function AdminPage() {
     runReassignVoices({ applyAll: true });
   };
 
+  // ── Admin Services: Regenerate scene maps ────────────────────────────────
+  const [regenSceneStoryId, setRegenSceneStoryId] = useState("");
+  const [regenSceneRunning, setRegenSceneRunning] = useState(false);
+  const [regenSceneLog, setRegenSceneLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const runRegenerateScenes = async (body: { storyId?: string } | { applyAll: true }) => {
+    setRegenSceneRunning(true);
+    setRegenSceneLog([{ type: "info", text: "applyAll" in body ? "Scanning every story in the library…" : `Regenerating scene map for story ${(body as { storyId: string }).storyId}…` }]);
+    try {
+      const res = await fetch("/api/admin/regenerate-scenes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRegenSceneLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      const d = data as { totalStories: number; storiesUpdated: number; storiesSkipped: number; results: Array<{ storyId: string; title: string; sceneCount: number; skippedReason?: string }> };
+      setRegenSceneLog((l) => [
+        ...l,
+        { type: "success", text: `✅ Done — ${d.storiesUpdated}/${d.totalStories} stories updated (${d.storiesSkipped} skipped)` },
+        ...d.results.filter((r) => r.sceneCount > 0).map((r) => ({ type: "info" as const, text: `  · "${r.title}" — ${r.sceneCount} scene(s)` })),
+        ...d.results.filter((r) => r.skippedReason).map((r) => ({ type: "error" as const, text: `  · "${r.title}" — skipped: ${r.skippedReason}` })),
+      ]);
+    } catch (e) {
+      setRegenSceneLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setRegenSceneRunning(false);
+    }
+  };
+
+  const handleRegenerateOneStory = () => {
+    if (!regenSceneStoryId.trim()) return;
+    runRegenerateScenes({ storyId: regenSceneStoryId.trim() });
+  };
+
+  const handleRegenerateAllStories = () => {
+    if (!confirm("Regenerate the scene map for EVERY story in the library (public + private)? Each story requires a fresh Gemini call — this may take a while for a large library.")) return;
+    runRegenerateScenes({ applyAll: true });
+  };
+
+  // ── Admin Services: Generate voice preview samples ───────────────────────
+  const [previewVoiceId, setPreviewVoiceId] = useState("");
+  const [previewRunning, setPreviewRunning] = useState(false);
+  const [previewLog, setPreviewLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const runGenerateVoiceSamples = async (body: { voiceId?: string } | { applyAll: true }) => {
+    setPreviewRunning(true);
+    setPreviewLog([{ type: "info", text: "applyAll" in body ? "Generating samples for every voice × language…" : `Generating samples for voice ${(body as { voiceId: string }).voiceId}…` }]);
+    try {
+      const res = await fetch("/api/admin/generate-voice-samples", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPreviewLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      const d = data as { totalCombos: number; succeeded: number; failed: number; results: Array<{ voiceId: string; language: string; ok: boolean; error?: string }> };
+      setPreviewLog((l) => [
+        ...l,
+        { type: "success", text: `✅ Done — ${d.succeeded}/${d.totalCombos} samples generated (${d.failed} failed)` },
+        ...d.results.filter((r) => !r.ok).map((r) => ({ type: "error" as const, text: `  · ${r.voiceId} [${r.language}] — ${r.error}` })),
+      ]);
+    } catch (e) {
+      setPreviewLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setPreviewRunning(false);
+    }
+  };
+
+  const handleGenerateOneVoice = () => {
+    if (!previewVoiceId.trim()) return;
+    runGenerateVoiceSamples({ voiceId: previewVoiceId.trim() });
+  };
+
+  const handleGenerateAllVoices = () => {
+    if (!confirm("Generate preview samples for EVERY voice × all 4 languages (~130 TTS calls across Gemini + ElevenLabs)? This will take a while and use real API quota.")) return;
+    runGenerateVoiceSamples({ applyAll: true });
+  };
+
   return (
     <div className="cosmic-page min-h-full pb-40">
       <div className="px-5 pt-12">
@@ -1655,6 +1740,128 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {reassignLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Regenerate Scene Maps Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🗺️ Regenerate Scene Maps</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Re-runs the scene breakdown against the current policy in config/story-guidance.txt
+                    (same-language summaries, no-spoiler teasing questions for the climax/resolution).
+                    Only produced stories (with a script) can be regenerated; already-produced audio is
+                    unaffected.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={regenSceneStoryId}
+                  onChange={(e) => setRegenSceneStoryId(e.target.value)}
+                  placeholder="Story ID"
+                  disabled={regenSceneRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+                <button
+                  onClick={handleRegenerateOneStory}
+                  disabled={regenSceneRunning || !regenSceneStoryId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Regenerate This Story
+                </button>
+              </div>
+
+              <button
+                onClick={handleRegenerateAllStories}
+                disabled={regenSceneRunning}
+                className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {regenSceneRunning ? "Working…" : "Regenerate ALL Stories"}
+              </button>
+
+              {/* Log output */}
+              {regenSceneLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {regenSceneLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Generate Voice Preview Samples Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🔊 Generate Voice Preview Samples</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Synthesizes a bedtime-story sample sentence for every voice (Gemini presets + curated
+                    ElevenLabs Hebrew pool), in English, Hebrew, French, and Spanish, so the Studio voice
+                    picker can preview a voice in the story's own language instead of one fixed generic clip.
+                    Voice ID here is the preset name (e.g. "Charon") or the ElevenLabs voice id.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={previewVoiceId}
+                  onChange={(e) => setPreviewVoiceId(e.target.value)}
+                  placeholder="Voice ID"
+                  disabled={previewRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+                <button
+                  onClick={handleGenerateOneVoice}
+                  disabled={previewRunning || !previewVoiceId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Generate This Voice
+                </button>
+              </div>
+
+              <button
+                onClick={handleGenerateAllVoices}
+                disabled={previewRunning}
+                className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {previewRunning ? "Working…" : "Generate ALL Voices × Languages"}
+              </button>
+
+              {/* Log output */}
+              {previewLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {previewLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"

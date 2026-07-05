@@ -9,7 +9,9 @@ import Icon from "@/components/ui/Icon";
 import type { ScriptBlock } from "@/types";
 import ShareSheet from "@/components/ShareSheet";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
+import SceneMap from "@/components/studio/SceneMap";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
+import { useListeningProgress } from "@/hooks/useListeningProgress";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -49,6 +51,8 @@ export default function StoryDetailPage() {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const { resumeFrom, markTick, markPause, markEnded, applyResumeSeek, clearResumePrompt } =
+    useListeningProgress({ storyId: entry?.id, audioRef });
 
   const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
   const [summaryPlaying, setSummaryPlaying] = useState(false);
@@ -179,6 +183,12 @@ export default function StoryDetailPage() {
     audio.currentTime = Number(e.target.value);
   };
 
+  const handleStartOver = () => {
+    const audio = audioRef.current;
+    if (audio) audio.currentTime = 0;
+    clearResumePrompt();
+  };
+
   const handleEdit = useCallback(() => {
     if (!entry) return;
     const isOwned = !entry.isPublic && !entry.isClassic;
@@ -221,10 +231,10 @@ export default function StoryDetailPage() {
         ref={audioRef}
         src={entry.audioUrl}
         onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => { setPlaying(false); setCurrentTime(0); }}
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        onPause={() => { setPlaying(false); markPause(); }}
+        onEnded={() => { setPlaying(false); setCurrentTime(0); markEnded(); }}
+        onTimeUpdate={() => { setCurrentTime(audioRef.current?.currentTime ?? 0); markTick(); }}
+        onLoadedMetadata={() => { setDuration(audioRef.current?.duration ?? 0); applyResumeSeek(); }}
       />
 
       <div className="pb-64">
@@ -391,6 +401,25 @@ export default function StoryDetailPage() {
           </div>
         )}
 
+        {/* Scene-by-scene outline */}
+        {entry.scenes && entry.scenes.length > 0 && (
+          <div className="px-5 mt-4">
+            <SceneMap
+              scenes={entry.scenes}
+              blocks={entry.blocks}
+              onSceneClick={(blockIdx) => {
+                setScriptExpanded(true);
+                setTimeout(() => {
+                  const targetId = entry.blocks[blockIdx]?.id;
+                  if (targetId) {
+                    document.getElementById(`block-${targetId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }, 120);
+              }}
+            />
+          </div>
+        )}
+
         {/* Divider */}
         <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
 
@@ -418,7 +447,7 @@ export default function StoryDetailPage() {
               const isSfx = block.characterName === "SFX";
               if (isSfx) return null;
               return (
-                <div key={block.id}>
+                <div key={block.id} id={`block-${block.id}`}>
                   {!isNarrator && (
                     <p
                       className="text-fs-body font-semibold uppercase tracking-widest mb-1 ml-3"
@@ -506,6 +535,21 @@ export default function StoryDetailPage() {
                 )}
               </div>
             </div>
+
+            {resumeFrom != null && (
+              <div className="flex items-center justify-between mb-2 px-0.5">
+                <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.6)" }}>
+                  ▶ Resumed from {formatTime(resumeFrom)}
+                </p>
+                <button
+                  onClick={handleStartOver}
+                  className="text-fs-body font-semibold"
+                  style={{ color: "rgba(255,255,255,0.35)" }}
+                >
+                  Start over
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <span className="text-fs-body w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>

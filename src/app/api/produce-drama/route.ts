@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { ScriptBlock, StoryScene } from "@/types";
+import type { ScriptBlock } from "@/types";
 import type { CharacterProfile } from "@/lib/libraryStore";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ import { pickGeminiVoice as pickGeminiVoiceForChar } from "@/config/ttsDefaults"
 import { PRESET_VOICES } from "@/config/presetVoices";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
+import { generateScenes } from "@/lib/services/sceneGenerator";
 
 /**
  * Builds character → voice overrides from the user's per-block voice assignments
@@ -204,52 +205,6 @@ function sweepOrphanedTempDirs() {
       } catch { /* skip */ }
     }
   } catch { /* best effort */ }
-}
-
-async function generateScenes(blocks: ScriptBlock[], geminiKey: string): Promise<StoryScene[]> {
-  const script = blocks
-    .map((b, i) => `[${i}] ${b.characterName}: ${b.textPayload}`)
-    .join("\n");
-
-  const prompt = `You are given a children's bedtime story script. Divide it into 3–5 logical scenes.
-
-For each scene output JSON with:
-- sceneNumber: integer starting at 1
-- title: 3–5 word evocative label
-- summary: exactly 1 sentence describing what happens
-- primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy
-- sfxTags: array of 2–4 short ambient/effect labels
-- lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based inclusive> }
-
-Rules:
-- lineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to ${blocks.length - 1}
-- Scene arc: opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime)
-- Output ONLY a JSON array, no markdown fences
-
-Script:
-${script}`;
-
-  try {
-    const { data } = await geminiPost(geminiKey, "gemini-2.5-flash", {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.4 },
-    });
-    const text = geminiText(data).replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
-    const raw = JSON.parse(text) as Array<{
-      sceneNumber: number; title: string; summary: string;
-      primaryMood: string; sfxTags: string[];
-      lineRange: { start: number; end: number };
-    }>;
-    return raw.map((s) => {
-      const { start, end } = s.lineRange ?? { start: 0, end: blocks.length - 1 };
-      const sceneBlocks = blocks.slice(start, end + 1).filter((b) => b.characterName !== "SFX");
-      const words = sceneBlocks.reduce((sum, b) => sum + b.textPayload.trim().split(/\s+/).filter(Boolean).length, 0);
-      return { ...s, estimatedDurationSeconds: Math.ceil(words / (130 / 60)) };
-    });
-  } catch (err) {
-    console.warn(`[produce-drama] generateScenes failed:`, err);
-    return [];
-  }
 }
 
 async function runProduction(
