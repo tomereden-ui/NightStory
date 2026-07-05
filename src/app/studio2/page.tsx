@@ -11,7 +11,8 @@ import LessonStep from "@/components/studio/LessonStep";
 import LessonEditor from "@/components/studio/LessonEditor";
 import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
-import type { ScriptBlock, Voice, StoryScene } from "@/types";
+import type { ScriptBlock, Voice, StoryScene, Language } from "@/types";
+import LanguageToggle from "@/components/ui/LanguageToggle";
 import type { CharacterProfile } from "@/lib/libraryStore";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
@@ -1139,6 +1140,11 @@ export default function Studio2Page() {
   // else. Used to decide whether to show Hebrew EL voices, so it must reflect
   // the real story, not just whatever language the UI happens to show now.
   const [storyLang, setStoryLang]           = useState<string>(language);
+  // Bumped to force-remount FiveQuestionFlow for a full reset (its own state
+  // — step, answers, etc. — is internal, so a key change is the clean way to
+  // clear it from the parent without duplicating its reset logic here).
+  const [wizardResetKey, setWizardResetKey] = useState(0);
+  const [wizardResetConfirm, setWizardResetConfirm] = useState(false);
 
   // ─── Lesson state ───────────────────────────────────────────────────────────
   const [lessons, setLessons]               = useState<string[]>([]);
@@ -2075,6 +2081,8 @@ export default function Studio2Page() {
         {activeTab === "chat" && (
           <LunaChatPanel
             activeChild={activeChild}
+            storyLanguage={storyLang}
+            onStoryLanguageChange={setStoryLang}
             onFirstMessage={() => setChatLocked(true)}
             onDiscard={() => setChatLocked(false)}
             onGenerating={() => {
@@ -2145,7 +2153,45 @@ export default function Studio2Page() {
         {/* Step-by-step tab */}
         {activeTab === "step-by-step" && (
           <div className="-mx-5">
+            {/* Reset + language — same as Chat with Luna: local to this story,
+                never touches the app's global UI language. */}
+            <div className="flex items-center gap-2 px-5 mb-4">
+              {wizardResetConfirm ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
+                  <button
+                    onClick={() => { setWizardResetKey((k) => k + 1); setWizardResetConfirm(false); }}
+                    className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+                    style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
+                  >
+                    Yes, start over
+                  </button>
+                  <button
+                    onClick={() => setWizardResetConfirm(false)}
+                    className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setWizardResetConfirm(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
+                >
+                  <span>↺</span>
+                  <span>Start over</span>
+                </button>
+              )}
+              <LanguageToggle
+                value={storyLang as Language}
+                onLanguageChange={(lang) => { setStoryLang(lang); setWizardResetKey((k) => k + 1); setWizardResetConfirm(false); }}
+              />
+            </div>
             <FiveQuestionFlow
+              key={wizardResetKey}
+              contentLanguage={storyLang}
               childName={activeChild?.name}
               childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
               onGenerating={() => {
@@ -2157,7 +2203,9 @@ export default function Studio2Page() {
                 setCoverPrompt(cp);
                 setCoverUrl("");
                 setStoryTitle("");
-                setStoryLang(language);
+                // storyLang deliberately left as-is — it already reflects
+                // whatever language was chosen in this flow's own picker,
+                // not necessarily the app's global UI language.
                 setLessons([]);
                 setLessonImplementations([]);
                 setScenes(fqScenes ?? []);
@@ -2183,7 +2231,7 @@ export default function Studio2Page() {
                         if (i === blocks.length - 1) {
                           setIsValidating(false);
                           setTotalExpectedBlocks(undefined);
-                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language }, DRAFT_KEY);
+                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang }, DRAFT_KEY);
                         }
                       }, i * 65);
                     });

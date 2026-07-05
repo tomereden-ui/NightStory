@@ -20,8 +20,20 @@ function FlagImg({ countryCode, label }: { countryCode: string; label: string })
   );
 }
 
-export default function LanguageToggle({ onLanguageChange }: { onLanguageChange?: (lang: Language) => void } = {}) {
-  const { language, setLanguage } = useLanguage();
+interface LanguageToggleProps {
+  /** Controlled mode: shows this language as selected instead of the global
+   *  UI language, and — critically — selecting one does NOT call the global
+   *  setLanguage(), only onLanguageChange. Use this wherever a language
+   *  choice should apply to a single panel (e.g. story creation) rather than
+   *  the whole app's UI language, as it does everywhere this prop is omitted. */
+  value?: Language;
+  onLanguageChange?: (lang: Language) => void;
+}
+
+export default function LanguageToggle({ value, onLanguageChange }: LanguageToggleProps = {}) {
+  const { language: globalLanguage, setLanguage: setGlobalLanguage } = useLanguage();
+  const isControlled = value !== undefined;
+  const language = isControlled ? value : globalLanguage;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -66,7 +78,7 @@ export default function LanguageToggle({ onLanguageChange }: { onLanguageChange?
               return (
                 <li key={lang}>
                   <button
-                    onClick={() => { setLanguage(lang); setOpen(false); onLanguageChange?.(lang); }}
+                    onClick={() => { if (!isControlled) setGlobalLanguage(lang); setOpen(false); onLanguageChange?.(lang); }}
                     className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left ${
                       isSelected ? "bg-purple/10" : "hover:bg-white/5"
                     }`}

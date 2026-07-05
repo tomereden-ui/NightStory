@@ -5,9 +5,9 @@ import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import type { DraftState } from "@/lib/draftStore";
 import type { ScriptBlock } from "@/types";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
-import { useLanguage } from "@/context/LanguageContext";
 import Icon from "@/components/ui/Icon";
 import LanguageToggle from "@/components/ui/LanguageToggle";
+import type { Language } from "@/types";
 
 interface Message {
   role: "user" | "model";
@@ -167,14 +167,20 @@ export default function LunaChatPanel({
   onFirstMessage,
   onDiscard,
   onGenerating,
+  storyLanguage,
+  onStoryLanguageChange,
 }: {
   activeChild: DBChildProfile | null;
   onScriptReady: (draft: Omit<DraftState, "coverUrl">, durationMinutes?: number) => void;
   onFirstMessage?: () => void;
   onDiscard?: () => void;
   onGenerating?: () => void;
+  /** The language this story is created in — independent of the app's
+   *  global UI language (set via the picker in this panel's own header). */
+  storyLanguage: string;
+  onStoryLanguageChange: (lang: string) => void;
 }) {
-  const { language } = useLanguage();
+  const language = storyLanguage;
   const [messages, setMessages]             = useState<Message[]>([]);
   const [input, setInput]                   = useState("");
   const [loading, setLoading]               = useState(false);
@@ -481,7 +487,10 @@ export default function LunaChatPanel({
   // Selecting a language mid-chat would leave old messages in one language
   // and new ones in another — restart fresh so the whole conversation (including
   // the greeting, which has no user text yet to "mirror") is in the new language.
-  function handleLanguageChange() {
+  // This only affects this panel's story language, never the app's global UI
+  // language (LanguageToggle is used here in controlled mode).
+  function handleLanguageChange(lang: Language) {
+    onStoryLanguageChange(lang);
     setTopResetConfirm(false);
     handleDiscard();
   }
@@ -568,7 +577,7 @@ export default function LunaChatPanel({
             <span>Start over</span>
           </button>
         )}
-        <LanguageToggle onLanguageChange={handleLanguageChange} />
+        <LanguageToggle value={storyLanguage as Language} onLanguageChange={handleLanguageChange} />
       </div>
 
       {/* Luna header */}

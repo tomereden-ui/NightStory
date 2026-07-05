@@ -1000,9 +1000,10 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 
 // ─── Generating screen ────────────────────────────────────────────────────────────────────────
 
-function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, onError }: {
+function GeneratingView({ heroName, worldName, seeds, durationMinutes, contentLanguage, onDone, onError }: {
   heroName: string; worldName: string;
   seeds: StorySeeds; durationMinutes: number;
+  contentLanguage?: string;
   onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => void;
   onError: (msg: string) => void;
 }) {
@@ -1022,7 +1023,7 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, onDone, o
     fetch("/api/five-question-story", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seeds, durationMinutes }),
+      body: JSON.stringify({ seeds, durationMinutes, language: contentLanguage }),
       signal: controller.signal,
     })
       .then(async (res) => {
@@ -1066,9 +1067,12 @@ const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", 
 export interface StoryCharacterInfo { type: "child" | "adult" | "animal" | "narrator"; visualDescription: string; }
 export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo>; scenes?: import("@/types").StoryScene[] };
 
-export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string } = {}) {
+export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl, contentLanguage }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string; /** Story content language — independent of the app's global UI language. Falls back to it when not provided. */ contentLanguage?: string } = {}) {
   const router = useRouter();
   const { language, t } = useLanguage();
+  // Governs the Bluebell narration audio + final story text — the wizard's
+  // own UI chrome (via t()) intentionally stays on the global language.
+  const effectiveLanguage = contentLanguage ?? language;
 
   const [step, setStep]                   = useState<Step>("q1");
   const [answers, setAnswers]             = useState<Answers>(INITIAL_ANSWERS);
@@ -1128,7 +1132,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     let cancelled = false;
     async function seedAudio() {
       try {
-        const res = await fetch(`/api/admin/seed-bluebell-audio?lang=${language}`);
+        const res = await fetch(`/api/admin/seed-bluebell-audio?lang=${effectiveLanguage}`);
         if (!res.ok) return;
         const { missing, existingAudioUrls } = await res.json() as {
           missing: string[];
@@ -1145,7 +1149,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         for (const key of ordered) {
           if (cancelled) return;
           try {
-            const genRes = await fetch(`/api/admin/seed-bluebell-audio?lang=${language}&key=${key}`, { method: "POST" });
+            const genRes = await fetch(`/api/admin/seed-bluebell-audio?lang=${effectiveLanguage}&key=${key}`, { method: "POST" });
             if (genRes.ok) {
               const { url } = await genRes.json() as { ok: boolean; key: string; url: string };
               if (url) setQuestionAudios((prev) => ({ ...prev, [key]: url }));
@@ -1157,7 +1161,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     setQuestionAudios({});
     seedAudio();
     return () => { cancelled = true; };
-  }, [language]);
+  }, [effectiveLanguage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1355,7 +1359,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   );
 
   if (step === "generating" && seeds) return (
-    <GeneratingView heroName={answers.q1_hero} worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} onDone={handleDone} onError={handleGenError} />
+    <GeneratingView heroName={answers.q1_hero} worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} onDone={handleDone} onError={handleGenError} />
   );
 
   if (step === "done") {
