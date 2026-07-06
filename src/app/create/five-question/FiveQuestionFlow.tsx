@@ -1286,12 +1286,21 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     setSummary(incomingSummary);
     setCoverPrompt(incomingCoverPrompt);
     setCoverUrl("");
-    writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes });
     if (onComplete) {
+      writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes });
       onComplete({ blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, characters, scenes });
     } else {
+      // Standalone (no onComplete) means this flow was reached directly at
+      // /create/five-question rather than embedded inside Studio — hand off
+      // to Studio via its own draft key (nightstory_draft_v1 is unrelated and
+      // never read by /studio2), including characterProfiles so nature-based
+      // voice casting works immediately instead of only after a later save.
+      writeDraft(
+        { promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes, characterProfiles: characters },
+        "nightstory_studio2_draft_v1",
+      );
       if (incomingCoverPrompt) fetchCover(incomingCoverPrompt, incomingSummary);
-      router.push("/studio");
+      router.push("/studio2");
     }
   }, [fetchCover, router, onComplete]);
 
