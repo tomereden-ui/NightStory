@@ -2,32 +2,24 @@
 
 import React, { useState, useRef } from "react";
 import Icon from "@/components/ui/Icon";
+import { getLessonsCatalog, getLessonsChrome, type LessonLabel } from "@/constants/lessonsUi";
 
-export const LESSONS = [
-  { icon: "🦁", label: "Bravery",               desc: "Facing fears, trying scary things" },
-  { icon: "🤝", label: "Friendship",             desc: "Sharing, including others, resolving conflict" },
-  { icon: "💝", label: "Kindness",               desc: "Noticing when others need help" },
-  { icon: "⭐", label: "Honesty",                desc: "Telling the truth even when it's hard" },
-  { icon: "🌱", label: "Perseverance",           desc: "Trying again after failing" },
-  { icon: "🎁", label: "Sharing",                desc: "Generosity with others" },
-  { icon: "⏳", label: "Patience",               desc: "Waiting calmly" },
-  { icon: "🌈", label: "Respecting differences", desc: "Appreciating diversity, not judging" },
-  { icon: "🌟", label: "Responsibility",         desc: "Taking care of things, pets, promises" },
-  { icon: "🙏", label: "Gratitude",              desc: "Appreciating what you have" },
-] as const;
-
-export type LessonLabel = typeof LESSONS[number]["label"];
+export type { LessonLabel };
 
 export default function LessonStep({
   onSelect,
   onBack,
+  language,
 }: {
   onSelect: (lessons: string[]) => void;
   onBack?: () => void;
+  language?: string;
 }) {
   const [selected, setSelected] = useState<LessonLabel[]>([]);
   const [custom, setCustom] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const LESSONS = getLessonsCatalog(language);
+  const ui = getLessonsChrome(language);
 
   const toggleLabel = (label: LessonLabel) => {
     setSelected((prev) =>
@@ -67,7 +59,7 @@ export default function LessonStep({
             style={{ color: "rgba(255,255,255,0.3)" }}
           >
             <Icon name="back" size={14} />
-            <span>Back to idea</span>
+            <span>{ui.stepBackToIdea}</span>
           </button>
         )}
         <div
@@ -75,25 +67,25 @@ export default function LessonStep({
           style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(79,195,247,0.05) 100%)", border: "1px solid rgba(139,92,246,0.2)" }}
         >
           <p className="text-fs-body font-bold uppercase tracking-[0.18em] mb-1.5" style={{ color: "rgba(139,92,246,0.7)" }}>
-            Optional · Step 2
+            {ui.stepLabel}
           </p>
           <h2 className="text-fs-heading font-bold text-white leading-snug mb-1">
-            Want today&apos;s story to teach something?
+            {ui.stepHeading}
           </h2>
           <p className="text-fs-body leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>
-            Pick one or more values — they&apos;ll be woven in naturally, never stated out loud.
+            {ui.stepSubheading}
           </p>
         </div>
       </div>
 
       {/* Lesson grid */}
       <div className="grid grid-cols-2 gap-2.5">
-        {LESSONS.map(({ icon, label, desc }) => {
-          const isSelected = selected.includes(label);
+        {LESSONS.map(({ id, icon, label, desc }) => {
+          const isSelected = selected.includes(id);
           return (
             <button
-              key={label}
-              onClick={() => toggleLabel(label)}
+              key={id}
+              onClick={() => toggleLabel(id)}
               className="flex flex-col gap-1.5 px-3.5 py-3 rounded-2xl text-left transition-all active:scale-[0.97]"
               style={isSelected ? selectedStyle : defaultCardStyle}
             >
@@ -126,7 +118,7 @@ export default function LessonStep({
         }
       >
         <label className="text-fs-body font-bold uppercase tracking-widest block mb-2" style={{ color: "rgba(79,195,247,0.5)" }}>
-          Or describe your own
+          {ui.orDescribeOwn}
         </label>
         <textarea
           ref={inputRef}
@@ -139,7 +131,7 @@ export default function LessonStep({
             }
           }}
           rows={2}
-          placeholder="e.g. learning to ask for help…"
+          placeholder={ui.customPlaceholder}
           className="w-full bg-transparent outline-none resize-none text-fs-body leading-relaxed placeholder-white/20 text-white/80"
           style={{ caretColor: "#4fc3f7" }}
         />
@@ -153,7 +145,7 @@ export default function LessonStep({
           style={{ background: "linear-gradient(90deg,#4fc3f7,#8B5CF6)", color: "#fff", boxShadow: "0 4px 28px rgba(79,195,247,0.25), 0 2px 8px rgba(139,92,246,0.25)" }}
         >
           <span>✨</span>
-          <span>Write My Story{selected.length > 1 ? ` with ${selected.length} lessons` : ""}</span>
+          <span>{selected.length > 1 ? ui.stepWriteMyStoryWithCount(selected.length) : ui.stepWriteMyStory}</span>
         </button>
       )}
 
@@ -168,7 +160,7 @@ export default function LessonStep({
         }}
       >
         <span className="text-fs-heading">🌙</span>
-        <span>Skip — just tell a fun story</span>
+        <span>{ui.stepSkip}</span>
       </button>
 
     </div>

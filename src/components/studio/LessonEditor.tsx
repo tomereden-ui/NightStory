@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { LESSONS, type LessonLabel } from "./LessonStep";
+import { getLessonsCatalog, getLessonsChrome, LESSON_IDS, type LessonLabel } from "@/constants/lessonsUi";
 import Icon from "@/components/ui/Icon";
 import type { MoralLesson } from "@/types";
 
-const PRESET_LABELS = LESSONS.map((l) => l.label) as LessonLabel[];
-
 function isPreset(l: string): l is LessonLabel {
-  return PRESET_LABELS.includes(l as LessonLabel);
+  return (LESSON_IDS as readonly string[]).includes(l);
 }
 
 export default function LessonEditor({
@@ -17,6 +15,7 @@ export default function LessonEditor({
   onRewrite,
   moralLessons,
   analyzing,
+  storyLanguage,
 }: {
   lessons: string[];
   onChange: (lessons: string[]) => void;
@@ -24,7 +23,11 @@ export default function LessonEditor({
   /** Gemini's confirmed analysis of what's actually embedded in the current script — may include values the user never explicitly picked. */
   moralLessons?: MoralLesson[];
   analyzing?: boolean;
+  /** The story's actual content language — falls back to English chrome/catalog if not provided. */
+  storyLanguage?: string;
 }) {
+  const LESSONS = getLessonsCatalog(storyLanguage);
+  const ui = getLessonsChrome(storyLanguage);
   const [expanded, setExpanded] = useState(false);
 
   // Editing state (only used when expanded)
@@ -116,11 +119,11 @@ export default function LessonEditor({
         <div className="flex items-start justify-between mb-1">
           <div>
             <span className="text-fs-heading font-bold tracking-tight" style={{ color: "#E9D8FD" }}>
-              🌟 Moral Lessons
+              🌟 {ui.panelTitle}
             </span>
             {hasDisplayedLessons && (
               <p className="text-fs-body mt-0.5" style={{ color: "rgba(196,181,253,0.55)" }}>
-                The values this story brings to life
+                {ui.collapsedSubtitle}
               </p>
             )}
           </div>
@@ -129,7 +132,7 @@ export default function LessonEditor({
             className="flex-shrink-0 text-fs-body font-semibold px-2.5 py-1 rounded-lg transition-all active:scale-95"
             style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
           >
-            {hasLessons ? "Edit" : "+ Add lesson"}
+            {hasLessons ? ui.editButton : ui.addLessonButton}
           </button>
         </div>
 
@@ -139,7 +142,7 @@ export default function LessonEditor({
               <span className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0"
                 style={{ borderColor: "rgba(139,92,246,0.2)", borderTopColor: "#C4B5FD" }} />
               <span className="text-fs-body" style={{ color: "rgba(196,181,253,0.6)" }}>
-                Reading the story for embedded values…
+                {ui.analyzing}
               </span>
             </div>
           )}
@@ -148,7 +151,7 @@ export default function LessonEditor({
             <button
               onClick={openEditor}
               className="w-full flex flex-wrap gap-1.5 text-left"
-              aria-label="View lesson details"
+              aria-label={ui.currentlyInStory}
             >
               {displayedLessons.map((ml) => {
                 const preset = LESSONS.find((l) => l.label === ml.lesson);
@@ -174,9 +177,7 @@ export default function LessonEditor({
 
           {!analyzing && !hasDisplayedLessons && (
             <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>
-              {hasLessons
-                ? "No confirmed values yet — rewrite the story below to weave your selected lesson in."
-                : "No moral lesson detected yet — tap “+ Add lesson” to weave a value into the story."}
+              {hasLessons ? ui.emptyNoConfirmed : ui.emptyNoLessons}
             </p>
           )}
         </div>
@@ -188,7 +189,7 @@ export default function LessonEditor({
             style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.22)", color: "#C4B5FD" }}
           >
             <span>✦</span>
-            <span>{hasLessons ? `Rewrite story with ${lessons.length === 1 ? "this lesson" : "these lessons"}` : "Rewrite story"}</span>
+            <span>{hasLessons ? (lessons.length === 1 ? ui.rewriteWithOne : ui.rewriteWithMany) : ui.rewriteGeneric}</span>
           </button>
         )}
       </div>
@@ -208,10 +209,10 @@ export default function LessonEditor({
       <div className="flex items-center justify-between">
         <div>
           <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>
-            🌟 Moral Lessons
+            🌟 {ui.panelTitle}
           </span>
           <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-            Pick one or more values to weave into the story
+            {ui.expandedSubtitle}
           </p>
         </div>
         <button
@@ -227,7 +228,7 @@ export default function LessonEditor({
         {hasDisplayedLessons && (
           <div className="flex flex-col gap-2">
             <label className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
-              Currently in this story
+              {ui.currentlyInStory}
             </label>
             {displayedLessons.map((ml) => {
               const preset = LESSONS.find((l) => l.label === ml.lesson);
@@ -249,8 +250,8 @@ export default function LessonEditor({
                       <span
                         className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center font-bold"
                         style={{ background: "#34d399", color: "#05080F", fontSize: "9px" }}
-                        aria-label="Confirmed in this story"
-                        title="Confirmed in this story"
+                        aria-label={ui.confirmedBadge}
+                        title={ui.confirmedBadge}
                       >
                         ✓
                       </span>
@@ -276,15 +277,15 @@ export default function LessonEditor({
         {/* Lesson grid */}
         <div className="flex flex-col gap-2">
           <label className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
-            Add a value
+            {ui.addAValue}
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {LESSONS.map(({ icon, label, desc }) => {
-              const isSelected = pendingLabels.includes(label);
+            {LESSONS.map(({ id, icon, label, desc }) => {
+              const isSelected = pendingLabels.includes(id);
               return (
                 <button
-                  key={label}
-                  onClick={() => togglePendingLabel(label)}
+                  key={id}
+                  onClick={() => togglePendingLabel(id)}
                   className="flex flex-col gap-1.5 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.97]"
                   style={isSelected
                     ? { background: "rgba(79,195,247,0.12)", border: "1.5px solid rgba(79,195,247,0.5)" }
@@ -317,7 +318,7 @@ export default function LessonEditor({
           }
         >
           <label className="text-fs-body font-bold uppercase tracking-widest block mb-1.5" style={{ color: "rgba(79,195,247,0.5)" }}>
-            Or describe your own
+            {ui.orDescribeOwn}
           </label>
           <textarea
             ref={inputRef}
@@ -330,7 +331,7 @@ export default function LessonEditor({
               }
             }}
             rows={2}
-            placeholder="e.g. learning to ask for help…"
+            placeholder={ui.customPlaceholder}
             className="w-full bg-transparent outline-none resize-none text-fs-body leading-relaxed placeholder-white/20 text-white/80"
             style={{ caretColor: "#4fc3f7" }}
           />
@@ -344,20 +345,17 @@ export default function LessonEditor({
           className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
         >
-          Cancel
+          {ui.cancel}
         </button>
-        <button
-          onClick={applyEditor}
-          className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98]"
-          style={canApply
-            ? { background: "linear-gradient(90deg, rgba(139,92,246,0.3), rgba(79,195,247,0.25))", border: "1.5px solid rgba(139,92,246,0.4)", color: "#C4B5FD" }
-            : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
-          }
-        >
-          {canApply
-            ? `Apply${pendingLabels.length > 0 ? ` (${pendingLabels.length + (pendingCustom.trim() ? 1 : 0)})` : ""}`
-            : "No lesson"}
-        </button>
+        {canApply && (
+          <button
+            onClick={applyEditor}
+            className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98]"
+            style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.3), rgba(79,195,247,0.25))", border: "1.5px solid rgba(139,92,246,0.4)", color: "#C4B5FD" }}
+          >
+            {`${ui.apply}${pendingLabels.length > 0 ? ` (${pendingLabels.length + (pendingCustom.trim() ? 1 : 0)})` : ""}`}
+          </button>
+        )}
       </div>
 
       {/* Clear all */}
@@ -367,7 +365,7 @@ export default function LessonEditor({
           className="text-center text-fs-body font-medium transition-opacity"
           style={{ color: "rgba(255,255,255,0.2)" }}
         >
-          Remove all lessons
+          {ui.removeAll}
         </button>
       )}
     </div>

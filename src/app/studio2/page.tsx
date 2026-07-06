@@ -1100,7 +1100,7 @@ export default function Studio2Page() {
       const res = await fetch("/api/analyze-lessons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks, storyId: storyId ?? undefined }),
+        body: JSON.stringify({ blocks, storyId: storyId ?? undefined, language: storyLang }),
       });
       if (!res.ok) return;
       const data = await res.json() as { lessons?: MoralLesson[] };
@@ -1110,7 +1110,7 @@ export default function Studio2Page() {
     } finally {
       setAnalyzingLessons(false);
     }
-  }, []);
+  }, [storyLang]);
 
   // ─── Tab / view state ───────────────────────────────────────────────────────
   const searchParams = useSearchParams();
@@ -2130,6 +2130,7 @@ export default function Studio2Page() {
           <LessonStep
             onSelect={(selectedLessons) => handleGenerate(selectedLessons)}
             onBack={() => setActiveTab("step-by-step")}
+            language={storyLang}
           />
         )}
 
@@ -2375,6 +2376,7 @@ export default function Studio2Page() {
                     onRewrite={(instruction) => handleLessonRewrite(instruction)}
                     moralLessons={moralLessons}
                     analyzing={analyzingLessons}
+                    storyLanguage={storyLang}
                   />
                 </>
               }
