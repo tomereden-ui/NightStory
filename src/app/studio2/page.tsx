@@ -11,7 +11,7 @@ import LessonStep from "@/components/studio/LessonStep";
 import LessonEditor from "@/components/studio/LessonEditor";
 import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
-import type { ScriptBlock, Voice, StoryScene, Language } from "@/types";
+import type { ScriptBlock, Voice, StoryScene, Language, MoralLesson } from "@/types";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import type { CharacterProfile } from "@/lib/libraryStore";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
@@ -1149,6 +1149,30 @@ export default function Studio2Page() {
   // ─── Lesson state ───────────────────────────────────────────────────────────
   const [lessons, setLessons]               = useState<string[]>([]);
   const [lessonImplementations, setLessonImplementations] = useState<{ lesson: string; implemented: boolean; how: string }[]>([]);
+  // Gemini's own analysis of what's actually embedded in the current script —
+  // distinct from lessonImplementations (which only reflects what happened at
+  // the moment of generation/revision). Persisted to stories.moral_lessons.
+  const [moralLessons, setMoralLessons]     = useState<MoralLesson[]>([]);
+  const [analyzingLessons, setAnalyzingLessons] = useState(false);
+
+  const analyzeLessons = useCallback(async (blocks: ScriptBlock[], storyId?: string | null) => {
+    if (!blocks.length) { setMoralLessons([]); return; }
+    setAnalyzingLessons(true);
+    try {
+      const res = await fetch("/api/analyze-lessons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks, storyId: storyId ?? undefined }),
+      });
+      if (!res.ok) return;
+      const data = await res.json() as { lessons?: MoralLesson[] };
+      setMoralLessons(data.lessons ?? []);
+    } catch (err) {
+      console.warn("[analyzeLessons] failed:", err);
+    } finally {
+      setAnalyzingLessons(false);
+    }
+  }, []);
 
   // ─── Tab / view state ───────────────────────────────────────────────────────
   const searchParams = useSearchParams();
@@ -1275,18 +1299,28 @@ export default function Studio2Page() {
       setLessons(draft.lessons ?? (draft.lesson ? [draft.lesson] : []));
       setLessonImplementations(draft.lessonImplementations ?? []);
       setScenes(draft.scenes ?? []);
+      if (draft.moralLessons?.length) {
+        setMoralLessons(draft.moralLessons);
+      } else if (draft.scriptBlocks.length) {
+        // Either a pre-feature story being opened for the first time, or a
+        // fresh generation whose draft didn't carry an analysis yet — analyze
+        // now so "already embedded" lessons show up whether or not the story
+        // was ever explicitly created through the lesson picker.
+        void analyzeLessons(draft.scriptBlocks, draft.editingStoryId ?? null);
+      }
       if (!startOnPrompt) setActiveTab("script");
     } else {
       setActiveTab(startOnPrompt ? "step-by-step" : "chat");
     }
     setLoaded(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist draft on change
   useEffect(() => {
     if (!loaded) return;
-    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, scenes, language: storyLang }, DRAFT_KEY);
-  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, scenes, storyLang, loaded]);
+    writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, moralLessons, scenes, language: storyLang }, DRAFT_KEY);
+  }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, moralLessons, scenes, storyLang, loaded]);
 
   // Auto-save to Supabase — debounced 3s after any script change
   useEffect(() => {
@@ -1561,6 +1595,7 @@ export default function Studio2Page() {
             setIsValidating(false);
             setTotalExpectedBlocks(undefined);
             writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, forkedFromTitle: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls, scenes: rawScenes }, DRAFT_KEY);
+            void analyzeLessons(blocks, null);
           }
         }, i * 65);
       }
@@ -1612,12 +1647,13 @@ export default function Studio2Page() {
       setDirectorNote("");
       markScriptDirty();
       cleanLessonsRef.current = lessons;
+      void analyzeLessons(data.blocks, editingStoryId);
     } catch (err: unknown) {
       setReviseError(err instanceof Error ? err.message : "Revision failed");
     } finally {
       setIsRevising(false);
     }
-  }, [scriptBlocks, isRevising, lessons]);
+  }, [scriptBlocks, isRevising, lessons, editingStoryId, analyzeLessons]);
 
   // ─── Manual save ────────────────────────────────────────────────────────────
 
@@ -1647,7 +1683,7 @@ export default function Studio2Page() {
           fetch(`/api/library/${editingStoryId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ blocks: scriptBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined }),
+            body: JSON.stringify({ blocks: scriptBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined }),
           })
         );
 
@@ -1704,7 +1740,7 @@ export default function Studio2Page() {
     } finally {
       setIsValidating(false);
     }
-  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving, editingStoryId, storyTitle]);
+  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving, editingStoryId, storyTitle, moralLessons]);
 
   // ─── Load a save into the studio ────────────────────────────────────────────
 
@@ -1846,7 +1882,7 @@ export default function Studio2Page() {
     setActiveTab("producing");
     try {
       const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
-      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, ...(activeChildId ? { childIds: [activeChildId] } : {}) };
+      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined, ...(activeChildId ? { childIds: [activeChildId] } : {}) };
       if (editingStoryId) {
         body.editingStoryId = editingStoryId;
         // Always force re-production when editing an existing story — the server-side
@@ -1880,7 +1916,7 @@ export default function Studio2Page() {
       setIsProducing(false);
       setActiveTab("script");
     }
-  }, [editingStoryId, summary, coverPrompt, coverUrl]);
+  }, [editingStoryId, summary, coverPrompt, coverUrl, moralLessons]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job);
@@ -2390,7 +2426,8 @@ export default function Studio2Page() {
                     lessons={lessons}
                     onChange={(next) => setLessons(next)}
                     onRewrite={(instruction) => handleLessonRewrite(instruction)}
-                    lessonImplementations={lessonImplementations}
+                    moralLessons={moralLessons}
+                    analyzing={analyzingLessons}
                   />
                 </>
               }

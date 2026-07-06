@@ -205,6 +205,7 @@ export default function StoryDetailPage() {
       storyTitle: entry.title,
       language: entry.language,
       audioUrl: isOwned ? entry.audioUrl : undefined,
+      moralLessons: entry.moralLessons,
     }, "nightstory_studio2_draft_v1");
     router.push("/studio2");
   }, [entry, router]);

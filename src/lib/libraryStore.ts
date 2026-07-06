@@ -1,5 +1,5 @@
 import { supabase, ensureBuckets } from "./supabase";
-import type { ScriptBlock, StoryScene, VoiceGender, VoiceStyle } from "@/types";
+import type { ScriptBlock, StoryScene, VoiceGender, VoiceStyle, MoralLesson } from "@/types";
 
 export interface CharacterProfile {
   type: "child" | "adult" | "animal" | "narrator";
@@ -29,6 +29,8 @@ export interface LibraryEntry {
   shareCount?: number;
   scenes?: StoryScene[];
   characterProfiles?: Record<string, CharacterProfile>;
+  /** Gemini's analysis of which moral/values lessons are embedded in this story. */
+  moralLessons?: MoralLesson[];
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -62,6 +64,7 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
     characterProfiles: row.character_profiles && typeof row.character_profiles === "object" && !Array.isArray(row.character_profiles)
       ? (row.character_profiles as Record<string, CharacterProfile>)
       : undefined,
+    moralLessons: Array.isArray(row.moral_lessons) ? (row.moral_lessons as MoralLesson[]) : undefined,
   };
 }
 
@@ -90,8 +93,18 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
     favorited_by: entry.favoritedBy ?? null,
     scenes: entry.scenes ?? null,
     character_profiles: entry.characterProfiles ?? null,
+    moral_lessons: entry.moralLessons ?? null,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
+}
+
+// Update just the moral-lessons analysis for an already-saved story, without
+// touching anything else — used when the panel re-analyzes an existing story
+// (e.g. after the user adds/removes a lesson) and doesn't have a full entry
+// to upsert.
+export async function updateMoralLessons(id: string, moralLessons: MoralLesson[]): Promise<void> {
+  const { error } = await supabase.from("stories").update({ moral_lessons: moralLessons }).eq("id", id);
+  if (error) throw new Error(`updateMoralLessons: ${error.message}`);
 }
 
 // User's private stories. Pass childId to scope to a specific child; omit for all.

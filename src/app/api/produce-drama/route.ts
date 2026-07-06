@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { ScriptBlock } from "@/types";
+import type { ScriptBlock, MoralLesson } from "@/types";
 import type { CharacterProfile } from "@/lib/libraryStore";
 
 export const dynamic = "force-dynamic";
@@ -227,6 +227,7 @@ async function runProduction(
   isClassic?: boolean,
   characterProfiles?: Record<string, CharacterProfile>,
   skipLibrarySave?: boolean,
+  moralLessons?: MoralLesson[],
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -716,6 +717,7 @@ async function runProduction(
       isPublic: isPublic ?? false,
       isClassic: isClassic ?? false,
       characterProfiles: characterProfiles && Object.keys(characterProfiles).length ? characterProfiles : undefined,
+      moralLessons: moralLessons?.length ? moralLessons : undefined,
     };
 
     if (skipLibrarySave) {
@@ -791,6 +793,7 @@ export async function POST(req: NextRequest) {
       isPublic?: boolean;
       isClassic?: boolean;
       skipLibrarySave?: boolean;
+      moralLessons?: MoralLesson[];
     };
     try {
       body = await req.json();
@@ -823,7 +826,7 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave, body.moralLessons);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

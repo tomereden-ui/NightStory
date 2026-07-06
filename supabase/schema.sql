@@ -15,7 +15,8 @@ create table if not exists public.stories (
   is_classic boolean not null default false,
   child_ids jsonb,
   scenes jsonb,
-  character_profiles jsonb
+  character_profiles jsonb,
+  moral_lessons jsonb
 );
 
 create table if not exists public.trash (
@@ -28,7 +29,8 @@ create table if not exists public.trash (
   created_at bigint not null,
   deleted_at bigint not null,
   blocks jsonb not null default '[]'::jsonb,
-  scenes jsonb
+  scenes jsonb,
+  moral_lessons jsonb
 );
 
 create table if not exists public.voices (

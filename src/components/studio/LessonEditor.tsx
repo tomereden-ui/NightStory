@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { LESSONS, type LessonLabel } from "./LessonStep";
 import Icon from "@/components/ui/Icon";
+import type { MoralLesson } from "@/types";
 
 const PRESET_LABELS = LESSONS.map((l) => l.label) as LessonLabel[];
 
@@ -10,22 +11,19 @@ function isPreset(l: string): l is LessonLabel {
   return PRESET_LABELS.includes(l as LessonLabel);
 }
 
-interface LessonImpl {
-  lesson: string;
-  implemented: boolean;
-  how: string;
-}
-
 export default function LessonEditor({
   lessons,
   onChange,
   onRewrite,
-  lessonImplementations,
+  moralLessons,
+  analyzing,
 }: {
   lessons: string[];
   onChange: (lessons: string[]) => void;
   onRewrite?: (instruction: string) => void;
-  lessonImplementations?: LessonImpl[];
+  /** Gemini's confirmed analysis of what's actually embedded in the current script — may include values the user never explicitly picked. */
+  moralLessons?: MoralLesson[];
+  analyzing?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -61,93 +59,117 @@ export default function LessonEditor({
     );
   };
 
-  const removeLesson = (lesson: string) => {
-    onChange(lessons.filter((l) => l !== lesson));
-  };
-
-  const hasLessons = lessons.length > 0;
-
   const buildRewriteInstruction = (nextLessons: string[]): string => {
     if (nextLessons.length === 0) return "Remove any explicit moral lessons — just tell a fun story.";
     if (nextLessons.length === 1) return `Rewrite the story to naturally embed the value of "${nextLessons[0]}" through a concrete action the protagonist takes. Don't state it explicitly.`;
     return `Rewrite the story to naturally embed these values through concrete actions the protagonist takes (don't state them explicitly): ${nextLessons.map((l, i) => `${i + 1}. ${l}`).join(", ")}.`;
   };
 
+  // Removing a confirmed lesson: it may not even be in the `lessons`
+  // selection (it could've been organically present in the script), so
+  // dropping it means asking for a rewrite that removes it — not just
+  // editing the selection array.
+  const removeMoralLesson = (lesson: string) => {
+    if (lessons.includes(lesson)) onChange(lessons.filter((l) => l !== lesson));
+    onRewrite?.(`Rewrite the story to remove the value of "${lesson}" — keep everything else about the story the same.`);
+  };
+
+  const hasLessons = lessons.length > 0;
+  const hasMoralLessons = Boolean(moralLessons?.length);
+
   // ─── Collapsed view ──────────────────────────────────────────────────────────
 
   if (!expanded) {
     return (
       <div
-        className="mb-4 rounded-2xl px-4 py-3.5"
-        style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)" }}
+        className="mb-4 rounded-2xl px-4 py-4"
+        style={{
+          background: "linear-gradient(160deg, rgba(139,92,246,0.09), rgba(79,195,247,0.05))",
+          border: "1px solid rgba(139,92,246,0.25)",
+          boxShadow: "0 0 28px rgba(139,92,246,0.06)",
+        }}
       >
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>
-            ✦ Lessons
-          </span>
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <span className="text-fs-heading font-bold tracking-tight" style={{ color: "#E9D8FD" }}>
+              🌟 Moral Lessons
+            </span>
+            {hasMoralLessons && (
+              <p className="text-fs-body mt-0.5" style={{ color: "rgba(196,181,253,0.55)" }}>
+                The values this story brings to life
+              </p>
+            )}
+          </div>
           <button
             onClick={openEditor}
-            className="text-fs-body font-semibold px-2.5 py-1 rounded-lg transition-all active:scale-95"
-            style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.25)", color: "#C4B5FD" }}
+            className="flex-shrink-0 text-fs-body font-semibold px-2.5 py-1 rounded-lg transition-all active:scale-95"
+            style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
           >
             {hasLessons ? "Edit" : "+ Add lesson"}
           </button>
         </div>
 
-        {hasLessons ? (
-          <div className="flex flex-col gap-2">
-            {lessons.map((lesson) => {
-              const preset = LESSONS.find((l) => l.label === lesson);
-              const impl   = lessonImplementations?.find((i) => i.lesson === lesson);
-              const statusIcon = impl
-                ? impl.implemented ? "✓" : "⚠"
-                : null;
-              const statusColor = impl
-                ? impl.implemented ? "#34d399" : "#fbbf24"
-                : "#C4B5FD";
-              return (
-                <div key={lesson}>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-fs-body font-semibold"
-                      style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
-                    >
-                      {preset && <span>{preset.icon}</span>}
-                      <span>{lesson}</span>
-                      {statusIcon && (
-                        <span className="font-bold ml-0.5" style={{ color: statusColor }}>{statusIcon}</span>
-                      )}
-                    </span>
-                    <button
-                      onClick={() => removeLesson(lesson)}
-                      className="opacity-30 hover:opacity-70 transition-opacity"
-                      style={{ color: "#C4B5FD" }}
-                      aria-label={`Remove ${lesson}`}
-                    >
-                      <Icon name="close" size={10} />
-                    </button>
-                  </div>
-                  {impl && (
-                    <p className="mt-1 text-fs-body leading-snug ml-1" style={{ color: impl.implemented ? "rgba(52,211,153,0.65)" : "rgba(251,191,36,0.65)" }}>
-                      {impl.implemented ? impl.how : "Could not be naturally integrated with this story"}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>
-            No lesson selected — tap &quot;+ Add lesson&quot; to weave a value into the story.
-          </p>
-        )}
+        <div className="mt-3 flex flex-col gap-2">
+          {analyzing && (
+            <div className="flex items-center gap-2 py-1.5">
+              <span className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0"
+                style={{ borderColor: "rgba(139,92,246,0.2)", borderTopColor: "#C4B5FD" }} />
+              <span className="text-fs-body" style={{ color: "rgba(196,181,253,0.6)" }}>
+                Reading the story for embedded values…
+              </span>
+            </div>
+          )}
 
-        {/* Rewrite shortcut — shown after lessons change or always when lessons present */}
-        {hasLessons && lessonImplementations && lessonImplementations.length === 0 && (
-          <p className="mt-2 text-fs-body" style={{ color: "rgba(139,92,246,0.45)" }}>
-            ✦ Lesson badges appear in the script after generating a story with these lessons from the Prompt tab.
-          </p>
-        )}
+          {!analyzing && hasMoralLessons && moralLessons!.map((ml) => {
+            const preset = LESSONS.find((l) => l.label === ml.lesson);
+            return (
+              <div
+                key={ml.lesson}
+                className="flex items-start gap-2.5 p-2.5 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.16)" }}
+              >
+                <div
+                  className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(139,92,246,0.16)" }}
+                >
+                  <span className="text-fs-heading leading-none">{preset?.icon ?? "✨"}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-fs-body font-bold" style={{ color: "#E9D8FD" }}>{ml.lesson}</span>
+                    <span
+                      className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center font-bold"
+                      style={{ background: "#34d399", color: "#05080F", fontSize: "9px" }}
+                      aria-label="Confirmed in this story"
+                      title="Confirmed in this story"
+                    >
+                      ✓
+                    </span>
+                  </div>
+                  <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    {ml.how}
+                  </p>
+                </div>
+                <button
+                  onClick={() => removeMoralLesson(ml.lesson)}
+                  className="flex-shrink-0 opacity-25 hover:opacity-70 transition-opacity mt-0.5"
+                  style={{ color: "#C4B5FD" }}
+                  aria-label={`Remove ${ml.lesson}`}
+                >
+                  <Icon name="close" size={11} />
+                </button>
+              </div>
+            );
+          })}
+
+          {!analyzing && !hasMoralLessons && (
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>
+              {hasLessons
+                ? "No confirmed values yet — rewrite the story below to weave your selected lesson in."
+                : "No moral lesson detected yet — tap “+ Add lesson” to weave a value into the story."}
+            </p>
+          )}
+        </div>
 
         {hasLessons && onRewrite && (
           <button
@@ -176,7 +198,7 @@ export default function LessonEditor({
       <div className="flex items-center justify-between">
         <div>
           <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>
-            ✦ Lessons
+            🌟 Moral Lessons
           </span>
           <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
             Pick one or more values to weave into the story

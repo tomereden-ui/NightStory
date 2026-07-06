@@ -1247,7 +1247,6 @@ export default function Studio2Page() {
                     lessons={lessons}
                     onChange={(next) => setLessons(next)}
                     onRewrite={(instruction) => handleLessonRewrite(instruction)}
-                    lessonImplementations={lessonImplementations}
                   />
                 </>
               }

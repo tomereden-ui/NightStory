@@ -1,4 +1,4 @@
-import type { ScriptBlock, StoryScene } from "@/types";
+import type { ScriptBlock, StoryScene, MoralLesson } from "@/types";
 import type { CharacterProfile } from "./libraryStore";
 
 const KEY = "nightstory_draft_v1";
@@ -19,6 +19,7 @@ export interface DraftState {
   lesson?: string | null;
   lessons?: string[];
   lessonImplementations?: { lesson: string; implemented: boolean; how: string }[];
+  moralLessons?: MoralLesson[];
   scenes?: StoryScene[];
   characterProfiles?: Record<string, CharacterProfile>;
   /** Whether this story already has produced audio (entry.audioUrl) — read once at load time. */

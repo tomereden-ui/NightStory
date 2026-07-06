@@ -111,6 +111,12 @@ export interface ScriptBlock {
   validated?: boolean;
 }
 
+/** A moral/values lesson Gemini has confirmed is meaningfully embedded in a story's script. */
+export interface MoralLesson {
+  lesson: string;
+  how: string;
+}
+
 export interface StoryScene {
   sceneNumber: number;
   title: string;
