@@ -1870,6 +1870,7 @@ export default function Studio2Page() {
     setHasScriptChanges(false);
     setHasUnsavedChanges(false);
     setMetaDirty(false);
+    setVersionsOpen(false);
   }, []);
 
   const handleProductionError = useCallback((msg: string) => {
@@ -1956,19 +1957,27 @@ export default function Studio2Page() {
             <div className="w-8" />
           )}
           <h1 className="flex-1 text-center text-fs-heading font-semibold text-white tracking-wide">🌟 {i18nT(language, "studioTitle")}</h1>
-          <button
-            onClick={() => setVersionsOpen(true)}
-            className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
-            style={savesCount > 0
-              ? { background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
-              : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }
-            }
-          >
-            <Icon name="folder" size={15} />
-            {savesCount > 0 && (
-              <span className="text-fs-body font-bold leading-none">{savesCount}</span>
-            )}
-          </button>
+          {/* Saved Versions is a safety net for scripts that don't exist
+              anywhere else yet — once a story has produced audio, it's
+              persisted and reachable from the Stories tab, so this global
+              draft-snapshot list no longer applies to it. */}
+          {!storyHasAudio ? (
+            <button
+              onClick={() => setVersionsOpen(true)}
+              className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
+              style={savesCount > 0
+                ? { background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
+                : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }
+              }
+            >
+              <Icon name="folder" size={15} />
+              {savesCount > 0 && (
+                <span className="text-fs-body font-bold leading-none">{savesCount}</span>
+              )}
+            </button>
+          ) : (
+            <div className="w-8" />
+          )}
         </div>
 
         {/* Child profile picker */}
