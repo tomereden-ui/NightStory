@@ -53,7 +53,12 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const ok = await moveToTrash(params.id);
-  if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ ok: true });
+  try {
+    const ok = await moveToTrash(params.id);
+    if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[library DELETE] moveToTrash failed:", err);
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Delete failed" }, { status: 500 });
+  }
 }

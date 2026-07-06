@@ -263,9 +263,16 @@ export default function StoryDetailPage() {
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/library/${entry.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
-      router.push("/library");
-    } catch {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Delete failed");
+      }
+      // Go back to wherever the user came from (library grid, home, a child's
+      // profile, etc.) instead of hardcoding one destination — the story no
+      // longer exists, so there's nothing to show by staying on this card.
+      router.back();
+    } catch (err) {
+      console.error("[handleDeleteConfirm]", err);
       setIsDeleting(false);
       setConfirmingDelete(false);
     }

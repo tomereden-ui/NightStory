@@ -29,7 +29,16 @@ create table if not exists public.trash (
   created_at bigint not null,
   deleted_at bigint not null,
   blocks jsonb not null default '[]'::jsonb,
+  language text,
+  emoji text,
+  is_public boolean not null default false,
+  is_classic boolean not null default false,
+  child_id text,
+  child_ids jsonb,
+  favorited_by jsonb,
+  share_message text,
   scenes jsonb,
+  character_profiles jsonb,
   moral_lessons jsonb
 );
 
