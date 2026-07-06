@@ -564,6 +564,12 @@ export default function HomePage() {
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [familyStories, setFamilyStories] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  // Tracks the SEPARATE per-child stories fetch below — without this, once
+  // the first fetch (classics/children/familyStories) resolves and flips
+  // `loading` false, there's a window where `stories` is still its initial
+  // empty array while the child-scoped fetch is in flight, briefly showing
+  // the "Create your first story" empty state before real stories arrive.
+  const [storiesLoading, setStoriesLoading] = useState(true);
   const [hour, setHour] = useState(20);
 
   // Load children + classics + all-family stories once on mount
@@ -589,12 +595,20 @@ export default function HomePage() {
 
   // Re-fetch stories whenever the active child changes
   useEffect(() => {
-    if (activeChildId === null) return;
+    if (activeChildId === null) {
+      // Only settle once the initial load has confirmed there's no child to
+      // scope by at all (as opposed to just not having resolved yet) —
+      // otherwise this fires immediately on mount and defeats the guard.
+      if (!loading) setStoriesLoading(false);
+      return;
+    }
+    setStoriesLoading(true);
     fetch(`/api/library?childId=${encodeURIComponent(activeChildId)}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((lib) => setStories(Array.isArray(lib) ? lib : []))
-      .catch(() => {});
-  }, [activeChildId]);
+      .catch(() => {})
+      .finally(() => setStoriesLoading(false));
+  }, [activeChildId, loading]);
 
   // Persist active child selection across sessions
   const handleChildSwitch = (id: string) => {
@@ -718,7 +732,7 @@ export default function HomePage() {
       </div>
 
       {/* ── Content ── */}
-      {loading ? (
+      {(loading || storiesLoading) ? (
         <div className="flex flex-col gap-8">
           {[0, 1, 2].map((i) => (
             <div key={i}>
