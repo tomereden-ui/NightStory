@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { PRESET_VOICES } from "@/config/presetVoices";
+import { HEBREW_VOICE_POOL } from "@/config/hebrewVoices";
+
+const HEBREW_VOICE_IDS = new Set(HEBREW_VOICE_POOL.map((v) => v.id));
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -83,19 +86,32 @@ export default function VoiceManagerPage() {
         return r.json();
       })
       .then((data: { voices: { id: string; name: string; category: string; verifiedLanguages: { language: string }[] }[] }) => {
+        // ElevenLabs' verified_languages never actually includes "he" for any
+        // voice in this account (confirmed by direct API check) — production
+        // always forces eleven_v3 + language_code="he" against a small,
+        // hand-tested pool (HEBREW_VOICE_POOL) regardless of what EL's own
+        // language metadata claims. So verified_languages alone would wrongly
+        // show every one of those proven voices as English-only.
         const mapped: ManagerVoice[] = (data.voices ?? []).map((v) => {
           const langs = new Set(v.verifiedLanguages.map((vl) => vl.language));
-          const hasEn = langs.has("en");
-          const hasHe = langs.has("he");
+          const hasEn = langs.has("en") || v.verifiedLanguages.length === 0;
+          const hasHeVerified = langs.has("he");
+          const isCurated = HEBREW_VOICE_IDS.has(v.id);
+
+          if (isCurated) {
+            return { id: v.id, name: v.name, description: v.category, languages: ["en", "he"], languageNote: "hand-verified for Hebrew — used in production casting" };
+          }
           if (v.verifiedLanguages.length === 0) {
             // No verified_languages usually means an Instant Voice Clone — these
             // aren't pre-verified per-language, but the multilingual model (eleven_v3)
-            // handles any language, and this is exactly the pool used for Hebrew
-            // production casting today. Assume multilingual rather than "no languages".
+            // handles any language. Assume multilingual rather than "no languages".
             return { id: v.id, name: v.name, description: v.category, languages: ["en", "he"], languageNote: "cloned — multilingual assumed" };
           }
-          const languages: Lang[] = [...(hasEn ? (["en"] as const) : []), ...(hasHe ? (["he"] as const) : [])];
-          return { id: v.id, name: v.name, description: v.category, languages };
+          const languages: Lang[] = [...(hasEn ? (["en"] as const) : []), ...(hasHeVerified ? (["he"] as const) : [])];
+          return {
+            id: v.id, name: v.name, description: v.category, languages,
+            languageNote: "Hebrew not verified by ElevenLabs — eleven_v3 may still work, untested",
+          };
         });
         setElVoices(mapped);
       })
