@@ -70,7 +70,12 @@ async function synthesizeGemini(body: SynthesizeBody): Promise<NextResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
+  // gemini-3.1-flash-tts-preview (ttsService.ts's production model) was
+  // blocked/erroring when tested here. gemini-2.5-flash-preview-tts is the
+  // model actually working today in voices/preview/route.ts (Voice Bank
+  // preview generation) and seed-bluebell-audio/route.ts — same request
+  // shape, just a different model id, so used here for a reliable tool.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

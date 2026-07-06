@@ -183,7 +183,7 @@ export default function VoiceManagerPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#ddd", fontFamily: "monospace", padding: 24 }}>
       <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Voice Manager</h1>
-      <p style={{ color: "#666", fontSize: 13, marginBottom: 20 }}>Internal TTS audition tool — ElevenLabs &amp; Gemini 3.1 Flash TTS. Not user-facing.</p>
+      <p style={{ color: "#666", fontSize: 13, marginBottom: 20 }}>Internal TTS audition tool — ElevenLabs &amp; Gemini 2.5 Flash TTS. Not user-facing.</p>
 
       {/* Engine toggle */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -198,7 +198,7 @@ export default function VoiceManagerPage() {
               color: engine === e ? "#fff" : "#999", fontSize: 13,
             }}
           >
-            {e === "elevenlabs" ? "ElevenLabs" : "Gemini 3.1 Flash TTS"}
+            {e === "elevenlabs" ? "ElevenLabs" : "Gemini 2.5 Flash TTS"}
           </button>
         ))}
       </div>
@@ -273,7 +273,7 @@ export default function VoiceManagerPage() {
             </div>
           ) : (
             <p style={{ marginTop: 16, fontSize: 12, color: "#666" }}>
-              Gemini 3.1 Flash TTS exposes no synthesis parameters beyond voice selection — no pitch/speed/style controls exist in this API.
+              Gemini 2.5 Flash TTS exposes no synthesis parameters beyond voice selection — no pitch/speed/style controls exist in this API.
             </p>
           )}
 
