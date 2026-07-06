@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEntry, getEntries, getPublicEntries, addEntry, type LibraryEntry } from "@/lib/libraryStore";
-import { assignVoicesToCharacters, assignHebrewVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import type { ScriptBlock } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -24,10 +24,8 @@ interface ReassignOutcome {
  * produced audio — a story must be re-produced for the new casting to be heard.
  */
 function reassignBlocks(entry: LibraryEntry): { blocks: ScriptBlock[]; changedCount: number } {
-  const language = entry.language ?? "en";
   const characters = entry.characterProfiles ?? {};
-  const assignFn = language === "he" ? assignHebrewVoicesToCharacters : assignVoicesToCharacters;
-  const voiceMap = assignFn(entry.blocks, "", undefined, characters);
+  const voiceMap = assignVoicesToCharacters(entry.blocks, "", undefined, characters);
 
   let changedCount = 0;
   const blocks = entry.blocks.map((b) => {

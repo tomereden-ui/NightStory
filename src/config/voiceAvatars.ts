@@ -35,4 +35,12 @@ export const VOICE_AVATAR_PROMPTS: Record<string, string> = {
   Umbriel:        "an easy-going, mellow young man with a relaxed unhurried expression",
   Vindemiatrix:   "a gentle, nurturing young woman with soft features and a tender caring smile",
   Zubenelgenubi:  "a casual, relaxed person with an open friendly expression and conversational ease",
+
+  // Added to complete Google's official 30-voice Gemini TTS catalog
+  Achernar:       "a soft-spoken, delicate young woman with a serene gentle smile",
+  Achird:         "a friendly, approachable young man with a warm open grin",
+  Algenib:        "a raspy-voiced, weathered man with rugged textured features",
+  Algieba:        "a smooth-voiced, polished young man with a composed refined look",
+  Alnilam:        "a firm, assured middle-aged man with steady confident eyes",
+  Enceladus:      "a soft-spoken, breathy young man with a quiet contemplative expression",
 };

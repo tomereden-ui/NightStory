@@ -191,29 +191,19 @@ export function assignVoicesToCharacters(
 /**
  * Single-character version of the nature-based matching above, for the
  * per-character "Auto Assign" button in the Direction Sheet. Scores the same
- * way assignVoicesToCharacters/assignHebrewVoicesToCharacters do, but for one
- * character at a time so the UI can apply it without touching anyone else's
- * voice. excludeVoiceIds lets the caller keep this pick distinct from voices
- * already assigned to other characters in the same story.
+ * way assignVoicesToCharacters does, but for one character at a time so the
+ * UI can apply it without touching anyone else's voice. excludeVoiceIds lets
+ * the caller keep this pick distinct from voices already assigned to other
+ * characters in the same story. Gemini's preset pool now voices every
+ * language, so this no longer branches on Hebrew (kept as a param for
+ * backward-compatible call sites, but unused here).
  */
 export function pickBestVoiceForCharacter(
   profile: CharacterProfile | undefined,
-  language: string | undefined,
+  _language: string | undefined,
   excludeVoiceIds: Set<string> = new Set(),
 ): string | undefined {
   const need = deriveNeed(profile);
-
-  if (language === "he") {
-    const unused = HEBREW_VOICE_POOL.filter((v) => !excludeVoiceIds.has(v.id));
-    const candidates = unused.length > 0 ? unused : HEBREW_VOICE_POOL;
-    let best: HebrewVoice | undefined;
-    let bestScore = -Infinity;
-    candidates.forEach((c, idx) => {
-      const s = scoreHebrewVoice(c, need) - idx * 0.001;
-      if (s > bestScore) { bestScore = s; best = c; }
-    });
-    return best?.id;
-  }
 
   const unused = PRESET_VOICES.filter((p) => !excludeVoiceIds.has(p.id));
   const candidates = unused.length > 0 ? unused : PRESET_VOICES;

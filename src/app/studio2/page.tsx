@@ -28,7 +28,7 @@ import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { fetchBankAvatars, resolveCharacterAvatar, buildDiceBearUrl, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
-import { assignVoicesToCharacters, assignHebrewVoicesToCharacters, pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
+import { assignVoicesToCharacters, pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
@@ -1798,17 +1798,16 @@ export default function Studio2Page() {
   // ─── Admin-only: re-run nature-based voice assignment for every cast member ──
 
   const handleReassignCast = useCallback(() => {
-    const assignFn = storyLang === "he" ? assignHebrewVoicesToCharacters : assignVoicesToCharacters;
     // heroName="" disables the hero-lock so every character is (re)cast by
     // nature — same approach as the admin "Reassign Cast Voices" tool.
-    const voiceMap = assignFn(scriptBlocks, "", undefined, characterProfiles);
+    const voiceMap = assignVoicesToCharacters(scriptBlocks, "", undefined, characterProfiles);
     setScriptBlocks((prev) => prev.map((b) => {
       if (b.characterName === "SFX") return b;
       const newVoice = voiceMap[b.characterName];
       return newVoice ? { ...b, assignedVoiceId: newVoice } : b;
     }));
     markScriptDirty();
-  }, [scriptBlocks, characterProfiles, storyLang]);
+  }, [scriptBlocks, characterProfiles]);
 
   // ─── Fetch cover ─────────────────────────────────────────────────────────────
 

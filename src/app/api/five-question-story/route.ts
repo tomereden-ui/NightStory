@@ -6,7 +6,7 @@ import path from "path";
 import { inferCompanionAbility } from "@/utils/inferCompanionAbility";
 import { MOOD_LABELS } from "@/constants/bluebellScripts";
 import type { StorySeeds } from "@/utils/buildStoryPrompt";
-import { assignVoicesToCharacters, assignHebrewVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntries } from "@/lib/libraryStore";
 
@@ -177,8 +177,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
     }
 
-    const assignVoices = body.language === "he" ? assignHebrewVoicesToCharacters : assignVoicesToCharacters;
-    const characterVoiceMap = assignVoices(raw.blocks ?? [], seeds.q1_hero, undefined, raw.characters ?? {});
+    const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], seeds.q1_hero, undefined, raw.characters ?? {});
     const blocks = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,

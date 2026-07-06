@@ -326,9 +326,14 @@ async function synthesizeGemini(
 ): Promise<{ mimeType: string }> {
   const maxAttempts = opts?.maxAttempts ?? 5;
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
+  // gemini-3.1-flash-tts-preview was blocked/erroring when tested via Voice
+  // Manager. gemini-2.5-flash-preview-tts is the model actually working today
+  // (voices/preview/route.ts, seed-bluebell-audio/route.ts) -- same request
+  // shape, different model id. Now this app's primary TTS engine for all
+  // languages, so it needs to be the reliable one.
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
+    `gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
   // Gemini 3.1 Flash TTS does NOT support systemInstruction.
   // Expressiveness comes from inline [audio tags] already in the line text.
@@ -483,22 +488,31 @@ export async function synthesizeLine(
     return {};
   }
 
-  // Hebrew: ElevenLabs handles Hebrew pronunciation correctly; WaveNet/Chirp do not
+  // Gemini 2.5 Flash TTS is now the primary engine for every language —
+  // confirmed Hebrew-capable per Google's own docs (no per-voice restriction),
+  // and this is the same model already verified reliable via Voice Manager.
+  try {
+    console.log(`[${ts()}][Gemini TTS] text →`, JSON.stringify(line));
+    return await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts);
+  } catch (primaryErr) {
+    console.warn(`[${ts()}][Gemini TTS] Primary engine failed, falling back:`, primaryErr);
+  }
+
+  // Fallback 1 — Hebrew: ElevenLabs' curated pool, hand-verified for Hebrew pronunciation
   if (effectiveLang === "he") {
     const elKey = process.env.ELEVENLABS_API_KEY;
     if (elKey) {
       const heVoiceId = HE_EL_VOICE_MAP[voiceId] ?? HE_EL_VOICE_MAP["Charon"]!;
-      console.log(`[${ts()}][HE-EL] ${voiceId} → ${heVoiceId}`);
+      console.log(`[${ts()}][HE-EL fallback] ${voiceId} → ${heVoiceId}`);
       // Hebrew prosody tuning: lower stability allows natural intonation variance;
       // higher style exaggeration pushes the voice away from flat/robotic delivery.
       await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.30, style ?? 0.60, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
       return { mimeType: "audio/mpeg" };
     }
-    // No EL key — fall through to GC TTS with WaveNet (degraded quality)
     console.warn(`[${ts()}][HE] ELEVENLABS_API_KEY not set — using WaveNet fallback for Hebrew`);
   }
 
-  // Chirp 3 HD — active when GOOGLE_CLOUD_TTS_API_KEY is set in env
+  // Fallback 2 — Google Cloud Chirp3-HD, if configured
   const gcTtsKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
   if (gcTtsKey) {
     // Pass raw line — synthesizeChirp3HD converts [tags] to SSML internally
@@ -506,7 +520,5 @@ export async function synthesizeLine(
     return { mimeType: "audio/mpeg" };
   }
 
-  // Gemini TTS fallback — used when GOOGLE_CLOUD_TTS_API_KEY is not set
-  console.log(`[${ts()}][Gemini TTS] text →`, JSON.stringify(line));
-  return synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts);
+  throw new Error("Gemini TTS failed and no fallback provider (ElevenLabs/Google Cloud TTS) is configured.");
 }
