@@ -1312,6 +1312,45 @@ export default function AdminPage() {
     runRegenerateScenes({ applyAll: true });
   };
 
+  // ── Admin Services: Delete a story by ID ──────────────────────────────────
+  const [deleteStoryId, setDeleteStoryId] = useState("");
+  const [deleteRunning, setDeleteRunning] = useState(false);
+  const [deleteLog, setDeleteLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const handleDeleteStory = async () => {
+    const id = deleteStoryId.trim();
+    if (!id) return;
+
+    setDeleteRunning(true);
+    setDeleteLog([{ type: "info", text: `Looking up story ${id}…` }]);
+    try {
+      const lookupRes = await fetch(`/api/library/${encodeURIComponent(id)}`);
+      if (!lookupRes.ok) {
+        setDeleteLog((l) => [...l, { type: "error", text: lookupRes.status === 404 ? "No story found with that ID." : `Lookup failed: ${lookupRes.statusText}` }]);
+        return;
+      }
+      const entry = await lookupRes.json() as { title: string };
+
+      if (!confirm(`Move "${entry.title}" (${id}) to trash?\n\nRecoverable from Trash for 30 days — this is not a permanent delete.`)) {
+        setDeleteLog((l) => [...l, { type: "info", text: "Cancelled." }]);
+        return;
+      }
+
+      const res = await fetch(`/api/library/${encodeURIComponent(id)}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      setDeleteLog((l) => [...l, { type: "success", text: `✅ Moved "${entry.title}" to trash — recoverable for 30 days.` }]);
+      setDeleteStoryId("");
+    } catch (e) {
+      setDeleteLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setDeleteRunning(false);
+    }
+  };
+
   // ── Admin Services: Generate voice preview samples ───────────────────────
   const [previewVoiceId, setPreviewVoiceId] = useState("");
   const [previewRunning, setPreviewRunning] = useState(false);
@@ -1862,6 +1901,58 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {previewLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Delete Story Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.18)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🗑️ Delete Story</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Moves a story to trash by its story ID — the same action a user gets from their own
+                    story's card, just usable on any story regardless of owner. Recoverable from Trash for
+                    30 days; this is not a permanent delete.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={deleteStoryId}
+                  onChange={(e) => setDeleteStoryId(e.target.value)}
+                  placeholder="Story ID"
+                  disabled={deleteRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+                <button
+                  onClick={handleDeleteStory}
+                  disabled={deleteRunning || !deleteStoryId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171" }}>
+                  Delete This Story
+                </button>
+              </div>
+
+              {/* Log output */}
+              {deleteLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {deleteLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"
