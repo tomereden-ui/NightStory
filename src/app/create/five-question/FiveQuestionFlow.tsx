@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
+import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { getBluebell, getMoodLabels, type BluebellCopy } from "@/constants/bluebellScripts";
 import {
   getWizardUi, type WizardUiCopy,
@@ -1140,8 +1141,12 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   useEffect(() => {
     let cancelled = false;
     async function seedAudio() {
+      // Bluebell speaks in the user's own chosen default narrator voice —
+      // cached per (language, voiceId) so anyone else who picked the same
+      // voice shares the cache instead of regenerating it.
+      const voiceId = getNarratorVoiceId();
       try {
-        const res = await fetch(`/api/admin/seed-bluebell-audio?lang=${effectiveLanguage}`);
+        const res = await fetch(`/api/admin/seed-bluebell-audio?lang=${effectiveLanguage}&voiceId=${voiceId}`);
         if (!res.ok) return;
         const { missing, existingAudioUrls } = await res.json() as {
           missing: string[];
@@ -1158,7 +1163,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         for (const key of ordered) {
           if (cancelled) return;
           try {
-            const genRes = await fetch(`/api/admin/seed-bluebell-audio?lang=${effectiveLanguage}&key=${key}`, { method: "POST" });
+            const genRes = await fetch(`/api/admin/seed-bluebell-audio?lang=${effectiveLanguage}&key=${key}&voiceId=${voiceId}`, { method: "POST" });
             if (genRes.ok) {
               const { url } = await genRes.json() as { ok: boolean; key: string; url: string };
               if (url) setQuestionAudios((prev) => ({ ...prev, [key]: url }));

@@ -336,8 +336,12 @@ async function runProduction(
     const voiceMap = new VoiceMap();
     const voiceOverrides = await buildVoiceOverrides(blocks, supabase);
 
-    // Apply user's default narrator voice if no per-block override exists
-    if (narratorVoiceId && !voiceOverrides["Narrator"]) {
+    // The user's default narrator voice always wins for the Narrator
+    // character. Nature-based casting at generation time already assigns
+    // *something* to every character including "Narrator", so a
+    // "only if unset" guard here would (and did) almost never fire --
+    // this must be unconditional to actually be the default.
+    if (narratorVoiceId) {
       (voiceOverrides as Record<string, { geminiVoiceName?: string }>)["Narrator"] = { geminiVoiceName: narratorVoiceId };
     }
 

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, ensureBuckets } from "@/lib/supabase";
+import { PRESET_VOICES } from "@/config/presetVoices";
 
 export const dynamic = "force-dynamic";
 
-const BLUEBELL_VOICE = "Kore"; // soft & gentle feminine — suits a fairy narrator
+const DEFAULT_BLUEBELL_VOICE = "Kore"; // soft & gentle feminine — suits a fairy narrator, used if no voiceId given
+
+function resolveGeminiVoiceName(voiceId: string | null): string {
+  if (!voiceId) return DEFAULT_BLUEBELL_VOICE;
+  return PRESET_VOICES.find((v) => v.id === voiceId)?.geminiVoiceName ?? DEFAULT_BLUEBELL_VOICE;
+}
 
 const LANG_NAMES: Record<string, string> = {
   en: "English", he: "Hebrew", ar: "Arabic", fr: "French", es: "Spanish",
@@ -93,8 +99,8 @@ function resolveScripts(lang: string): Record<string, string> {
   return BLUEBELL_SCRIPTS_BY_LANG[lang] ?? BLUEBELL_SCRIPTS_BY_LANG.en;
 }
 
-function storageKey(lang: string, questionKey: string): string {
-  return `${FOLDER}/${lang}/${questionKey}.wav`;
+function storageKey(lang: string, voiceId: string, questionKey: string): string {
+  return `${FOLDER}/${lang}/${voiceId}/${questionKey}.wav`;
 }
 
 function pcmToWav(pcmBase64: string): Buffer {
@@ -124,7 +130,7 @@ function pcmToWav(pcmBase64: string): Buffer {
   return wav;
 }
 
-async function generateTTS(apiKey: string, text: string, lang: string): Promise<Buffer> {
+async function generateTTS(apiKey: string, text: string, lang: string, geminiVoiceName: string): Promise<Buffer> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
   const langName = LANG_NAMES[lang] ?? lang;
   const systemInstruction = lang !== "en"
@@ -134,7 +140,7 @@ async function generateTTS(apiKey: string, text: string, lang: string): Promise<
     contents: [{ role: "user", parts: [{ text }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
-      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: BLUEBELL_VOICE } } },
+      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: geminiVoiceName } } },
     },
   };
   const body = systemInstruction ? { systemInstruction, ...basePayload } : basePayload;
@@ -169,11 +175,15 @@ async function generateTTS(apiKey: string, text: string, lang: string): Promise<
   throw new Error("TTS failed after 3 attempts");
 }
 
-// GET ?lang=he — returns existing audio URLs + list of missing question keys for that language
+// GET ?lang=he&voiceId=Kore — returns existing audio URLs + list of missing
+// question keys for that language, cached per (language, voiceId) so every
+// family gets Bluebell's prompts in their own chosen narrator voice while
+// still sharing the cache with anyone else who picked that same voice.
 export async function GET(req: NextRequest) {
   const lang = req.nextUrl.searchParams.get("lang") ?? "en";
+  const voiceId = req.nextUrl.searchParams.get("voiceId") ?? DEFAULT_BLUEBELL_VOICE;
   await ensureBuckets();
-  const { data: files } = await supabase.storage.from("audio").list(`${FOLDER}/${lang}`);
+  const { data: files } = await supabase.storage.from("audio").list(`${FOLDER}/${lang}/${voiceId}`);
   const existingNames = new Set((files ?? []).map((f) => f.name));
 
   const existingAudioUrls: Record<string, string> = {};
@@ -182,7 +192,7 @@ export async function GET(req: NextRequest) {
   for (const key of QUESTION_KEYS) {
     const fileName = `${key}.wav`;
     if (existingNames.has(fileName)) {
-      existingAudioUrls[key] = supabase.storage.from("audio").getPublicUrl(storageKey(lang, key)).data.publicUrl;
+      existingAudioUrls[key] = supabase.storage.from("audio").getPublicUrl(storageKey(lang, voiceId, key)).data.publicUrl;
     } else {
       missing.push(key);
     }
@@ -191,12 +201,14 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ missing, existingAudioUrls });
 }
 
-// POST ?lang=he&key=q1 — generate TTS for one question in the given language and cache it
+// POST ?lang=he&key=q1&voiceId=Kore — generate TTS for one question in the
+// given language + narrator voice and cache it
 export async function POST(req: NextRequest) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
 
   const lang = req.nextUrl.searchParams.get("lang") ?? "en";
+  const voiceId = req.nextUrl.searchParams.get("voiceId") ?? DEFAULT_BLUEBELL_VOICE;
   const key = req.nextUrl.searchParams.get("key");
   const scripts = resolveScripts(lang);
 
@@ -207,13 +219,14 @@ export async function POST(req: NextRequest) {
   await ensureBuckets();
 
   try {
-    const wavBuf = await generateTTS(geminiKey, scripts[key], lang);
+    const geminiVoiceName = resolveGeminiVoiceName(voiceId);
+    const wavBuf = await generateTTS(geminiKey, scripts[key], lang, geminiVoiceName);
     const { error } = await supabase.storage
       .from("audio")
-      .upload(storageKey(lang, key), wavBuf, { contentType: "audio/wav", upsert: true });
+      .upload(storageKey(lang, voiceId, key), wavBuf, { contentType: "audio/wav", upsert: true });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const url = supabase.storage.from("audio").getPublicUrl(storageKey(lang, key)).data.publicUrl;
+    const url = supabase.storage.from("audio").getPublicUrl(storageKey(lang, voiceId, key)).data.publicUrl;
     return NextResponse.json({ ok: true, key, url });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 502 });
