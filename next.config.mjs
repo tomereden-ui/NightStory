@@ -18,7 +18,7 @@ const nextConfig = {
   },
   experimental: {
     // Prevent webpack from bundling server-only native binaries (Next.js 14 syntax)
-    serverComponentsExternalPackages: ["ffmpeg-static", "fluent-ffmpeg"],
+    serverComponentsExternalPackages: ["ffmpeg-static", "fluent-ffmpeg", "sharp"],
   },
 };
 

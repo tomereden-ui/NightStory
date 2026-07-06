@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 import { supabase } from "@/lib/supabase";
 import { getAllCreateOptionSpecs, optionStorageKey } from "@/config/createFlowImages";
+
+// Card thumbnails render at a few hundred CSS px wide at most — resize the
+// raw Gemini output down so they load near-instantly instead of shipping
+// multi-megabyte originals to a 16:9 grid card.
+async function compressForCard(buf: Buffer): Promise<Buffer> {
+  return sharp(buf).resize({ width: 720, withoutEnlargement: true }).jpeg({ quality: 74 }).toBuffer();
+}
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +67,6 @@ export async function POST(req: NextRequest) {
   // Generate image via Gemini
   const fullPrompt = `${prompt} ${STYLE_SUFFIX}`;
   let imageData: string;
-  let mimeType: string;
 
   try {
     const res = await fetch(`${GEMINI_BASE}/${IMAGE_MODEL}:generateContent?key=${apiKey}`, {
@@ -88,16 +95,26 @@ export async function POST(req: NextRequest) {
     }
 
     imageData = imagePart.inlineData.data;
-    mimeType = imagePart.inlineData.mimeType ?? "image/png";
   } catch (err) {
     console.error("[seed-create-images] Gemini error:", err);
     return NextResponse.json({ error: "Gemini request failed" }, { status: 500 });
   }
 
+  // Compress before upload — card thumbnails don't need the multi-MB
+  // originals Gemini returns, and the smaller file makes the placeholder→
+  // photo swap in the UI effectively instant.
+  const rawBuf = Buffer.from(imageData, "base64");
+  let buf: Buffer;
+  try {
+    buf = await compressForCard(rawBuf);
+  } catch (err) {
+    console.warn("[seed-create-images] compression failed, uploading original:", err);
+    buf = rawBuf;
+  }
+
   // Upload to Supabase
-  const buf = Buffer.from(imageData, "base64");
-  const storageKey = key.endsWith(".jpg") || key.endsWith(".png") ? key : `${key}.png`;
-  const { error } = await supabase.storage.from(BUCKET).upload(storageKey, buf, { contentType: mimeType, upsert: true });
+  const storageKey = (key.replace(/\.(jpg|png)$/, "")) + ".jpg";
+  const { error } = await supabase.storage.from(BUCKET).upload(storageKey, buf, { contentType: "image/jpeg", upsert: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Strip version prefix (e.g. "v3-") so imageKey matches the frontend's optionImages lookup ("world-deep-ocean")
