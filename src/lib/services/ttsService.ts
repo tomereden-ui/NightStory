@@ -3,7 +3,7 @@ import { trackELTts, trackGeminiTts } from "@/lib/usageTracker";
 
 const ts = () => new Date().toTimeString().slice(0, 8);
 
-function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
+export function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
   const numChannels = 1;
   const bitsPerSample = 16;
   const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
