@@ -39,7 +39,7 @@ interface Answers {
   q5_mood: ResolutionMood | null;
 }
 
-const DRAFT_KEY = "ns-wizard-draft-v1";
+export const DRAFT_KEY = "ns-wizard-draft-v1";
 
 // ─── FairyFigure: animated Bluebell fairy portrait ────────────────────────────────────
 
@@ -1080,6 +1080,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const q4Categories = useMemo(() => getQ4Categories(effectiveLanguage), [effectiveLanguage]);
 
   const [step, setStep]                   = useState<Step>("q1");
+  const [resetToken, setResetToken]       = useState(0);
   const [answers, setAnswers]             = useState<Answers>(INITIAL_ANSWERS);
   const [durationMinutes, setDuration]    = useState(5);
   const [editingFromSummary, setEditingFromSummary] = useState(false);
@@ -1239,6 +1240,11 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     setIsProducing(false); setProductionJobId(null); setCompletedJob(null);
     setSummary(""); setCoverUrl(""); setCoverPrompt("");
     setEditingFromSummary(false);
+    // Force a fresh mount of the active question view even when the step
+    // value itself doesn't change (e.g. resetting while already on q1) —
+    // otherwise that view's own local state (typed text, selected card)
+    // keeps showing the pre-reset selection.
+    setResetToken((t) => t + 1);
   };
 
   const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
@@ -1350,16 +1356,16 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
 
   const resetProp = hasProgress ? handleReset : undefined;
 
-  if (step === "q1") return <>{GeneratingBadge}<Q1View initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} bb={bb} ui={ui} /></>;
-  if (step === "q2") return <>{GeneratingBadge}<Q2View heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} bb={bb} ui={ui} worldOptions={worldOptions} /></>;
-  if (step === "q3") return <>{GeneratingBadge}<Q3View heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} bb={bb} ui={ui} companionTypes={companionTypes} /></>;
-  if (step === "q4") return <>{GeneratingBadge}<Q4View heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} bb={bb} ui={ui} q4Categories={q4Categories} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View heroName={answers.q1_hero} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} bb={bb} ui={ui} moodLabels={moodLabels} /></>;
+  if (step === "q1") return <>{GeneratingBadge}<Q1View key={resetToken} initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} bb={bb} ui={ui} /></>;
+  if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} bb={bb} ui={ui} worldOptions={worldOptions} /></>;
+  if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} bb={bb} ui={ui} companionTypes={companionTypes} /></>;
+  if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} bb={bb} ui={ui} q4Categories={q4Categories} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} heroName={answers.q1_hero} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} bb={bb} ui={ui} moodLabels={moodLabels} /></>;
 
   if (step === "summary") return (
     <>
       {ErrorBanner}
-      <SummaryView answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={handleReset} bb={bb} ui={ui} moodLabels={moodLabels} />
+      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={handleReset} bb={bb} ui={ui} moodLabels={moodLabels} />
     </>
   );
 

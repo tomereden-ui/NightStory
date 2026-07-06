@@ -17,7 +17,7 @@ import type { CharacterProfile } from "@/lib/libraryStore";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
-import { FiveQuestionFlow } from "@/app/create/five-question/FiveQuestionFlow";
+import { FiveQuestionFlow, DRAFT_KEY as WIZARD_DRAFT_KEY } from "@/app/create/five-question/FiveQuestionFlow";
 import { SCENE_CHARS } from "@/config/sceneCharacters";
 import { LANGUAGE_META, t as i18nT } from "@/lib/i18n";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
@@ -2160,7 +2160,11 @@ export default function Studio2Page() {
                 <div className="flex items-center gap-2 flex-1">
                   <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
                   <button
-                    onClick={() => { setWizardResetKey((k) => k + 1); setWizardResetConfirm(false); }}
+                    onClick={() => {
+                      try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+                      setWizardResetKey((k) => k + 1);
+                      setWizardResetConfirm(false);
+                    }}
                     className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
                     style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
                   >
@@ -2186,7 +2190,12 @@ export default function Studio2Page() {
               )}
               <LanguageToggle
                 value={storyLang as Language}
-                onLanguageChange={(lang) => { setStoryLang(lang); setWizardResetKey((k) => k + 1); setWizardResetConfirm(false); }}
+                onLanguageChange={(lang) => {
+                  try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+                  setStoryLang(lang);
+                  setWizardResetKey((k) => k + 1);
+                  setWizardResetConfirm(false);
+                }}
               />
             </div>
             <FiveQuestionFlow
