@@ -28,7 +28,7 @@ import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { fetchBankAvatars, resolveCharacterAvatar, buildDiceBearUrl, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
-import { assignVoicesToCharacters, assignHebrewVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import { assignVoicesToCharacters, assignHebrewVoicesToCharacters, pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
@@ -279,6 +279,7 @@ function CharacterCards({
   voicePool,
   avatars,
   characterTypes,
+  characterProfiles,
   onDirectCharacter,
   onAvatarChange,
   onVoiceChange,
@@ -290,6 +291,7 @@ function CharacterCards({
   voicePool: Voice[];
   avatars: Record<string, string>;
   characterTypes: Record<string, CharacterType>;
+  characterProfiles: Record<string, CharacterProfile>;
   onDirectCharacter: (characterName: string, instruction: string) => void;
   onAvatarChange: (characterName: string, url: string, type: CharacterType) => void;
   onVoiceChange: (characterName: string, voiceId: string) => void;
@@ -357,6 +359,10 @@ function CharacterCards({
           voicePool={voicePool}
           avatarUrl={avatars[openCharacter]}
           characterType={characterTypes[openCharacter] ?? "adult"}
+          characterProfile={characterProfiles[openCharacter]}
+          otherAssignedVoiceIds={new Set(
+            cast.filter((c) => c.characterName !== openCharacter && c.voice).map((c) => c.voice!.id)
+          )}
           onDirect={(instruction) => onDirectCharacter(openCharacter, instruction)}
           onAvatarChange={(url, type) => onAvatarChange(openCharacter, url, type)}
           onVoiceChange={(voiceId) => onVoiceChange(openCharacter, voiceId)}
@@ -468,6 +474,8 @@ function DirectionSheet({
   voicePool,
   avatarUrl,
   characterType,
+  characterProfile,
+  otherAssignedVoiceIds,
   onDirect,
   onAvatarChange,
   onVoiceChange,
@@ -479,6 +487,10 @@ function DirectionSheet({
   voicePool: Voice[];
   avatarUrl?: string;
   characterType: CharacterType;
+  /** This character's nature (gender/voicePersona/type/visualDescription) — feeds Auto Assign's matching. */
+  characterProfile?: CharacterProfile;
+  /** Voice ids already assigned to OTHER characters in this story — Auto Assign avoids picking these when possible. */
+  otherAssignedVoiceIds?: Set<string>;
   onDirect: (instruction: string) => void;
   onAvatarChange: (url: string, type: CharacterType) => void;
   onVoiceChange: (voiceId: string) => void;
@@ -492,6 +504,14 @@ function DirectionSheet({
   const [showVoicePicker, setShowVoicePicker]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isNarrator = characterName === "Narrator" || characterName === "קריין";
+
+  const handleAutoAssign = () => {
+    const bestId = pickBestVoiceForCharacter(characterProfile, storyLanguage ?? language, otherAssignedVoiceIds);
+    if (bestId) {
+      onVoiceChange(bestId);
+      setShowVoicePicker(false);
+    }
+  };
 
   const submit = (instruction: string) => {
     const trimmed = instruction.trim();
@@ -659,6 +679,14 @@ function DirectionSheet({
             </button>
             {showVoicePicker && (
               <div className="px-3 pb-3">
+                <button
+                  onClick={handleAutoAssign}
+                  className="w-full mb-2 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
+                  style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
+                  title="Match this character's nature (gender/style/age) to the best-fitting voice"
+                >
+                  ✨ Auto Assign
+                </button>
                 <VoicePicker
                   inline
                   voices={voicePool}
@@ -2360,6 +2388,7 @@ export default function Studio2Page() {
                     storyLanguage={storyLang}
                     avatars={characterAvatars}
                     characterTypes={characterTypes}
+                    characterProfiles={characterProfiles}
                     onDirectCharacter={(_, instruction) => handleRevise(instruction)}
                     onAvatarChange={handleAvatarChange}
                     onVoiceChange={handleCharacterVoiceChange}

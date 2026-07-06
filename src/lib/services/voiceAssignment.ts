@@ -188,6 +188,44 @@ export function assignVoicesToCharacters(
   return assignments;
 }
 
+/**
+ * Single-character version of the nature-based matching above, for the
+ * per-character "Auto Assign" button in the Direction Sheet. Scores the same
+ * way assignVoicesToCharacters/assignHebrewVoicesToCharacters do, but for one
+ * character at a time so the UI can apply it without touching anyone else's
+ * voice. excludeVoiceIds lets the caller keep this pick distinct from voices
+ * already assigned to other characters in the same story.
+ */
+export function pickBestVoiceForCharacter(
+  profile: CharacterProfile | undefined,
+  language: string | undefined,
+  excludeVoiceIds: Set<string> = new Set(),
+): string | undefined {
+  const need = deriveNeed(profile);
+
+  if (language === "he") {
+    const unused = HEBREW_VOICE_POOL.filter((v) => !excludeVoiceIds.has(v.id));
+    const candidates = unused.length > 0 ? unused : HEBREW_VOICE_POOL;
+    let best: HebrewVoice | undefined;
+    let bestScore = -Infinity;
+    candidates.forEach((c, idx) => {
+      const s = scoreHebrewVoice(c, need) - idx * 0.001;
+      if (s > bestScore) { bestScore = s; best = c; }
+    });
+    return best?.id;
+  }
+
+  const unused = PRESET_VOICES.filter((p) => !excludeVoiceIds.has(p.id));
+  const candidates = unused.length > 0 ? unused : PRESET_VOICES;
+  let best: PresetVoiceConfig | undefined;
+  let bestScore = -Infinity;
+  candidates.forEach((c, idx) => {
+    const s = scoreVoice(c, need) - idx * 0.001;
+    if (s > bestScore) { bestScore = s; best = c; }
+  });
+  return best?.id;
+}
+
 // ── Hebrew: cast to real ElevenLabs voices ──────────────────────────────────────
 // WaveNet/Chirp can't pronounce Hebrew, so Hebrew stories are voiced entirely by
 // ElevenLabs. Here we match each character to an actual EL voice by nature —
