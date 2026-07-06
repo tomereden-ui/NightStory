@@ -325,7 +325,9 @@ export default function LunaChatPanel({
           setMessages(parsed.messages);
           if (parsed.storyReady) setStoryReady(parsed.storyReady);
           if (parsed.storyParams) setStoryParams(parsed.storyParams);
-          if (parsed.readyConfirmed) setReadyConfirmed(parsed.readyConfirmed);
+          // Deliberately never restore readyConfirmed=true — the Story Length
+          // panel should only appear after the user re-confirms "let's go" in
+          // this visit, not immediately on reopening a past conversation.
           if (parsed.durationMinutes) setDurationMinutes(parsed.durationMinutes);
           setGreeted(true);
           firstMsgSent.current = true;

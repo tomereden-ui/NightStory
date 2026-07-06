@@ -1114,7 +1114,10 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
           setAnswers(parsed.answers);
           if (parsed.durationMinutes) setDuration(parsed.durationMinutes);
           const safestep = parsed.step;
-          if (safestep && !["generating", "done"].includes(safestep)) setStep(safestep);
+          // Never resume straight onto the summary screen — the Story Length
+          // panel lives there, and reopening a draft shouldn't drop the user
+          // in front of it without re-reaching that step this visit.
+          if (safestep && !["generating", "done", "summary"].includes(safestep)) setStep(safestep);
         }
       }
     } catch { /* ignore */ }
