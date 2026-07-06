@@ -1016,36 +1016,40 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               />
             )}
 
-            {/* The block card */}
-            <div className="mb-0.5">
-              {block.lessonHighlight && (
-                <div className="mb-1 px-0.5">
-                  <span
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-fs-body font-bold"
-                    style={{ background: "rgba(139,92,246,0.22)", border: "1.5px solid rgba(139,92,246,0.5)", color: "#C4B5FD", boxShadow: "0 0 8px rgba(139,92,246,0.2)" }}
-                  >
-                    <span>✦</span>
-                    <span>{block.lessonHighlight.lesson}</span>
-                  </span>
-                </div>
-              )}
-              <ScriptBlockCard
-                block={block}
-                voices={voices}
-                isPlaying={activeBlockId === block.id && isPlaying}
-                onTextChange={handleTextChange}
-                onVoiceChange={handleVoiceChange}
-                onPlayPreview={handleOpenPlayer}
-                onDelete={handleDelete}
-                onReviseBlock={handleReviseBlock}
-                isRevising={isRevising}
-                characterAvatarUrl={block.characterName !== "SFX" ? characterAvatars?.[block.characterName] : undefined}
-                isDirty={dirtyBlockIds.has(block.id)}
-                onSave={onSaveBlock ? () => handleSaveBlock(block.id) : undefined}
-                storyLanguage={storyLanguage}
-                readOnly={readOnlyScript}
-              />
-            </div>
+            {/* The block card — SFX cues stay editable via the insert-SFX
+                separator above, but don't render as cards in the full
+                script list (it should read like the story, not a cue sheet). */}
+            {block.characterName !== "SFX" && (
+              <div className="mb-0.5">
+                {block.lessonHighlight && (
+                  <div className="mb-1 px-0.5">
+                    <span
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-fs-body font-bold"
+                      style={{ background: "rgba(139,92,246,0.22)", border: "1.5px solid rgba(139,92,246,0.5)", color: "#C4B5FD", boxShadow: "0 0 8px rgba(139,92,246,0.2)" }}
+                    >
+                      <span>✦</span>
+                      <span>{block.lessonHighlight.lesson}</span>
+                    </span>
+                  </div>
+                )}
+                <ScriptBlockCard
+                  block={block}
+                  voices={voices}
+                  isPlaying={activeBlockId === block.id && isPlaying}
+                  onTextChange={handleTextChange}
+                  onVoiceChange={handleVoiceChange}
+                  onPlayPreview={handleOpenPlayer}
+                  onDelete={handleDelete}
+                  onReviseBlock={handleReviseBlock}
+                  isRevising={isRevising}
+                  characterAvatarUrl={characterAvatars?.[block.characterName]}
+                  isDirty={dirtyBlockIds.has(block.id)}
+                  onSave={onSaveBlock ? () => handleSaveBlock(block.id) : undefined}
+                  storyLanguage={storyLanguage}
+                  readOnly={readOnlyScript}
+                />
+              </div>
+            )}
           </div>
         ))}
 
