@@ -28,7 +28,6 @@ import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { fetchBankAvatars, resolveCharacterAvatar, buildDiceBearUrl, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
-import { useUnsavedChanges } from "@/context/UnsavedChangesContext";
 import { assignVoicesToCharacters, assignHebrewVoicesToCharacters } from "@/lib/services/voiceAssignment";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
@@ -1047,7 +1046,6 @@ export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
-  const unsavedGuard = useUnsavedChanges();
   const router = useRouter();
 
   // ─── Active child profile ────────────────────────────────────────────────────
@@ -1896,29 +1894,9 @@ export default function Studio2Page() {
     setActiveTab("script");
   }, []);
 
-  // ─── Derived dirty state — shared by the Produce/Save buttons and the
-  // leave-without-saving guard below, so they never drift out of sync ────────
+  // ─── Derived dirty state — drives the Produce/Save buttons ─────────────────
   const needsProduce = scriptBlocks.length > 0 && (!storyHasAudio || hasScriptChanges);
   const needsSave = scriptBlocks.length > 0 && (metaDirty || hasUnsavedChanges);
-  const hasUnsavedWork = needsProduce || needsSave;
-
-  // ─── Warn before leaving the screen with unsaved/unproduced work ───────────
-  useEffect(() => {
-    unsavedGuard.setGuard(
-      hasUnsavedWork,
-      "You have changes that haven't been saved or turned into audio yet. If you leave now, they'll be lost.",
-    );
-  }, [hasUnsavedWork, unsavedGuard]);
-
-  // Best-effort coverage for tab close/refresh/typing a new URL — the browser
-  // shows its own generic prompt here (text/buttons can't be customized), but
-  // it's the only way to warn on non-in-app navigation.
-  useEffect(() => {
-    if (!hasUnsavedWork) return;
-    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [hasUnsavedWork]);
 
   // ─── Early returns ──────────────────────────────────────────────────────────
 
