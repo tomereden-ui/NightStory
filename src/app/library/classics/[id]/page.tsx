@@ -13,7 +13,7 @@ import ScriptTab from "@/components/studio/ScriptTab";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType } from "@/lib/services/characterAvatars";
 import ShareSheet from "@/components/ShareSheet";
-import type { LibraryEntry } from "@/lib/libraryStore";
+import type { LibraryEntry, CharacterProfile } from "@/lib/libraryStore";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { useListeningProgress } from "@/hooks/useListeningProgress";
 
@@ -68,6 +68,8 @@ export default function ClassicDetailPage() {
   const [meta, setMeta] = useState<ClassicMeta | null>(null);
   const [blocks, setBlocks] = useState<ScriptBlock[] | null>(null);
   const [scenes, setScenes] = useState<StoryScene[]>([]);
+  const [storyLanguage, setStoryLanguage] = useState<string | undefined>(undefined);
+  const [characterProfiles, setCharacterProfiles] = useState<Record<string, CharacterProfile> | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   // Used only to decide Studio-open behavior (fork vs edit-in-place) — every
@@ -219,6 +221,8 @@ export default function ClassicDetailPage() {
       if (full?.audioUrl) setStoryAudioUrl(full.audioUrl);
       if (Array.isArray(full?.favoritedBy)) setFavoritedBy(full.favoritedBy);
       if (Array.isArray(full?.scenes)) setScenes(full.scenes);
+      if (full?.language) setStoryLanguage(full.language);
+      if (full?.characterProfiles) setCharacterProfiles(full.characterProfiles);
     }).finally(() => setLoading(false));
   }, [id]);
 
@@ -274,9 +278,11 @@ export default function ClassicDetailPage() {
       editingStoryId: isHardcoded ? undefined : id,
       characterAvatars: {},
       storyTitle: meta.title,
+      language: storyLanguage,
+      characterProfiles,
     }, "nightstory_studio2_draft_v1");
     router.push("/studio2");
-  }, [meta, blocks, router]);
+  }, [meta, blocks, router, storyLanguage, characterProfiles, isHardcoded, id]);
 
   const toggleSummaryPlay = useCallback(async () => {
     if (summaryPlaying) {

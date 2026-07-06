@@ -20,7 +20,7 @@ export async function GET(
   // same favorites, same share support.
   const { data: row, error: dbErr } = await supabase
     .from("stories")
-    .select("blocks, duration_seconds, audio_url, favorited_by, scenes")
+    .select("blocks, duration_seconds, audio_url, favorited_by, scenes, language, character_profiles")
     .eq("id", id)
     .maybeSingle();
 
@@ -31,6 +31,8 @@ export async function GET(
       audioUrl: row.audio_url ?? null,
       favoritedBy: Array.isArray(row.favorited_by) ? row.favorited_by : undefined,
       scenes: Array.isArray(row.scenes) ? row.scenes : undefined,
+      language: row.language ?? undefined,
+      characterProfiles: row.character_profiles ?? undefined,
     });
   }
 
