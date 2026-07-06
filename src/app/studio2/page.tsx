@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import { stripNamePrefix } from "@/utils/stripSoundCues";
 import { readDraft, writeDraft } from "@/lib/draftStore";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -1523,6 +1524,9 @@ export default function Studio2Page() {
       } catch {
         blocks = policyBlocks; // fall back to policy-checked blocks on network error
       }
+      // Strip a redundant "CharacterName:" prefix some generations bake into
+      // the line itself — deterministic, safe, always a no-op if not present.
+      blocks = blocks.map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
 
       // Stagger-reveal validated blocks one by one for progressive feel
       for (let i = 0; i < blocks.length; i++) {
@@ -1558,7 +1562,8 @@ export default function Studio2Page() {
       const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: scriptBlocks, instruction: instruction.trim() }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Revision failed");
-      setScriptBlocks(data.blocks);
+      const cleaned = (data.blocks as ScriptBlock[]).map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
+      setScriptBlocks(cleaned);
       setDirectorNote("");
       // The revision changed the script content, so it now differs from what's
       // saved/produced — mark dirty (not clean) so Save/Produce reflect that.
@@ -1580,12 +1585,13 @@ export default function Studio2Page() {
       const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: scriptBlocks, instruction: instruction.trim(), lessons }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Revision failed");
-      setScriptBlocks(data.blocks);
+      const cleaned = (data.blocks as ScriptBlock[]).map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
+      setScriptBlocks(cleaned);
       if (data.lessonImplementations) setLessonImplementations(data.lessonImplementations);
       setDirectorNote("");
       markScriptDirty();
       cleanLessonsRef.current = lessons;
-      void analyzeLessons(data.blocks, editingStoryId);
+      void analyzeLessons(cleaned, editingStoryId);
     } catch (err: unknown) {
       setReviseError(err instanceof Error ? err.message : "Revision failed");
     } finally {
@@ -1602,6 +1608,16 @@ export default function Studio2Page() {
     // Clear any issues surfaced by a previous save's check — the list below
     // the script panel should only ever reflect the check that just ran.
     setSaveValidationIssues([]);
+
+    // Deterministically strip any redundant "CharacterName:" prefix baked
+    // into a line's own text — a no-op unless it's actually present, safe
+    // to always apply (unlike the AI content check below, which only ever
+    // lists what it found rather than rewriting anything itself).
+    const cleanedBlocks = scriptBlocks.map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
+    if (cleanedBlocks.some((b, i) => b.textPayload !== scriptBlocks[i].textPayload)) {
+      setScriptBlocks(cleanedBlocks);
+    }
+
     try {
       const saves: Promise<unknown>[] = [];
 
@@ -1610,7 +1626,7 @@ export default function Studio2Page() {
         fetch("/api/script-saves", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ blocks: scriptBlocks, summary, coverUrl, coverPrompt, isAutosave: false, label: storyTitle || undefined }),
+          body: JSON.stringify({ blocks: cleanedBlocks, summary, coverUrl, coverPrompt, isAutosave: false, label: storyTitle || undefined }),
         })
       );
 
@@ -1621,7 +1637,7 @@ export default function Studio2Page() {
           fetch(`/api/library/${editingStoryId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ blocks: scriptBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined }),
+            body: JSON.stringify({ blocks: cleanedBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined }),
           })
         );
 
@@ -1666,7 +1682,7 @@ export default function Studio2Page() {
       const res = await fetch("/api/validate-script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks: scriptBlocks }),
+        body: JSON.stringify({ blocks: cleanedBlocks }),
       });
       const data = await res.json();
       if (res.ok && !data.ok && Array.isArray(data.issues) && data.issues.length > 0) {
@@ -2094,7 +2110,8 @@ export default function Studio2Page() {
               })
                 .then((r) => r.json())
                 .then((valData) => {
-                  const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
+                  const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks)
+                    .map((b: ScriptBlock) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
                   void resolveAndSetCharacterAvatars(blocks, draft.summary);
                   blocks.forEach((block, i) => {
                     setTimeout(() => {
@@ -2216,7 +2233,8 @@ export default function Studio2Page() {
                 })
                   .then((r) => r.json())
                   .then((valData) => {
-                    const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks);
+                    const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks)
+                      .map((b: ScriptBlock) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
                     void resolveAndSetCharacterAvatars(blocks, sm, fqChars);
                     blocks.forEach((block, i) => {
                       setTimeout(() => {
