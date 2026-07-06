@@ -644,8 +644,11 @@ export default function LunaChatPanel({
         ))}
         {loading && <TypingDots />}
 
-        {/* "No, let's go" — attached right below the last Luna message */}
-        {storyReady && !readyConfirmed && (
+        {/* "No, let's go" — attached right below the last Luna message.
+            Guarded on hasUserMessages too: storyReady should only ever become
+            true after a real user reply (never on the bare greeting), but
+            this is a deterministic backstop in case that ever drifts. */}
+        {storyReady && !readyConfirmed && hasUserMessages && (
           <div className="flex justify-start pl-14">
             <button
               onClick={() => setReadyConfirmed(true)}
