@@ -1269,6 +1269,49 @@ export default function AdminPage() {
     runReassignVoices({ applyAll: true });
   };
 
+  // ── Admin Services: Backfill character profiles (pre-existing stories) ──
+  const [backfillStoryId, setBackfillStoryId] = useState("");
+  const [backfillRunning, setBackfillRunning] = useState(false);
+  const [backfillLog, setBackfillLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const runBackfillCharacterProfiles = async (body: { storyId?: string } | { applyAll: true }) => {
+    setBackfillRunning(true);
+    setBackfillLog([{ type: "info", text: "applyAll" in body ? "Scanning every produced story in the library…" : `Backfilling story ${(body as { storyId: string }).storyId}…` }]);
+    try {
+      const res = await fetch("/api/admin/backfill-character-profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBackfillLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      const d = data as { totalStories: number; storiesBackfilled: number; storiesSkipped: number; results: Array<{ storyId: string; title: string; charactersProfiled: number; skippedReason?: string }> };
+      setBackfillLog((l) => [
+        ...l,
+        { type: "success", text: `✅ Done — ${d.storiesBackfilled}/${d.totalStories} stories backfilled (${d.storiesSkipped} skipped)` },
+        ...d.results.filter((r) => r.charactersProfiled > 0).map((r) => ({ type: "info" as const, text: `  · "${r.title}" — ${r.charactersProfiled} character(s) profiled` })),
+        ...d.results.filter((r) => r.skippedReason && r.skippedReason !== "no audio yet" && r.skippedReason !== "already has character profile data").map((r) => ({ type: "error" as const, text: `  · "${r.title}" — ${r.skippedReason}` })),
+      ]);
+    } catch (e) {
+      setBackfillLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setBackfillRunning(false);
+    }
+  };
+
+  const handleBackfillOneStory = () => {
+    if (!backfillStoryId.trim()) return;
+    runBackfillCharacterProfiles({ storyId: backfillStoryId.trim() });
+  };
+
+  const handleBackfillAllStories = () => {
+    if (!confirm("Backfill character profiles for EVERY produced story missing them (public + private)? Stories with no audio yet are skipped. This calls Gemini once per story that needs it.")) return;
+    runBackfillCharacterProfiles({ applyAll: true });
+  };
+
   // ── Admin Services: Regenerate scene maps ────────────────────────────────
   const [regenSceneStoryId, setRegenSceneStoryId] = useState("");
   const [regenSceneRunning, setRegenSceneRunning] = useState(false);
@@ -1779,6 +1822,66 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {reassignLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Backfill Character Profiles Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🧬 Backfill Character Profiles</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Runs the same character classifier used for new stories (type + visual description)
+                    against stories generated before that data was saved. Skips stories that already have
+                    character profile data, and skips any story with no audio yet.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={backfillStoryId}
+                  onChange={(e) => setBackfillStoryId(e.target.value)}
+                  placeholder="Story ID"
+                  disabled={backfillRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+                <button
+                  onClick={handleBackfillOneStory}
+                  disabled={backfillRunning || !backfillStoryId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Backfill This Story
+                </button>
+              </div>
+
+              <button
+                onClick={handleBackfillAllStories}
+                disabled={backfillRunning}
+                className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {backfillRunning ? "Working…" : "Backfill ALL Stories"}
+              </button>
+
+              {/* Log output */}
+              {backfillLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {backfillLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"
