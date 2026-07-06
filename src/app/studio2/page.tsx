@@ -1692,7 +1692,7 @@ export default function Studio2Page() {
     } finally {
       setIsValidating(false);
     }
-  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving, editingStoryId, storyTitle, moralLessons]);
+  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving, editingStoryId, storyTitle, moralLessons, characterProfiles, scenes]);
 
   // ─── Load a save into the studio ────────────────────────────────────────────
 
@@ -1868,7 +1868,7 @@ export default function Studio2Page() {
       setIsProducing(false);
       setActiveTab("script");
     }
-  }, [editingStoryId, summary, coverPrompt, coverUrl, moralLessons]);
+  }, [editingStoryId, summary, coverPrompt, coverUrl, moralLessons, characterProfiles, characterDescriptions, characterTypes]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job);
