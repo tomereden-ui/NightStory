@@ -11,10 +11,10 @@ function audioResponse(buf: Buffer, contentType: string): NextResponse {
 }
 
 interface SynthesizeBody {
-  engine: "elevenlabs" | "gemini";
+  engine: "elevenlabs" | "gemini" | "chirp3hd";
   voiceId: string;
   text: string;
-  /** Detected/selected content language — used for EL's language_code hint only. */
+  /** Detected/selected content language — used for EL's language_code hint and to pick Chirp3-HD's locale-suffixed voice name. */
   language?: string;
   params?: {
     stability?: number;
@@ -22,6 +22,8 @@ interface SynthesizeBody {
     style?: number;
     useSpeakerBoost?: boolean;
     speed?: number;
+    speakingRate?: number;
+    pitch?: number;
   };
 }
 
@@ -129,6 +131,40 @@ async function synthesizeGemini(body: SynthesizeBody): Promise<NextResponse> {
   return NextResponse.json({ error: `Gemini TTS returned an unrecognized audio format (mimeType: "${mime}").` }, { status: 502 });
 }
 
+async function synthesizeChirp3HD(body: SynthesizeBody): Promise<NextResponse> {
+  const apiKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
+  if (!apiKey) return NextResponse.json({ error: "GOOGLE_CLOUD_TTS_API_KEY not configured." }, { status: 500 });
+
+  const locale = body.language === "he" ? "he-IL" : "en-US";
+  const voiceName = `${locale}-Chirp3-HD-${body.voiceId}`;
+  const p = body.params ?? {};
+
+  const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      input: { text: body.text },
+      voice: { languageCode: locale, name: voiceName },
+      audioConfig: {
+        audioEncoding: "MP3",
+        speakingRate: p.speakingRate ?? 1.0,
+        pitch: p.pitch ?? 0,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    return NextResponse.json({ error: `Google Cloud TTS ${res.status}: ${errText || res.statusText}` }, { status: 502 });
+  }
+
+  const json = await res.json() as { audioContent?: string };
+  if (!json.audioContent) {
+    return NextResponse.json({ error: "Google Cloud TTS returned no audio." }, { status: 502 });
+  }
+  return audioResponse(Buffer.from(json.audioContent, "base64"), "audio/mpeg");
+}
+
 export async function POST(req: NextRequest) {
   let body: SynthesizeBody;
   try {
@@ -144,6 +180,7 @@ export async function POST(req: NextRequest) {
   try {
     if (body.engine === "elevenlabs") return await synthesizeElevenLabs(body);
     if (body.engine === "gemini") return await synthesizeGemini(body);
+    if (body.engine === "chirp3hd") return await synthesizeChirp3HD(body);
     return NextResponse.json({ error: `Unknown engine "${body.engine}".` }, { status: 400 });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });

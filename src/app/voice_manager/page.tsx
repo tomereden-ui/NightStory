@@ -11,8 +11,14 @@ const ADMIN_EMAIL = "tomereden@gmail.com";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Engine = "elevenlabs" | "gemini";
+type Engine = "elevenlabs" | "gemini" | "chirp3hd";
 type Lang = "en" | "he";
+
+const ENGINE_LABELS: Record<Engine, string> = {
+  elevenlabs: "ElevenLabs",
+  gemini: "Gemini 2.5 Flash TTS",
+  chirp3hd: "Google Chirp3-HD",
+};
 
 interface ManagerVoice {
   id: string;
@@ -30,7 +36,13 @@ interface ElParams {
   speed: number;
 }
 
+interface ChirpParams {
+  speakingRate: number;
+  pitch: number;
+}
+
 const EL_DEFAULTS: ElParams = { stability: 0.5, similarityBoost: 0.75, style: 0, useSpeakerBoost: true, speed: 1.0 };
+const CHIRP_DEFAULTS: ChirpParams = { speakingRate: 1.0, pitch: 0 };
 
 interface HistoryEntry {
   id: string;
@@ -38,7 +50,7 @@ interface HistoryEntry {
   voiceName: string;
   textSnippet: string;
   charCount: number;
-  params?: ElParams;
+  params?: Record<string, number | boolean>;
   timestamp: number;
   status: "ok" | "error";
   audioUrl?: string;
@@ -57,10 +69,13 @@ export default function VoiceManagerPage() {
   const [engine, setEngine] = useState<Engine>("elevenlabs");
   const [elVoices, setElVoices] = useState<ManagerVoice[]>([]);
   const [elVoicesError, setElVoicesError] = useState<string | null>(null);
+  const [chirpVoices, setChirpVoices] = useState<ManagerVoice[]>([]);
+  const [chirpVoicesError, setChirpVoicesError] = useState<string | null>(null);
   const [loadingVoices, setLoadingVoices] = useState(false);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>("");
   const [text, setText] = useState("");
-  const [params, setParams] = useState<ElParams>(EL_DEFAULTS);
+  const [elParams, setElParams] = useState<ElParams>(EL_DEFAULTS);
+  const [chirpParams, setChirpParams] = useState<ChirpParams>(CHIRP_DEFAULTS);
   const [generating, setGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const audioUrlsRef = useRef<string[]>([]);
@@ -70,7 +85,7 @@ export default function VoiceManagerPage() {
     [],
   );
 
-  const voices = engine === "elevenlabs" ? elVoices : geminiVoices;
+  const voices = engine === "elevenlabs" ? elVoices : engine === "chirp3hd" ? chirpVoices : geminiVoices;
   const selectedVoice = voices.find((v) => v.id === selectedVoiceId);
   const detectedLang = detectLanguage(text);
   const mismatch = !!selectedVoice && text.trim().length > 0 && !selectedVoice.languages.includes(detectedLang);
@@ -119,12 +134,33 @@ export default function VoiceManagerPage() {
       .finally(() => setLoadingVoices(false));
   }, [engine, elVoices.length, loadingVoices]);
 
+  // Fetch Chirp3-HD voices once (live from Google's real catalog, grouped by
+  // base name across en-US/he-IL — see /api/voice-manager/chirp-voices)
+  useEffect(() => {
+    if (engine !== "chirp3hd" || chirpVoices.length > 0 || loadingVoices) return;
+    setLoadingVoices(true);
+    setChirpVoicesError(null);
+    fetch("/api/voice-manager/chirp-voices", { cache: "no-store" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error ?? `Fetch failed: ${r.status}`);
+        return r.json();
+      })
+      .then((data: { voices: { id: string; name: string; languages: Lang[] }[] }) => {
+        setChirpVoices(data.voices ?? []);
+      })
+      .catch((e) => setChirpVoicesError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoadingVoices(false));
+  }, [engine, chirpVoices.length, loadingVoices]);
+
   // Reset selection when switching engines
   useEffect(() => {
     setSelectedVoiceId("");
   }, [engine]);
 
   useEffect(() => () => { audioUrlsRef.current.forEach((u) => URL.revokeObjectURL(u)); }, []);
+
+  const activeParams: Record<string, number | boolean> | undefined =
+    engine === "elevenlabs" ? { ...elParams } : engine === "chirp3hd" ? { ...chirpParams } : undefined;
 
   const handleGenerate = async () => {
     if (!selectedVoice || !text.trim() || generating) return;
@@ -139,7 +175,7 @@ export default function VoiceManagerPage() {
           voiceId: selectedVoice.id,
           text,
           language: detectedLang,
-          ...(engine === "elevenlabs" ? { params } : {}),
+          ...(activeParams ? { params: activeParams } : {}),
         }),
       });
       if (!res.ok) {
@@ -151,14 +187,14 @@ export default function VoiceManagerPage() {
       audioUrlsRef.current.push(audioUrl);
       const entry: HistoryEntry = {
         id, engine, voiceName: selectedVoice.name, textSnippet: text.slice(0, 60),
-        charCount: text.length, params: engine === "elevenlabs" ? params : undefined,
+        charCount: text.length, params: activeParams,
         timestamp: Date.now(), status: "ok", audioUrl,
       };
       setHistory((h) => [entry, ...h].slice(0, 10));
     } catch (err) {
       const entry: HistoryEntry = {
         id, engine, voiceName: selectedVoice.name, textSnippet: text.slice(0, 60),
-        charCount: text.length, params: engine === "elevenlabs" ? params : undefined,
+        charCount: text.length, params: activeParams,
         timestamp: Date.now(), status: "error", error: err instanceof Error ? err.message : String(err),
       };
       setHistory((h) => [entry, ...h].slice(0, 10));
@@ -183,11 +219,11 @@ export default function VoiceManagerPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#ddd", fontFamily: "monospace", padding: 24 }}>
       <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Voice Manager</h1>
-      <p style={{ color: "#666", fontSize: 13, marginBottom: 20 }}>Internal TTS audition tool — ElevenLabs &amp; Gemini 2.5 Flash TTS. Not user-facing.</p>
+      <p style={{ color: "#666", fontSize: 13, marginBottom: 20 }}>Internal TTS audition tool — ElevenLabs, Gemini 2.5 Flash TTS &amp; Google Chirp3-HD. Not user-facing.</p>
 
       {/* Engine toggle */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {(["elevenlabs", "gemini"] as Engine[]).map((e) => (
+        {(["elevenlabs", "gemini", "chirp3hd"] as Engine[]).map((e) => (
           <button
             key={e}
             onClick={() => setEngine(e)}
@@ -198,7 +234,7 @@ export default function VoiceManagerPage() {
               color: engine === e ? "#fff" : "#999", fontSize: 13,
             }}
           >
-            {e === "elevenlabs" ? "ElevenLabs" : "Gemini 2.5 Flash TTS"}
+            {ENGINE_LABELS[e]}
           </button>
         ))}
       </div>
@@ -211,6 +247,9 @@ export default function VoiceManagerPage() {
           </p>
           {elVoicesError && engine === "elevenlabs" && (
             <p style={{ color: "#f87171", fontSize: 12, marginBottom: 8 }}>{elVoicesError}</p>
+          )}
+          {chirpVoicesError && engine === "chirp3hd" && (
+            <p style={{ color: "#f87171", fontSize: 12, marginBottom: 8 }}>{chirpVoicesError}</p>
           )}
           {voices.map((v) => (
             <label key={v.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 4px", cursor: "pointer", borderRadius: 4, background: selectedVoiceId === v.id ? "#1a1a24" : "transparent" }}>
@@ -248,7 +287,7 @@ export default function VoiceManagerPage() {
             )}
           </div>
 
-          {engine === "elevenlabs" ? (
+          {engine === "elevenlabs" && (
             <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
               {([
                 ["stability", 0, 1, 0.01],
@@ -257,24 +296,49 @@ export default function VoiceManagerPage() {
                 ["speed", 0.7, 1.2, 0.01],
               ] as [keyof ElParams, number, number, number][]).map(([key, min, max, step]) => (
                 <label key={key} style={{ fontSize: 12, color: "#999" }}>
-                  {key} — {(params[key] as number).toFixed(2)}
+                  {key} — {(elParams[key] as number).toFixed(2)}
                   <input
                     type="range" min={min} max={max} step={step}
-                    value={params[key] as number}
-                    onChange={(e) => setParams((p) => ({ ...p, [key]: parseFloat(e.target.value) }))}
+                    value={elParams[key] as number}
+                    onChange={(e) => setElParams((p) => ({ ...p, [key]: parseFloat(e.target.value) }))}
                     style={{ width: "100%" }}
                   />
                 </label>
               ))}
               <label style={{ fontSize: 12, color: "#999", display: "flex", alignItems: "center", gap: 6 }}>
-                <input type="checkbox" checked={params.useSpeakerBoost} onChange={(e) => setParams((p) => ({ ...p, useSpeakerBoost: e.target.checked }))} />
+                <input type="checkbox" checked={elParams.useSpeakerBoost} onChange={(e) => setElParams((p) => ({ ...p, useSpeakerBoost: e.target.checked }))} />
                 use_speaker_boost
               </label>
             </div>
-          ) : (
+          )}
+
+          {engine === "gemini" && (
             <p style={{ marginTop: 16, fontSize: 12, color: "#666" }}>
               Gemini 2.5 Flash TTS exposes no synthesis parameters beyond voice selection — no pitch/speed/style controls exist in this API.
             </p>
+          )}
+
+          {engine === "chirp3hd" && (
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+              <label style={{ fontSize: 12, color: "#999" }}>
+                speakingRate — {chirpParams.speakingRate.toFixed(2)}
+                <input
+                  type="range" min={0.25} max={4.0} step={0.05}
+                  value={chirpParams.speakingRate}
+                  onChange={(e) => setChirpParams((p) => ({ ...p, speakingRate: parseFloat(e.target.value) }))}
+                  style={{ width: "100%" }}
+                />
+              </label>
+              <label style={{ fontSize: 12, color: "#999" }}>
+                pitch — {chirpParams.pitch.toFixed(1)}
+                <input
+                  type="range" min={-20} max={20} step={0.5}
+                  value={chirpParams.pitch}
+                  onChange={(e) => setChirpParams((p) => ({ ...p, pitch: parseFloat(e.target.value) }))}
+                  style={{ width: "100%" }}
+                />
+              </label>
+            </div>
           )}
 
           <button
@@ -297,8 +361,8 @@ export default function VoiceManagerPage() {
             {history.map((h) => (
               <div key={h.id} style={{ border: "1px solid #222", borderRadius: 6, padding: 10, marginBottom: 8 }}>
                 <div style={{ fontSize: 12, color: "#999", marginBottom: 4 }}>
-                  <strong>{h.engine === "elevenlabs" ? "ElevenLabs" : "Gemini"}</strong> · {h.voiceName} · {h.charCount} chars
-                  {h.params && ` · stability=${h.params.stability.toFixed(2)} sim=${h.params.similarityBoost.toFixed(2)} style=${h.params.style.toFixed(2)} speed=${h.params.speed.toFixed(2)} boost=${h.params.useSpeakerBoost}`}
+                  <strong>{ENGINE_LABELS[h.engine]}</strong> · {h.voiceName} · {h.charCount} chars
+                  {h.params && ` · ${Object.entries(h.params).map(([k, v]) => `${k}=${typeof v === "number" ? v.toFixed(2) : v}`).join(" ")}`}
                 </div>
                 <div style={{ fontSize: 12, color: "#777", marginBottom: 6, fontStyle: "italic" }}>&ldquo;{h.textSnippet}{h.textSnippet.length >= 60 ? "…" : ""}&rdquo;</div>
                 {h.status === "ok" ? (
