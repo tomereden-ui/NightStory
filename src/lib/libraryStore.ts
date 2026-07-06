@@ -190,6 +190,18 @@ export async function moveToTrash(id: string): Promise<boolean> {
     await supabase.from("trash").delete().eq("id", id);
     throw new Error(`moveToTrash (delete): ${deleteErr.message}`);
   }
+
+  // Classics also cache their script/cover in the "classics" Storage bucket,
+  // and /api/classics falls back to that cache when there's no DB row —
+  // so without this, a deleted classic reappears as "ready" immediately.
+  if (data.is_classic) {
+    await supabase.storage.from("classics").remove([
+      `${id}/script.json`,
+      `${id}/cover.jpg`,
+      `${id}/cover.png`,
+    ]);
+  }
+
   return true;
 }
 
