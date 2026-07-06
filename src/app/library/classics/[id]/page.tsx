@@ -6,10 +6,12 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { ClassicMeta } from "@/lib/classicStories";
 import { CLASSIC_STORIES } from "@/lib/classicStories";
-import type { ScriptBlock, StoryScene } from "@/types";
+import type { ScriptBlock, StoryScene, Voice } from "@/types";
 import Icon from "@/components/ui/Icon";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
-import SceneMap from "@/components/studio/SceneMap";
+import ScriptTab from "@/components/studio/ScriptTab";
+import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
+import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType } from "@/lib/services/characterAvatars";
 import ShareSheet from "@/components/ShareSheet";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
@@ -80,8 +82,35 @@ export default function ClassicDetailPage() {
   const [openingInStudio, setOpeningInStudio] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
-  const [scriptExpanded, setScriptExpanded] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+
+  // ─── Script panel — same component/look as Studio's ScriptTab ─────────────
+  const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
+  const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchVoicePool().then(setVoicePool);
+  }, []);
+
+  // Deterministic bank-based avatars only (no live Gemini/Imagen generation)
+  // — a classic's cast should look the same on every visit, not regenerate.
+  useEffect(() => {
+    if (!blocks?.length) return;
+    let cancelled = false;
+    (async () => {
+      const uniqueChars = Array.from(new Set(blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
+      if (!uniqueChars.length) return;
+      const bank = await fetchBankAvatars();
+      if (cancelled) return;
+      const avatars: Record<string, string> = {};
+      for (const name of uniqueChars) {
+        const type: CharacterType = name.toLowerCase().includes("narrat") ? "narrator" : "adult";
+        avatars[name] = resolveCharacterAvatar(name, type, bank, voicePool);
+      }
+      setCharacterAvatars(avatars);
+    })();
+    return () => { cancelled = true; };
+  }, [blocks, voicePool]);
   const [summaryPlaying, setSummaryPlaying] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -583,82 +612,24 @@ export default function ClassicDetailPage() {
           </div>
         )}
 
-        {/* Scene-by-scene outline */}
-        {isReady && scenes.length > 0 && (
-          <div className="px-5 mt-4">
-            <SceneMap
-              scenes={scenes}
+        {/* Script panel — same component, look, and functionality as Studio's */}
+        {isReady ? (
+          <div className="px-5">
+            <ScriptTab
               blocks={blocks!}
-              onSceneClick={(blockIdx) => {
-                setScriptExpanded(true);
-                setTimeout(() => {
-                  const targetId = blocks![blockIdx]?.id;
-                  if (targetId) {
-                    document.getElementById(`block-${targetId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }
-                }, 120);
-              }}
+              voices={voicePool}
+              onBlocksChange={setBlocks}
+              onProduce={() => {}}
+              isProducing={false}
+              characterAvatars={characterAvatars}
+              storyId={meta.id}
+              scenes={scenes}
+              readOnlyScript
+              hideDurationPicker
+              hideProduceButton
+              hideDirectorsNote
             />
           </div>
-        )}
-
-        {/* Script toggle */}
-        {isReady && (
-          <div className="px-5 mb-3">
-            <button
-              onClick={() => setScriptExpanded((v) => !v)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
-              style={{
-                background: scriptExpanded ? `${c1}10` : "rgba(255,255,255,0.04)",
-                border: scriptExpanded ? `1px solid ${c1}33` : "1px solid rgba(255,255,255,0.07)",
-                color: scriptExpanded ? `${c1}bb` : "rgba(255,255,255,0.3)",
-              }}
-            >
-              <span>{scriptExpanded ? "Hide script" : "View full script"}</span>
-              <Icon name={scriptExpanded ? "collapse" : "expand"} size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* Script blocks — on demand */}
-        {isReady ? (
-          scriptExpanded && (
-            <div className="px-5 flex flex-col gap-3">
-              {blocks!.map((block) => {
-                const isNarrator = block.characterName.toLowerCase().includes("narrat");
-                const isSfx = block.characterName === "SFX";
-                if (isSfx) return null;
-                return (
-                  <div key={block.id} id={`block-${block.id}`}>
-                    <p
-                      className="text-fs-body font-semibold uppercase tracking-widest mb-1 ml-3"
-                      style={{ color: isNarrator ? "rgba(255,255,255,0.25)" : "rgba(79,195,247,0.72)" }}
-                    >
-                      {isNarrator ? "Narrator" : block.characterName}
-                    </p>
-                    <div
-                      className="px-4 py-3 rounded-xl"
-                      style={isNarrator ? {
-                        color: "rgba(255,255,255,0.45)",
-                        fontStyle: "italic",
-                        fontSize: "var(--fs-caption)",
-                        lineHeight: "1.6",
-                      } : {
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        borderLeft: `2px solid ${c1}4d`,
-                        color: "rgba(255,255,255,0.82)",
-                        fontSize: "var(--fs-caption)",
-                        lineHeight: "1.6",
-                      }}
-                    >
-                      {block.textPayload.replace(/^\[.*?\]\s*/, "")}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )
         ) : (
           <div className="px-5 flex flex-col items-center gap-3 py-10">
             {meta.status === "pending" || meta.status === "generating" ? (

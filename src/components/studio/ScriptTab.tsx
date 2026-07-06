@@ -676,23 +676,6 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     }
   }, [blocks, isRevising, onBlocksChange, markDirty]);
 
-  const handleReviseBlock = useCallback(async (id: string, instruction: string) => {
-    if (!instruction.trim() || isRevising) return;
-    setIsRevising(true);
-    setReviseError(null);
-    try {
-      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks, instruction: instruction.trim(), targetBlockId: id }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Revision failed");
-      onBlocksChange(data.blocks);
-      markDirty();
-    } catch (err: unknown) {
-      setReviseError(err instanceof Error ? err.message : "Revision failed");
-    } finally {
-      setIsRevising(false);
-    }
-  }, [blocks, isRevising, onBlocksChange, markDirty]);
-
   // ─── Validate / regenerate ──────────────────────────────────────────────────
 
   const handleRegenerate = useCallback(async () => {
@@ -1040,8 +1023,6 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                   onVoiceChange={handleVoiceChange}
                   onPlayPreview={handleOpenPlayer}
                   onDelete={handleDelete}
-                  onReviseBlock={handleReviseBlock}
-                  isRevising={isRevising}
                   characterAvatarUrl={characterAvatars?.[block.characterName]}
                   isDirty={dirtyBlockIds.has(block.id)}
                   onSave={onSaveBlock ? () => handleSaveBlock(block.id) : undefined}

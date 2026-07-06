@@ -6,10 +6,12 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import Icon from "@/components/ui/Icon";
-import type { ScriptBlock } from "@/types";
+import type { ScriptBlock, Voice } from "@/types";
 import ShareSheet from "@/components/ShareSheet";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
-import SceneMap from "@/components/studio/SceneMap";
+import ScriptTab from "@/components/studio/ScriptTab";
+import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
+import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType } from "@/lib/services/characterAvatars";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { useListeningProgress } from "@/hooks/useListeningProgress";
 
@@ -60,7 +62,53 @@ export default function StoryDetailPage() {
   const [summaryPlaying, setSummaryPlaying] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
-  const [scriptExpanded, setScriptExpanded] = useState(false);
+
+  // ─── Script panel — same component/look as Studio's ScriptTab ─────────────
+  const [scriptBlocks, setScriptBlocks] = useState<ScriptBlock[]>([]);
+  const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
+  const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (entry) setScriptBlocks(entry.blocks);
+  }, [entry]);
+
+  useEffect(() => {
+    fetchVoicePool(entry?.language).then(setVoicePool);
+  }, [entry?.language]);
+
+  // Deterministic bank-based avatars only (no live Gemini/Imagen generation)
+  // — this is a read view, not an active creation session, so it should
+  // look the same on every visit rather than regenerating art each time.
+  useEffect(() => {
+    if (!entry?.blocks?.length) return;
+    let cancelled = false;
+    (async () => {
+      const uniqueChars = Array.from(new Set(entry.blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
+      if (!uniqueChars.length) return;
+      const bank = await fetchBankAvatars();
+      if (cancelled) return;
+      const avatars: Record<string, string> = {};
+      for (const name of uniqueChars) {
+        const type: CharacterType = entry.characterProfiles?.[name]?.type ?? (name === "Narrator" ? "narrator" : "adult");
+        avatars[name] = resolveCharacterAvatar(name, type, bank, voicePool);
+      }
+      setCharacterAvatars(avatars);
+    })();
+    return () => { cancelled = true; };
+  }, [entry, voicePool]);
+
+  // Persist block/voice changes for owned stories only — public/community/
+  // classic entries aren't the viewer's to modify.
+  const handleScriptBlocksChange = useCallback((blocks: ScriptBlock[]) => {
+    setScriptBlocks(blocks);
+    if (entry && !entry.isPublic && !entry.isClassic) {
+      fetch(`/api/library/${entry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks }),
+      }).catch(() => {});
+    }
+  }, [entry]);
 
   useEffect(() => {
     return () => {
@@ -420,82 +468,26 @@ export default function StoryDetailPage() {
           </div>
         )}
 
-        {/* Scene-by-scene outline */}
-        {entry.scenes && entry.scenes.length > 0 && (
-          <div className="px-5 mt-4">
-            <SceneMap
-              scenes={entry.scenes}
-              blocks={entry.blocks}
-              onSceneClick={(blockIdx) => {
-                setScriptExpanded(true);
-                setTimeout(() => {
-                  const targetId = entry.blocks[blockIdx]?.id;
-                  if (targetId) {
-                    document.getElementById(`block-${targetId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }
-                }, 120);
-              }}
-            />
-          </div>
-        )}
-
         {/* Divider */}
         <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
 
-        {/* Script toggle */}
-        <div className="px-5 mb-3">
-          <button
-            onClick={() => setScriptExpanded((v) => !v)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
-            style={{
-              background: scriptExpanded ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
-              border: scriptExpanded ? "1px solid rgba(79,195,247,0.2)" : "1px solid rgba(255,255,255,0.07)",
-              color: scriptExpanded ? "rgba(79,195,247,0.7)" : "rgba(255,255,255,0.3)",
-            }}
-          >
-            <span>{scriptExpanded ? "Hide script" : "View full script"}</span>
-            <Icon name={scriptExpanded ? "collapse" : "expand"} size={14} />
-          </button>
+        {/* Script panel — same component, look, and functionality as Studio's */}
+        <div className="px-5">
+          <ScriptTab
+            blocks={scriptBlocks}
+            voices={voicePool}
+            onBlocksChange={handleScriptBlocksChange}
+            onProduce={() => {}}
+            isProducing={false}
+            characterAvatars={characterAvatars}
+            storyId={entry.id}
+            scenes={entry.scenes}
+            readOnlyScript
+            hideDurationPicker
+            hideProduceButton
+            hideDirectorsNote
+          />
         </div>
-
-        {/* Script blocks — on demand */}
-        {scriptExpanded && (
-          <div className="px-5 flex flex-col gap-3">
-            {entry.blocks.map((block) => {
-              const isNarrator = block.characterName.toLowerCase().includes("narrat");
-              const isSfx = block.characterName === "SFX";
-              if (isSfx) return null;
-              return (
-                <div key={block.id} id={`block-${block.id}`}>
-                  {!isNarrator && (
-                    <p
-                      className="text-fs-body font-semibold uppercase tracking-widest mb-1 ml-3"
-                      style={{ color: "rgba(79,195,247,0.72)" }}
-                    >
-                      {block.characterName}
-                    </p>
-                  )}
-                  <div
-                    className="px-4 py-3 rounded-xl text-fs-body"
-                    style={isNarrator ? {
-                      color: "rgba(255,255,255,0.45)",
-                      fontStyle: "italic",
-                      lineHeight: "1.6",
-                    } : {
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderLeft: "2px solid rgba(79,195,247,0.3)",
-                      color: "rgba(255,255,255,0.82)",
-                      lineHeight: "1.6",
-                    }}
-                  >
-                    {block.textPayload.replace(/^\[.*?\]\s*/, "")}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
 
         {/* Actions row */}
         {confirmingDelete ? (

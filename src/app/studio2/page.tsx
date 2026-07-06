@@ -24,6 +24,7 @@ import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/Chi
 import LunaChatPanel from "@/components/studio/LunaChatPanel";
 import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
+import { fetchBankAvatars, resolveCharacterAvatar, buildDiceBearUrl, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
 import { useUnsavedChanges } from "@/context/UnsavedChangesContext";
@@ -264,69 +265,6 @@ function VersionList({
       )}
     </div>
   );
-}
-
-// ─── Avatar types ─────────────────────────────────────────────────────────────
-
-type CharacterType = "child" | "adult" | "animal" | "narrator";
-
-// Bank avatar type (matches avatar-bank-list API response)
-interface BankAvatar { id: string; description: string; image_url: string; type: string; gender: string; }
-
-// Module-level cache so we only fetch once per session
-let _bankCache: BankAvatar[] | null = null;
-async function fetchBankAvatars(): Promise<BankAvatar[]> {
-  if (_bankCache) return _bankCache;
-  try {
-    const res = await fetch("/api/avatar-bank-list");
-    const data = await res.json() as { avatars: BankAvatar[] };
-    _bankCache = data.avatars ?? [];
-  } catch {
-    _bankCache = [];
-  }
-  return _bankCache;
-}
-
-// Simple deterministic hash so the same character always gets the same avatar
-function nameHash(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-// Pick a bank avatar matching the character type, falling back to DiceBear on empty bank
-function pickBankAvatar(characterName: string, type: CharacterType, bank: BankAvatar[]): string {
-  const dbType = type === "narrator" ? "adult" : type;
-  const pool = bank.filter((a) => a.type === dbType);
-  // Fall back to the full bank if no type-matched entries (e.g. type column not yet populated)
-  const candidates = pool.length > 0 ? pool : bank;
-  if (candidates.length === 0) return buildDiceBearUrl(characterName, type);
-  return candidates[nameHash(characterName) % candidates.length].image_url;
-}
-
-// For narrator characters, always use the selected narrator voice's avatar
-function resolveCharacterAvatar(
-  name: string,
-  type: CharacterType,
-  bank: BankAvatar[],
-  voicePool: Voice[],
-): string {
-  if (type === "narrator") {
-    const voiceId = getNarratorVoiceId();
-    const avatar = voicePool.find((v) => v.id === voiceId)?.avatarUrl;
-    if (avatar) return avatar;
-  }
-  return pickBankAvatar(name, type, bank);
-}
-
-function buildDiceBearUrl(characterName: string, type: CharacterType): string {
-  const seed = encodeURIComponent(characterName);
-  const bg = "0d1b4a";
-  switch (type) {
-    case "child":  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}&backgroundColor=${bg}`;
-    case "animal": return `https://api.dicebear.com/9.x/croodles/svg?seed=${seed}&backgroundColor=${bg}&scale=90`;
-    default:       return `https://api.dicebear.com/9.x/micah/svg?seed=${seed}&backgroundColor=${bg}&scale=85`;
-  }
 }
 
 // ─── Character Cards ──────────────────────────────────────────────────────────
