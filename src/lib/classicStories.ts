@@ -27,19 +27,6 @@ Adapt it faithfully: Peter visits Wendy's nursery window at night, teaches Wendy
 Tone: magical, warm, gently exciting, ends peacefully and sleepily.`,
   },
   {
-    id: "maya-the-bee",
-    title: "Maya the Bee",
-    emoji: "🐝",
-    tagline: "A little bee who dared to explore",
-    coverPrompt:
-      "A small golden bee with delicate wings resting on a bright wildflower in a sunlit meadow, a butterfly and friendly cricket nearby, warm dappled afternoon light, tall grass swaying gently, distant beehive glowing softly, painterly children's book illustration, soft dreamy atmosphere, no text",
-    scriptPrompt:
-      `Write a bedtime story script for "Maya the Bee" following the original Waldemar Bonsels story.
-Audience: children aged 4–8. Duration: ~3 minutes when read aloud.
-Adapt it faithfully: young Maya the bee is born in the hive, curious and adventurous, she sneaks out despite warnings, explores the meadow and meets a butterfly, a cricket, and a grasshopper, gets lost, is helped home by her friend Willy the bee, and falls asleep safely in the hive.
-Tone: warm, adventurous but gentle, wonder-filled, ends with Maya sleepily back in her cozy hive.`,
-  },
-  {
     id: "cinderella",
     title: "Cinderella",
     emoji: "👠",
