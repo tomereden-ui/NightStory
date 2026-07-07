@@ -246,13 +246,12 @@ function valueBadgeStyle(label: string) {
 function ValueBadge({ label, count }: { label: string; count: number }) {
   const { bg, border, icon, accent } = valueBadgeStyle(label);
   return (
-    <div className="flex flex-col items-center gap-1.5 flex-shrink-0" style={{ width: 68 }}>
+    <div className="flex flex-col items-center flex-shrink-0">
       <div style={{ position: "relative" }}>
         <div
-          className="flex items-center justify-center"
-          style={{ width: 52, height: 52, borderRadius: 16, background: bg, border: `1px solid ${border}` }}
+          style={{ width: 52, height: 52, borderRadius: 16, background: bg, border: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center" }}
         >
-          <Icon name={icon} size={22} strokeWidth={1.4} style={{ color: accent }} />
+          <Icon name={icon} size={26} strokeWidth={1.4} style={{ color: accent }} />
         </div>
         <span
           className="font-bold"
@@ -266,7 +265,7 @@ function ValueBadge({ label, count }: { label: string; count: number }) {
           {count}×
         </span>
       </div>
-      <p className="text-fs-body font-semibold text-center truncate w-full" style={{ color: "rgba(255,255,255,0.65)" }}>{label}</p>
+      <p className="text-fs-body font-semibold text-center" style={{ color: "rgba(255,255,255,0.65)", marginTop: 8, whiteSpace: "nowrap" }}>{label}</p>
     </div>
   );
 }
@@ -401,7 +400,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
           <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
             {t("valuesHeard" as TranslationKey)}
           </p>
-          <div className="flex gap-3 overflow-x-auto hide-scrollbar" style={{ paddingTop: 8, paddingBottom: 4 }}>
+          <div className="flex overflow-x-auto hide-scrollbar" style={{ gap: 20, paddingTop: 8, paddingBottom: 4 }}>
             {child.lessons.map((l) => (
               <ValueBadge key={l.label} label={l.label} count={l.count} />
             ))}
