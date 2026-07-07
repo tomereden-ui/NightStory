@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { getLessonsCatalog, getLessonsChrome, LESSON_IDS, type LessonLabel } from "@/constants/lessonsUi";
 import Icon from "@/components/ui/Icon";
 import type { MoralLesson } from "@/types";
@@ -53,8 +53,6 @@ export default function LessonEditor({
 
   // Editing state (only used when expanded)
   const [pendingLabels, setPendingLabels] = useState<LessonLabel[]>([]);
-  const [pendingCustom, setPendingCustom] = useState("");
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Locally-displayed lessons + pending removals — clicking the X just
   // updates what's shown here; nothing is sent to Gemini until the user
@@ -77,11 +75,9 @@ export default function LessonEditor({
   // "selected" for values the story doesn't actually contain (or vice versa).
   const confirmedNames = displayedLessons.map((ml) => ml.lesson);
   const currentPresets = confirmedNames.filter(isPreset) as LessonLabel[];
-  const currentCustom  = confirmedNames.find((l) => !isPreset(l)) ?? "";
 
   const openEditor = () => {
     setPendingLabels(currentPresets);
-    setPendingCustom(currentCustom);
     setExpanded(true);
   };
 
@@ -90,10 +86,7 @@ export default function LessonEditor({
   };
 
   const applyEditor = () => {
-    const next: string[] = [...pendingLabels];
-    const trimmed = pendingCustom.trim();
-    if (trimmed) next.push(trimmed);
-    onChange(next);
+    onChange([...pendingLabels]);
     setExpanded(false);
   };
 
@@ -228,7 +221,7 @@ export default function LessonEditor({
 
   // ─── Expanded panel — full details (scrollable) + add/remove ───────────────
 
-  const canApply = pendingLabels.length > 0 || pendingCustom.trim().length > 0;
+  const canApply = pendingLabels.length > 0;
 
   return (
     <div
@@ -354,33 +347,6 @@ export default function LessonEditor({
           </div>
         </div>
 
-        {/* Custom text */}
-        <div
-          className="rounded-xl px-3.5 py-3 transition-all"
-          style={pendingCustom.trim()
-            ? { background: "rgba(79,195,247,0.07)", border: "1.5px solid rgba(79,195,247,0.35)" }
-            : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)" }
-          }
-        >
-          <label className="text-fs-body font-bold uppercase tracking-widest block mb-1.5" style={{ color: "rgba(79,195,247,0.5)" }}>
-            {ui.orDescribeOwn}
-          </label>
-          <textarea
-            ref={inputRef}
-            value={pendingCustom}
-            onChange={(e) => setPendingCustom(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && canApply) {
-                e.preventDefault();
-                applyEditor();
-              }
-            }}
-            rows={2}
-            placeholder={ui.customPlaceholder}
-            className="w-full bg-transparent outline-none resize-none text-fs-body leading-relaxed placeholder-white/20 text-white/80"
-            style={{ caretColor: "#4fc3f7" }}
-          />
-        </div>
       </div>
 
       {/* Action buttons */}
@@ -398,7 +364,7 @@ export default function LessonEditor({
             className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98]"
             style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.3), rgba(79,195,247,0.25))", border: "1.5px solid rgba(139,92,246,0.4)", color: "#C4B5FD" }}
           >
-            {`${ui.apply}${pendingLabels.length > 0 ? ` (${pendingLabels.length + (pendingCustom.trim() ? 1 : 0)})` : ""}`}
+            {`${ui.apply}${pendingLabels.length > 0 ? ` (${pendingLabels.length})` : ""}`}
           </button>
         )}
       </div>
