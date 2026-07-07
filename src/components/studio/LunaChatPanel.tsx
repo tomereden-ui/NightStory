@@ -181,6 +181,18 @@ export default function LunaChatPanel({
   onStoryLanguageChange: (lang: string) => void;
 }) {
   const language = storyLanguage;
+
+  const ERROR_REPLY_LABELS: Record<string, string> = {
+    he: "אופס, משהו השתבש. ✨\nתוכלו לומר את זה שוב?",
+    ar: "عذرًا، حدث خطأ ما. ✨\nهل يمكنك قول ذلك مرة أخرى؟",
+    fr: "Oups, quelque chose a mal tourné. ✨\nPeux-tu redire ça ?",
+    es: "Vaya, algo salió mal. ✨\n¿Puedes decirlo de nuevo?",
+    de: "Hoppla, da ist etwas schiefgelaufen. ✨\nKannst du das noch einmal sagen?",
+    it: "Ops, qualcosa è andato storto. ✨\nPuoi ripeterlo?",
+    pt: "Ops, algo deu errado. ✨\nVocê pode dizer isso de novo?",
+  };
+  const errorReplyLabel = ERROR_REPLY_LABELS[language] ?? "Hmm, something went sideways. ✨\nCan you say that again?";
+
   const [messages, setMessages]             = useState<Message[]>([]);
   const [input, setInput]                   = useState("");
   const [loading, setLoading]               = useState(false);
@@ -466,17 +478,18 @@ export default function LunaChatPanel({
         data = await sendOnce();
       }
       setMessages((prev) => [...prev, { role: "model", content: data.reply }]);
+      // Luna's own reply already ends with a language-correct "anything else
+      // to add?" question per the STORY_READY prompt rule — no separate
+      // synthetic follow-up needed (a leftover from before that rule existed
+      // was both redundant and always hardcoded in English regardless of story language).
       if (data.storyReady && data.storyParams) {
         setStoryReady(true);
         setStoryParams(data.storyParams);
         setReadyConfirmed(false);
-        setTimeout(() => {
-          setMessages((prev) => [...prev, { role: "model", content: "We're all set! ✨\nAnything else to add?" }]);
-        }, 600);
       }
     } catch (err) {
       console.error("[Luna] Send failed (after retry):", err);
-      setMessages((prev) => [...prev, { role: "model", content: "Hmm, something went sideways. ✨\nCan you say that again?" }]);
+      setMessages((prev) => [...prev, { role: "model", content: errorReplyLabel }]);
     } finally {
       setLoading(false);
       textareaRef.current?.focus();
@@ -568,6 +581,17 @@ export default function LunaChatPanel({
   };
   const letsGoLabel = LETS_GO_LABELS[language] ?? "No, let's go :)";
 
+  const QUICK_REPLY_HINT_LABELS: Record<string, string> = {
+    he: "תשובה מהירה",
+    ar: "رد سريع",
+    fr: "Réponse rapide",
+    es: "Respuesta rápida",
+    de: "Schnelle Antwort",
+    it: "Risposta rapida",
+    pt: "Resposta rápida",
+  };
+  const quickReplyHint = QUICK_REPLY_HINT_LABELS[language] ?? "Quick reply";
+
   return (
     <div className="flex flex-col gap-4">
 
@@ -644,23 +668,33 @@ export default function LunaChatPanel({
         ))}
         {loading && <TypingDots />}
 
-        {/* "No, let's go" — attached right below the last Luna message.
+        {/* Quick-reply chip answering Luna's "anything else to add?" question.
+            Deliberately styled unlike a message bubble (centered, pill-shaped,
+            warm accent color, glow, icon, hint caption) so it reads as a
+            tappable action rather than another line of conversation.
             Guarded on hasUserMessages too: storyReady should only ever become
             true after a real user reply (never on the bare greeting), but
             this is a deterministic backstop in case that ever drifts. */}
         {storyReady && !readyConfirmed && hasUserMessages && (
-          <div className="flex justify-start pl-14">
+          <div className="flex flex-col items-center gap-1.5 mt-1 mb-1">
+            <span
+              className="text-fs-caption font-bold uppercase tracking-widest"
+              style={{ color: "rgba(252,211,77,0.55)" }}
+            >
+              {quickReplyHint}
+            </span>
             <button
               onClick={() => setReadyConfirmed(true)}
-              className="py-2.5 px-5 rounded-2xl text-fs-body transition-all active:scale-[0.98]"
+              className="flex items-center gap-2 py-2.5 px-6 rounded-full text-fs-body font-bold transition-all active:scale-95"
               style={{
-                background: "rgba(167,139,250,0.1)",
-                border: "1.5px solid rgba(167,139,250,0.35)",
-                color: "#c4b5fd",
-                fontWeight: 500,
+                background: "linear-gradient(135deg, rgba(251,191,36,0.22), rgba(245,158,11,0.15))",
+                border: "1.5px solid rgba(251,191,36,0.6)",
+                color: "#fcd34d",
+                boxShadow: "0 0 20px rgba(251,191,36,0.25)",
               }}
             >
-              {letsGoLabel}
+              <span>✨</span>
+              <span>{letsGoLabel}</span>
             </button>
           </div>
         )}
