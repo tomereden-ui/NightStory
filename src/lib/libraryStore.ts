@@ -31,6 +31,10 @@ export interface LibraryEntry {
   characterProfiles?: Record<string, CharacterProfile>;
   /** Gemini's analysis of which moral/values lessons are embedded in this story. */
   moralLessons?: MoralLesson[];
+  /** True for a script saved before audio production — excluded from getEntries so it
+   *  never shows up as a broken/unplayable item in Library or Home. Producing audio
+   *  upserts the same row without this field, which defaults it back to false. */
+  isDraft?: boolean;
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -65,6 +69,7 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
       ? (row.character_profiles as Record<string, CharacterProfile>)
       : undefined,
     moralLessons: Array.isArray(row.moral_lessons) ? (row.moral_lessons as MoralLesson[]) : undefined,
+    isDraft: row.is_draft ?? false,
   };
 }
 
@@ -94,6 +99,7 @@ export async function addEntry(entry: LibraryEntry): Promise<void> {
     scenes: entry.scenes ?? null,
     character_profiles: entry.characterProfiles ?? null,
     moral_lessons: entry.moralLessons ?? null,
+    is_draft: entry.isDraft ?? false,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
 }
@@ -109,7 +115,7 @@ export async function updateMoralLessons(id: string, moralLessons: MoralLesson[]
 
 // User's private stories. Pass childId to scope to a specific child; omit for all.
 export async function getEntries(childId?: string): Promise<LibraryEntry[]> {
-  let q = supabase.from("stories").select("*").eq("is_public", false);
+  let q = supabase.from("stories").select("*").eq("is_public", false).eq("is_draft", false);
   if (childId) q = q.filter("child_ids", "cs", JSON.stringify([childId]));
   const { data, error } = await q.order("created_at", { ascending: false });
   if (error) throw new Error(`getEntries: ${error.message}`);

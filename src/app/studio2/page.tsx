@@ -49,12 +49,14 @@ function timeAgo(ts: number): string {
 }
 
 function ScriptBrowser({
+  storyId,
   onLoad,
   refreshKey,
   forceExpanded = false,
   onCount,
   onClose,
 }: {
+  storyId: string | null;
   onLoad: (save: ScriptSaveFull) => void;
   refreshKey: number;
   forceExpanded?: boolean;
@@ -69,18 +71,19 @@ function ScriptBrowser({
   const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
-    fetch("/api/script-saves", { cache: "no-store" })
+    if (!storyId) { setSaves([]); onCount?.(0); return; }
+    fetch(`/api/script-saves?storyId=${encodeURIComponent(storyId)}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d)) { setSaves(d); onCount?.(d.length); } })
       .catch(() => {});
-  }, [refreshKey]);
+  }, [refreshKey, storyId]);
 
-  if (saves.length === 0) return null;
+  if (saves.length === 0 || !storyId) return null;
 
   const handleLoad = async (id: string) => {
     setLoadingId(id);
     try {
-      const res = await fetch(`/api/script-saves/${id}`, { cache: "no-store" });
+      const res = await fetch(`/api/script-saves/${id}?storyId=${encodeURIComponent(storyId)}`, { cache: "no-store" });
       if (!res.ok) {
         console.error("[ScriptBrowser] load failed:", res.status, id);
         // Server cleaned up the index entry; on next open it won't appear.
@@ -102,7 +105,7 @@ function ScriptBrowser({
     e.stopPropagation();
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/script-saves/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/script-saves/${id}?storyId=${encodeURIComponent(storyId)}`, { method: "DELETE" });
       if (!res.ok) {
         console.error("[ScriptBrowser] delete failed:", res.status, await res.text().catch(() => ""));
       }
@@ -118,7 +121,7 @@ function ScriptBrowser({
   const handleClearAll = async () => {
     if (!confirm(i18nT(language, "deleteAllVersionsConfirm" as Parameters<typeof i18nT>[1]))) return;
     setClearing(true);
-    await Promise.allSettled(saves.map((s) => fetch(`/api/script-saves/${s.id}`, { method: "DELETE" })));
+    await Promise.allSettled(saves.map((s) => fetch(`/api/script-saves/${s.id}?storyId=${encodeURIComponent(storyId)}`, { method: "DELETE" })));
     setSaves([]);
     onCount?.(0);
     setClearing(false);
@@ -1192,6 +1195,9 @@ export default function Studio2Page() {
   }, []);
   const cleanLessonsRef = useRef<string[]>([]);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Guards the draft-creation POST below from firing twice for the same
+  // script (e.g. React re-renders before the fetch resolves).
+  const creatingDraftRef = useRef(false);
   // Keeps the raw base64 payload from the last cover generation so production
   // can reuse it even after coverUrl has been swapped to a CDN URL
   const coverBase64Ref = useRef<{ data: string; mimeType: string } | null>(null);
@@ -1202,11 +1208,12 @@ export default function Studio2Page() {
   const [savesCount, setSavesCount] = useState(0);
 
   useEffect(() => {
-    fetch("/api/script-saves", { cache: "no-store" })
+    if (!editingStoryId) { setSavesCount(0); return; }
+    fetch(`/api/script-saves?storyId=${encodeURIComponent(editingStoryId)}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d)) setSavesCount(d.length); })
       .catch(() => {});
-  }, [savesRefreshKey]);
+  }, [savesRefreshKey, editingStoryId]);
 
   useEffect(() => { fetchVoicePool(storyLang).then(setVoicePool); }, [storyLang]);
 
@@ -1284,6 +1291,37 @@ export default function Studio2Page() {
     writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, moralLessons, scenes, language: storyLang }, DRAFT_KEY);
   }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, moralLessons, scenes, storyLang, loaded]);
 
+  // Persist a freshly-generated script to the database immediately, as a
+  // draft (no audio yet) -- previously a script lived only in localStorage
+  // until "Produce" ran, so a crash, a cleared cache, or a different device
+  // meant losing it outright, and Saved Versions had nothing real to attach
+  // to. Producing audio later reuses this same id (it becomes body.editingStoryId
+  // in the produce-drama request) and upserts the row without isDraft, which
+  // promotes it to a real, visible library entry.
+  useEffect(() => {
+    if (!loaded || scriptBlocks.length === 0 || editingStoryId || creatingDraftRef.current) return;
+    creatingDraftRef.current = true;
+    const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
+    fetch("/api/library", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: storyTitle || undefined,
+        summary,
+        blocks: scriptBlocks,
+        language: storyLang,
+        scenes: scenes.length ? scenes : undefined,
+        characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined,
+        moralLessons: moralLessons.length ? moralLessons : undefined,
+        childIds: activeChildId ? [activeChildId] : undefined,
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => { if (d?.id) setEditingStoryId(d.id); })
+      .catch(() => {})
+      .finally(() => { creatingDraftRef.current = false; });
+  }, [loaded, scriptBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons]);
+
   // Auto-save to Supabase — debounced 3s after any script change. Also
   // updates the live story row (when one exists) at the same moment, not
   // just the recoverable version-history snapshot — otherwise a crash or
@@ -1291,35 +1329,35 @@ export default function Studio2Page() {
   // last explicit Save left it at, with the newer work only reachable by
   // knowing to go dig it out of Saved Versions.
   useEffect(() => {
-    if (!loaded || scriptBlocks.length === 0) return;
+    // script-saves is now scoped per-story, so there's nothing to autosave
+    // into until the draft-creation effect below has assigned a real id.
+    if (!loaded || scriptBlocks.length === 0 || !editingStoryId) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
       fetch("/api/script-saves", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks: scriptBlocks, summary, coverUrl, coverPrompt, isAutosave: true }),
+        body: JSON.stringify({ storyId: editingStoryId, blocks: scriptBlocks, summary, coverUrl, coverPrompt, isAutosave: true }),
       })
         .then(() => setSavesRefreshKey((k) => k + 1))
         .catch(() => {});
 
-      if (editingStoryId) {
-        fetch(`/api/library/${editingStoryId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            blocks: scriptBlocks,
-            title: storyTitle || undefined,
-            summary: summary || undefined,
-            scenes: scenes.length ? scenes : undefined,
-            characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined,
-            moralLessons: moralLessons.length ? moralLessons : undefined,
-          }),
-        }).catch(() => {});
-      }
+      fetch(`/api/library/${editingStoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blocks: scriptBlocks,
+          title: storyTitle || undefined,
+          summary: summary || undefined,
+          scenes: scenes.length ? scenes : undefined,
+          characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined,
+          moralLessons: moralLessons.length ? moralLessons : undefined,
+        }),
+      }).catch(() => {});
     }, 3000);
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scriptBlocks, loaded]);
+  }, [scriptBlocks, loaded, editingStoryId]);
 
   // ─── Auto-switch to script tab whenever generation/validation is active ───────
 
@@ -1665,17 +1703,17 @@ export default function Studio2Page() {
     try {
       const saves: Promise<unknown>[] = [];
 
-      // Always save a script-saves version snapshot
-      saves.push(
-        fetch("/api/script-saves", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ blocks: cleanedBlocks, summary, coverUrl, coverPrompt, isAutosave: false, label: storyTitle || undefined }),
-        })
-      );
-
       // If this story exists in the library, also update it directly
       if (editingStoryId) {
+        // script-saves is scoped per-story, so this needs a real id to save into
+        saves.push(
+          fetch("/api/script-saves", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ storyId: editingStoryId, blocks: cleanedBlocks, summary, coverUrl, coverPrompt, isAutosave: false, label: storyTitle || undefined }),
+          })
+        );
+
         // Update script blocks (and title/summary) on the library entry
         saves.push(
           fetch(`/api/library/${editingStoryId}`, {
@@ -2677,6 +2715,7 @@ export default function Studio2Page() {
             {/* Scrollable list */}
             <div className="overflow-y-auto px-5 pt-3 pb-8 flex-1" style={{ scrollbarWidth: "none" }}>
               <ScriptBrowser
+                storyId={editingStoryId}
                 onLoad={(save) => { handleLoadSave(save); setVersionsOpen(false); }}
                 refreshKey={savesRefreshKey}
                 forceExpanded

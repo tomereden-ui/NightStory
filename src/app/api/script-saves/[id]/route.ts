@@ -7,32 +7,35 @@ export const dynamic = "force-dynamic";
 const BUCKET     = "script-saves";
 const SAVES_INDEX = "saves-index.json";
 
-async function readManualIndex(): Promise<ScriptSaveMeta[]> {
-  const { data } = await supabase.storage.from(BUCKET).download(SAVES_INDEX);
+async function readManualIndex(storyId: string): Promise<ScriptSaveMeta[]> {
+  const { data } = await supabase.storage.from(BUCKET).download(`${storyId}/${SAVES_INDEX}`);
   if (!data) return [];
   try { return JSON.parse(await data.text()) as ScriptSaveMeta[]; } catch { return []; }
 }
 
-async function writeManualIndex(index: ScriptSaveMeta[]): Promise<void> {
+async function writeManualIndex(storyId: string, index: ScriptSaveMeta[]): Promise<void> {
   const blob = new Blob([JSON.stringify(index)], { type: "application/json" });
-  await supabase.storage.from(BUCKET).upload(SAVES_INDEX, blob, { upsert: true });
+  await supabase.storage.from(BUCKET).upload(`${storyId}/${SAVES_INDEX}`, blob, { upsert: true });
 }
 
-// GET /api/script-saves/[id] — return full save with blocks
+// GET /api/script-saves/[id]?storyId=... — return full save with blocks
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
-  const path = id === "autosave" ? "autosave.json" : `${id}.json`;
+  const storyId = req.nextUrl.searchParams.get("storyId");
+  if (!storyId) return NextResponse.json({ error: "storyId required" }, { status: 400 });
+
+  const path = `${storyId}/${id === "autosave" ? "autosave.json" : `${id}.json`}`;
   const { data, error } = await supabase.storage.from(BUCKET).download(path);
   if (error || !data) {
     console.error("[ScriptSaves] GET missing file:", path, error?.message);
     // Auto-clean phantom index entries so they stop appearing in the list
     if (id !== "autosave") {
-      const manuals = await readManualIndex();
+      const manuals = await readManualIndex(storyId);
       if (manuals.some((s) => s.id === id)) {
-        await writeManualIndex(manuals.filter((s) => s.id !== id));
+        await writeManualIndex(storyId, manuals.filter((s) => s.id !== id));
         console.warn("[ScriptSaves] removed phantom entry:", id);
       }
     }
@@ -46,19 +49,21 @@ export async function GET(
   }
 }
 
-// DELETE /api/script-saves/[id] — only touches saves-index.json, never autosave-meta.json
+// DELETE /api/script-saves/[id]?storyId=... — only touches saves-index.json, never autosave-meta.json
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const { id } = params;
+  const storyId = req.nextUrl.searchParams.get("storyId");
+  if (!storyId) return NextResponse.json({ error: "storyId required" }, { status: 400 });
   if (id === "autosave") {
     return NextResponse.json({ error: "Cannot delete autosave" }, { status: 400 });
   }
   const [, manuals] = await Promise.all([
-    supabase.storage.from(BUCKET).remove([`${id}.json`]),
-    readManualIndex(),
+    supabase.storage.from(BUCKET).remove([`${storyId}/${id}.json`]),
+    readManualIndex(storyId),
   ]);
-  await writeManualIndex(manuals.filter((s) => s.id !== id));
+  await writeManualIndex(storyId, manuals.filter((s) => s.id !== id));
   return NextResponse.json({ ok: true });
 }

@@ -9,6 +9,10 @@ const BUCKET = "script-saves";
 // Two separate index files so autosave and manual saves never contend on the
 // same file — eliminating the read-modify-write race condition where a
 // concurrent autosave could overwrite a freshly-written manual save index.
+// Everything lives under a per-story prefix so different stories' version
+// histories never collide — this used to be one single global slot shared
+// by whatever story happened to be open in Studio, which meant switching
+// stories could silently overwrite another story's autosave.
 const AUTOSAVE_META = "autosave-meta.json"; // single entry, only autosave writes
 const SAVES_INDEX   = "saves-index.json";   // list of manual saves only
 
@@ -24,31 +28,31 @@ async function ensureBucket() {
   bucketReady = true;
 }
 
-async function readAutosaveMeta(): Promise<ScriptSaveMeta | null> {
-  const { data } = await supabase.storage.from(BUCKET).download(AUTOSAVE_META);
+async function readAutosaveMeta(storyId: string): Promise<ScriptSaveMeta | null> {
+  const { data } = await supabase.storage.from(BUCKET).download(`${storyId}/${AUTOSAVE_META}`);
   if (!data) return null;
   try { return JSON.parse(await data.text()) as ScriptSaveMeta; } catch { return null; }
 }
 
-async function readManualIndex(): Promise<ScriptSaveMeta[]> {
-  const { data } = await supabase.storage.from(BUCKET).download(SAVES_INDEX);
+async function readManualIndex(storyId: string): Promise<ScriptSaveMeta[]> {
+  const { data } = await supabase.storage.from(BUCKET).download(`${storyId}/${SAVES_INDEX}`);
   if (!data) return [];
   try { return JSON.parse(await data.text()) as ScriptSaveMeta[]; } catch { return []; }
 }
 
-async function writeAutosaveMeta(meta: ScriptSaveMeta): Promise<void> {
+async function writeAutosaveMeta(storyId: string, meta: ScriptSaveMeta): Promise<void> {
   const blob = new Blob([JSON.stringify(meta)], { type: "application/json" });
-  await supabase.storage.from(BUCKET).upload(AUTOSAVE_META, blob, { upsert: true });
+  await supabase.storage.from(BUCKET).upload(`${storyId}/${AUTOSAVE_META}`, blob, { upsert: true });
 }
 
-async function writeManualIndex(index: ScriptSaveMeta[]): Promise<void> {
+async function writeManualIndex(storyId: string, index: ScriptSaveMeta[]): Promise<void> {
   const blob = new Blob([JSON.stringify(index)], { type: "application/json" });
-  await supabase.storage.from(BUCKET).upload(SAVES_INDEX, blob, { upsert: true });
+  await supabase.storage.from(BUCKET).upload(`${storyId}/${SAVES_INDEX}`, blob, { upsert: true });
 }
 
-async function writeSave(save: ScriptSaveFull): Promise<void> {
+async function writeSave(storyId: string, save: ScriptSaveFull): Promise<void> {
   const blob = new Blob([JSON.stringify(save)], { type: "application/json" });
-  const path = save.isAutosave ? "autosave.json" : `${save.id}.json`;
+  const path = `${storyId}/${save.isAutosave ? "autosave.json" : `${save.id}.json`}`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { upsert: true });
   if (error) {
     console.error("[ScriptSaves] writeSave failed:", error.message, "path:", path);
@@ -56,12 +60,15 @@ async function writeSave(save: ScriptSaveFull): Promise<void> {
   }
 }
 
-// GET — return merged list: autosave first, then manual saves newest-first
-export async function GET() {
+// GET /api/script-saves?storyId=... — return merged list: autosave first, then manual saves newest-first
+export async function GET(req: NextRequest) {
+  const storyId = req.nextUrl.searchParams.get("storyId");
+  if (!storyId) return NextResponse.json({ error: "storyId required" }, { status: 400 });
+
   await ensureBucket();
   const [autosaveMeta, manuals] = await Promise.all([
-    readAutosaveMeta(),
-    readManualIndex(),
+    readAutosaveMeta(storyId),
+    readManualIndex(storyId),
   ]);
   const sorted = [
     ...(autosaveMeta ? [autosaveMeta] : []),
@@ -70,9 +77,10 @@ export async function GET() {
   return NextResponse.json(sorted);
 }
 
-// POST — create or upsert a save
+// POST — create or upsert a save, scoped to body.storyId
 export async function POST(req: NextRequest) {
   let body: {
+    storyId?: string;
     blocks: ScriptBlock[];
     summary?: string;
     coverUrl?: string;
@@ -86,9 +94,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
+  if (!body.storyId) {
+    return NextResponse.json({ error: "storyId required" }, { status: 400 });
+  }
   if (!Array.isArray(body.blocks) || body.blocks.length === 0) {
     return NextResponse.json({ error: "blocks required" }, { status: 400 });
   }
+  const storyId = body.storyId;
 
   await ensureBucket();
 
@@ -108,7 +120,7 @@ export async function POST(req: NextRequest) {
       isAutosave: true,
     };
     const full: ScriptSaveFull = { ...meta, blocks: body.blocks, coverUrl: body.coverUrl, coverPrompt: body.coverPrompt };
-    await Promise.all([writeSave(full), writeAutosaveMeta(meta)]);
+    await Promise.all([writeSave(storyId, full), writeAutosaveMeta(storyId, meta)]);
     return NextResponse.json({ ok: true, meta });
   } else {
     // Manual save writes ONLY to saves-index.json + its own file.
@@ -124,16 +136,16 @@ export async function POST(req: NextRequest) {
       isAutosave: false,
     };
     const full: ScriptSaveFull = { ...meta, blocks: body.blocks, coverUrl: body.coverUrl, coverPrompt: body.coverPrompt };
-    await writeSave(full);
+    await writeSave(storyId, full);
 
     // Trim oldest manual saves to stay within cap, then append new entry
-    const manuals = (await readManualIndex()).sort((a, b) => a.savedAt - b.savedAt);
+    const manuals = (await readManualIndex(storyId)).sort((a, b) => a.savedAt - b.savedAt);
     const toRemove = manuals.slice(0, Math.max(0, manuals.length - MAX_MANUAL_SAVES + 1));
     if (toRemove.length > 0) {
-      await supabase.storage.from(BUCKET).remove(toRemove.map((s) => `${s.id}.json`));
+      await supabase.storage.from(BUCKET).remove(toRemove.map((s) => `${storyId}/${s.id}.json`));
     }
     const kept = manuals.filter((s) => !toRemove.find((r) => r.id === s.id));
-    await writeManualIndex([...kept, meta]);
+    await writeManualIndex(storyId, [...kept, meta]);
     return NextResponse.json({ ok: true, meta });
   }
 }
