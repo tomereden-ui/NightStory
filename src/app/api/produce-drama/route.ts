@@ -234,7 +234,7 @@ async function runProduction(
 
   // Wrap EVERYTHING including dynamic imports so job always gets an error state
   try {
-    const { planDrama }         = await import("@/lib/services/dramaPlanner");
+    const { planDrama, MAX_TRAILING_SFX_SECONDS } = await import("@/lib/services/dramaPlanner");
     const { synthesizeLine }    = await import("@/lib/services/ttsService");
     const { generateSfx, writeSilence } = await import("@/lib/services/sfxService");
     const { mixTracks, concatenateTracks, concatenateWavFilesPureJS } = await import("@/lib/services/audioMixer");
@@ -599,9 +599,22 @@ async function runProduction(
         return s + (fp ? audioDurationMs(fp) : 2000);
       }),
     );
-    // Add 2 s grace buffer so the last line isn't clipped, then cap at planned duration
-    // if that's longer (e.g. when the drama planner intentionally left trailing ambience).
-    const adjustedTotal = Math.max(totalDurationMs, lastDialogueEnd + 2000);
+    // Add 2 s grace buffer so the last line isn't clipped. The planner's
+    // duration_estimate_seconds is only ever allowed to extend the mix past
+    // real content by a short, capped ambient wind-down (MAX_TRAILING_SFX_SECONDS)
+    // -- otherwise a script that came out short of the requested length would
+    // get silently masked by looping the ambient SFX track to fake a match,
+    // instead of surfacing that the script itself needs to be longer.
+    const naturalEnd = lastDialogueEnd + 2000;
+    const requestedTail = Math.max(0, totalDurationMs - naturalEnd);
+    const cappedTail = Math.min(requestedTail, MAX_TRAILING_SFX_SECONDS * 1000);
+    if (requestedTail > cappedTail) {
+      console.warn(
+        `[${ts()}][produce-drama] Script ran ${Math.round((requestedTail - cappedTail) / 1000)}s short of the ` +
+        `requested duration after capping trailing SFX at ${MAX_TRAILING_SFX_SECONDS}s -- the underlying script is too short.`,
+      );
+    }
+    const adjustedTotal = naturalEnd + cappedTail;
 
     // Stamp actual start/end times onto each dialogue track so DramaPlayer
     // can display accurate subtitles and timeline positions.
@@ -712,7 +725,7 @@ async function runProduction(
       summary: summaryOverride || generateSummary(blocks),
       audioUrl,
       coverUrl,
-      durationSeconds: drama.duration_estimate_seconds,
+      durationSeconds: Math.round(adjustedTotal / 1000),
       createdAt: Date.now(),
       blocks,
       language: scriptLanguage,
@@ -726,7 +739,7 @@ async function runProduction(
 
     if (skipLibrarySave) {
       // Admin "preview before save" flow: store entry in job so /api/admin/save-story can persist it later
-      updateJob(jobId, { pendingEntry: entry, durationSeconds: drama.duration_estimate_seconds });
+      updateJob(jobId, { pendingEntry: entry, durationSeconds: Math.round(adjustedTotal / 1000) });
     } else {
       try {
         await addEntry(entry);

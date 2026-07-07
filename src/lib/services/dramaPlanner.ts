@@ -22,6 +22,12 @@ export interface DramaScript {
   tracks: DramaTrack[];
 }
 
+// How much longer the final mix may run past the last real line of dialogue,
+// as a closing ambient wind-down. This is the only padding allowed — it stops
+// produce-drama from stretching the ambient loop indefinitely to fake a match
+// against the requested duration when the underlying script came out short.
+export const MAX_TRAILING_SFX_SECONDS = 20;
+
 const SYSTEM_INSTRUCTION = `You are a children's audio drama producer creating a warm, imaginative bedtime story experience.
 Your job is to take a written children's story script and produce a precise audio drama timeline
 with character timing, gentle sound effects, and ambient audio cues suitable for young listeners.`;
@@ -49,6 +55,7 @@ SFX RULES:
 - First track MUST be an ambient background loop (start_ms: 0, loop: true, duration_hint_ms: 12000). Describe the setting's soundscape in comma-separated form: e.g. "sunny garden, soft birdsong, gentle breeze, rustling leaves, peaceful"
 - Add 2–4 event SFX at emotionally significant moments (a discovery, a magical moment, a surprise, a joyful reunion).
 - Non-looping SFX duration_hint_ms: typically 1500–4000ms
+- If the script's real dialogue runs shorter than the target duration, do NOT pad the gap with a longer ambient loop or extra silence — that is not your job. A closing ambient wind-down after the last line may run at most ${MAX_TRAILING_SFX_SECONDS} seconds; anything beyond that must come from the dialogue itself being the right length, which is decided before this step.
 
 OUTPUT FORMAT — return ONLY valid JSON, no markdown, no explanation:
 {
@@ -87,9 +94,10 @@ export async function planDrama(
     `${SYSTEM_INSTRUCTION}\n\n` +
     `Create a warm, child-friendly audio drama timeline for this bedtime story.\n` +
     `TARGET DURATION: approximately ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""} (${durationMinutes * 60} seconds). ` +
-    `Set duration_estimate_seconds to ${durationMinutes * 60} and pace the dialogue accordingly — ` +
-    `expand descriptions and add natural pauses for shorter scripts, or select key passages for longer ones.\n\n` +
-    `STORY SCRIPT (may be in any language — preserve the original language in all dialogue lines):\n${scriptText}\n\n` +
+    `This script was already written to roughly match that length, so pace the dialogue naturally rather than stretching or ` +
+    `compressing it to force a match. Set duration_estimate_seconds to your own honest estimate of this timeline's real total ` +
+    `length in seconds (sum of dialogue timing, gaps, and SFX) — never just copy the target number.\n\n` +
+    `STORY SCRIPT (may be in any language — copy each dialogue line's "line" text EXACTLY as written below, character-for-character, including any Hebrew niqqud/vowel points — do not transliterate, translate, or strip diacritics):\n${scriptText}\n\n` +
     FORMAT_RULES;
 
   const { data, ok, status } = await geminiPost(apiKey, "gemini-2.5-flash", {
