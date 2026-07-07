@@ -130,6 +130,19 @@ export async function POST(req: NextRequest) {
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction,
+      generationConfig: {
+        temperature: 0.85,
+        // Unlike generate-story/route.ts, this route never set an explicit
+        // token budget — relying on the SDK/API's own default, which is
+        // lower than what a full response (title/summary/coverPrompt/
+        // characters/blocks/scenes) can need. Confirmed directly: the exact
+        // same prompt got cut off mid-response with finishReason MAX_TOKENS,
+        // producing unterminated JSON ("Gemini returned non-JSON output").
+        // Match generate-story's budget so this route doesn't truncate.
+        maxOutputTokens: 8192,
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     });
 
     // Gemini often doesn't hit the target word count on the first try (a
