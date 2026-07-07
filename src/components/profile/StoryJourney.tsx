@@ -246,7 +246,7 @@ function valueBadgeStyle(label: string) {
 function ValueBadge({ label, count }: { label: string; count: number }) {
   const { bg, border, icon, accent } = valueBadgeStyle(label);
   return (
-    <div className="flex flex-col items-center gap-1.5 flex-shrink-0" style={{ width: 64 }}>
+    <div className="flex flex-col items-center gap-1.5 flex-shrink-0" style={{ width: 68 }}>
       <div style={{ position: "relative" }}>
         <div
           className="flex items-center justify-center"
@@ -257,15 +257,16 @@ function ValueBadge({ label, count }: { label: string; count: number }) {
         <span
           className="font-bold"
           style={{
-            position: "absolute", top: -5, right: -7,
+            position: "absolute", top: -6, right: -6,
             fontSize: "var(--fs-micro)", color: "#080d1a", background: accent,
-            borderRadius: 999, padding: "1px 5px", boxShadow: "0 0 0 2px #0d1225",
+            borderRadius: 999, padding: "1.5px 5px", boxShadow: "0 0 0 2px #0d1225",
+            whiteSpace: "nowrap",
           }}
         >
           {count}×
         </span>
       </div>
-      <p className="text-fs-micro text-center truncate w-full" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</p>
+      <p className="text-fs-body font-semibold text-center truncate w-full" style={{ color: "rgba(255,255,255,0.65)" }}>{label}</p>
     </div>
   );
 }
@@ -400,7 +401,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
           <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
             {t("valuesHeard" as TranslationKey)}
           </p>
-          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+          <div className="flex gap-3 overflow-x-auto hide-scrollbar" style={{ paddingTop: 8, paddingBottom: 4 }}>
             {child.lessons.map((l) => (
               <ValueBadge key={l.label} label={l.label} count={l.count} />
             ))}
