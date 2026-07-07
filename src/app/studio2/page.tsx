@@ -1273,7 +1273,12 @@ export default function Studio2Page() {
     writeDraft({ promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId: editingStoryId ?? undefined, forkedFromTitle: forkedFromTitle ?? undefined, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, moralLessons, scenes, language: storyLang }, DRAFT_KEY);
   }, [promptText, scriptBlocks, summary, coverUrl, coverPrompt, editingStoryId, forkedFromTitle, characterAvatars, characterTypes, characterProfiles, storyTitle, lessons, lessonImplementations, moralLessons, scenes, storyLang, loaded]);
 
-  // Auto-save to Supabase — debounced 3s after any script change
+  // Auto-save to Supabase — debounced 3s after any script change. Also
+  // updates the live story row (when one exists) at the same moment, not
+  // just the recoverable version-history snapshot — otherwise a crash or
+  // navigating away mid-edit left the actual story stuck at whatever the
+  // last explicit Save left it at, with the newer work only reachable by
+  // knowing to go dig it out of Saved Versions.
   useEffect(() => {
     if (!loaded || scriptBlocks.length === 0) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -1285,6 +1290,21 @@ export default function Studio2Page() {
       })
         .then(() => setSavesRefreshKey((k) => k + 1))
         .catch(() => {});
+
+      if (editingStoryId) {
+        fetch(`/api/library/${editingStoryId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            blocks: scriptBlocks,
+            title: storyTitle || undefined,
+            summary: summary || undefined,
+            scenes: scenes.length ? scenes : undefined,
+            characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined,
+            moralLessons: moralLessons.length ? moralLessons : undefined,
+          }),
+        }).catch(() => {});
+      }
     }, 3000);
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
