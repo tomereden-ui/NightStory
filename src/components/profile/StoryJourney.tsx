@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import type { TranslationKey } from "@/lib/i18n";
+import Icon from "@/components/ui/Icon";
+import type { IconName } from "@/lib/icons";
 
 // ── Mock data — replace with real Supabase queries once story_plays table exists ──
 
@@ -51,15 +53,17 @@ export const MOCK_JOURNEY = MOCK_CHILDREN;
 const CELL = 20; // px per cell
 const GAP  = 4;  // px gap
 
+// Gentle, translucent tones rather than heavy opaque blocks -- keeps the
+// grid feeling calm and dark-mode premium instead of a GitHub-style graph.
 function cellStyle(count: number): React.CSSProperties {
-  if (count === 0) return { background: "rgba(255,255,255,0.06)" };
+  if (count === 0) return { background: "rgba(255,255,255,0.045)" };
   if (count === 1) return {
-    background: "linear-gradient(135deg, #4fc3f7, #a78bfa)",
-    boxShadow: "0 0 5px rgba(79,195,247,0.35)",
+    background: "linear-gradient(135deg, rgba(79,195,247,0.35), rgba(167,139,250,0.35))",
+    boxShadow: "0 0 4px rgba(79,195,247,0.18)",
   };
   return {
-    background: "linear-gradient(135deg, #fbbf24, #f472b6)",
-    boxShadow: "0 0 7px rgba(251,191,36,0.5)",
+    background: "linear-gradient(135deg, rgba(251,191,36,0.4), rgba(244,114,182,0.4))",
+    boxShadow: "0 0 5px rgba(251,191,36,0.25)",
   };
 }
 
@@ -68,15 +72,15 @@ function CalendarLegend() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-        <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "rgba(255,255,255,0.06)" }} />
+        <div style={{ width: CELL, height: CELL, borderRadius: 6, background: "rgba(255,255,255,0.045)" }} />
         <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("calNone" as TranslationKey)}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-        <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#4fc3f7,#a78bfa)" }} />
+        <div style={{ width: CELL, height: CELL, borderRadius: 6, background: "linear-gradient(135deg,rgba(79,195,247,0.35),rgba(167,139,250,0.35))" }} />
         <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("cal1Story" as TranslationKey)}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-        <div style={{ width: CELL, height: CELL, borderRadius: 3, background: "linear-gradient(135deg,#fbbf24,#f472b6)" }} />
+        <div style={{ width: CELL, height: CELL, borderRadius: 6, background: "linear-gradient(135deg,rgba(251,191,36,0.4),rgba(244,114,182,0.4))" }} />
         <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("cal2Plus" as TranslationKey)}</span>
       </div>
     </div>
@@ -100,7 +104,7 @@ function CalendarHeatmap({ days }: { days: number[] }) {
           <div
             key={i}
             title={count > 0 ? `${count} ${count === 1 ? "story" : "stories"}` : undefined}
-            style={{ width: CELL, height: CELL, borderRadius: 3, ...cellStyle(count) }}
+            style={{ width: CELL, height: CELL, borderRadius: 6, ...cellStyle(count) }}
           />
         ))}
       </div>
@@ -225,6 +229,87 @@ async function shareChildMonth(child: typeof MOCK_CHILDREN[0]): Promise<"shared"
   return "opened-whatsapp";
 }
 
+// ── Value badges ("Themes & Values Explored") ──────────────────────────────────
+
+const VALUE_BADGE_STYLES: Record<string, { bg: string; border: string; icon: IconName; accent: string }> = {
+  Courage:    { bg: "rgba(79,195,247,0.14)",  border: "rgba(79,195,247,0.35)",  icon: "flame",           accent: "#4fc3f7" },
+  Bravery:    { bg: "rgba(79,195,247,0.14)",  border: "rgba(79,195,247,0.35)",  icon: "flame",           accent: "#4fc3f7" },
+  Friendship: { bg: "rgba(251,191,36,0.14)",  border: "rgba(251,191,36,0.35)",  icon: "friendshipRings", accent: "#fbbf24" },
+  Kindness:   { bg: "rgba(167,139,250,0.14)", border: "rgba(167,139,250,0.35)", icon: "heartSparkle",    accent: "#a78bfa" },
+};
+const DEFAULT_VALUE_BADGE = { bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.16)", icon: "sparkles" as IconName, accent: "rgba(255,255,255,0.55)" };
+
+function valueBadgeStyle(label: string) {
+  return VALUE_BADGE_STYLES[label] ?? DEFAULT_VALUE_BADGE;
+}
+
+function ValueBadge({ label, count }: { label: string; count: number }) {
+  const { bg, border, icon, accent } = valueBadgeStyle(label);
+  return (
+    <div className="flex flex-col items-center gap-1.5 flex-shrink-0" style={{ width: 64 }}>
+      <div style={{ position: "relative" }}>
+        <div
+          className="flex items-center justify-center"
+          style={{ width: 52, height: 52, borderRadius: 16, background: bg, border: `1px solid ${border}` }}
+        >
+          <Icon name={icon} size={22} strokeWidth={1.4} style={{ color: accent }} />
+        </div>
+        <span
+          className="font-bold"
+          style={{
+            position: "absolute", top: -5, right: -7,
+            fontSize: "var(--fs-micro)", color: "#080d1a", background: accent,
+            borderRadius: 999, padding: "1px 5px", boxShadow: "0 0 0 2px #0d1225",
+          }}
+        >
+          {count}×
+        </span>
+      </div>
+      <p className="text-fs-micro text-center truncate w-full" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</p>
+    </div>
+  );
+}
+
+// ── Pillow Talk Starter (mock, based on the month's most-explored value) ──────
+
+const PILLOW_TALK_QUESTIONS: Record<string, string> = {
+  Kindness: "What's a small, secret nice thing we can do for someone tomorrow?",
+  Courage: "What's one brave thing you did today, even if it felt small?",
+  Bravery: "What's one brave thing you did today, even if it felt small?",
+  Friendship: "What made you feel like a good friend today?",
+  Curiosity: "What's something you wondered about today that you'd love to find the answer to?",
+  Adventure: "If we could go on one adventure this weekend, what would it be?",
+};
+const DEFAULT_PILLOW_TALK_QUESTION = "What part of tonight's story do you think about the most?";
+
+function buildPillowTalkPrompt(child: typeof MOCK_CHILDREN[0]): string {
+  const topValue = [...child.lessons].sort((a, b) => b.count - a.count)[0];
+  if (!topValue) return DEFAULT_PILLOW_TALK_QUESTION;
+  const question = PILLOW_TALK_QUESTIONS[topValue.label] ?? DEFAULT_PILLOW_TALK_QUESTION;
+  return `Since ${child.name} explored a lot of ${topValue.label} stories this week, here's a starter for your next walk together: "${question}"`;
+}
+
+function PillowTalkCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
+  return (
+    <div
+      className="rounded-2xl px-4 py-3.5"
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        backdropFilter: "blur(10px)",
+        border: "1px solid rgba(167,139,250,0.25)",
+        boxShadow: "0 0 22px rgba(79,195,247,0.1), 0 0 36px rgba(167,139,250,0.08)",
+      }}
+    >
+      <p className="text-fs-body font-bold mb-1.5" style={{ color: "#c4b5fd" }}>
+        ✨ Tonight&apos;s Pillow Talk Starter
+      </p>
+      <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.55 }}>
+        {buildPillowTalkPrompt(child)}
+      </p>
+    </div>
+  );
+}
+
 // ── Single child journey card ─────────────────────────────────────────────────
 
 function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
@@ -315,19 +400,9 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
           <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
             {t("valuesHeard" as TranslationKey)}
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
             {child.lessons.map((l) => (
-              <span
-                key={l.label}
-                className="text-fs-body font-semibold px-2.5 py-1 rounded-full"
-                style={{
-                  background: `${l.color}18`,
-                  border: `1px solid ${l.color}44`,
-                  color: l.color,
-                }}
-              >
-                {l.label} · {l.count}×
-              </span>
+              <ValueBadge key={l.label} label={l.label} count={l.count} />
             ))}
           </div>
         </div>
@@ -339,6 +414,9 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
           </p>
           <CalendarHeatmap days={child.calendar} />
         </div>
+
+        {/* Pillow Talk Starter */}
+        <PillowTalkCard child={child} />
 
         {/* Recent stories */}
         <div>
