@@ -164,10 +164,23 @@ export async function POST(req: NextRequest) {
       try {
         raw = JSON.parse(json);
       } catch {
-        if (attempt === maxLengthAttempts) {
-          return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
+        // Malformed JSON is a separate failure mode from being off the word-count
+        // target, so it gets its own immediate retry rather than just eating into
+        // the length-correction budget above -- otherwise a story that needed 2
+        // length corrections had zero attempts left to recover from a garbled
+        // final response, and the whole request failed outright.
+        console.warn(`[five-question-story] Attempt ${attempt} returned non-JSON output, retrying once immediately.`);
+        try {
+          const retryResult = await model.generateContent(currentPrompt);
+          const retryText = retryResult.response.text().trim();
+          const retryJson = retryText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+          raw = JSON.parse(retryJson);
+        } catch {
+          if (attempt === maxLengthAttempts) {
+            return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
+          }
+          continue;
         }
-        continue;
       }
 
       const actualWords = estimateWordCount(raw!.blocks ?? []);
