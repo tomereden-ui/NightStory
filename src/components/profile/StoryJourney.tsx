@@ -83,8 +83,13 @@ function CalendarLegend() {
 
 function CalendarHeatmap({ days }: { days: number[] }) {
   const DAY_LABELS = ["S","M","T","W","T","F","S"];
+  const todayIndex = days.length - 1;
   return (
     <div style={{ width: "100%" }}>
+      {/* directional hint: oldest night starts top-left */}
+      <p style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)", marginBottom: 4 }}>
+        Older
+      </p>
       {/* day-of-week labels */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: GAP, marginBottom: 8 }}>
         {DAY_LABELS.map((d, i) => (
@@ -93,15 +98,34 @@ function CalendarHeatmap({ days }: { days: number[] }) {
       </div>
       {/* nodes -- small, fixed-size circles centered in a responsive, roomy grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: GAP }}>
-        {days.map((count, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div
-              title={count > 0 ? `${count} ${count === 1 ? "story" : "stories"}` : undefined}
-              style={{ width: NODE, height: NODE, borderRadius: "50%", ...cellStyle(count) }}
-            />
-          </div>
-        ))}
+        {days.map((count, i) => {
+          const isToday = i === todayIndex;
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+              {isToday && (
+                <span
+                  className="animate-ping"
+                  style={{
+                    position: "absolute", width: NODE + 8, height: NODE + 8, borderRadius: "50%",
+                    border: "1px solid rgba(251,191,36,0.55)",
+                  }}
+                />
+              )}
+              <div
+                title={isToday ? "Tonight" : count > 0 ? `${count} ${count === 1 ? "story" : "stories"}` : undefined}
+                style={{
+                  width: NODE, height: NODE, borderRadius: "50%", position: "relative", ...cellStyle(count),
+                  ...(isToday ? { boxShadow: "0 0 0 2px rgba(251,191,36,0.7), 0 0 10px rgba(251,191,36,0.45)" } : {}),
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
+      {/* directional hint: today's slot lands bottom-right */}
+      <p style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)", textAlign: "right", marginTop: 6 }}>
+        Today
+      </p>
       {/* legend */}
       <CalendarLegend />
     </div>
