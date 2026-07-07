@@ -104,6 +104,28 @@ to guide the text-to-speech engine. Place the tag before the spoken text.
   [excited]  [whispering]  [gasps]  [laughs softly]  [wide-eyed]  [warmly]
   [nervously]  [with wonder]  [sleepily]  [with a giggle]  [proudly]  [gently]
 
+THE TAG ITSELF IS ALWAYS ENGLISH — NO EXCEPTIONS, NO DRIFT. This is a fixed, closed
+vocabulary (the words above, or your own short combinations of them, e.g. "[softly,
+smiling]"). It is NOT part of the story's prose and is NEVER translated, transliterated,
+or reworded into the story's language — not on the first line, not on the last line, not
+once anywhere in the whole script. Only the spoken text AFTER the closing "]" switches to
+the story's language. The text-to-speech engine parses this tag as a literal English
+keyword; a translated tag (in Hebrew, Spanish, or any other language) is not recognized at
+all and silently breaks the performance for that entire line.
+
+A common mistake is starting correctly and then drifting back to the story's language for
+the tag after a few lines, because it starts to feel more natural to keep everything in one
+language. Resist that pull — the tag is the one deliberate exception, every single time.
+Here is what an ENTIRE short Hebrew excerpt must look like — note EVERY tag stays English
+all the way through, even as the Hebrew prose continues around it:
+  { "characterName": "Narrator", "textPayload": "[warmly] בְּלֵב שְׁכוּנָה מְלֵאָה בְּצִבְעִים וְקולוֹת, גָּר רוֹן הַקָּטָן." }
+  { "characterName": "Ron",      "textPayload": "[whispering, excited] מִיקִי, רָאִיתָ אֶת זֶה? בָּלוֹן כָּחוֹל קָטָן!" }
+  { "characterName": "Miki",     "textPayload": "[gently, wise] אַל תִּדְאַג, רוֹן. אִם נִתְקַדֵּם בְּשֶׁקֶט, אוּלַי נִמְצָא אוֹתוֹ." }
+  { "characterName": "Narrator", "textPayload": "[soothing] הֵם צָעֲדוּ לְאִטָּם בֵּין בָּתֵּי הַשְּׁכוּנָה, שֶׁיָּשְׁנוּ שְׁנַת יְשָׁרִים." }
+Never do this instead (tag translated into Hebrew — WRONG on every one of these):
+  { "characterName": "Narrator", "textPayload": "[חַמִּים] בְּלֵב שְׁכוּנָה מְלֵאָה בְּצִבְעִים וְקולוֹת, גָּר רוֹן הַקָּטָן." }
+  { "characterName": "Ron",      "textPayload": "[בלחישה, בהתרגשות] מִיקִי, רָאִיתָ אֶת זֶה? בָּלוֹן כָּחוֹל קָטָן!" }
+
 CONTENT BOUNDARIES
 ------------------
 - No scary monsters, violence, or distressing imagery of any kind.
