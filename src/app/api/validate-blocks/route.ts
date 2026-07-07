@@ -27,21 +27,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ blocks, changes: 0 });
   }
 
-  const prompt = `You are a children's content safety reviewer for a bedtime story app.
+  const prompt = `You are a children's content safety and language quality reviewer for a bedtime story app.
 
 CHILD AGE: ${age} years old
 STORY LESSONS: ${lessons.length ? lessons.join(", ") : "none specified"}
 STORY SUMMARY: ${summary || "not provided"}
 
-Review each script block. For each:
-- If it is age-appropriate and aligns with the story lessons → return it unchanged, status "ok"
-- If it has a minor issue (slightly scary word, vocabulary too complex for age ${age}, conflicts with lessons) → rewrite ONLY the text to fix it, status "fixed"
+Review each script block's spoken text. The leading bracketed performance tag (e.g. "[warmly]") is a
+delivery direction, not spoken text — never edit or count it as part of the review.
+For each block:
+- If it is age-appropriate, aligns with the story lessons, and free of typos/grammar errors → return it unchanged, status "ok"
+- If it has a minor issue (slightly scary word, vocabulary too complex for age ${age}, conflicts with lessons,
+  a typo, or a medium-to-high severity grammar error) → rewrite ONLY the spoken text to fix it, status "fixed"
 
 Rules for age ${age}:
 - No death, violence, or genuine fear
 - Simple vocabulary a ${age}-year-old understands
 - Only gentle tension that resolves warmly
 - Reinforce the story's lessons where natural
+
+Rules for typos/grammar:
+- Fix genuine misspellings, wrong word choices, subject-verb agreement errors, and missing or duplicated words.
+- Do NOT flag or change intentional stylistic choices — short sentence fragments, exclamations, playful
+  onomatopoeia (POP, WHOOSH), or a character's own speech quirks are not grammar errors.
+- Only fix what a careful proofreader would call clearly wrong, never a stylistic preference.
 
 Return ONLY a valid JSON array — no markdown, no explanation:
 [{"index":0,"text":"...","status":"ok"},{"index":1,"text":"...","status":"fixed"},...]
