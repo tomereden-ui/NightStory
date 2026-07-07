@@ -6,9 +6,10 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { ClassicMeta } from "@/lib/classicStories";
 import { CLASSIC_STORIES } from "@/lib/classicStories";
-import type { ScriptBlock, StoryScene, Voice } from "@/types";
+import type { ScriptBlock, StoryScene, Voice, MoralLesson } from "@/types";
 import Icon from "@/components/ui/Icon";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
+import ReadOnlyLessonsPanel from "@/components/story/ReadOnlyLessonsPanel";
 import ScriptTab from "@/components/studio/ScriptTab";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType } from "@/lib/services/characterAvatars";
@@ -70,6 +71,7 @@ export default function ClassicDetailPage() {
   const [scenes, setScenes] = useState<StoryScene[]>([]);
   const [storyLanguage, setStoryLanguage] = useState<string | undefined>(undefined);
   const [characterProfiles, setCharacterProfiles] = useState<Record<string, CharacterProfile> | undefined>(undefined);
+  const [moralLessons, setMoralLessons] = useState<MoralLesson[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   // Used only to decide Studio-open behavior (fork vs edit-in-place) — every
@@ -223,6 +225,7 @@ export default function ClassicDetailPage() {
       if (Array.isArray(full?.scenes)) setScenes(full.scenes);
       if (full?.language) setStoryLanguage(full.language);
       if (full?.characterProfiles) setCharacterProfiles(full.characterProfiles);
+      if (Array.isArray(full?.moralLessons)) setMoralLessons(full.moralLessons);
     }).finally(() => setLoading(false));
   }, [id]);
 
@@ -615,6 +618,13 @@ export default function ClassicDetailPage() {
         {isReady && blocks!.length > 0 && (
           <div className="mt-4 mb-1">
             <ReadOnlyCastPanel blocks={blocks!} />
+          </div>
+        )}
+
+        {/* Moral lessons panel — same presentation as Studio's collapsed view, read-only */}
+        {moralLessons && moralLessons.length > 0 && (
+          <div className="mt-4 px-5">
+            <ReadOnlyLessonsPanel moralLessons={moralLessons} storyLanguage={storyLanguage} />
           </div>
         )}
 

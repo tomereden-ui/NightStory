@@ -20,7 +20,7 @@ export async function GET(
   // same favorites, same share support.
   const { data: row, error: dbErr } = await supabase
     .from("stories")
-    .select("blocks, duration_seconds, audio_url, favorited_by, scenes, language, character_profiles")
+    .select("blocks, duration_seconds, audio_url, favorited_by, scenes, language, character_profiles, moral_lessons")
     .eq("id", id)
     .maybeSingle();
 
@@ -33,6 +33,7 @@ export async function GET(
       scenes: Array.isArray(row.scenes) ? row.scenes : undefined,
       language: row.language ?? undefined,
       characterProfiles: row.character_profiles ?? undefined,
+      moralLessons: Array.isArray(row.moral_lessons) ? row.moral_lessons : undefined,
     });
   }
 
