@@ -50,38 +50,37 @@ export const MOCK_JOURNEY = MOCK_CHILDREN;
 
 // ── Calendar heatmap ─────────────────────────────────────────────────────────
 
-const CELL = 20; // px per cell
-const GAP  = 4;  // px gap
+const GAP = 6; // px gap between day cells
 
-// Gentle, translucent tones rather than heavy opaque blocks -- keeps the
-// grid feeling calm and dark-mode premium instead of a GitHub-style graph.
+// "Twilight Sky" tones -- a calm midnight-to-amber progression instead of
+// a GitHub-style multi-color contribution graph.
 function cellStyle(count: number): React.CSSProperties {
-  if (count === 0) return { background: "rgba(255,255,255,0.045)" };
+  if (count === 0) return { background: "rgba(120,140,200,0.07)", border: "1px solid rgba(167,139,250,0.12)" };
   if (count === 1) return {
-    background: "linear-gradient(135deg, rgba(79,195,247,0.35), rgba(167,139,250,0.35))",
-    boxShadow: "0 0 4px rgba(79,195,247,0.18)",
+    background: "linear-gradient(135deg, rgba(79,195,247,0.4), rgba(167,139,250,0.45))",
+    boxShadow: "0 0 6px rgba(129,161,247,0.3)",
   };
   return {
-    background: "linear-gradient(135deg, rgba(251,191,36,0.4), rgba(244,114,182,0.4))",
-    boxShadow: "0 0 5px rgba(251,191,36,0.25)",
+    background: "linear-gradient(135deg, rgba(251,191,36,0.55), rgba(245,158,11,0.5))",
+    boxShadow: "0 0 8px rgba(251,191,36,0.35)",
   };
 }
 
 function CalendarLegend() {
   const { t } = useLanguage();
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-        <div style={{ width: CELL, height: CELL, borderRadius: 6, background: "rgba(255,255,255,0.045)" }} />
-        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("calNone" as TranslationKey)}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "rgba(120,140,200,0.07)", border: "1px solid rgba(167,139,250,0.12)" }} />
+        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.35)" }}>{t("calNone" as TranslationKey)}</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-        <div style={{ width: CELL, height: CELL, borderRadius: 6, background: "linear-gradient(135deg,rgba(79,195,247,0.35),rgba(167,139,250,0.35))" }} />
-        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("cal1Story" as TranslationKey)}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "linear-gradient(135deg,rgba(79,195,247,0.4),rgba(167,139,250,0.45))" }} />
+        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.35)" }}>{t("cal1Story" as TranslationKey)}</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-        <div style={{ width: CELL, height: CELL, borderRadius: 6, background: "linear-gradient(135deg,rgba(251,191,36,0.4),rgba(244,114,182,0.4))" }} />
-        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.2)" }}>{t("cal2Plus" as TranslationKey)}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "linear-gradient(135deg,rgba(251,191,36,0.55),rgba(245,158,11,0.5))" }} />
+        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.35)" }}>{t("cal2Plus" as TranslationKey)}</span>
       </div>
     </div>
   );
@@ -89,22 +88,21 @@ function CalendarLegend() {
 
 function CalendarHeatmap({ days }: { days: number[] }) {
   const DAY_LABELS = ["S","M","T","W","T","F","S"];
-  const totalW = 7 * CELL + 6 * GAP;
   return (
-    <div style={{ width: totalW }}>
+    <div style={{ width: "100%" }}>
       {/* day-of-week labels */}
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP, marginBottom: 4 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: GAP, marginBottom: 6 }}>
         {DAY_LABELS.map((d, i) => (
-          <div key={i} style={{ width: CELL, textAlign: "center", fontSize: "var(--fs-micro)", fontWeight: 700, color: "rgba(255,255,255,0.2)" }}>{d}</div>
+          <div key={i} style={{ textAlign: "center", fontSize: "var(--fs-micro)", fontWeight: 700, color: "rgba(255,255,255,0.2)" }}>{d}</div>
         ))}
       </div>
-      {/* cells */}
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP }}>
+      {/* cells -- perfect circles that scale with the parent's width */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: GAP }}>
         {days.map((count, i) => (
           <div
             key={i}
             title={count > 0 ? `${count} ${count === 1 ? "story" : "stories"}` : undefined}
-            style={{ width: CELL, height: CELL, borderRadius: 6, ...cellStyle(count) }}
+            style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", ...cellStyle(count) }}
           />
         ))}
       </div>
