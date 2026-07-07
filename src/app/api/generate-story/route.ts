@@ -5,7 +5,7 @@ import path from "path";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
 import { getEntries } from "@/lib/libraryStore";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage } from "@/lib/services/scriptGenerationHelpers";
 import type { ScriptBlock } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -327,7 +327,17 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ blocks: splitBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes: remappedScenes });
+    // If an explicit non-English language was requested, the LANGUAGE section
+    // above told Gemini to write in it and it reliably does -- trust it. When
+    // no language was given (or it's "en", the default that adds no explicit
+    // instruction), story-guidance.txt's own auto-detect-from-prompt behavior
+    // may have produced something other than English, so detect what Gemini
+    // actually wrote rather than assume the request's own language holds.
+    const detectedLanguage = (body.language && body.language !== "en")
+      ? body.language
+      : await detectGeneratedLanguage(splitBlocks, apiKey);
+
+    return NextResponse.json({ blocks: splitBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes: remappedScenes, language: detectedLanguage });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -9,7 +9,7 @@ import type { StorySeeds } from "@/utils/buildStoryPrompt";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntries } from "@/lib/libraryStore";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage } from "@/lib/services/scriptGenerationHelpers";
 
 export const maxDuration = 120;
 
@@ -236,7 +236,15 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ blocks: splitBlocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: remappedScenes });
+    // See generate-story/route.ts for why this isn't just body.language: an
+    // explicit non-English request is trusted, but "en" (the unset default)
+    // adds no explicit LANGUAGE instruction, so what Gemini actually wrote can
+    // still differ from it.
+    const detectedLanguage = (body.language && body.language !== "en")
+      ? body.language
+      : await detectGeneratedLanguage(splitBlocks, apiKey);
+
+    return NextResponse.json({ blocks: splitBlocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: remappedScenes, language: detectedLanguage });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

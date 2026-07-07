@@ -12,13 +12,17 @@ function isPreset(l: string): l is LessonLabel {
 // Each lesson gets its own chip color, hashed from its name so the same
 // lesson always lands on the same color across renders/reloads (matching
 // the same hash-based palette pattern used for cast avatars elsewhere).
+// `text` is the brighter accent used for chip text/borders against a near-
+// black background (needs to stay legible); `solid` is a darker, more muted
+// tone of the same hue, used as an actual filled background (e.g. the "Add
+// a Value" card header) where the brighter shade read as too loud/saturated.
 const LESSON_PALETTE = [
-  { bg: "rgba(244,114,182,0.14)", border: "rgba(244,114,182,0.4)", text: "#f472b6" }, // pink
-  { bg: "rgba(251,191,36,0.14)",  border: "rgba(251,191,36,0.4)",  text: "#fbbf24" }, // amber
-  { bg: "rgba(79,195,247,0.14)",  border: "rgba(79,195,247,0.4)",  text: "#4fc3f7" }, // blue
-  { bg: "rgba(52,211,153,0.14)",  border: "rgba(52,211,153,0.4)",  text: "#34d399" }, // teal
-  { bg: "rgba(167,139,250,0.14)", border: "rgba(167,139,250,0.4)", text: "#a78bfa" }, // purple
-  { bg: "rgba(248,113,113,0.14)", border: "rgba(248,113,113,0.4)", text: "#f87171" }, // red
+  { bg: "rgba(244,114,182,0.14)", border: "rgba(244,114,182,0.4)", text: "#f472b6", solid: "#8f4867" }, // pink / muted rose
+  { bg: "rgba(251,191,36,0.14)",  border: "rgba(251,191,36,0.4)",  text: "#fbbf24", solid: "#8a6a2e" }, // amber / muted gold
+  { bg: "rgba(79,195,247,0.14)",  border: "rgba(79,195,247,0.4)",  text: "#4fc3f7", solid: "#316379" }, // blue / muted teal-blue
+  { bg: "rgba(52,211,153,0.14)",  border: "rgba(52,211,153,0.4)",  text: "#34d399", solid: "#2c6b53" }, // teal / muted emerald
+  { bg: "rgba(167,139,250,0.14)", border: "rgba(167,139,250,0.4)", text: "#a78bfa", solid: "#5c4d85" }, // purple / muted violet
+  { bg: "rgba(248,113,113,0.14)", border: "rgba(248,113,113,0.4)", text: "#f87171", solid: "#8a4646" }, // red / muted brick
 ];
 export function lessonColor(label: string): typeof LESSON_PALETTE[number] {
   let h = 0;
@@ -317,8 +321,8 @@ export default function LessonEditor({
                   className="w-full rounded-2xl overflow-hidden text-start transition-all active:scale-[0.98]"
                   style={{ border: isSelected ? `2px solid ${color.text}` : "2px solid transparent" }}
                 >
-                  <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ background: color.text }}>
-                    <span className="text-fs-body font-bold" style={{ color: "#05080F" }}>{label}</span>
+                  <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ background: color.solid }}>
+                    <span className="text-fs-body font-bold" style={{ color: "rgba(255,255,255,0.92)" }}>{label}</span>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {isSelected && (
                         <span
@@ -328,7 +332,7 @@ export default function LessonEditor({
                           ✓
                         </span>
                       )}
-                      <Icon name={icon} size={18} style={{ color: "#05080F" }} />
+                      <Icon name={icon} size={18} style={{ color: "rgba(255,255,255,0.85)" }} />
                     </div>
                   </div>
                   <div className="px-4 py-3" style={{ background: "#05080F" }}>

@@ -1,6 +1,50 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ScriptBlock } from "@/types";
 
+// ─── Language detection ─────────────────────────────────────────────────────────
+// The prompt tab sends the app's OWN UI language to the generation prompt, but
+// story-guidance.txt has Gemini auto-detect and write in whatever language the
+// user's free-text prompt itself is in when that param is "en" (the default) --
+// so a user whose app UI is English but who types a Hebrew prompt correctly
+// gets a Hebrew story back, while the client would otherwise still believe the
+// story is in English (the UI language it sent), breaking every storyLanguage-
+// driven piece of UI (lesson editor chrome, voice pool, etc). Detecting the
+// REAL output language and returning it lets the client trust the response
+// instead of the request. Same technique already used in produce-drama's own
+// detectScriptLanguage, just reimplemented with the SDK client these two
+// generation routes already use (produce-drama uses a different geminiClient
+// wrapper) rather than duplicating that import for one small call.
+export async function detectGeneratedLanguage(blocks: { characterName: string; textPayload: string }[], apiKey: string): Promise<string> {
+  const sample = blocks
+    .filter((b) => b.characterName !== "SFX")
+    .slice(0, 6)
+    .map((b) => b.textPayload.replace(/\[.*?\]/g, "").trim())
+    .join(" ")
+    .slice(0, 400);
+  if (!sample.trim()) return "en";
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 5,
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
+    const result = await model.generateContent(
+      `What language is this text written in? Reply with ONLY the ISO 639-1 two-letter code (e.g. "en", "he", "ar", "fr", "de", "es"). No explanation.\n\n${sample}`,
+    );
+    const code = result.response.text().trim().toLowerCase();
+    if (/^[a-z]{2}$/.test(code)) return code;
+  } catch {
+    // fall through to default
+  }
+  return "en";
+}
+
 // ─── Long-block splitting ──────────────────────────────────────────────────────
 // Gemini occasionally writes one giant block of narration/dialogue instead of
 // several shorter beats — bad for TTS pacing, and directly caused a

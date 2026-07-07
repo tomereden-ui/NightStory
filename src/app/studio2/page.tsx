@@ -1553,7 +1553,12 @@ export default function Studio2Page() {
       setSummary(sm);
       setCoverPrompt(cp);
       setStoryTitle(title);
-      setStoryLang(language);
+      // The prompt tab sends this browser's own UI language, but Gemini
+      // auto-detects and writes in whatever language the free-text prompt
+      // itself is in when that's "en" (the default, which adds no explicit
+      // override) -- so trust what the server says it actually generated
+      // rather than assume the request's own language always held.
+      setStoryLang((data.language as string | undefined) ?? language);
       setLessonImplementations(impls);
       setScenes(rawScenes);
       setHasScriptChanges(false);
