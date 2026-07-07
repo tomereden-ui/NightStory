@@ -255,10 +255,18 @@ export async function POST(req: NextRequest) {
     // Gemini's preset pool now voices every language, so casting no longer
     // needs a separate Hebrew EL-voice path.
     const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], heroName, body.primaryVoiceId, raw.characters ?? {});
-    // The user's default narrator voice always wins for "Narrator" — nature-
+    // The user's default narrator voice always wins for the narrator — nature-
     // based casting would otherwise assign it something else from the moment
     // the story is generated, visible immediately in Studio's Cast section.
-    if (body.narratorVoiceId) characterVoiceMap["Narrator"] = body.narratorVoiceId;
+    // The guidance file has Gemini translate "Narrator" into the story's own
+    // language (e.g. "קריין" in Hebrew), so the literal key "Narrator" won't
+    // match for non-English stories — look up the actual key via the
+    // characters map's type field instead, which survives translation.
+    if (body.narratorVoiceId) {
+      const narratorKey = Object.entries(raw.characters ?? {}).find(([, c]) => c.type === "narrator")?.[0];
+      characterVoiceMap["Narrator"] = body.narratorVoiceId;
+      if (narratorKey) characterVoiceMap[narratorKey] = body.narratorVoiceId;
+    }
     const blocks: ScriptBlock[] = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,

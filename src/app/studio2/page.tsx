@@ -489,9 +489,18 @@ function DirectionSheet({
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isNarrator = characterName === "Narrator" || characterName === "קריין";
+  // Gemini translates the literal word "Narrator" into the story's own
+  // language (e.g. "קריין" in Hebrew), so name checks alone miss it for any
+  // non-English story — characterProfile/characterType survive translation
+  // since they come from the "type" field, not the character's display name.
+  const isNarrator = characterType === "narrator" || characterProfile?.type === "narrator"
+    || characterName === "Narrator" || characterName === "קריין";
 
   const handleAutoAssign = () => {
+    // Auto Assign is nature-based casting and must never touch the Narrator —
+    // that voice comes exclusively from the user's configured default, or it
+    // gets silently clobbered the moment someone hits this button.
+    if (isNarrator) return;
     const bestId = pickBestVoiceForCharacter(characterProfile, storyLanguage ?? language, otherAssignedVoiceIds);
     if (bestId) {
       onVoiceChange(bestId);
@@ -665,6 +674,7 @@ function DirectionSheet({
             </button>
             {showVoicePicker && (
               <div className="px-3 pb-3">
+                {!isNarrator && (
                 <button
                   onClick={handleAutoAssign}
                   className="w-full mb-2 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
@@ -673,6 +683,7 @@ function DirectionSheet({
                 >
                   ✨ Auto Assign
                 </button>
+                )}
                 <VoicePicker
                   inline
                   voices={voicePool}

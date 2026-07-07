@@ -33,10 +33,18 @@ async function reassignBlocks(
   apiKey: string,
   narratorVoiceId: string | undefined,
 ): Promise<{ blocks: ScriptBlock[]; characterProfiles: Record<string, CharacterProfile>; changedCount: number }> {
+  // Gemini's own guidance translates the literal word "Narrator" into the
+  // story's language (e.g. "קריין" in Hebrew), so a plain name check misses
+  // it for any non-English story. Find the real key via characterProfiles'
+  // type field instead, which survives translation, and fall back to the
+  // literal "Narrator" for older entries saved before profiles were persisted.
+  const narratorName = Object.entries(entry.characterProfiles ?? {}).find(([, p]) => p.type === "narrator")?.[0]
+    ?? "Narrator";
+
   const seen = new Set<string>();
   const nonNarratorChars = entry.blocks
     .map((b) => b.characterName)
-    .filter((c) => c !== "SFX" && c !== "Narrator" && !seen.has(c) && seen.add(c));
+    .filter((c) => c !== "SFX" && c !== narratorName && !seen.has(c) && seen.add(c));
 
   let freshProfiles: Record<string, CharacterProfile> = {};
   if (nonNarratorChars.length > 0) {
@@ -55,14 +63,14 @@ async function reassignBlocks(
   }
 
   // Preserve any existing Narrator profile entry untouched — it was never analyzed here.
-  const existingNarratorProfile = entry.characterProfiles?.["Narrator"];
+  const existingNarratorProfile = entry.characterProfiles?.[narratorName];
   const characterProfiles: Record<string, CharacterProfile> = {
     ...freshProfiles,
-    ...(existingNarratorProfile ? { Narrator: existingNarratorProfile } : {}),
+    ...(existingNarratorProfile ? { [narratorName]: existingNarratorProfile } : {}),
   };
 
   const voiceMap = assignVoicesToCharacters(entry.blocks, "", undefined, characterProfiles);
-  if (narratorVoiceId) voiceMap["Narrator"] = narratorVoiceId;
+  if (narratorVoiceId) voiceMap[narratorName] = narratorVoiceId;
 
   let changedCount = 0;
   const blocks = entry.blocks.map((b) => {
