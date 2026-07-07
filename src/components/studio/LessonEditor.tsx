@@ -372,7 +372,7 @@ export default function LessonEditor({
             className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98]"
             style={{ background: "linear-gradient(90deg, rgba(139,92,246,0.3), rgba(79,195,247,0.25))", border: "1.5px solid rgba(139,92,246,0.4)", color: "#C4B5FD" }}
           >
-            {`${ui.apply}${pendingLabels.length > 0 ? ` (${pendingLabels.length})` : ""}`}
+            {ui.apply}
           </button>
         )}
       </div>
