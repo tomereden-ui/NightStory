@@ -306,30 +306,47 @@ export default function LessonEditor({
           <label className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>
             {ui.addAValue}
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {LESSONS.map(({ id, icon, label, desc }) => {
               const isSelected = pendingLabels.includes(id);
+              const color = lessonColor(label);
               return (
                 <button
                   key={id}
                   onClick={() => togglePendingLabel(id)}
-                  className="flex flex-col gap-1.5 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.97]"
+                  className="w-full flex flex-col gap-2.5 p-4 rounded-2xl text-start transition-all active:scale-[0.98]"
                   style={isSelected
-                    ? { background: "rgba(79,195,247,0.12)", border: "1.5px solid rgba(79,195,247,0.5)" }
+                    ? { background: color.bg, border: `1.5px solid ${color.border}` }
                     : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }
                   }
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-fs-subtitle leading-none">{icon}</span>
-                    {isSelected && <span className="text-fs-body font-bold" style={{ color: "#4fc3f7" }}>✓</span>}
+                  <div className="flex items-center justify-between w-full">
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: isSelected ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
+                        border: `1px solid ${isSelected ? color.border : "rgba(255,255,255,0.1)"}`,
+                      }}
+                    >
+                      <span className="text-fs-subtitle leading-none">{icon}</span>
+                    </div>
+                    {isSelected && (
+                      <span
+                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center font-bold"
+                        style={{ background: color.text, color: "#05080F", fontSize: "10px" }}
+                      >
+                        ✓
+                      </span>
+                    )}
                   </div>
-                  <span className="text-fs-body font-bold leading-tight"
-                    style={{ color: isSelected ? "#4fc3f7" : "rgba(255,255,255,0.85)" }}>
-                    {label}
-                  </span>
-                  <span className="text-fs-body leading-snug" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    {desc}
-                  </span>
+                  <div>
+                    <p className="text-fs-body font-bold leading-tight" style={{ color: isSelected ? color.text : "rgba(255,255,255,0.85)" }}>
+                      {label}
+                    </p>
+                    <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      {desc}
+                    </p>
+                  </div>
                 </button>
               );
             })}
