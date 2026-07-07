@@ -1359,6 +1359,65 @@ export default function AdminPage() {
     runRegenerateScenes({ applyAll: true });
   };
 
+  // ── Admin Services: Refresh story policies (cast/voices, lessons, scenes, summary) ──
+  const [refreshQuery, setRefreshQuery] = useState("");
+  const [refreshRunning, setRefreshRunning] = useState(false);
+  const [refreshLog, setRefreshLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const runRefreshStory = async (body: { storyId: string } | { title: string } | { applyAll: true }) => {
+    setRefreshRunning(true);
+    setRefreshLog([{
+      type: "info",
+      text: "applyAll" in body ? "Scanning every story in the library…"
+        : "title" in body ? `Searching for stories matching "${body.title}"…`
+        : `Refreshing story ${body.storyId}…`,
+    }]);
+    try {
+      const res = await fetch("/api/admin/refresh-story", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, narratorVoiceId: getNarratorVoiceId() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRefreshLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      const d = data as {
+        totalStories: number; storiesRefreshed: number; storiesFailed: number;
+        results: Array<{ storyId: string; title: string; status: "ok" | "error"; changes?: { voicesRecast: number; lessonCount: number; sceneCount: number }; error?: string }>;
+      };
+      setRefreshLog((l) => [
+        ...l,
+        { type: "success", text: `✅ Done — ${d.storiesRefreshed}/${d.totalStories} stories refreshed (${d.storiesFailed} failed)` },
+        ...d.results.filter((r) => r.status === "ok").map((r) => ({
+          type: "info" as const,
+          text: `  · "${r.title}" — ${r.changes?.voicesRecast ?? 0} voice(s) recast, ${r.changes?.lessonCount ?? 0} lesson(s), ${r.changes?.sceneCount ?? 0} scene(s)`,
+        })),
+        ...d.results.filter((r) => r.status === "error").map((r) => ({ type: "error" as const, text: `  · "${r.title}" (${r.storyId}) — ${r.error}` })),
+      ]);
+    } catch (e) {
+      setRefreshLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setRefreshRunning(false);
+    }
+  };
+
+  const handleRefreshById = () => {
+    if (!refreshQuery.trim()) return;
+    runRefreshStory({ storyId: refreshQuery.trim() });
+  };
+
+  const handleRefreshByTitle = () => {
+    if (!refreshQuery.trim()) return;
+    runRefreshStory({ title: refreshQuery.trim() });
+  };
+
+  const handleRefreshAllStories = () => {
+    if (!confirm("Refresh cast/voices, lessons, scenes, and summary for EVERY story in the library (public + private)? This never touches script text, cover image, or audio. Each story requires 4 fresh Gemini calls — this may take a while for a large library.")) return;
+    runRefreshStory({ applyAll: true });
+  };
+
   // ── Admin Services: Delete a story by ID ──────────────────────────────────
   const [deleteStoryId, setDeleteStoryId] = useState("");
   const [deleteRunning, setDeleteRunning] = useState(false);
@@ -1948,6 +2007,77 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {regenSceneLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Refresh Story Policies Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🔄 Refresh Story Policies</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Re-applies every generation-time rule to an already-produced story — cast/voice
+                    assignment, moral-lesson analysis, scene breakdown, and the summary blurb — as if it
+                    were being generated fresh today. Never touches the script text, cover image, or audio.
+                    If a story fails (bad Gemini response, etc.) its error is logged and it&apos;s skipped;
+                    the rest of the batch continues.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={refreshQuery}
+                  onChange={(e) => setRefreshQuery(e.target.value)}
+                  placeholder="Story ID or title"
+                  disabled={refreshRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={handleRefreshById}
+                  disabled={refreshRunning || !refreshQuery.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Refresh by ID
+                </button>
+                <button
+                  onClick={handleRefreshByTitle}
+                  disabled={refreshRunning || !refreshQuery.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Refresh by Title
+                </button>
+              </div>
+
+              <button
+                onClick={handleRefreshAllStories}
+                disabled={refreshRunning}
+                className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {refreshRunning ? "Working…" : "Refresh ALL Stories"}
+              </button>
+
+              {/* Log output */}
+              {refreshLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {refreshLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"
