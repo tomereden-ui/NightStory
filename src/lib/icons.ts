@@ -141,6 +141,11 @@ export const ICONS = {
   diversity: mixed(c(5, 12, 2), c(12, 12, 3.5), c(19, 12, 2.5)),
   checklist: mixed(rect(8, 2, 8, 4, 1), p("M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"), p("m9 14 2 2 4-4")),
   sun:       mixed(c(12, 12, 4), line(12, 2, 12, 4), line(12, 20, 12, 22), line(4.93, 4.93, 6.34, 6.34), line(17.66, 17.66, 19.07, 19.07), line(2, 12, 4, 12), line(20, 12, 22, 12), line(6.34, 17.66, 4.93, 19.07), line(19.07, 4.93, 17.66, 6.34)),
+
+  // ── Director's Note quick-mood chips (abstract, minimal — no emoji) ────────
+  smile:    mixed(c(12, 12, 10), p("M8 14s1.5 2 4 2 4-2 4-2"), p("M9 9h.01"), p("M15 9h.01")),
+  scissors: mixed(c(6, 6, 3), c(6, 18, 3), p("M20 4 8.12 15.88"), p("M14.47 14.48 20 20"), p("M8.12 8.12 12 12")),
+  zap:      paths("M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"),
 } as const;
 
 export type IconName = keyof typeof ICONS;

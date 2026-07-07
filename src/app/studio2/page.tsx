@@ -2504,7 +2504,7 @@ export default function Studio2Page() {
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-fs-body opacity-60">🎬</span>
+                  <Icon name="edit" size={14} style={{ color: "rgba(255,255,255,0.4)" }} />
                   <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
                     {i18nT(language, "directorsNote" as never)}
                   </span>
@@ -2514,70 +2514,69 @@ export default function Studio2Page() {
                       {i18nT(language, "revisingLabel" as never)}
                     </span>
                   )}
-                  {hasPending && !isRevising && (
-                    <button
-                      onClick={() => setDirectorNote("")}
-                      className="ml-auto text-fs-body font-medium transition-colors"
-                      style={{ color: "rgba(255,255,255,0.25)" }}
-                    >
-                      <Icon name="restore" size={14} className="inline-block align-middle" /> {i18nT(language, "discardChanges" as never)}
-                    </button>
-                  )}
                 </div>
 
+                {/* Quick chips only STAGE an instruction into the note below —
+                    nothing is sent to Gemini until "Update Script" is clicked. */}
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { labelKey: "moreSleepy" as const,   instruction: "Make the whole story more sleepy and calming — softer language, slower pace, perfect for drifting off" },
-                    { labelKey: "moreMagical" as const,   instruction: "Add more magic, wonder and enchantment throughout" },
-                    { labelKey: "funnier" as const,        instruction: "Add playful humor and lightness throughout — make it fun and giggly for young children" },
-                    { labelKey: "shorter" as const,        instruction: "Shorten the story — condense each scene to its essential moment while keeping the emotional arc" },
-                    { labelKey: "moreDramatic" as const,  instruction: "Add more dramatic tension and emotional peaks" },
-                    { labelKey: "cozier" as const,         instruction: "Make the story feel warmer, cozier and more comforting — like being tucked in on a cold night" },
-                  ].map(({ labelKey, instruction }) => (
+                    { labelKey: "moreSleepy" as const,   icon: "moon" as const,     instruction: "Make the whole story more sleepy and calming — softer language, slower pace, perfect for drifting off" },
+                    { labelKey: "moreMagical" as const,   icon: "sparkles" as const, instruction: "Add more magic, wonder and enchantment throughout" },
+                    { labelKey: "funnier" as const,        icon: "smile" as const,    instruction: "Add playful humor and lightness throughout — make it fun and giggly for young children" },
+                    { labelKey: "shorter" as const,        icon: "scissors" as const, instruction: "Shorten the story — condense each scene to its essential moment while keeping the emotional arc" },
+                    { labelKey: "moreDramatic" as const,  icon: "zap" as const,      instruction: "Add more dramatic tension and emotional peaks" },
+                    { labelKey: "cozier" as const,         icon: "heart" as const,    instruction: "Make the story feel warmer, cozier and more comforting — like being tucked in on a cold night" },
+                  ].map(({ labelKey, icon, instruction }) => (
                     <button
                       key={labelKey}
                       disabled={isRevising}
-                      onClick={() => handleRevise(instruction)}
-                      className="text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+                      onClick={() => setDirectorNote(instruction)}
+                      className="flex items-center gap-1.5 text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
                       style={{
                         background: isRevising ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.06)",
                         border: "1px solid rgba(255,255,255,0.1)",
                         color: isRevising ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.55)",
                       }}
                     >
+                      <Icon name={icon} size={13} />
                       {i18nT(language, labelKey)}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex gap-2 items-end">
-                  <textarea
-                    ref={noteRef}
-                    value={directorNote}
-                    onChange={(e) => setDirectorNote(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey && directorNote.trim()) {
-                        e.preventDefault();
-                        handleRevise(directorNote);
-                      }
-                    }}
-                    rows={2}
-                    disabled={isRevising}
-                    placeholder={i18nT(language, "directorsNotePlaceholder")}
-                    className="flex-1 rounded-xl px-3 py-2.5 text-fs-body leading-relaxed outline-none resize-none text-white/70 placeholder-white/15 transition-colors"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
-                  />
+                <textarea
+                  ref={noteRef}
+                  value={directorNote}
+                  onChange={(e) => setDirectorNote(e.target.value)}
+                  rows={2}
+                  disabled={isRevising}
+                  placeholder={i18nT(language, "directorsNotePlaceholder")}
+                  className="w-full rounded-xl px-3 py-2.5 text-fs-body leading-relaxed outline-none resize-none text-white/70 placeholder-white/15 transition-colors"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
+                />
+
+                <div className="flex gap-2">
                   <button
-                    disabled={!directorNote.trim() || isRevising}
+                    disabled={!hasPending || isRevising}
+                    onClick={() => setDirectorNote("")}
+                    className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98] disabled:opacity-40"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
+                  >
+                    {i18nT(language, "cancel")}
+                  </button>
+                  <button
+                    disabled={!hasPending || isRevising}
                     onClick={() => handleRevise(directorNote)}
-                    className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-fs-body font-bold transition-all active:scale-95"
-                    style={directorNote.trim() && !isRevising
+                    className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40"
+                    style={hasPending && !isRevising
                       ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
                       : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.15)" }
                     }
-                  ><Icon name="submit" size={14} /></button>
+                  >
+                    {i18nT(language, "updateScript" as never)}
+                  </button>
                 </div>
 
                 {reviseError && (

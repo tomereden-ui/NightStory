@@ -138,24 +138,16 @@ export default function LessonEditor({
           boxShadow: "0 0 28px rgba(139,92,246,0.06)",
         }}
       >
-        <div className="flex items-start justify-between mb-1">
-          <div>
-            <span className="text-fs-heading font-bold tracking-tight" style={{ color: "#E9D8FD" }}>
-              🌟 {ui.panelTitle}
-            </span>
-            {hasDisplayedLessons && (
-              <p className="text-fs-body mt-0.5" style={{ color: "rgba(196,181,253,0.55)" }}>
-                {ui.collapsedSubtitle}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={openEditor}
-            className="flex-shrink-0 text-fs-body font-semibold px-2.5 py-1 rounded-lg transition-all active:scale-95"
-            style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
-          >
-            {hasLessons ? ui.editButton : ui.addLessonButton}
-          </button>
+        <div className="mb-1">
+          <span className="text-fs-heading font-bold tracking-tight flex items-center gap-1.5" style={{ color: "#E9D8FD" }}>
+            <Icon name="sparkles" size={16} />
+            {ui.panelTitle}
+          </span>
+          {hasDisplayedLessons && (
+            <p className="text-fs-body mt-0.5" style={{ color: "rgba(196,181,253,0.55)" }}>
+              {ui.collapsedSubtitle}
+            </p>
+          )}
         </div>
 
         <div className="mt-3">
@@ -215,6 +207,14 @@ export default function LessonEditor({
             <span>{hasLessons ? (lessons.length === 1 ? ui.rewriteWithOne : ui.rewriteWithMany) : ui.rewriteGeneric}</span>
           </button>
         )}
+
+        <button
+          onClick={openEditor}
+          className="mt-3 w-full py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
+          style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
+        >
+          {ui.editButton}
+        </button>
       </div>
     );
   }
@@ -231,8 +231,9 @@ export default function LessonEditor({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(139,92,246,0.6)" }}>
-            🌟 {ui.panelTitle}
+          <span className="text-fs-body font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "rgba(139,92,246,0.6)" }}>
+            <Icon name="sparkles" size={14} />
+            {ui.panelTitle}
           </span>
           <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
             {ui.expandedSubtitle}
