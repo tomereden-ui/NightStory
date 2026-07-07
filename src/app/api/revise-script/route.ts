@@ -51,39 +51,60 @@ You will receive a script as a JSON array and a director's instruction. Apply th
 
 RULES:
 - Preserve EVERY block's id, blockOrder, characterName, and assignedVoiceId exactly.
-- Only modify textPayload where the instruction applies.
+- Make the SMALLEST edit that achieves the instruction — change as few blocks as possible, and leave the wording of every other block exactly as it was. Only modify textPayload where the instruction actually applies.
 - Preserve existing [audio tags] style marks or update them to match the new tone.
-- SFX blocks (characterName === "SFX") should only be modified if the instruction explicitly targets sounds.
+- SFX blocks (characterName === "SFX") should only be modified if the instruction explicitly targets sounds, or if a nearby dialogue/narration change you made would leave an SFX description describing a moment that no longer happens.
 - Keep language appropriate for children aged 3-10.
-- Do not add new blocks or remove existing blocks.
+- Do not add new blocks or remove existing blocks — this also means no new characters, since a new character would require a new block.
 ${isTargeted ? `- Only the block with id "${targetBlockId}" should be changed. Leave all other blocks exactly as they are.` : "- Apply the instruction across the whole script as it makes sense."}
 ${lessonSection}
 ${returnFormat}`;
 
   const scriptJson = JSON.stringify(blocks, null, 2);
+  const userPrompt = `Director's instruction: "${instruction.trim()}"\n\nScript:\n${scriptJson}`;
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
-    const result = await model.generateContent(
-      `Director's instruction: "${instruction.trim()}"\n\nScript:\n${scriptJson}`
-    );
-    const _t = result.response.usageMetadata?.totalTokenCount;
-    if (_t) trackGemini(_t).catch(() => {});
-    const text = result.response.text().trim()
-      .replace(/^```(?:json)?\n?/, "")
-      .replace(/\n?```$/, "")
-      .trim();
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
+
+    // A revision echoes the ENTIRE script back, so a malformed/truncated
+    // response is a real risk on longer scripts (the same failure mode
+    // already fixed for generation) — give it one immediate retry before
+    // giving up, rather than surfacing "Gemini returned invalid JSON" on
+    // the first bad response.
+    const generateAndParse = async <T,>(): Promise<{ text: string; parsed: T } | null> => {
+      const result = await model.generateContent(userPrompt);
+      const _t = result.response.usageMetadata?.totalTokenCount;
+      if (_t) trackGemini(_t).catch(() => {});
+      const text = result.response.text().trim()
+        .replace(/^```(?:json)?\n?/, "")
+        .replace(/\n?```$/, "")
+        .trim();
+      try {
+        return { text, parsed: JSON.parse(text) as T };
+      } catch {
+        return null;
+      }
+    };
 
     if (hasLessons) {
       // Expect { blocks: [...], lessonImplementations: [...] }
-      let parsed: { blocks: RawBlock[]; lessonImplementations?: { lesson: string; implemented: boolean; how: string; blockIndices: number[] }[] };
-      try {
-        parsed = JSON.parse(text);
-        if (!Array.isArray(parsed.blocks)) throw new Error("blocks not an array");
-      } catch {
-        return NextResponse.json({ error: "Gemini returned invalid JSON.", raw: text.slice(0, 300) }, { status: 502 });
+      type Parsed = { blocks: RawBlock[]; lessonImplementations?: { lesson: string; implemented: boolean; how: string; blockIndices: number[] }[] };
+      let attempt = await generateAndParse<Parsed>();
+      if (!attempt || !Array.isArray(attempt.parsed.blocks)) attempt = await generateAndParse<Parsed>();
+      if (!attempt || !Array.isArray(attempt.parsed.blocks)) {
+        return NextResponse.json({ error: "Gemini returned invalid JSON.", raw: attempt?.text.slice(0, 300) }, { status: 502 });
       }
+      const parsed = attempt.parsed;
 
       const merged: ScriptBlock[] = parsed.blocks.map((r, i) => ({
         ...(blocks[i] ?? {}),
@@ -109,13 +130,12 @@ ${returnFormat}`;
     }
 
     // Standard path — plain array
-    let revised: RawBlock[];
-    try {
-      revised = JSON.parse(text);
-      if (!Array.isArray(revised)) throw new Error("Not an array");
-    } catch {
-      return NextResponse.json({ error: "Gemini returned invalid JSON.", raw: text.slice(0, 300) }, { status: 502 });
+    let attempt = await generateAndParse<RawBlock[]>();
+    if (!attempt || !Array.isArray(attempt.parsed)) attempt = await generateAndParse<RawBlock[]>();
+    if (!attempt || !Array.isArray(attempt.parsed)) {
+      return NextResponse.json({ error: "Gemini returned invalid JSON.", raw: attempt?.text.slice(0, 300) }, { status: 502 });
     }
+    const revised = attempt.parsed;
 
     const merged = revised.map((r, i) => ({
       ...(blocks[i] ?? {}),

@@ -47,8 +47,16 @@ export default function LessonEditor({
     setPendingRemoved([]);
   }, [moralLessons]);
 
-  const currentPresets = lessons.filter(isPreset) as LessonLabel[];
-  const currentCustom  = lessons.find((l) => !isPreset(l)) ?? "";
+  // The picker pre-selects from the CONFIRMED, DB-saved analysis
+  // (displayedLessons, mirroring moralLessons) rather than `lessons` (the
+  // user's original selection intent at creation time) -- those two can
+  // diverge: an intended lesson might not have actually landed in the text,
+  // or the script may have organically embedded a value nobody picked.
+  // Showing intent instead of what's really there made the picker look
+  // "selected" for values the story doesn't actually contain (or vice versa).
+  const confirmedNames = displayedLessons.map((ml) => ml.lesson);
+  const currentPresets = confirmedNames.filter(isPreset) as LessonLabel[];
+  const currentCustom  = confirmedNames.find((l) => !isPreset(l)) ?? "";
 
   const openEditor = () => {
     setPendingLabels(currentPresets);

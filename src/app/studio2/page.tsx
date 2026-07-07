@@ -1356,8 +1356,14 @@ export default function Studio2Page() {
       }).catch(() => {});
     }, 3000);
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  // moralLessons is included here (unlike other fields read via closure below)
+  // because it often finishes analyzing *after* this effect last ran for a
+  // scriptBlocks change -- without it, a freshly-completed analysis could sit
+  // in client state and never reach stories.moral_lessons until some
+  // unrelated edit happened to retrigger this debounce, so reopening the
+  // story would silently re-run the analysis instead of reading the DB.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scriptBlocks, loaded, editingStoryId]);
+  }, [scriptBlocks, loaded, editingStoryId, moralLessons]);
 
   // ─── Auto-switch to script tab whenever generation/validation is active ───────
 
