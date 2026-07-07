@@ -2,6 +2,7 @@
 
 import { getLessonsCatalog, getLessonsChrome } from "@/constants/lessonsUi";
 import { lessonColor } from "@/components/studio/LessonEditor";
+import Icon from "@/components/ui/Icon";
 import type { MoralLesson } from "@/types";
 
 export default function ReadOnlyLessonsPanel({
@@ -45,7 +46,7 @@ export default function ReadOnlyLessonsPanel({
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-fs-body font-bold"
               style={{ background: color.bg, border: `1px solid ${color.border}`, color: color.text }}
             >
-              <span>{preset?.icon ?? "✨"}</span>
+              <Icon name={preset?.icon ?? "sparkles"} size={13} />
               <span>{ml.lesson}</span>
             </span>
           );

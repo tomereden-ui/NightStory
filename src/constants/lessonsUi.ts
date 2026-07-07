@@ -4,6 +4,8 @@
 // canonical id below — only the icon/label/description shown to the user,
 // and the UI chrome around it, are localized.
 
+import type { IconName } from "@/lib/icons";
+
 export const LESSON_IDS = [
   "Bravery", "Friendship", "Kindness", "Honesty", "Perseverance",
   "Sharing", "Patience", "Respecting differences", "Responsibility", "Gratitude",
@@ -13,11 +15,16 @@ export type LessonId = typeof LESSON_IDS[number];
 // Kept as an alias — LessonEditor/LessonStep referred to this as LessonLabel before.
 export type LessonLabel = LessonId;
 
-export interface LessonCatalogEntry { id: LessonId; icon: string; label: string; desc: string }
+export interface LessonCatalogEntry { id: LessonId; icon: IconName; label: string; desc: string }
 
-const ICONS: Record<LessonId, string> = {
-  "Bravery": "🦁", "Friendship": "🤝", "Kindness": "💝", "Honesty": "⭐", "Perseverance": "🌱",
-  "Sharing": "🎁", "Patience": "⏳", "Respecting differences": "🌈", "Responsibility": "🌟", "Gratitude": "🙏",
+// Abstract, minimal line icons (from the shared icon registry) instead of
+// emoji — emoji render inconsistently across platforms/fonts (e.g. the old
+// "Respecting differences" 🌈 and "Responsibility" 🌟 could both end up
+// looking like an ambiguous flower/sunburst depending on the font) and don't
+// match the rest of the app's icon style.
+const ICONS: Record<LessonId, IconName> = {
+  "Bravery": "shield", "Friendship": "users", "Kindness": "heart", "Honesty": "star", "Perseverance": "trendingUp",
+  "Sharing": "gift", "Patience": "clock", "Respecting differences": "diversity", "Responsibility": "checklist", "Gratitude": "sun",
 };
 
 const CATALOG_TEXT: Record<string, Record<LessonId, { label: string; desc: string }>> = {
