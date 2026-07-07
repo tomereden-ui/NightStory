@@ -221,7 +221,14 @@ export default function LessonEditor({
 
   // ─── Expanded panel — full details (scrollable) + add/remove ───────────────
 
-  const canApply = pendingLabels.length > 0;
+  // Apply should only enable once the user has actually CHANGED the
+  // selection from what's already confirmed for this story -- previously
+  // this was just "at least one selected", so opening the editor on a story
+  // that already has lessons (which pre-selects them) enabled Apply
+  // immediately even though nothing had changed yet.
+  const selectionUnchanged = pendingLabels.length === currentPresets.length
+    && pendingLabels.every((l) => currentPresets.includes(l));
+  const canApply = !selectionUnchanged;
 
   return (
     <div
