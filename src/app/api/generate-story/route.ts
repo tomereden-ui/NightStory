@@ -5,10 +5,11 @@ import path from "path";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
 import { getEntries } from "@/lib/libraryStore";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict } from "@/lib/services/scriptGenerationHelpers";
 import type { ScriptBlock } from "@/types";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export interface GenerateStoryRequest {
   mode: "wizard" | "prompt";
@@ -31,6 +32,8 @@ export interface GenerateStoryRequest {
   language?: string;
   // content to strictly avoid (fears, sensitivities from child profile)
   avoid?: string;
+  // user's chosen default narrator voice — always wins for the "Narrator" character
+  narratorVoiceId?: string;
 }
 
 interface RawBlock {
@@ -75,44 +78,6 @@ export interface LessonImplementation {
   lesson: string;
   implemented: boolean;
   how: string;
-}
-
-// ─── Title conflict resolution ────────────────────────────────────────────────
-
-function normTitle(t: string): string {
-  return t.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-async function fixConflictingTitle(
-  genAI: GoogleGenerativeAI,
-  title: string,
-  summary: string,
-  existingTitles: string[]
-): Promise<string> {
-  const existNorm = new Set(existingTitles.map(normTitle));
-  if (!existNorm.has(normTitle(title))) return title;
-  try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        temperature: 0.9,
-        maxOutputTokens: 30,
-        // @ts-expect-error thinkingConfig valid but not in typedefs
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    });
-    const existList = existingTitles.slice(0, 20).map((t) => `"${t}"`).join(", ");
-    const prompt = `The children's story title "${title}" already exists in this family's library. Based on this story summary: "${summary.slice(0, 200)}", suggest ONE alternative creative title. It must NOT be any of: ${existList}. Output ONLY the title, nothing else.`;
-    const result = await model.generateContent(prompt);
-    const alt = result.response.text().trim().replace(/^["'`]|["'`]$/g, "").trim();
-    if (alt && alt.length > 2 && alt.length < 80 && !existNorm.has(normTitle(alt))) return alt;
-  } catch { /* ignore */ }
-  const SUFFIXES = ["A New Adventure", "A Magical Tale", "The Next Chapter", "A New Journey"];
-  for (const sfx of SUFFIXES) {
-    const candidate = `${title}: ${sfx}`;
-    if (!existNorm.has(normTitle(candidate))) return candidate;
-  }
-  return `${title} (New)`;
 }
 
 // ─── Load external story guidance ────────────────────────────────────────────
@@ -240,35 +205,60 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    let result;
-    try {
-      result = await model.generateContent(prompt);
-    } catch (err) {
-      console.warn("[generate-story] First Gemini attempt failed, retrying once:", err);
-      result = await model.generateContent(prompt);
+    // Gemini often doesn't hit the target word count on the first try (a
+    // story requested at 2 minutes has come out well under a minute) —
+    // check the actual output and, if it's off by more than 20%, ask Gemini
+    // to expand/shorten and regenerate rather than silently accepting it.
+    const targetWords = Math.round(durationMinutes * 140);
+    let raw: RawResponse | undefined;
+    let currentPrompt = prompt;
+    const maxLengthAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxLengthAttempts; attempt++) {
+      let result;
+      try {
+        result = await model.generateContent(currentPrompt);
+      } catch (err) {
+        console.warn(`[generate-story] Gemini attempt ${attempt} failed, retrying once:`, err);
+        result = await model.generateContent(currentPrompt);
+      }
+      const _t = result.response.usageMetadata?.totalTokenCount;
+      if (_t) trackGemini(_t).catch(() => {});
+      const text = result.response.text().trim();
+      const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+
+      try {
+        raw = JSON.parse(json);
+      } catch {
+        if (attempt === maxLengthAttempts) {
+          return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
+        }
+        continue;
+      }
+
+      const actualWords = estimateWordCount(raw!.blocks ?? []);
+      if (isWithinLengthTolerance(actualWords, targetWords) || attempt === maxLengthAttempts) break;
+      console.warn(`[generate-story] Attempt ${attempt}: ${actualWords} words vs target ${targetWords} — retrying with a length correction.`);
+      currentPrompt = `${prompt}${buildLengthCorrectionNote(actualWords, targetWords)}`;
     }
-    const _t = result.response.usageMetadata?.totalTokenCount;
-    if (_t) trackGemini(_t).catch(() => {});
-    const text = result.response.text().trim();
 
-    const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
-
-    let raw: RawResponse;
-    try {
-      raw = JSON.parse(json);
-    } catch {
-      return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
+    if (!raw) {
+      return NextResponse.json({ error: "Gemini returned non-JSON output after retries." }, { status: 502 });
     }
 
     // Fix title conflict if needed (small Gemini call, not a full regeneration)
     if (raw.title && existingTitles.length > 0) {
-      raw.title = await fixConflictingTitle(genAI, raw.title, raw.summary ?? "", existingTitles);
+      raw.title = await resolveTitleConflict(genAI, raw.title, raw.summary ?? "", existingTitles);
     }
 
     const heroName = body.hero ?? "";
     // Gemini's preset pool now voices every language, so casting no longer
     // needs a separate Hebrew EL-voice path.
     const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], heroName, body.primaryVoiceId, raw.characters ?? {});
+    // The user's default narrator voice always wins for "Narrator" — nature-
+    // based casting would otherwise assign it something else from the moment
+    // the story is generated, visible immediately in Studio's Cast section.
+    if (body.narratorVoiceId) characterVoiceMap["Narrator"] = body.narratorVoiceId;
     const blocks: ScriptBlock[] = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,

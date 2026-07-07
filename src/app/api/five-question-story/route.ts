@@ -9,11 +9,16 @@ import type { StorySeeds } from "@/utils/buildStoryPrompt";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntries } from "@/lib/libraryStore";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote } from "@/lib/services/scriptGenerationHelpers";
+
+export const maxDuration = 120;
 
 export interface FiveQuestionStoryRequest {
   seeds: StorySeeds;
   durationMinutes: number;
   language?: string;
+  // user's chosen default narrator voice — always wins for the "Narrator" character
+  narratorVoiceId?: string;
 }
 
 interface RawBlock {
@@ -69,42 +74,6 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, langu
     : "";
 
   return `${guidance}${langPart}${titleUniquePart}\n\nRUNTIME TARGETS FOR THIS STORY\n-------------------------------\nTarget duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}\nTarget word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)\nTarget blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)\n\nSCENE STRUCTURE (required — output in "scenes" array)\n------------------------------------------------------\nDivide the story into 3–5 logical scenes based on natural story beats. For each scene output:\n  - sceneNumber: integer starting at 1\n  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")\n  - summary: exactly 1 sentence describing what happens in this scene\n  - primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy\n  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])\n  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }\n\nScene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).\nlineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
-}
-
-function normTitle(t: string): string {
-  return t.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-async function fixConflictingTitle(
-  genAI: GoogleGenerativeAI,
-  title: string,
-  summary: string,
-  existingTitles: string[]
-): Promise<string> {
-  const existNorm = new Set(existingTitles.map(normTitle));
-  if (!existNorm.has(normTitle(title))) return title;
-  try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        temperature: 0.9,
-        maxOutputTokens: 30,
-        // @ts-expect-error thinkingConfig valid but not in typedefs
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    });
-    const existList = existingTitles.slice(0, 20).map((t) => `"${t}"`).join(", ");
-    const prompt = `The children's story title "${title}" is already in this family's library. Based on this story summary: "${summary.slice(0, 200)}", suggest ONE alternative title. It must NOT be any of: ${existList}. Output ONLY the title, nothing else.`;
-    const result = await model.generateContent(prompt);
-    const alt = result.response.text().trim().replace(/^["'`]|["'`]$/g, "").trim();
-    if (alt && alt.length > 2 && alt.length < 80 && !existNorm.has(normTitle(alt))) return alt;
-  } catch { /* ignore */ }
-  const SUFFIXES = ["A New Adventure", "A Magical Tale", "The Next Chapter", "A New Journey"];
-  for (const sfx of SUFFIXES) {
-    const candidate = `${title}: ${sfx}`;
-    if (!existNorm.has(normTitle(candidate))) return candidate;
-  }
-  return `${title} (New)`;
 }
 
 function buildUserPrompt(seeds: StorySeeds): string {
@@ -163,21 +132,46 @@ export async function POST(req: NextRequest) {
       systemInstruction,
     });
 
-    const result = await model.generateContent(userPrompt);
-    const _t = result.response.usageMetadata?.totalTokenCount;
-    if (_t) trackGemini(_t).catch(() => {});
-    const text = result.response.text().trim();
+    // Gemini often doesn't hit the target word count on the first try (a
+    // story requested at 2 minutes has come out well under a minute) —
+    // check the actual output and, if it's off by more than 20%, ask Gemini
+    // to expand/shorten and regenerate rather than silently accepting it.
+    const targetWords = Math.round(clampedDuration * 140);
+    let raw: RawResponse | undefined;
+    let currentPrompt = userPrompt;
+    const maxLengthAttempts = 3;
 
-    const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+    for (let attempt = 1; attempt <= maxLengthAttempts; attempt++) {
+      const result = await model.generateContent(currentPrompt);
+      const _t = result.response.usageMetadata?.totalTokenCount;
+      if (_t) trackGemini(_t).catch(() => {});
+      const text = result.response.text().trim();
+      const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
 
-    let raw: RawResponse;
-    try {
-      raw = JSON.parse(json);
-    } catch {
-      return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
+      try {
+        raw = JSON.parse(json);
+      } catch {
+        if (attempt === maxLengthAttempts) {
+          return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
+        }
+        continue;
+      }
+
+      const actualWords = estimateWordCount(raw!.blocks ?? []);
+      if (isWithinLengthTolerance(actualWords, targetWords) || attempt === maxLengthAttempts) break;
+      console.warn(`[five-question-story] Attempt ${attempt}: ${actualWords} words vs target ${targetWords} — retrying with a length correction.`);
+      currentPrompt = `${userPrompt}${buildLengthCorrectionNote(actualWords, targetWords)}`;
+    }
+
+    if (!raw) {
+      return NextResponse.json({ error: "Gemini returned non-JSON output after retries." }, { status: 502 });
     }
 
     const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], seeds.q1_hero, undefined, raw.characters ?? {});
+    // The user's default narrator voice always wins for "Narrator" — nature-
+    // based casting would otherwise assign it something else from the moment
+    // the story is generated, visible immediately in Studio's Cast section.
+    if (body.narratorVoiceId) characterVoiceMap["Narrator"] = body.narratorVoiceId;
     const blocks = (raw.blocks ?? []).map((block, i) => ({
       id: `blk-${i + 1}-${Math.random().toString(36).slice(2, 6)}`,
       blockOrder: i + 1,

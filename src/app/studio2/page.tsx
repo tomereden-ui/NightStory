@@ -1457,6 +1457,7 @@ export default function Studio2Page() {
         ? (activeChild.age <= 4 ? "2-4" : activeChild.age <= 6 ? "4-6" : activeChild.age <= 8 ? "6-8" : activeChild.age <= 10 ? "8-10" : "10-12")
         : MOCK_USER.preferredAgeGroup,
       language,
+      narratorVoiceId: getNarratorVoiceId(),
       ...(selectedLessons.length > 0 ? { lessons: selectedLessons } : {}),
       ...(activeChild?.avoid ? { avoid: activeChild.avoid } : {}),
     };

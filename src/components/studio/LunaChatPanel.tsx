@@ -439,7 +439,7 @@ export default function LunaChatPanel({
         const res = await fetch("/api/generate-story", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language }),
+          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language, narratorVoiceId: getNarratorVoiceId() }),
         });
         if (!res.ok) throw new Error("Generation failed");
         const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string };
@@ -550,6 +550,7 @@ export default function LunaChatPanel({
           durationMinutes,
           childAgeGroup: getChildAgeGroup(),
           language,
+          narratorVoiceId: getNarratorVoiceId(),
         }),
       });
       if (!res.ok) throw new Error("Generation failed");

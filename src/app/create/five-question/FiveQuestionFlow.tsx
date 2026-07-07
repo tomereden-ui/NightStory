@@ -1022,7 +1022,7 @@ function GeneratingView({ heroName, worldName, seeds, durationMinutes, contentLa
     fetch("/api/five-question-story", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seeds, durationMinutes, language: contentLanguage }),
+      body: JSON.stringify({ seeds, durationMinutes, language: contentLanguage, narratorVoiceId: getNarratorVoiceId() }),
       signal: controller.signal,
     })
       .then(async (res) => {
