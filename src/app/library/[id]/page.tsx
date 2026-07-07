@@ -9,6 +9,7 @@ import Icon from "@/components/ui/Icon";
 import type { ScriptBlock, Voice } from "@/types";
 import ShareSheet from "@/components/ShareSheet";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
+import ReadOnlyLessonsPanel from "@/components/story/ReadOnlyLessonsPanel";
 import ScriptTab from "@/components/studio/ScriptTab";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType } from "@/lib/services/characterAvatars";
@@ -472,6 +473,13 @@ export default function StoryDetailPage() {
         {entry.blocks.length > 0 && (
           <div className="mt-4 mb-1">
             <ReadOnlyCastPanel blocks={entry.blocks} />
+          </div>
+        )}
+
+        {/* Moral lessons panel — same presentation as Studio's collapsed view, read-only */}
+        {entry.moralLessons && entry.moralLessons.length > 0 && (
+          <div className="mt-4 px-5">
+            <ReadOnlyLessonsPanel moralLessons={entry.moralLessons} storyLanguage={entry.language} />
           </div>
         )}
 
