@@ -1163,13 +1163,14 @@ export default function Studio2Page() {
   const [isRevising, setIsRevising]         = useState(false);
   const [reviseError, setReviseError]       = useState<string | null>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
-  // A chip's canned instruction is pre-vetted and marked valid immediately;
-  // manually typed text has to pass a debounced Gemini reasonableness check
-  // (below) before "Update Script" is allowed to enable.
+  // A chip's canned instruction is pre-vetted and marked valid immediately.
+  // Manually typed text needs an explicit "Check Wording" click (below) --
+  // NOT a debounce-on-every-keystroke, which fired a real Gemini call on
+  // every natural typing pause mid-sentence and could show a stale verdict
+  // for a half-finished thought.
   const [directionValid, setDirectionValid]           = useState(false);
   const [checkingDirection, setCheckingDirection]     = useState(false);
   const [directionCheckReason, setDirectionCheckReason] = useState<string | null>(null);
-  const directionCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Resets validation state whenever the note is cleared (Cancel, or a
   // successful Update Script which clears it on completion) so the next
@@ -1179,40 +1180,39 @@ export default function Studio2Page() {
       setDirectionValid(false);
       setCheckingDirection(false);
       setDirectionCheckReason(null);
-      if (directionCheckTimerRef.current) clearTimeout(directionCheckTimerRef.current);
     }
   }, [directorNote]);
 
   const handleDirectorNoteChange = (val: string) => {
     setDirectorNote(val);
+    // Any edit invalidates a previous check (or a chip's free pass) --
+    // needs a fresh "Check Wording" click before Update Script can enable.
     setDirectionValid(false);
     setDirectionCheckReason(null);
-    if (directionCheckTimerRef.current) clearTimeout(directionCheckTimerRef.current);
-    if (!val.trim()) { setCheckingDirection(false); return; }
+  };
 
+  const checkDirectorNote = async () => {
+    if (!directorNote.trim() || checkingDirection) return;
     setCheckingDirection(true);
-    directionCheckTimerRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch("/api/validate-direction", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ instruction: val, blocks: scriptBlocks, summary }),
-        });
-        const data = await res.json() as { reasonable?: boolean; reason?: string };
-        setDirectionValid(data.reasonable !== false);
-        setDirectionCheckReason(data.reasonable === false ? (data.reason || null) : null);
-      } catch {
-        // Network hiccup — leave disabled rather than silently trusting it;
-        // the user can just keep typing (or retype) to trigger another check.
-        setDirectionValid(false);
-      } finally {
-        setCheckingDirection(false);
-      }
-    }, 700);
+    setDirectionCheckReason(null);
+    try {
+      const res = await fetch("/api/validate-direction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: directorNote, blocks: scriptBlocks, summary }),
+      });
+      const data = await res.json() as { reasonable?: boolean; reason?: string };
+      setDirectionValid(data.reasonable !== false);
+      setDirectionCheckReason(data.reasonable === false ? (data.reason || null) : null);
+    } catch {
+      setDirectionValid(false);
+      setDirectionCheckReason(null);
+    } finally {
+      setCheckingDirection(false);
+    }
   };
 
   const selectDirectorChip = (instruction: string) => {
-    if (directionCheckTimerRef.current) clearTimeout(directionCheckTimerRef.current);
     setDirectorNote(instruction);
     setCheckingDirection(false);
     setDirectionCheckReason(null);
@@ -2569,19 +2569,13 @@ export default function Studio2Page() {
                       {i18nT(language, "revisingLabel" as never)}
                     </span>
                   )}
-                  {!isRevising && checkingDirection && (
-                    <span className="ml-auto flex items-center gap-1.5 text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
-                      <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.08)", borderTopColor: "rgba(255,255,255,0.4)" }} />
-                      {i18nT(language, "checkingDirection" as never)}
-                    </span>
-                  )}
                 </div>
 
                 {/* Quick chips only STAGE an instruction into the note below —
                     nothing is sent to Gemini until "Update Script" is clicked.
                     Their text is pre-vetted, so picking one enables Update
-                    Script immediately; typed text needs the debounced check
-                    below to pass first. */}
+                    Script immediately; typed text needs an explicit "Check
+                    Wording" click first (see the primary button below). */}
                 <div className="flex flex-wrap gap-2">
                   {[
                     { labelKey: "moreSleepy" as const,   icon: "moon" as const,     instruction: "Make the whole story more sleepy and calming — softer language, slower pace, perfect for drifting off" },
@@ -2634,17 +2628,31 @@ export default function Studio2Page() {
                   >
                     {i18nT(language, "cancel")}
                   </button>
-                  <button
-                    disabled={!hasPending || isRevising || checkingDirection || !directionValid}
-                    onClick={() => handleRevise(directorNote)}
-                    className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40"
-                    style={hasPending && !isRevising && !checkingDirection && directionValid
-                      ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
-                      : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.15)" }
-                    }
-                  >
-                    {i18nT(language, "updateScript" as never)}
-                  </button>
+                  {directionValid ? (
+                    <button
+                      disabled={!hasPending || isRevising}
+                      onClick={() => handleRevise(directorNote)}
+                      className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40"
+                      style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
+                    >
+                      {i18nT(language, "updateScript" as never)}
+                    </button>
+                  ) : (
+                    <button
+                      disabled={!hasPending || isRevising || checkingDirection}
+                      onClick={checkDirectorNote}
+                      className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-1.5"
+                      style={hasPending && !isRevising && !checkingDirection
+                        ? { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" }
+                        : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.15)" }
+                      }
+                    >
+                      {checkingDirection && (
+                        <span className="w-3 h-3 border-2 rounded-full animate-spin flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.6)" }} />
+                      )}
+                      {checkingDirection ? i18nT(language, "checkingDirection" as never) : i18nT(language, "checkWording" as never)}
+                    </button>
+                  )}
                 </div>
 
                 {reviseError && (
