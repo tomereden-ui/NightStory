@@ -50,38 +50,33 @@ export const MOCK_JOURNEY = MOCK_CHILDREN;
 
 // ── Calendar heatmap ─────────────────────────────────────────────────────────
 
-const GAP = 6; // px gap between day cells
+const GAP = 14;    // px gap between day nodes -- generous breathing room
+const NODE = 22;   // px diameter of each day node
 
-// "Twilight Sky" tones -- a calm midnight-to-amber progression instead of
-// a GitHub-style multi-color contribution graph.
+// "Twilight Sky" tones, pared back to minimal/high-end: a hollow ring for an
+// empty night, a small solid pastel dot for one story, and a solid gold dot
+// with a soft diffused glow for a deep multi-story night.
 function cellStyle(count: number): React.CSSProperties {
-  if (count === 0) return { background: "rgba(120,140,200,0.07)", border: "1px solid rgba(167,139,250,0.12)" };
-  if (count === 1) return {
-    background: "linear-gradient(135deg, rgba(79,195,247,0.4), rgba(167,139,250,0.45))",
-    boxShadow: "0 0 6px rgba(129,161,247,0.3)",
-  };
-  return {
-    background: "linear-gradient(135deg, rgba(251,191,36,0.55), rgba(245,158,11,0.5))",
-    boxShadow: "0 0 8px rgba(251,191,36,0.35)",
-  };
+  if (count === 0) return { background: "transparent", border: "1px solid rgba(255,255,255,0.16)" };
+  if (count === 1) return { background: "rgba(165,180,252,0.9)" };
+  return { background: "rgba(251,191,36,0.95)", boxShadow: "0 0 12px rgba(251,191,36,0.45)" };
 }
 
 function CalendarLegend() {
   const { t } = useLanguage();
+  const items: { key: TranslationKey; style: React.CSSProperties }[] = [
+    { key: "calNone" as TranslationKey, style: cellStyle(0) },
+    { key: "cal1Story" as TranslationKey, style: cellStyle(1) },
+    { key: "cal2Plus" as TranslationKey, style: cellStyle(2) },
+  ];
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "rgba(120,140,200,0.07)", border: "1px solid rgba(167,139,250,0.12)" }} />
-        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.35)" }}>{t("calNone" as TranslationKey)}</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "linear-gradient(135deg,rgba(79,195,247,0.4),rgba(167,139,250,0.45))" }} />
-        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.35)" }}>{t("cal1Story" as TranslationKey)}</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "linear-gradient(135deg,rgba(251,191,36,0.55),rgba(245,158,11,0.5))" }} />
-        <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.35)" }}>{t("cal2Plus" as TranslationKey)}</span>
-      </div>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+      {items.map(({ key, style }) => (
+        <div key={key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", ...style }} />
+          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.3)" }}>{t(key)}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -91,19 +86,20 @@ function CalendarHeatmap({ days }: { days: number[] }) {
   return (
     <div style={{ width: "100%" }}>
       {/* day-of-week labels */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: GAP, marginBottom: 6 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: GAP, marginBottom: 8 }}>
         {DAY_LABELS.map((d, i) => (
-          <div key={i} style={{ textAlign: "center", fontSize: "var(--fs-micro)", fontWeight: 700, color: "rgba(255,255,255,0.2)" }}>{d}</div>
+          <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>{d}</div>
         ))}
       </div>
-      {/* cells -- perfect circles that scale with the parent's width */}
+      {/* nodes -- small, fixed-size circles centered in a responsive, roomy grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: GAP }}>
         {days.map((count, i) => (
-          <div
-            key={i}
-            title={count > 0 ? `${count} ${count === 1 ? "story" : "stories"}` : undefined}
-            style={{ width: "100%", aspectRatio: "1", borderRadius: "50%", ...cellStyle(count) }}
-          />
+          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              title={count > 0 ? `${count} ${count === 1 ? "story" : "stories"}` : undefined}
+              style={{ width: NODE, height: NODE, borderRadius: "50%", ...cellStyle(count) }}
+            />
+          </div>
         ))}
       </div>
       {/* legend */}
