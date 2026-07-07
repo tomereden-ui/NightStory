@@ -1,6 +1,7 @@
 "use client";
 
 import { getLessonsCatalog, getLessonsChrome } from "@/constants/lessonsUi";
+import { lessonColor } from "@/components/studio/LessonEditor";
 import type { MoralLesson } from "@/types";
 
 export default function ReadOnlyLessonsPanel({
@@ -37,11 +38,12 @@ export default function ReadOnlyLessonsPanel({
       <div className="mt-3 flex flex-wrap gap-1.5" aria-label={ui.currentlyInStory}>
         {moralLessons.map((ml) => {
           const preset = LESSONS.find((l) => l.label === ml.lesson);
+          const color = lessonColor(ml.lesson);
           return (
             <span
               key={ml.lesson}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-fs-body font-semibold"
-              style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-fs-body font-bold"
+              style={{ background: color.bg, border: `1px solid ${color.border}`, color: color.text }}
             >
               <span>{preset?.icon ?? "✨"}</span>
               <span>{ml.lesson}</span>

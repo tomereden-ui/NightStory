@@ -9,6 +9,23 @@ function isPreset(l: string): l is LessonLabel {
   return (LESSON_IDS as readonly string[]).includes(l);
 }
 
+// Each lesson gets its own chip color, hashed from its name so the same
+// lesson always lands on the same color across renders/reloads (matching
+// the same hash-based palette pattern used for cast avatars elsewhere).
+const LESSON_PALETTE = [
+  { bg: "rgba(244,114,182,0.14)", border: "rgba(244,114,182,0.4)", text: "#f472b6" }, // pink
+  { bg: "rgba(251,191,36,0.14)",  border: "rgba(251,191,36,0.4)",  text: "#fbbf24" }, // amber
+  { bg: "rgba(79,195,247,0.14)",  border: "rgba(79,195,247,0.4)",  text: "#4fc3f7" }, // blue
+  { bg: "rgba(52,211,153,0.14)",  border: "rgba(52,211,153,0.4)",  text: "#34d399" }, // teal
+  { bg: "rgba(167,139,250,0.14)", border: "rgba(167,139,250,0.4)", text: "#a78bfa" }, // purple
+  { bg: "rgba(248,113,113,0.14)", border: "rgba(248,113,113,0.4)", text: "#f87171" }, // red
+];
+export function lessonColor(label: string): typeof LESSON_PALETTE[number] {
+  let h = 0;
+  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) >>> 0;
+  return LESSON_PALETTE[h % LESSON_PALETTE.length];
+}
+
 export default function LessonEditor({
   lessons,
   onChange,
@@ -163,11 +180,12 @@ export default function LessonEditor({
             >
               {displayedLessons.map((ml) => {
                 const preset = LESSONS.find((l) => l.label === ml.lesson);
+                const color = lessonColor(ml.lesson);
                 return (
                   <span
                     key={ml.lesson}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-fs-body font-semibold"
-                    style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-fs-body font-bold"
+                    style={{ background: color.bg, border: `1px solid ${color.border}`, color: color.text }}
                   >
                     <span>{preset?.icon ?? "✨"}</span>
                     <span>{ml.lesson}</span>
@@ -240,21 +258,22 @@ export default function LessonEditor({
             </label>
             {displayedLessons.map((ml) => {
               const preset = LESSONS.find((l) => l.label === ml.lesson);
+              const color = lessonColor(ml.lesson);
               return (
                 <div
                   key={ml.lesson}
                   className="flex items-start gap-2.5 p-2.5 rounded-xl"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(139,92,246,0.16)" }}
+                  style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${color.border}` }}
                 >
-                  <div
-                    className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ background: "rgba(139,92,246,0.16)" }}
-                  >
-                    <span className="text-fs-heading leading-none">{preset?.icon ?? "✨"}</span>
-                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-fs-body font-bold" style={{ color: "#E9D8FD" }}>{ml.lesson}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-fs-body font-bold flex-shrink-0"
+                        style={{ background: color.bg, border: `1px solid ${color.border}`, color: color.text }}
+                      >
+                        <span>{preset?.icon ?? "✨"}</span>
+                        <span>{ml.lesson}</span>
+                      </span>
                       <span
                         className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center font-bold"
                         style={{ background: "#34d399", color: "#05080F", fontSize: "9px" }}
@@ -264,7 +283,7 @@ export default function LessonEditor({
                         ✓
                       </span>
                     </div>
-                    <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    <p className="text-fs-body leading-snug mt-1.5" style={{ color: "rgba(255,255,255,0.45)" }}>
                       {ml.how}
                     </p>
                   </div>
