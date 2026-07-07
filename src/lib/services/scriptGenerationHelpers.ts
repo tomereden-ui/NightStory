@@ -1,4 +1,74 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { ScriptBlock } from "@/types";
+
+// ─── Long-block splitting ──────────────────────────────────────────────────────
+// Gemini occasionally writes one giant block of narration/dialogue instead of
+// several shorter beats — bad for TTS pacing, and directly caused a
+// summary-audio timeout on a classic story whose "summary" was a raw 100+
+// word narration dump. Rather than trust the prompt alone (a "keep it short"
+// instruction drifts the same way the performance-tag instruction did), this
+// deterministically re-chunks any block whose spoken text exceeds maxWords
+// into multiple consecutive blocks for the same character at sentence
+// boundaries, repeating the leading performance tag on each chunk since every
+// block becomes its own independent TTS line. Returns an index map so callers
+// that reference the ORIGINAL block indices (e.g. scenes' lineRange) can
+// remap them against the new, longer array.
+
+export function splitLongBlocks(blocks: ScriptBlock[], maxWords = 30): { blocks: ScriptBlock[]; indexMap: [number, number][] } {
+  const result: ScriptBlock[] = [];
+  const indexMap: [number, number][] = [];
+
+  for (const block of blocks) {
+    const startIdx = result.length;
+
+    if (block.characterName === "SFX") {
+      result.push({ ...block, blockOrder: result.length + 1 });
+      indexMap.push([startIdx, startIdx]);
+      continue;
+    }
+
+    const tagMatch = block.textPayload.match(/^(\[[^\]]+\]\s*)/);
+    const tag = tagMatch ? tagMatch[1] : "";
+    const spoken = tagMatch ? block.textPayload.slice(tagMatch[1].length) : block.textPayload;
+    const wordCount = spoken.trim().split(/\s+/).filter(Boolean).length;
+
+    if (wordCount <= maxWords) {
+      result.push({ ...block, blockOrder: result.length + 1 });
+      indexMap.push([startIdx, startIdx]);
+      continue;
+    }
+
+    // Greedily group sentences into chunks that stay under maxWords.
+    const sentences = spoken.match(/[^.!?…]+[.!?…]*\s*/g) ?? [spoken];
+    const chunks: string[] = [];
+    let current = "";
+    let currentWords = 0;
+    for (const sentence of sentences) {
+      const sWords = sentence.trim().split(/\s+/).filter(Boolean).length;
+      if (currentWords > 0 && currentWords + sWords > maxWords) {
+        chunks.push(current.trim());
+        current = sentence;
+        currentWords = sWords;
+      } else {
+        current += sentence;
+        currentWords += sWords;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+
+    chunks.forEach((chunk, i) => {
+      result.push({
+        ...block,
+        id: i === 0 ? block.id : `${block.id}-${i}`,
+        blockOrder: result.length + 1,
+        textPayload: `${tag}${chunk}`,
+      });
+    });
+    indexMap.push([startIdx, result.length - 1]);
+  }
+
+  return { blocks: result, indexMap };
+}
 
 // ─── Length targeting ──────────────────────────────────────────────────────────
 // Shared by generate-story and five-question-story: both build a target word

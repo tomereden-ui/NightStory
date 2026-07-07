@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { trackGemini } from "@/lib/usageTracker";
+import { splitLongBlocks } from "@/lib/services/scriptGenerationHelpers";
 import type { ScriptBlock } from "@/types";
 
 interface RawBlock {
@@ -126,7 +127,10 @@ ${returnFormat}`;
         }
       }
 
-      return NextResponse.json({ blocks: merged, lessonImplementations });
+      // Re-chunk any block Gemini wrote too long (bad for TTS pacing) into
+      // several shorter consecutive blocks — lessonHighlight, already
+      // assigned per-block above, carries forward onto every resulting chunk.
+      return NextResponse.json({ blocks: splitLongBlocks(merged, 30).blocks, lessonImplementations });
     }
 
     // Standard path — plain array
@@ -144,7 +148,7 @@ ${returnFormat}`;
       blockOrder: i + 1,
     }));
 
-    return NextResponse.json({ blocks: merged });
+    return NextResponse.json({ blocks: splitLongBlocks(merged, 30).blocks });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }

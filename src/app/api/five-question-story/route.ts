@@ -9,7 +9,7 @@ import type { StorySeeds } from "@/utils/buildStoryPrompt";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntries } from "@/lib/libraryStore";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks } from "@/lib/services/scriptGenerationHelpers";
 
 export const maxDuration = 120;
 
@@ -221,7 +221,22 @@ export async function POST(req: NextRequest) {
       return { ...s, estimatedDurationSeconds: Math.ceil(words / (130 / 60)) };
     });
 
-    return NextResponse.json({ blocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes });
+    // Re-chunk any block Gemini wrote too long (bad for TTS pacing) into
+    // several shorter consecutive blocks, then remap scenes' lineRange
+    // against the now-longer block array.
+    const { blocks: splitBlocks, indexMap } = splitLongBlocks(blocks, 30);
+    const remappedScenes = scenes.map((s) => {
+      const { start, end } = s.lineRange ?? { start: 0, end: blocks.length - 1 };
+      return {
+        ...s,
+        lineRange: {
+          start: indexMap[start]?.[0] ?? start,
+          end: indexMap[end]?.[1] ?? end,
+        },
+      };
+    });
+
+    return NextResponse.json({ blocks: splitBlocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: remappedScenes });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

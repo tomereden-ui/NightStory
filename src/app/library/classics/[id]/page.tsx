@@ -27,6 +27,13 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// Last-resort fallback for a classic with no curated tagline (e.g. an
+// admin-added one nobody wrote a blurb for) -- NOT the primary summary
+// source. Capped at 40 words: this used to join up to 3 full narration
+// blocks with no length limit at all, which meant it could run to 100+
+// words of raw script text (and, since the audio preview reads out
+// whatever this returns verbatim, that was slow enough to time out the
+// primary TTS engine on some stories).
 function deriveClassicSummary(blocks: ScriptBlock[]): string {
   const speechBlocks = blocks.filter((b) => b.characterName !== "SFX");
   // The Narrator's name is always translated into the story's language (see
@@ -40,10 +47,19 @@ function deriveClassicSummary(blocks: ScriptBlock[]): string {
     return name.includes("narrat") || b.characterName.includes("קריין");
   });
   const source = narratorLines.length > 0 ? narratorLines : speechBlocks;
-  return source
+  const text = source
     .slice(0, 3)
     .map((b) => b.textPayload.replace(/^\[.*?\]\s*/, ""))
     .join(" ");
+  const words = text.split(/\s+/).filter(Boolean);
+  return words.slice(0, 40).join(" ") + (words.length > 40 ? "…" : "");
+}
+
+// The one summary shown/spoken everywhere on this page. Prefers the
+// curated tagline (short, written to sell the story) over the derived
+// fallback above.
+function getClassicSummary(tagline: string | undefined, blocks: ScriptBlock[]): string {
+  return tagline?.trim() || deriveClassicSummary(blocks);
 }
 
 const CARD_PALETTES: [string, string][] = [
@@ -171,7 +187,7 @@ export default function ClassicDetailPage() {
     setProduceStep("Starting…");
 
     try {
-      const summary = deriveClassicSummary(blocks);
+      const summary = getClassicSummary(meta.tagline, blocks);
       const durationMinutes = meta.durationSeconds ? Math.max(1, Math.round(meta.durationSeconds / 60)) : 3;
       // Persist to this classic's own id (not a fresh random one) so replaying
       // it later never re-generates audio, and favorite/share keep working.
@@ -270,7 +286,7 @@ export default function ClassicDetailPage() {
   const handleOpenInStudio = useCallback(async () => {
     if (!meta || !blocks) return;
     setOpeningInStudio(true);
-    const summary = deriveClassicSummary(blocks) || meta.tagline;
+    const summary = getClassicSummary(meta.tagline, blocks);
     // Admin-added classics (UUID IDs) are editable in-place; hardcoded classics fork.
     writeDraft({
       promptText: `${meta.title} — ${meta.tagline}`,
@@ -293,8 +309,8 @@ export default function ClassicDetailPage() {
       setSummaryPlaying(false);
       return;
     }
-    if (!blocks) return;
-    const summary = deriveClassicSummary(blocks);
+    if (!blocks || !meta) return;
+    const summary = getClassicSummary(meta.tagline, blocks);
     if (!summary) return;
 
     // Reuse cached audio URL from this session (survives component remounts)
@@ -329,7 +345,7 @@ export default function ClassicDetailPage() {
     } finally {
       setSummaryLoading(false);
     }
-  }, [summaryPlaying, blocks, id]);
+  }, [summaryPlaying, blocks, meta, id]);
 
   const handleUploadCover = () => fileInputRef.current?.click();
 
@@ -501,10 +517,6 @@ export default function ClassicDetailPage() {
             {meta.title}
           </h1>
 
-          <p className="text-fs-body leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.5)" }}>
-            {meta.tagline}
-          </p>
-
           <p className="text-fs-caption font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
             Id = {id}
           </p>
@@ -513,9 +525,12 @@ export default function ClassicDetailPage() {
         {/* Divider */}
         <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
 
-        {/* Story summary — derived from opening narrator lines */}
+        {/* Story summary — the tagline used to be shown redundantly right above
+            this same card (right under the title) as a second, separate
+            summary; this is now the only one, so remove the duplicate above
+            instead of showing the same story described twice in a row. */}
         {isReady && (() => {
-          const classicSummary = deriveClassicSummary(blocks!);
+          const classicSummary = getClassicSummary(meta.tagline, blocks!);
           if (!classicSummary) return null;
           const LIMIT = 220;
           const long = classicSummary.length > LIMIT;
@@ -602,7 +617,7 @@ export default function ClassicDetailPage() {
             story={{
               id,
               title: meta.title,
-              summary: blocks ? deriveClassicSummary(blocks) : meta.tagline,
+              summary: getClassicSummary(meta.tagline, blocks ?? []),
               coverUrl: meta.coverUrl,
               durationSeconds: meta.durationSeconds ?? 0,
               createdAt: 0,

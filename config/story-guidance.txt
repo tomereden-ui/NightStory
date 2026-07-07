@@ -97,6 +97,14 @@ Two rules that BOTH apply to every named character (other than "Narrator"):
   When the story language is not English, use names that sound natural in that language
   while still following both rules above — do NOT transliterate English names.
 
+BLOCK LENGTH
+------------
+Keep each block under 30 words. A long narration passage should be broken into several
+shorter consecutive blocks (same character, each with its own performance tag) at natural
+sentence or beat boundaries, rather than one long block — this paces the audio better and
+keeps each TTS line easy to deliver naturally. Blocks over 30 words will be split
+automatically regardless, but a natural author-chosen split reads better than a mechanical one.
+
 PERFORMANCE TAGS
 ----------------
 Every single line of dialogue or narration MUST begin with a bracketed performance direction
