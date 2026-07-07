@@ -851,6 +851,17 @@ const STORY_SEEDS = [
   { icon: "🦊", text: "A clever fox discovers the forest hides a secret library" },
 ];
 
+// Director's Note mood chips -- pre-vetted canned instructions, combined with
+// any typed free text only at the moment "Update Script" is clicked.
+const DIRECTOR_CHIPS = [
+  { labelKey: "moreSleepy" as const,   icon: "moon" as const,     instruction: "Make the whole story more sleepy and calming — softer language, slower pace, perfect for drifting off" },
+  { labelKey: "moreMagical" as const,  icon: "sparkles" as const, instruction: "Add more magic, wonder and enchantment throughout" },
+  { labelKey: "funnier" as const,      icon: "smile" as const,    instruction: "Add playful humor and lightness throughout — make it fun and giggly for young children" },
+  { labelKey: "shorter" as const,      icon: "scissors" as const, instruction: "Shorten the story — condense each scene to its essential moment while keeping the emotional arc" },
+  { labelKey: "moreDramatic" as const, icon: "zap" as const,      instruction: "Add more dramatic tension and emotional peaks" },
+  { labelKey: "cozier" as const,       icon: "heart" as const,    instruction: "Make the story feel warmer, cozier and more comforting — like being tucked in on a cold night" },
+];
+
 function SceneHeader() {
   const [cachedUrls, setCachedUrls] = useState<Record<string, string>>({});
 
@@ -1163,6 +1174,10 @@ export default function Studio2Page() {
   const [isRevising, setIsRevising]         = useState(false);
   const [reviseError, setReviseError]       = useState<string | null>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
+  // Mood chips are a pure multi-select toggle -- they never write into the
+  // free-text note. Their canned instructions are combined with the typed
+  // text (if any) only at the moment "Update Script" is clicked.
+  const [selectedMoodChips, setSelectedMoodChips] = useState<Set<string>>(new Set());
   // A chip's canned instruction is pre-vetted and marked valid immediately.
   // Manually typed text needs an explicit "Check Wording" click (below) --
   // NOT a debounce-on-every-keystroke, which fired a real Gemini call on
@@ -1185,8 +1200,8 @@ export default function Studio2Page() {
 
   const handleDirectorNoteChange = (val: string) => {
     setDirectorNote(val);
-    // Any edit invalidates a previous check (or a chip's free pass) --
-    // needs a fresh "Check Wording" click before Update Script can enable.
+    // Any edit invalidates a previous check -- needs a fresh "Check Wording"
+    // click before Update Script can enable.
     setDirectionValid(false);
     setDirectionCheckReason(null);
   };
@@ -1212,11 +1227,13 @@ export default function Studio2Page() {
     }
   };
 
-  const selectDirectorChip = (instruction: string) => {
-    setDirectorNote(instruction);
-    setCheckingDirection(false);
-    setDirectionCheckReason(null);
-    setDirectionValid(true);
+  const toggleMoodChip = (labelKey: string) => {
+    setSelectedMoodChips((prev) => {
+      const next = new Set(prev);
+      if (next.has(labelKey)) next.delete(labelKey);
+      else next.add(labelKey);
+      return next;
+    });
   };
 
   // ─── Character avatars (AI-generated, optional) ─────────────────────────────
@@ -1718,7 +1735,7 @@ export default function Studio2Page() {
 
   // ─── Revise script ──────────────────────────────────────────────────────────
 
-  const handleRevise = useCallback(async (instruction: string) => {
+  const handleRevise = useCallback(async (instruction: string, onSuccess?: () => void) => {
     if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return;
     setIsRevising(true);
     setReviseError(null);
@@ -1729,6 +1746,7 @@ export default function Studio2Page() {
       const cleaned = (data.blocks as ScriptBlock[]).map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
       setScriptBlocks(cleaned);
       setDirectorNote("");
+      onSuccess?.();
       // The revision changed the script content, so it now differs from what's
       // saved/produced — mark dirty (not clean) so Save/Produce reflect that.
       markScriptDirty();
@@ -2552,7 +2570,20 @@ export default function Studio2Page() {
 
             {/* Director's Note */}
             {(() => {
-              const hasPending = directorNote.trim().length > 0;
+              const hasFreeText = directorNote.trim().length > 0;
+              const hasChips = selectedMoodChips.size > 0;
+              const hasPending = hasFreeText || hasChips;
+              // Chips alone are pre-vetted and ready immediately; any typed
+              // free text still needs an explicit "Check Wording" pass.
+              const readyToApply = hasFreeText ? directionValid : hasChips;
+              const buildCombinedInstruction = () => {
+                const chipInstructions = DIRECTOR_CHIPS
+                  .filter((c) => selectedMoodChips.has(c.labelKey))
+                  .map((c) => c.instruction);
+                const parts = [...chipInstructions];
+                if (hasFreeText) parts.push(directorNote.trim());
+                return parts.join(". ");
+              };
               return (
               <div
                 className="mt-2 mb-3 rounded-2xl p-4 flex flex-col gap-3"
@@ -2571,35 +2602,35 @@ export default function Studio2Page() {
                   )}
                 </div>
 
-                {/* Quick chips only STAGE an instruction into the note below —
-                    nothing is sent to Gemini until "Update Script" is clicked.
-                    Their text is pre-vetted, so picking one enables Update
-                    Script immediately; typed text needs an explicit "Check
-                    Wording" click first (see the primary button below). */}
+                {/* Quick chips are a pure multi-select toggle — clicking one
+                    never writes into the note below. Their instructions are
+                    pre-vetted, so any combination of selected chips is ready
+                    to apply immediately; typed free text still needs an
+                    explicit "Check Wording" click (see the primary button
+                    below). */}
                 <div className="flex flex-wrap gap-2">
-                  {[
-                    { labelKey: "moreSleepy" as const,   icon: "moon" as const,     instruction: "Make the whole story more sleepy and calming — softer language, slower pace, perfect for drifting off" },
-                    { labelKey: "moreMagical" as const,   icon: "sparkles" as const, instruction: "Add more magic, wonder and enchantment throughout" },
-                    { labelKey: "funnier" as const,        icon: "smile" as const,    instruction: "Add playful humor and lightness throughout — make it fun and giggly for young children" },
-                    { labelKey: "shorter" as const,        icon: "scissors" as const, instruction: "Shorten the story — condense each scene to its essential moment while keeping the emotional arc" },
-                    { labelKey: "moreDramatic" as const,  icon: "zap" as const,      instruction: "Add more dramatic tension and emotional peaks" },
-                    { labelKey: "cozier" as const,         icon: "heart" as const,    instruction: "Make the story feel warmer, cozier and more comforting — like being tucked in on a cold night" },
-                  ].map(({ labelKey, icon, instruction }) => (
-                    <button
-                      key={labelKey}
-                      disabled={isRevising}
-                      onClick={() => selectDirectorChip(instruction)}
-                      className="flex items-center gap-1.5 text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
-                      style={{
-                        background: isRevising ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        color: isRevising ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.55)",
-                      }}
-                    >
-                      <Icon name={icon} size={13} />
-                      {i18nT(language, labelKey)}
-                    </button>
-                  ))}
+                  {DIRECTOR_CHIPS.map(({ labelKey, icon }) => {
+                    const isSelected = selectedMoodChips.has(labelKey);
+                    return (
+                      <button
+                        key={labelKey}
+                        disabled={isRevising}
+                        onClick={() => toggleMoodChip(labelKey)}
+                        className="flex items-center gap-1.5 text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
+                        style={isSelected
+                          ? { background: "rgba(79,195,247,0.16)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7" }
+                          : {
+                              background: isRevising ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.06)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              color: isRevising ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.55)",
+                            }
+                        }
+                      >
+                        <Icon name={icon} size={13} />
+                        {i18nT(language, labelKey)}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <textarea
@@ -2622,16 +2653,16 @@ export default function Studio2Page() {
                 <div className="flex gap-2">
                   <button
                     disabled={!hasPending || isRevising}
-                    onClick={() => setDirectorNote("")}
+                    onClick={() => { setDirectorNote(""); setSelectedMoodChips(new Set()); }}
                     className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98] disabled:opacity-40"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
                   >
                     {i18nT(language, "cancel")}
                   </button>
-                  {directionValid ? (
+                  {readyToApply ? (
                     <button
                       disabled={!hasPending || isRevising}
-                      onClick={() => handleRevise(directorNote)}
+                      onClick={() => handleRevise(buildCombinedInstruction(), () => setSelectedMoodChips(new Set()))}
                       className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40"
                       style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
                     >
