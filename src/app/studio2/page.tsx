@@ -6,8 +6,8 @@ import { readDraft, writeDraft } from "@/lib/draftStore";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import ScriptTab from "@/components/studio/ScriptTab";
+import StudioAudioBar from "@/components/studio/StudioAudioBar";
 import ProductionProgress from "@/components/studio/ProductionProgress";
-import DramaPlayer from "@/components/studio/DramaPlayer";
 import LessonStep from "@/components/studio/LessonStep";
 import LessonEditor from "@/components/studio/LessonEditor";
 import { MOCK_USER } from "@/lib/mockData";
@@ -1068,7 +1068,7 @@ function PromptTabContent({
 
 // ─── Studio 2 page ────────────────────────────────────────────────────────────
 
-type StudioTab = "chat" | "step-by-step" | "lesson" | "script" | "producing" | "drama";
+type StudioTab = "chat" | "step-by-step" | "lesson" | "script" | "producing";
 
 export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
@@ -1948,7 +1948,10 @@ export default function Studio2Page() {
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job);
     setIsProducing(false);
-    setActiveTab("drama");
+    // Stay on the script tab instead of navigating to a separate "Drama
+    // Ready" screen -- the finished audio just shows up in the sticky
+    // StudioAudioBar at the bottom instead.
+    setActiveTab("script");
     // After a brand-new story is produced, its storyId equals jobId (job.id).
     // Record it so any subsequent re-produce updates the same story entry
     // instead of creating a duplicate.
@@ -1989,21 +1992,6 @@ export default function Studio2Page() {
             <div className="w-8" />
           </div>
           <ProductionProgress jobId={productionJobId} onDone={handleProductionDone} onError={handleProductionError} coverUrl={coverUrl || undefined} />
-        </div>
-      </div>
-    );
-  }
-
-  if (activeTab === "drama" && completedJob) {
-    return (
-      <div className="min-h-full" dir={isRTL ? "rtl" : "ltr"}>
-        <div className="px-5 pt-12 pb-8">
-          <div className="flex items-center mb-7">
-            <button onClick={() => setActiveTab("script")} className="w-8 h-8 flex items-center justify-center text-white/50"><Icon name="back" size={18} /></button>
-            <h1 className="flex-1 text-center text-fs-heading font-semibold text-white tracking-wide">{i18nT(language, "dramaReady")}</h1>
-            <div className="w-8" />
-          </div>
-          <DramaPlayer job={completedJob} onGenerateAnother={() => { setActiveTab("script"); setCompletedJob(null); }} />
         </div>
       </div>
     );
@@ -2731,6 +2719,18 @@ export default function Studio2Page() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Sticky player for a just-produced drama -- replaces the old separate
+          "Drama Ready" screen so producing no longer navigates away from
+          whatever tab you were on. */}
+      {completedJob?.audioUrl && (
+        <StudioAudioBar
+          audioUrl={completedJob.audioUrl}
+          title={completedJob.title ?? storyTitle ?? "Your Story"}
+          durationSeconds={completedJob.durationSeconds ?? 0}
+          onClose={() => setCompletedJob(null)}
+        />
       )}
     </div>
   );
