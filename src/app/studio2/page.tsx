@@ -1256,7 +1256,23 @@ export default function Studio2Page() {
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
       setForkedFromTitle(draft.forkedFromTitle ?? null);
-      setStoryLang(draft.language ?? language);
+      if (draft.language) {
+        setStoryLang(draft.language);
+      } else {
+        // Language was never persisted for this story (created before that
+        // field existed, or a legacy/classic entry) -- detect it from the
+        // real script instead of assuming this browser's own UI language,
+        // which can easily be wrong for the story's actual content.
+        setStoryLang(language);
+        fetch("/api/detect-language", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blocks: draft.scriptBlocks }),
+        })
+          .then((r) => r.json())
+          .then((d) => { if (d?.language) setStoryLang(d.language); })
+          .catch(() => {});
+      }
       setStoryHasAudio(!!draft.audioUrl);
       const savedAvatars = draft.characterAvatars ?? {};
       const hasStale = Object.values(savedAvatars).some((u) => (u as string).includes("dicebear.com"));

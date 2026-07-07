@@ -318,25 +318,33 @@ export default function LessonEditor({
                 <button
                   key={id}
                   onClick={() => togglePendingLabel(id)}
-                  className="w-full rounded-2xl overflow-hidden text-start transition-all active:scale-[0.98]"
-                  style={{ border: isSelected ? `2px solid ${color.text}` : "2px solid transparent" }}
+                  className="w-full flex flex-col gap-2.5 p-4 rounded-2xl text-start transition-all active:scale-[0.98]"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: isSelected ? `1.5px solid ${color.text}` : "1px solid rgba(255,255,255,0.09)",
+                  }}
                 >
-                  <div className="flex items-center justify-between gap-2 px-4 py-3" style={{ background: color.solid }}>
-                    <span className="text-fs-body font-bold" style={{ color: "rgba(255,255,255,0.92)" }}>{label}</span>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {isSelected && (
-                        <span
-                          className="w-5 h-5 rounded-full flex items-center justify-center font-bold"
-                          style={{ background: "#05080F", color: color.text, fontSize: "10px" }}
-                        >
-                          ✓
-                        </span>
-                      )}
-                      <Icon name={icon} size={18} style={{ color: "rgba(255,255,255,0.85)" }} />
+                  <div className="flex items-center justify-between w-full">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: color.solid }}
+                    >
+                      <Icon name={icon} size={18} style={{ color: "rgba(255,255,255,0.9)" }} />
                     </div>
+                    {isSelected && (
+                      <span
+                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center font-bold"
+                        style={{ background: color.text, color: "#05080F", fontSize: "10px" }}
+                      >
+                        ✓
+                      </span>
+                    )}
                   </div>
-                  <div className="px-4 py-3" style={{ background: "#05080F" }}>
-                    <p className="text-fs-body leading-snug" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  <div>
+                    <p className="text-fs-body font-bold leading-tight" style={{ color: isSelected ? color.text : "rgba(255,255,255,0.85)" }}>
+                      {label}
+                    </p>
+                    <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
                       {desc}
                     </p>
                   </div>
