@@ -110,10 +110,126 @@ function CalendarHeatmap({ days }: { days: number[] }) {
   );
 }
 
+// ── Share Maya's month ─────────────────────────────────────────────────────────
+// Compiles the child's monthly summary into a short share line plus a
+// generated image card, then hands off to whatever the platform supports —
+// native share sheet (with the image attached where possible), or a WhatsApp
+// deep link + clipboard copy as a fallback, matching the pattern already
+// used for sharing individual stories in ShareSheet.tsx.
+
+function buildMonthShareText(child: typeof MOCK_CHILDREN[0]): string {
+  const topThemes = [...child.lessons].sort((a, b) => b.count - a.count).slice(0, 2).map((l) => l.label);
+  const themePart = topThemes.length === 2 ? `${topThemes[0]} & ${topThemes[1]}`
+    : topThemes.length === 1 ? topThemes[0]
+    : child.topTheme;
+  return `${child.name} listened to ${child.storiesThisMonth} screen-free bedtime stories this month exploring ${themePart}. 🌙`;
+}
+
+async function buildMonthShareImage(child: typeof MOCK_CHILDREN[0], text: string): Promise<Blob | null> {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  const W = 1080, H = 1350;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#0d1225");
+  bg.addColorStop(1, "#080d1a");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Soft glow accents
+  const glow = ctx.createRadialGradient(W * 0.5, H * 0.28, 40, W * 0.5, H * 0.28, 520);
+  glow.addColorStop(0, "rgba(167,139,250,0.28)");
+  glow.addColorStop(1, "rgba(167,139,250,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = "center";
+
+  // Moon + child initial bubble
+  ctx.font = "700 120px system-ui, sans-serif";
+  ctx.fillStyle = "#fbbf24";
+  ctx.fillText("🌙", W / 2, 300);
+
+  ctx.font = "800 64px system-ui, sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(child.name, W / 2, 430);
+
+  ctx.font = "600 44px system-ui, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  wrapText(ctx, text.replace(" 🌙", ""), W / 2, 540, 860, 60);
+
+  // Top themes
+  const topThemes = [...child.lessons].sort((a, b) => b.count - a.count).slice(0, 2);
+  const pillY = 900;
+  const pillColors = ["#4fc3f7", "#f472b6"];
+  const offsets = topThemes.length > 1 ? [-220, 220] : [0];
+  topThemes.forEach((theme, i) => {
+    ctx.font = "700 40px system-ui, sans-serif";
+    ctx.fillStyle = pillColors[i] ?? theme.color;
+    ctx.fillText(theme.label, W / 2 + offsets[i], pillY);
+  });
+
+  ctx.font = "700 40px system-ui, sans-serif";
+  ctx.fillStyle = "#fbbf24";
+  ctx.fillText(`${child.storiesThisMonth} stories · ${child.streak}-night streak`, W / 2, 1020);
+
+  ctx.font = "600 32px system-ui, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.fillText("NightStory — screen-free bedtime stories", W / 2, H - 80);
+
+  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
+}
+
+function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
+  const words = text.split(" ");
+  let line = "";
+  let cursorY = y;
+  for (const word of words) {
+    const testLine = line ? `${line} ${word}` : word;
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      ctx.fillText(line, x, cursorY);
+      line = word;
+      cursorY += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  if (line) ctx.fillText(line, x, cursorY);
+}
+
+async function shareChildMonth(child: typeof MOCK_CHILDREN[0]): Promise<"shared" | "copied" | "opened-whatsapp"> {
+  const text = buildMonthShareText(child);
+  const imageBlob = await buildMonthShareImage(child, text).catch(() => null);
+  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  if (imageBlob && canNativeShare) {
+    const file = new File([imageBlob], `${child.name}-month.png`, { type: "image/png" });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ title: "NightStory", text, files: [file] });
+      return "shared";
+    }
+  }
+  if (canNativeShare) {
+    await navigator.share({ title: "NightStory", text });
+    return "shared";
+  }
+
+  // No native share sheet available — copy the summary and hand off to
+  // WhatsApp's own deep link, same fallback used for individual story shares.
+  await navigator.clipboard?.writeText(text).catch(() => {});
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  return "opened-whatsapp";
+}
+
 // ── Single child journey card ─────────────────────────────────────────────────
 
 function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
   const [open, setOpen] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "sharing" | "done">("idle");
   const { t } = useLanguage();
   const hours = Math.floor(child.totalMinutes / 60);
   const mins  = child.totalMinutes % 60;
@@ -243,13 +359,23 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
         <button
           className="w-full py-2.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]"
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.09)",
-            color: "rgba(255,255,255,0.4)",
+            background: shareState === "done" ? "rgba(79,195,247,0.1)" : "rgba(255,255,255,0.04)",
+            border: `1px solid ${shareState === "done" ? "rgba(79,195,247,0.3)" : "rgba(255,255,255,0.09)"}`,
+            color: shareState === "done" ? "#4fc3f7" : "rgba(255,255,255,0.4)",
           }}
-          onClick={() => {}}
+          disabled={shareState === "sharing"}
+          onClick={async () => {
+            setShareState("sharing");
+            try {
+              const outcome = await shareChildMonth(child);
+              setShareState("done");
+              setTimeout(() => setShareState("idle"), outcome === "opened-whatsapp" ? 3000 : 2000);
+            } catch {
+              setShareState("idle");
+            }
+          }}
         >
-          Share {child.name}&apos;s month with family 🌙
+          {shareState === "sharing" ? "Preparing…" : shareState === "done" ? "✓ Ready to share!" : `Share ${child.name}'s month with family 🌙`}
         </button>
       </div>}
     </div>
@@ -274,6 +400,9 @@ export default function StoryJourney() {
             {t("storyJourneyTitle" as TranslationKey)}
           </p>
           <p className="text-white/25 text-fs-body mt-0.5 text-left">{t("monthlyReflection" as TranslationKey)}</p>
+          <p className="text-white/18 text-fs-body mt-1 text-left" style={{ lineHeight: 1.5 }}>
+            {t("privacyGuardNote" as TranslationKey)}
+          </p>
         </div>
         <span
           className="text-white/30 text-fs-body transition-transform"

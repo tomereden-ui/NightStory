@@ -239,10 +239,11 @@ export const translations = {
     // Story Journey section
     storyJourneyTitle: "Story Journey ✨",
     monthlyReflection: "Monthly reflection for each child",
+    privacyGuardNote: "🔒 NightStory Privacy Guard: This reflection is generated locally based purely on the story tags in your library. We never profile your child, and your data is never sold or used for ad targeting.",
     previewMockData: "Preview — showing example data. Real tracking coming soon.",
     thisMonthExpand: "This month · tap to expand",
     thisMonthClose: "This month · tap to close",
-    valuesHeard: "Values heard this month",
+    valuesHeard: "Themes & Values Explored in Stories",
     bedtimeRitual: "Bedtime ritual — last 28 nights",
     recentStoriesLabel: "Recent stories",
     calNone: "none",

@@ -732,7 +732,13 @@ export default function HomePage() {
       </div>
 
       {/* ── Content ── */}
-      {(loading || storiesLoading) ? (
+      {/* Only the true first load (before any child/story data has ever
+          rendered) shows the skeleton. Switching the active child re-fetches
+          via storiesLoading, but the previous rails stay mounted and just
+          dim briefly -- swapping the whole tree for a differently-sized
+          skeleton on every switch was causing layout shift and a jarring
+          full unmount/remount each time. */}
+      {loading ? (
         <div className="flex flex-col gap-8">
           {[0, 1, 2].map((i) => (
             <div key={i}>
@@ -745,7 +751,13 @@ export default function HomePage() {
           ))}
         </div>
       ) : (
-        <>
+        <div
+          style={{
+            opacity: storiesLoading ? 0.5 : 1,
+            pointerEvents: storiesLoading ? "none" : "auto",
+            transition: "opacity 0.2s ease",
+          }}
+        >
           {/* Create CTA — prominent at top when no stories yet */}
           {stories.length === 0 && (
             <div className="px-5 mb-8">
@@ -875,7 +887,7 @@ export default function HomePage() {
 
           {/* ── Create CTA (bottom) ── */}
           {stories.length > 0 && <CreateCTA childName={activeChild?.name} />}
-        </>
+        </div>
       )}
 
       {/* Desktop grid override: two-column layout for rails */}
