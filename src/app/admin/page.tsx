@@ -9,6 +9,7 @@ import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import ScriptTab from "@/components/studio/ScriptTab";
 import VoicePicker from "@/components/studio/VoicePicker";
 import Icon from "@/components/ui/Icon";
+import { getNarratorVoiceId } from "@/lib/narratorPreference";
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -1236,10 +1237,13 @@ export default function AdminPage() {
     setReassignRunning(true);
     setReassignLog([{ type: "info", text: "applyAll" in body ? "Scanning every story in the library…" : `Reassigning story ${(body as { storyId: string }).storyId}…` }]);
     try {
+      // narratorVoiceId comes from this browser's own default-narrator setting —
+      // there's no per-family preference persisted server-side, so the Narrator
+      // in every reassigned story gets whichever voice is set here.
       const res = await fetch("/api/admin/reassign-voices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, narratorVoiceId: getNarratorVoiceId() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1249,7 +1253,7 @@ export default function AdminPage() {
       const d = data as { totalStories: number; storiesChanged: number; storiesSkipped: number; totalBlocksChanged: number; results: Array<{ storyId: string; title: string; blocksChanged: number; skippedReason?: string }> };
       setReassignLog((l) => [
         ...l,
-        { type: "success", text: `✅ Done — ${d.storiesChanged}/${d.totalStories} stories updated, ${d.totalBlocksChanged} block${d.totalBlocksChanged === 1 ? "" : "s"} recast (${d.storiesSkipped} skipped — no character profile data)` },
+        { type: "success", text: `✅ Done — ${d.storiesChanged}/${d.totalStories} stories updated, ${d.totalBlocksChanged} block${d.totalBlocksChanged === 1 ? "" : "s"} recast (${d.storiesSkipped} skipped — no script blocks)` },
         ...d.results.filter((r) => r.blocksChanged > 0).map((r) => ({ type: "info" as const, text: `  · "${r.title}" — ${r.blocksChanged} block(s) recast` })),
       ]);
     } catch (e) {
@@ -1782,10 +1786,11 @@ export default function AdminPage() {
                 <div>
                   <p className="text-white font-bold text-fs-body">🎭 Reassign Cast Voices</p>
                   <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
-                    Recomputes each character&apos;s assigned voice using nature-based matching (gender/style/age)
-                    from the story&apos;s saved character profiles. Only updates the voice id on each block —
-                    already-produced audio is unaffected until the story is re-produced. Stories without
-                    saved character profiles are skipped.
+                    Runs a fresh character analysis (type/appearance) for every speaking character, then
+                    recomputes each one&apos;s assigned voice using nature-based matching (gender/style/age).
+                    The Narrator is excluded from analysis and always gets this browser&apos;s own default
+                    narrator voice instead. Only updates the voice id on each block — already-produced audio
+                    is unaffected until the story is re-produced.
                   </p>
                 </div>
               </div>

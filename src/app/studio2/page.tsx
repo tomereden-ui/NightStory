@@ -28,7 +28,7 @@ import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { fetchBankAvatars, resolveCharacterAvatar, buildDiceBearUrl, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
-import { assignVoicesToCharacters, pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
+import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
@@ -284,8 +284,6 @@ function CharacterCards({
   onAvatarChange,
   onVoiceChange,
   storyLanguage,
-  isAdmin,
-  onReassignCast,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
@@ -297,8 +295,6 @@ function CharacterCards({
   onVoiceChange: (characterName: string, voiceId: string) => void;
   /** The story's actual content language — falls back to UI language if not provided. */
   storyLanguage?: string;
-  isAdmin?: boolean;
-  onReassignCast?: () => void;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
   const { language } = useLanguage();
@@ -328,16 +324,6 @@ function CharacterCards({
         <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>
           {i18nT(language, "castSection")}
         </p>
-        {isAdmin && onReassignCast && (
-          <button
-            onClick={onReassignCast}
-            className="text-fs-body font-semibold px-2.5 py-1 rounded-full transition-all active:scale-95"
-            style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(167,139,250,0.35)", color: "#c4b5fd" }}
-            title="Re-run nature-based voice matching for every character"
-          >
-            🎭 Assign Cast
-          </button>
-        )}
       </div>
       <div className="flex gap-3 pb-2 -mx-5 px-5" style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
         {cast.map(({ characterName, voice }) => (
@@ -1795,20 +1781,6 @@ export default function Studio2Page() {
     setMetaDirty(true);
   }, []);
 
-  // ─── Admin-only: re-run nature-based voice assignment for every cast member ──
-
-  const handleReassignCast = useCallback(() => {
-    // heroName="" disables the hero-lock so every character is (re)cast by
-    // nature — same approach as the admin "Reassign Cast Voices" tool.
-    const voiceMap = assignVoicesToCharacters(scriptBlocks, "", undefined, characterProfiles);
-    setScriptBlocks((prev) => prev.map((b) => {
-      if (b.characterName === "SFX") return b;
-      const newVoice = voiceMap[b.characterName];
-      return newVoice ? { ...b, assignedVoiceId: newVoice } : b;
-    }));
-    markScriptDirty();
-  }, [scriptBlocks, characterProfiles]);
-
   // ─── Fetch cover ─────────────────────────────────────────────────────────────
 
   const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
@@ -2391,8 +2363,6 @@ export default function Studio2Page() {
                     onDirectCharacter={(_, instruction) => handleRevise(instruction)}
                     onAvatarChange={handleAvatarChange}
                     onVoiceChange={handleCharacterVoiceChange}
-                    isAdmin={isAdmin}
-                    onReassignCast={handleReassignCast}
                   />
                   <LessonEditor
                     lessons={lessons}
