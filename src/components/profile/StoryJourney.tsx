@@ -23,8 +23,7 @@ const MOCK_CHILDREN = [
       { label: "Courage", count: 3, color: "#fbbf24" },
       { label: "Friendship", count: 2, color: "#4fc3f7" },
     ],
-    recentTitles: ["The Dragon Who Was Afraid of Fire", "Peter Pan", "Maya and the Star Garden"],
-    // last 28 days: 0 = no story, 1 = one story, 2 = two stories
+    // last 28 nights: 0 = quiet night, 1 = cozy listening (passive), 2 = active creation
     calendar: [1,0,2,1,0,1,1,2,0,0,1,1,2,0,1,1,1,2,0,1,2,0,1,1,1,2,1,1],
   },
   {
@@ -40,7 +39,6 @@ const MOCK_CHILDREN = [
       { label: "Courage", count: 3, color: "#fbbf24" },
       { label: "Curiosity", count: 2, color: "#a78bfa" },
     ],
-    recentTitles: ["Space Rangers: Lost on Mars", "The Brave Little Robot"],
     calendar: [0,0,1,0,0,1,1,0,0,0,1,0,1,0,0,1,1,0,0,1,1,0,0,1,1,2,1,1],
   },
 ];
@@ -53,9 +51,10 @@ export const MOCK_JOURNEY = MOCK_CHILDREN;
 const GAP = 14;    // px gap between day nodes -- generous breathing room
 const NODE = 22;   // px diameter of each day node
 
-// "Twilight Sky" tones, pared back to minimal/high-end: a hollow ring for an
-// empty night, a small solid pastel dot for one story, and a solid gold dot
-// with a soft diffused glow for a deep multi-story night.
+// "Twilight Sky" tones, pared back to minimal/high-end: a hollow ring for a
+// quiet night, a small solid pastel dot for a passive listening night
+// ("Cozy Listening"), and a solid gold dot with a soft diffused glow for a
+// night the child actively created a story ("Active Creation").
 function cellStyle(count: number): React.CSSProperties {
   if (count === 0) return { background: "transparent", border: "1px solid rgba(255,255,255,0.16)" };
   if (count === 1) return { background: "rgba(165,180,252,0.9)" };
@@ -100,6 +99,7 @@ function CalendarHeatmap({ days }: { days: number[] }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: GAP }}>
         {days.map((count, i) => {
           const isToday = i === todayIndex;
+          const isCreation = count >= 2;
           return (
             <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
               {isToday && (
@@ -112,12 +112,24 @@ function CalendarHeatmap({ days }: { days: number[] }) {
                 />
               )}
               <div
-                title={isToday ? "Tonight" : count > 0 ? `${count} ${count === 1 ? "story" : "stories"}` : undefined}
+                title={isToday ? "Tonight" : isCreation ? "Active Creation" : count === 1 ? "Cozy Listening" : undefined}
                 style={{
                   width: NODE, height: NODE, borderRadius: "50%", position: "relative", ...cellStyle(count),
                   ...(isToday ? { boxShadow: "0 0 0 2px rgba(251,191,36,0.7), 0 0 10px rgba(251,191,36,0.45)" } : {}),
                 }}
-              />
+              >
+                {/* Sparkle marks an "Active Creation" night -- purely decorative
+                    overlay, positioned outside the node's own box so it never
+                    grows the node's width/height or the grid's row height. */}
+                {isCreation && (
+                  <Icon
+                    name="sparkles"
+                    size={9}
+                    strokeWidth={1.2}
+                    style={{ position: "absolute", top: -3, right: -3, color: "#fff7d6", filter: "drop-shadow(0 0 2px rgba(251,191,36,0.9))" }}
+                  />
+                )}
+              </div>
             </div>
           );
         })}
@@ -435,21 +447,6 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 
         {/* Pillow Talk Starter */}
         <PillowTalkCard child={child} />
-
-        {/* Recent stories */}
-        <div>
-          <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-            {t("recentStoriesLabel" as TranslationKey)}
-          </p>
-          <div className="flex flex-col gap-1">
-            {child.recentTitles.map((title, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: "rgba(79,195,247,0.5)" }} />
-                <p className="text-white/50 text-fs-body truncate">{title}</p>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Share CTA */}
         <button
