@@ -1178,7 +1178,10 @@ export default function Studio2Page() {
   // for a half-finished thought.
   const [directionValid, setDirectionValid]           = useState(false);
   const [checkingDirection, setCheckingDirection]     = useState(false);
-  const [directionCheckReason, setDirectionCheckReason] = useState<string | null>(null);
+  // Short, specific problems Gemini found -- unreasonable free text, a
+  // contradiction between the free text and a selected chip, or selected
+  // chips contradicting each other. Empty once the check passes clean.
+  const [directionCheckIssues, setDirectionCheckIssues] = useState<string[]>([]);
 
   // Resets validation state whenever the note is cleared (Cancel, or a
   // successful Update Script which clears it on completion) so the next
@@ -1187,7 +1190,7 @@ export default function Studio2Page() {
     if (!directorNote.trim()) {
       setDirectionValid(false);
       setCheckingDirection(false);
-      setDirectionCheckReason(null);
+      setDirectionCheckIssues([]);
     }
   }, [directorNote]);
 
@@ -1196,25 +1199,28 @@ export default function Studio2Page() {
     // Any edit invalidates a previous check -- needs a fresh "Check Wording"
     // click before Update Script can enable.
     setDirectionValid(false);
-    setDirectionCheckReason(null);
+    setDirectionCheckIssues([]);
   };
 
   const checkDirectorNote = async () => {
     if (!directorNote.trim() || checkingDirection) return;
     setCheckingDirection(true);
-    setDirectionCheckReason(null);
+    setDirectionCheckIssues([]);
     try {
+      const chipInstructions = DIRECTOR_CHIPS
+        .filter((c) => selectedMoodChips.has(c.labelKey))
+        .map((c) => c.instruction);
       const res = await fetch("/api/validate-direction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction: directorNote, blocks: scriptBlocks, summary }),
+        body: JSON.stringify({ instruction: directorNote, chipInstructions, blocks: scriptBlocks, summary }),
       });
-      const data = await res.json() as { reasonable?: boolean; reason?: string };
+      const data = await res.json() as { reasonable?: boolean; issues?: string[] };
       setDirectionValid(data.reasonable !== false);
-      setDirectionCheckReason(data.reasonable === false ? (data.reason || null) : null);
+      setDirectionCheckIssues(data.reasonable === false ? (data.issues ?? []) : []);
     } catch {
       setDirectionValid(false);
-      setDirectionCheckReason(null);
+      setDirectionCheckIssues([]);
     } finally {
       setCheckingDirection(false);
     }
@@ -2723,8 +2729,15 @@ export default function Studio2Page() {
                   onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
                 />
 
-                {directionCheckReason && (
-                  <p className="text-fs-body" style={{ color: "rgba(251,191,36,0.8)" }}>⚠ {directionCheckReason}</p>
+                {directionCheckIssues.length > 0 && (
+                  <ul className="flex flex-col gap-1">
+                    {directionCheckIssues.map((issue, i) => (
+                      <li key={i} className="text-fs-body flex gap-1.5" style={{ color: "rgba(251,191,36,0.8)" }}>
+                        <span>⚠</span>
+                        <span>{issue}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
 
                 <div className="flex gap-2">
