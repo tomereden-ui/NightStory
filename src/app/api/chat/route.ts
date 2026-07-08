@@ -139,12 +139,26 @@ export async function POST(req: NextRequest) {
     // Detect STORY_READY signal
     const readyMatch = raw.match(/\[STORY_READY\]([\s\S]*?)\[\/STORY_READY\]/);
     if (readyMatch) {
-      let storyParams: Record<string, string> | undefined;
+      let parsed: (Record<string, string> & { clarificationChips?: unknown }) | undefined;
       try {
-        storyParams = JSON.parse(readyMatch[1].trim());
+        parsed = JSON.parse(readyMatch[1].trim());
       } catch { /* ignore — proceed without params */ }
 
+      // Smart Chip Strategy — when the guide is still resolving a typo or
+      // invented word, it bundles guess options into the same block instead
+      // of a separate signal. That's a mid-clarification pause, not a truly
+      // finished concept, so it's surfaced as its own field and storyReady
+      // stays false until the user picks (or re-confirms) a word.
+      const clarificationChips = Array.isArray(parsed?.clarificationChips)
+        ? parsed.clarificationChips.map((c) => String(c).trim()).filter(Boolean).slice(0, 4)
+        : [];
+      const { clarificationChips: _omit, ...storyParams } = parsed ?? {};
       const reply = raw.replace(/\[STORY_READY\][\s\S]*?\[\/STORY_READY\]/, "").trim();
+
+      if (clarificationChips.length > 0) {
+        return NextResponse.json({ reply, storyReady: false, clarificationChips });
+      }
+
       const userConfirmedReady = await detectExplicitGoAhead(genAI, lastMessage);
       return NextResponse.json({ reply, storyReady: true, storyParams, userConfirmedReady });
     }

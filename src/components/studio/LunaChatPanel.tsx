@@ -12,6 +12,10 @@ import type { Language } from "@/types";
 interface Message {
   role: "user" | "model";
   content: string;
+  /** Smart-chip word clarification (typo/invented-word guesses) attached to
+   *  this specific model message — tapping one sends it as the next message,
+   *  same as if the user had typed it themselves. */
+  chips?: string[];
 }
 
 interface ChatResponse {
@@ -21,6 +25,10 @@ interface ChatResponse {
   /** True when the user's own last message already explicitly said to go
    *  ahead (e.g. "yes let's go") -- skips the redundant quick-reply chip tap. */
   userConfirmedReady?: boolean;
+  /** Word-clarification options (typo/invented-word guesses) for the user to
+   *  tap instead of retyping — present only while Luna is still resolving an
+   *  unclear word, before the story concept is actually ready. */
+  clarificationChips?: string[];
 }
 
 // ─── Typing dots ──────────────────────────────────────────────────────
@@ -74,12 +82,16 @@ function MessageBubble({
   isPlaying,
   isSpeechLoading,
   onTogglePlay,
+  onSelectChip,
+  chipsDisabled,
 }: {
   msg: Message;
   childEmoji?: string;
   isPlaying?: boolean;
   isSpeechLoading?: boolean;
   onTogglePlay?: () => void;
+  onSelectChip?: (chip: string) => void;
+  chipsDisabled?: boolean;
 }) {
   const isLuna = msg.role === "model";
   // Split Luna messages on newlines into separate visual bubbles
@@ -112,6 +124,28 @@ function MessageBubble({
             {part}
           </div>
         ))}
+
+        {/* Smart-chip word clarification — tapping one sends it as the next
+            message, same as typing it. */}
+        {isLuna && msg.chips && msg.chips.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-0.5">
+            {msg.chips.map((chip, i) => (
+              <button
+                key={i}
+                disabled={chipsDisabled}
+                onClick={() => onSelectChip?.(chip)}
+                className="px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95 disabled:opacity-50"
+                style={{
+                  background: "linear-gradient(135deg, rgba(251,191,36,0.16), rgba(245,158,11,0.1))",
+                  border: "1.5px solid rgba(251,191,36,0.4)",
+                  color: "#fcd34d",
+                }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Per-message listen button — Luna messages only */}
         {isLuna && onTogglePlay && (
@@ -420,8 +454,8 @@ export default function LunaChatPanel({
 
   // ─── Send message ──────────────────────────────────────────────────
 
-  async function sendMessage() {
-    const text = input.trim();
+  async function sendMessage(overrideText?: string) {
+    const text = (overrideText ?? input).trim();
     if (!text || loading) return;
 
     if (!firstMsgSent.current) {
@@ -480,7 +514,7 @@ export default function LunaChatPanel({
         console.error("[Luna] Send failed — retrying once:", err);
         data = await sendOnce();
       }
-      setMessages((prev) => [...prev, { role: "model", content: data.reply }]);
+      setMessages((prev) => [...prev, { role: "model", content: data.reply, chips: data.clarificationChips?.length ? data.clarificationChips : undefined }]);
       // Luna's own reply already ends with a language-correct "anything else
       // to add?" question per the STORY_READY prompt rule — no separate
       // synthetic follow-up needed (a leftover from before that rule existed
@@ -671,6 +705,8 @@ export default function LunaChatPanel({
               if (speakingIdx === i) stopSpeaking();
               else speakMessage(msg.content, i);
             } : undefined}
+            onSelectChip={(chip) => sendMessage(chip)}
+            chipsDisabled={loading}
           />
         ))}
         {loading && <TypingDots />}
@@ -807,7 +843,7 @@ export default function LunaChatPanel({
 
           {/* Send button */}
           <button
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={!input.trim() || loading}
             className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-90 disabled:opacity-20"
             style={{
