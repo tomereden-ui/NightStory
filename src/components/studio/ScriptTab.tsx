@@ -39,10 +39,9 @@ interface ScriptTabProps {
   onSaveBlock?: (blockId: string) => void;
   /** The story's actual content language — falls back to UI language if not provided. */
   storyLanguage?: string;
-  /** When true (and the change handlers below are supplied), title/summary render as editable fields. */
+  /** When true (and onTitleChange is supplied), the title renders as an editable field. Summary is always read-only. */
   isAdmin?: boolean;
   onTitleChange?: (title: string) => void;
-  onSummaryChange?: (summary: string) => void;
   /** Disables raw per-line text editing, block deletion, and manual/AI block
    *  insertion — voice/cast changes and AI-assisted revise tools stay available. */
   readOnlyScript?: boolean;
@@ -408,7 +407,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, onSummaryChange, readOnlyScript = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -883,15 +882,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                     <span>{summaryLoading ? "Loading…" : summaryPlaying ? "Stop" : "Play"}</span>
                   </button>
                 </div>
-                {isAdmin && onSummaryChange ? (
-                  <textarea
-                    value={summary}
-                    onChange={(e) => onSummaryChange(e.target.value)}
-                    rows={4}
-                    className="w-full bg-transparent outline-none resize-none"
-                    style={{ fontSize: "var(--fs-body)", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400, border: "1px solid rgba(79,195,247,0.25)", borderRadius: 8, padding: 8 }}
-                  />
-                ) : (() => {
+                {(() => {
                   const LIMIT = 220;
                   const long = summary.length > LIMIT;
                   const shown = !summaryExpanded && long ? summary.slice(0, LIMIT).trimEnd() : summary;

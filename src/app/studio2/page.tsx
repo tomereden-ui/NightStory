@@ -774,25 +774,19 @@ function CharacterCard({
   isOpen: boolean;
   onOpen: () => void;
 }) {
-  const isNarrator = characterName === "Narrator";
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => { setImgError(false); }, [avatarUrl]);
 
-  const size = isNarrator ? 72 : 64;
-  // Narrator: gold/amber. Cast: cyan-to-purple gradient.
-  const ringActive = isNarrator
-    ? "linear-gradient(135deg,#f59e0b,#fbbf24,#f59e0b)"
-    : "linear-gradient(135deg,#4fc3f7,#a78bfa)";
+  const size = 64;
+  const ringActive = "linear-gradient(135deg,#4fc3f7,#a78bfa)";
   const ringIdle = "linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))";
-  const glowActive = isNarrator
-    ? "0 0 22px rgba(245,158,11,0.5), 0 0 40px rgba(251,191,36,0.2)"
-    : "0 0 20px rgba(79,195,247,0.35), 0 0 36px rgba(167,139,250,0.2)";
-  const accentColor = isNarrator ? "#fbbf24" : "rgba(79,195,247,0.8)";
-  const displayUrl = avatarUrl || buildDiceBearUrl(characterName, isNarrator ? "narrator" : "adult");
+  const glowActive = "0 0 20px rgba(79,195,247,0.35), 0 0 36px rgba(167,139,250,0.2)";
+  const accentColor = "rgba(79,195,247,0.8)";
+  const displayUrl = avatarUrl || buildDiceBearUrl(characterName, "adult");
 
   return (
-    <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: isNarrator ? 80 : 72 }}>
+    <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 72 }}>
       <button onClick={onOpen} className="flex flex-col items-center gap-1.5 w-full" title={`Direct ${characterName}`}>
         {/* gradient ring wrapper */}
         <div style={{
@@ -812,18 +806,11 @@ function CharacterCard({
               <img src={displayUrl} alt={characterName} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={() => setImgError(true)} />
             ) : (
               <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
-                background: isNarrator ? "linear-gradient(135deg,rgba(120,80,10,0.5),rgba(80,50,5,0.5))" : "linear-gradient(135deg,rgba(30,80,120,0.5),rgba(60,20,120,0.5))" }}>
+                background: "linear-gradient(135deg,rgba(30,80,120,0.5),rgba(60,20,120,0.5))" }}>
                 <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: accentColor }}>{characterName.charAt(0).toUpperCase()}</span>
               </div>
             )}
           </div>
-          {/* Narrator crown badge */}
-          {isNarrator && (
-            <span style={{
-              position:"absolute", top:-6, left:"50%", transform:"translateX(-50%)",
-              fontSize:14, filter:"drop-shadow(0 0 6px rgba(245,158,11,0.8))",
-            }}>👑</span>
-          )}
         </div>
         <span className="text-fs-body font-bold uppercase tracking-widest text-center leading-tight truncate w-full"
           style={{ color: accentColor }}>
@@ -1970,11 +1957,6 @@ export default function Studio2Page() {
     setMetaDirty(true);
   }, []);
 
-  const handleSummaryChange = useCallback((next: string) => {
-    setSummary(next);
-    setMetaDirty(true);
-  }, []);
-
   // Erase the whole generated story and go back to a blank creation state —
   // same idea as the "Start over" reset on the Chat/Step-by-step tabs, just
   // applied to an already-generated script instead of an in-progress draft.
@@ -2566,7 +2548,6 @@ export default function Studio2Page() {
               title={storyTitle}
               isAdmin={isAdmin}
               onTitleChange={handleTitleChange}
-              onSummaryChange={handleSummaryChange}
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
               onRegenerateCover={scriptBlocks.length > 0 ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
