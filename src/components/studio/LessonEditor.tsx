@@ -238,14 +238,17 @@ export default function LessonEditor({
 
   // ─── Expanded panel — full details (scrollable) + add/remove ───────────────
 
-  // Apply should only enable once the user has actually CHANGED the
-  // selection from what's already confirmed for this story -- previously
-  // this was just "at least one selected", so opening the editor on a story
-  // that already has lessons (which pre-selects them) enabled Apply
-  // immediately even though nothing had changed yet.
+  // Apply should only enable once the user has actually CHANGED something
+  // from what's already confirmed for this story -- previously this was
+  // just "at least one selected", so opening the editor on a story that
+  // already has lessons (which pre-selects them) enabled Apply immediately
+  // even though nothing had changed yet. A change means either the picker
+  // selection differs from what's confirmed, OR an existing lesson was
+  // erased (which may not touch pendingLabels at all if it wasn't a preset
+  // in the grid to begin with).
   const selectionUnchanged = pendingLabels.length === currentPresets.length
     && pendingLabels.every((l) => currentPresets.includes(l));
-  const canApply = !selectionUnchanged;
+  const canApply = !selectionUnchanged || pendingRemoved.length > 0;
 
   return (
     <div

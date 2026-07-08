@@ -1121,6 +1121,7 @@ export default function Studio2Page() {
   // clear it from the parent without duplicating its reset logic here).
   const [wizardResetKey, setWizardResetKey] = useState(0);
   const [wizardResetConfirm, setWizardResetConfirm] = useState(false);
+  const [scriptResetConfirm, setScriptResetConfirm] = useState(false);
 
   // ─── Lesson state ───────────────────────────────────────────────────────────
   const [lessons, setLessons]               = useState<string[]>([]);
@@ -1974,6 +1975,36 @@ export default function Studio2Page() {
     setMetaDirty(true);
   }, []);
 
+  // Erase the whole generated story and go back to a blank creation state —
+  // same idea as the "Start over" reset on the Chat/Step-by-step tabs, just
+  // applied to an already-generated script instead of an in-progress draft.
+  const resetScript = useCallback(() => {
+    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+    setScriptBlocks([]);
+    setPromptText("");
+    setSummary("");
+    setCoverUrl("");
+    setCoverPrompt("");
+    setStoryTitle("");
+    setLessons([]);
+    setLessonImplementations([]);
+    setMoralLessons([]);
+    setScenes([]);
+    setEditingStoryId(null);
+    setForkedFromTitle(null);
+    setCharacterAvatars({});
+    setCharacterTypes({});
+    setCharacterDescriptions({});
+    setCharacterProfiles({});
+    setStoryHasAudio(false);
+    setHasScriptChanges(false);
+    setHasUnsavedChanges(false);
+    setCompletedJob(null);
+    cleanLessonsRef.current = [];
+    setScriptResetConfirm(false);
+    setActiveTab(startOnPrompt ? "step-by-step" : "chat");
+  }, [startOnPrompt]);
+
   // ─── Fetch cover ─────────────────────────────────────────────────────────────
 
   const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
@@ -2434,6 +2465,40 @@ export default function Studio2Page() {
         {/* Script tab */}
         {activeTab === "script" && hasScript && (
           <>
+
+            {/* Reset — same idea as "Start over" on the Chat/Step-by-step tabs,
+                just erasing an already-generated script instead of an
+                in-progress draft. */}
+            <div className="flex items-center gap-2 mb-4">
+              {scriptResetConfirm ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
+                  <button
+                    onClick={resetScript}
+                    className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+                    style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
+                  >
+                    Yes, start over
+                  </button>
+                  <button
+                    onClick={() => setScriptResetConfirm(false)}
+                    className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setScriptResetConfirm(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
+                >
+                  <Icon name="submit" size={12} />
+                  <span>Start over</span>
+                </button>
+              )}
+            </div>
 
             {/* ── In-tab generating placeholder ────────────────────────────── */}
             {generating && (
