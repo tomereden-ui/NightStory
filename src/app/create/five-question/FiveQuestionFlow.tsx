@@ -1095,17 +1095,11 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const [coverPrompt, setCoverPrompt]     = useState("");
   const [isFetchingCover, setIsFetchingCover] = useState(false);
   const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
-  const LS_KEY = "ns-option-images-v5";
   const [optionImages, setOptionImages] = useState<Record<string, string>>({});
   const [imagesGenerating, setImagesGenerating] = useState(false);
 
   // Restore saved draft on mount
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem(LS_KEY);
-      if (cached) setOptionImages(JSON.parse(cached) as Record<string, string>);
-    } catch { /* ignore */ }
-
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
@@ -1188,16 +1182,8 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
           existingImageUrls: Record<string, string>;
         };
 
-        const saveToLS = (imgs: Record<string, string>) => {
-          try { localStorage.setItem(LS_KEY, JSON.stringify(imgs)); } catch { /* ignore */ }
-        };
-
         if (existingImageUrls && Object.keys(existingImageUrls).length > 0) {
-          setOptionImages((prev) => {
-            const next = { ...prev, ...existingImageUrls };
-            saveToLS(next);
-            return next;
-          });
+          setOptionImages((prev) => ({ ...prev, ...existingImageUrls }));
         }
 
         if (!missing?.length) { return; }
@@ -1217,11 +1203,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
               if (cacheRes.ok) {
                 const { imageKey, url: cachedUrl } = await cacheRes.json() as { ok: boolean; imageKey: string; url: string };
                 if (imageKey && cachedUrl) {
-                  setOptionImages((prev) => {
-                    const next = { ...prev, [imageKey]: cachedUrl };
-                    saveToLS(next);
-                    return next;
-                  });
+                  setOptionImages((prev) => ({ ...prev, [imageKey]: cachedUrl }));
                 }
               } else {
                 console.warn("[seedImages] failed:", key, await cacheRes.text().catch(() => ""));
