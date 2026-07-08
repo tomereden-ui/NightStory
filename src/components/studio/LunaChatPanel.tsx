@@ -612,15 +612,15 @@ export default function LunaChatPanel({
   const hasUserMessages = messages.some((m) => m.role === "user");
 
   const LETS_GO_LABELS: Record<string, string> = {
-    he: "לא, בואו נתחיל :)",
-    ar: "لا، هيا بنا :)",
-    fr: "Non, c'est parti :)",
-    es: "¡No, vamos! :)",
-    de: "Nein, los geht's :)",
-    it: "No, andiamo :)",
-    pt: "Não, vamos lá :)",
+    he: "בואו נתחיל!",
+    ar: "هيا بنا!",
+    fr: "C'est parti !",
+    es: "¡Vamos!",
+    de: "Los geht's!",
+    it: "Andiamo!",
+    pt: "Vamos lá!",
   };
-  const letsGoLabel = LETS_GO_LABELS[language] ?? "No, let's go :)";
+  const letsGoLabel = LETS_GO_LABELS[language] ?? "Let's go !";
 
   const QUICK_REPLY_HINT_LABELS: Record<string, string> = {
     he: "תשובה מהירה",
