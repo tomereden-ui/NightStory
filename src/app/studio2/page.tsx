@@ -2486,7 +2486,7 @@ export default function Studio2Page() {
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
                 >
                   <Icon name="submit" size={12} />
-                  <span>Start over</span>
+                  <span>Clear</span>
                 </button>
               )}
             </div>
@@ -2672,15 +2672,19 @@ export default function Studio2Page() {
               };
               return (
               <div
-                className="mt-2 mb-3 rounded-2xl p-4 flex flex-col gap-3"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+                className="mb-4 rounded-2xl p-4 flex flex-col gap-3"
+                style={{
+                  background: "linear-gradient(160deg, rgba(139,92,246,0.09), rgba(79,195,247,0.05))",
+                  border: "1px solid rgba(139,92,246,0.25)",
+                  boxShadow: "0 0 28px rgba(139,92,246,0.06)",
+                }}
               >
                 <button
                   onClick={() => setDirectorNoteExpanded((v) => !v)}
                   className="flex items-center gap-2 w-full text-left"
                 >
-                  <Icon name="edit" size={14} style={{ color: "rgba(255,255,255,0.4)" }} />
-                  <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <Icon name="edit" size={16} style={{ color: "#E9D8FD" }} />
+                  <span className="text-fs-heading font-bold tracking-tight" style={{ color: "#E9D8FD" }}>
                     {i18nT(language, "directorsNote" as never)}
                   </span>
                   {isRevising && (
@@ -2691,7 +2695,7 @@ export default function Studio2Page() {
                   )}
                   <span
                     className="text-fs-body transition-transform"
-                    style={{ color: "rgba(255,255,255,0.3)", marginLeft: isRevising ? 0 : "auto", transform: directorNoteExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                    style={{ color: "rgba(196,181,253,0.5)", marginLeft: isRevising ? 0 : "auto", transform: directorNoteExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
                   >
                     ▾
                   </span>
