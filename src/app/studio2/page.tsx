@@ -1608,6 +1608,10 @@ export default function Studio2Page() {
     setSummary("");
     setCoverUrl("");
     setStoryHasAudio(false);
+    // A brand-new story must never show a previous story's analyzed lessons
+    // while its own script is still being generated/analyzed.
+    setMoralLessons([]);
+    setLessonImplementations([]);
     // Navigate to Script tab immediately so the user sees progress in context
     setActiveTab("script");
 
@@ -2221,6 +2225,7 @@ export default function Studio2Page() {
             onDiscard={() => setChatLocked(false)}
             onGenerating={() => {
               setScriptBlocks([]);
+              setMoralLessons([]);
             }}
             onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
@@ -2233,6 +2238,7 @@ export default function Studio2Page() {
               setStoryTitle(draft.storyTitle ?? "");
               setLessons([]);
               setLessonImplementations([]);
+              setMoralLessons([]);
               setActiveTab("script");
               setTotalExpectedBlocks(rawBlocks.length);
               setIsValidating(true);
@@ -2255,6 +2261,7 @@ export default function Studio2Page() {
                         setIsValidating(false);
                         setTotalExpectedBlocks(undefined);
                         writeDraft({ ...draft, scriptBlocks: blocks, coverUrl: "" }, DRAFT_KEY);
+                        void analyzeLessons(blocks, null);
                       }
                     }, i * 65);
                   });
@@ -2269,6 +2276,7 @@ export default function Studio2Page() {
                         setIsValidating(false);
                         setTotalExpectedBlocks(undefined);
                         writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
+                        void analyzeLessons(rawBlocks, null);
                       }
                     }, i * 65);
                   });
@@ -2341,6 +2349,7 @@ export default function Studio2Page() {
               childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
               onGenerating={() => {
                 setScriptBlocks([]);
+                setMoralLessons([]);
               }}
               onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes }) => {
                 setActiveTab("script");
@@ -2353,6 +2362,7 @@ export default function Studio2Page() {
                 // not necessarily the app's global UI language.
                 setLessons([]);
                 setLessonImplementations([]);
+                setMoralLessons([]);
                 setScenes(fqScenes ?? []);
                 setCharacterAvatars({});
                 setCharacterTypes({});
@@ -2378,6 +2388,7 @@ export default function Studio2Page() {
                           setIsValidating(false);
                           setTotalExpectedBlocks(undefined);
                           writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang }, DRAFT_KEY);
+                          void analyzeLessons(blocks, null);
                         }
                       }, i * 65);
                     });
@@ -2391,6 +2402,7 @@ export default function Studio2Page() {
                           setIsValidating(false);
                           setTotalExpectedBlocks(undefined);
                           writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
+                          void analyzeLessons(rawBlocks, null);
                         }
                       }, i * 65);
                     });
