@@ -1131,14 +1131,19 @@ export default function Studio2Page() {
   const [moralLessons, setMoralLessons]     = useState<MoralLesson[]>([]);
   const [analyzingLessons, setAnalyzingLessons] = useState(false);
 
-  const analyzeLessons = useCallback(async (blocks: ScriptBlock[], storyId?: string | null) => {
+  // languageOverride lets a caller pass a just-resolved language value
+  // directly, rather than relying on the storyLang state closure -- needed
+  // when setStoryLang(...) and this call happen in the same synchronous
+  // effect, where the closure would still see the OLD storyLang (a state
+  // update doesn't take effect until the next render).
+  const analyzeLessons = useCallback(async (blocks: ScriptBlock[], storyId?: string | null, languageOverride?: string) => {
     if (!blocks.length) { setMoralLessons([]); return; }
     setAnalyzingLessons(true);
     try {
       const res = await fetch("/api/analyze-lessons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks, storyId: storyId ?? undefined, language: storyLang }),
+        body: JSON.stringify({ blocks, storyId: storyId ?? undefined, language: languageOverride ?? storyLang }),
       });
       if (!res.ok) return;
       const data = await res.json() as { lessons?: MoralLesson[] };
@@ -1328,13 +1333,17 @@ export default function Studio2Page() {
       setCoverPrompt(draft.coverPrompt ?? "");
       setEditingStoryId(draft.editingStoryId ?? null);
       setForkedFromTitle(draft.forkedFromTitle ?? null);
+      const needsLessonAnalysis = !draft.moralLessons?.length && draft.scriptBlocks.length > 0;
       if (draft.language) {
         setStoryLang(draft.language);
       } else {
         // Language was never persisted for this story (created before that
         // field existed, or a legacy/classic entry) -- detect it from the
         // real script instead of assuming this browser's own UI language,
-        // which can easily be wrong for the story's actual content.
+        // which can easily be wrong for the story's actual content. Lesson
+        // analysis (below) waits for this to resolve rather than firing with
+        // a guessed language, which previously left "already embedded"
+        // lessons permanently analyzed (and persisted) in the wrong language.
         setStoryLang(language);
         fetch("/api/detect-language", {
           method: "POST",
@@ -1342,8 +1351,15 @@ export default function Studio2Page() {
           body: JSON.stringify({ blocks: draft.scriptBlocks }),
         })
           .then((r) => r.json())
-          .then((d) => { if (d?.language) setStoryLang(d.language); })
-          .catch(() => {});
+          .then((d) => {
+            if (d?.language) setStoryLang(d.language);
+            if (needsLessonAnalysis) {
+              void analyzeLessons(draft.scriptBlocks, draft.editingStoryId ?? null, d?.language ?? language);
+            }
+          })
+          .catch(() => {
+            if (needsLessonAnalysis) void analyzeLessons(draft.scriptBlocks, draft.editingStoryId ?? null, language);
+          });
       }
       setStoryHasAudio(!!draft.audioUrl);
       const savedAvatars = draft.characterAvatars ?? {};
@@ -1358,12 +1374,14 @@ export default function Studio2Page() {
       setScenes(draft.scenes ?? []);
       if (draft.moralLessons?.length) {
         setMoralLessons(draft.moralLessons);
-      } else if (draft.scriptBlocks.length) {
+      } else if (needsLessonAnalysis && draft.language) {
         // Either a pre-feature story being opened for the first time, or a
         // fresh generation whose draft didn't carry an analysis yet — analyze
         // now so "already embedded" lessons show up whether or not the story
-        // was ever explicitly created through the lesson picker.
-        void analyzeLessons(draft.scriptBlocks, draft.editingStoryId ?? null);
+        // was ever explicitly created through the lesson picker. When the
+        // language isn't known yet, the detect-language branch above fires
+        // this once the real language resolves instead.
+        void analyzeLessons(draft.scriptBlocks, draft.editingStoryId ?? null, draft.language);
       }
       if (!startOnPrompt) setActiveTab("script");
     } else {
@@ -1650,7 +1668,8 @@ export default function Studio2Page() {
       // itself is in when that's "en" (the default, which adds no explicit
       // override) -- so trust what the server says it actually generated
       // rather than assume the request's own language always held.
-      setStoryLang((data.language as string | undefined) ?? language);
+      const resolvedLanguage = (data.language as string | undefined) ?? language;
+      setStoryLang(resolvedLanguage);
       setLessonImplementations(impls);
       setScenes(rawScenes);
       setHasScriptChanges(false);
@@ -1722,7 +1741,7 @@ export default function Studio2Page() {
             setIsValidating(false);
             setTotalExpectedBlocks(undefined);
             writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, forkedFromTitle: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls, scenes: rawScenes }, DRAFT_KEY);
-            void analyzeLessons(blocks, null);
+            void analyzeLessons(blocks, null, resolvedLanguage);
           }
         }, i * 65);
       }
