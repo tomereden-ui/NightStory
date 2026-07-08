@@ -354,6 +354,14 @@ export default function LunaChatPanel({
   useEffect(() => { scrollToBottom(); }, [messages, loading, scrollToBottom]);
 
   const chatDraftKey = `${CHAT_DRAFT_KEY_PREFIX}-${activeChild?.id ?? "no-child"}`;
+  // On mount, this restore effect and the greeting effect below both run in
+  // the SAME initial effect flush, off the same render's closure -- so
+  // setGreeted(true) here isn't visible to the greeting effect's `if
+  // (greeted) return` check yet (state updates only apply on the next
+  // render). Without this ref, reopening the Chat tab would restore the
+  // saved conversation and then immediately overwrite it with a fresh
+  // greeting. A ref is mutated synchronously, so it's visible right away.
+  const skipGreetingRef = useRef(false);
 
   useEffect(() => {
     greetAbortRef.current?.abort();
@@ -385,6 +393,7 @@ export default function LunaChatPanel({
       }
     } catch { /* ignore */ }
 
+    skipGreetingRef.current = restored;
     if (!restored) {
       setMessages([]);
       setStoryReady(false);
@@ -406,7 +415,7 @@ export default function LunaChatPanel({
   // ─── Greeting ────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (greeted) return;
+    if (greeted || skipGreetingRef.current) return;
     setGreeted(true);
     setLoading(true);
 
