@@ -666,7 +666,10 @@ export default function LunaChatPanel({
             <span>Start over</span>
           </button>
         )}
-        {!topResetConfirm && (
+        {/* Changing language mid-chat wipes the whole conversation (it
+            restarts fresh so nothing ends up half in one language, half in
+            another) -- only offer it before the chat has actually started. */}
+        {!topResetConfirm && !hasUserMessages && (
           <LanguageToggle value={storyLanguage as Language} onLanguageChange={handleLanguageChange} />
         )}
       </div>
