@@ -85,23 +85,9 @@ export default function LessonEditor({
     setExpanded(false);
   };
 
-  const applyEditor = () => {
-    onChange([...pendingLabels]);
-    setExpanded(false);
-  };
-
-  const togglePendingLabel = (label: LessonLabel) => {
-    setPendingLabels((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
-    );
-  };
-
-  // Combines everything the user has queued up — lessons picked to add and
-  // lessons marked for removal — into a single instruction, sent only when
-  // "Rewrite story" is clicked.
-  const buildRewriteInstruction = (): string => {
-    const toAdd = lessons.filter((l) => !pendingRemoved.includes(l));
-    const toRemove = pendingRemoved.filter((l) => !lessons.includes(l));
+  // Shared instruction builder — combines a final "keep/add" list and a
+  // "remove" list into a single natural-language rewrite instruction.
+  const buildInstructionFor = (toAdd: string[], toRemove: string[]): string => {
     const parts: string[] = [];
     if (toAdd.length) {
       parts.push(`naturally embed ${toAdd.length === 1 ? "this value" : "these values"} through concrete actions the protagonist takes, without stating ${toAdd.length === 1 ? "it" : "them"} explicitly: ${toAdd.join(", ")}`);
@@ -113,12 +99,43 @@ export default function LessonEditor({
     return `Rewrite the story to ${parts.join("; and ")}.`;
   };
 
-  // Removing a lesson only updates what's shown locally — it may not even be
-  // in the `lessons` selection (it could've been organically present in the
-  // script) — the actual story only changes once "Rewrite story" is clicked.
+  const applyEditor = () => {
+    const finalLabels = [...pendingLabels];
+    // Anything explicitly erased that didn't make it back into the final
+    // selection still needs to be scrubbed from the actual script text.
+    const toRemove = pendingRemoved.filter((l) => !(finalLabels as string[]).includes(l));
+    onChange(finalLabels);
+    if (onRewrite && (finalLabels.length > 0 || toRemove.length > 0)) {
+      onRewrite(buildInstructionFor(finalLabels, toRemove));
+    }
+    setPendingRemoved([]);
+    setExpanded(false);
+  };
+
+  const togglePendingLabel = (label: LessonLabel) => {
+    setPendingLabels((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+    );
+  };
+
+  // Combines everything the user has queued up — lessons picked to add and
+  // lessons marked for removal — into a single instruction, sent only when
+  // "Rewrite story" is clicked (the collapsed-view fallback, for when
+  // changes were made without ever going through Apply).
+  const buildRewriteInstruction = (): string => {
+    const toAdd = lessons.filter((l) => !pendingRemoved.includes(l));
+    const toRemove = pendingRemoved.filter((l) => !lessons.includes(l));
+    return buildInstructionFor(toAdd, toRemove);
+  };
+
+  // Removing a lesson updates what's shown locally AND deselects it from the
+  // "Add a Value" picker below (it must not still look picked once erased),
+  // and queues it for removal from the actual script text — sent to Gemini
+  // as soon as the user confirms via Apply.
   const removeMoralLesson = (lesson: string) => {
     setDisplayedLessons((prev) => prev.filter((l) => l.lesson !== lesson));
     setPendingRemoved((prev) => (prev.includes(lesson) ? prev : [...prev, lesson]));
+    setPendingLabels((prev) => prev.filter((l) => l !== lesson));
     if (lessons.includes(lesson)) onChange(lessons.filter((l) => l !== lesson));
   };
 
