@@ -517,6 +517,7 @@ export default function LunaChatPanel({
     setGreeted(false);
     setDiscardConfirm(false);
     setReadyConfirmed(false);
+    setTopResetConfirm(false);
     firstMsgSent.current = false;
     onDiscard?.();
   }
@@ -528,7 +529,6 @@ export default function LunaChatPanel({
   // language (LanguageToggle is used here in controlled mode).
   function handleLanguageChange(lang: Language) {
     onStoryLanguageChange(lang);
-    setTopResetConfirm(false);
     handleDiscard();
   }
 
