@@ -2370,15 +2370,17 @@ export default function Studio2Page() {
                   <span>Start over</span>
                 </button>
               )}
-              <LanguageToggle
-                value={storyLang as Language}
-                onLanguageChange={(lang) => {
-                  try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
-                  setStoryLang(lang);
-                  setWizardResetKey((k) => k + 1);
-                  setWizardResetConfirm(false);
-                }}
-              />
+              {!wizardResetConfirm && (
+                <LanguageToggle
+                  value={storyLang as Language}
+                  onLanguageChange={(lang) => {
+                    try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+                    setStoryLang(lang);
+                    setWizardResetKey((k) => k + 1);
+                    setWizardResetConfirm(false);
+                  }}
+                />
+              )}
             </div>
             <FiveQuestionFlow
               key={wizardResetKey}

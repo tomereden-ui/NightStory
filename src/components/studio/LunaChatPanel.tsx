@@ -666,7 +666,9 @@ export default function LunaChatPanel({
             <span>Start over</span>
           </button>
         )}
-        <LanguageToggle value={storyLanguage as Language} onLanguageChange={handleLanguageChange} />
+        {!topResetConfirm && (
+          <LanguageToggle value={storyLanguage as Language} onLanguageChange={handleLanguageChange} />
+        )}
       </div>
 
       {/* Luna header */}
