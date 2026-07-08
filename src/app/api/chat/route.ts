@@ -53,6 +53,36 @@ function languageOverride(language?: string): string {
   return `\n\nLANGUAGE OVERRIDE\n=================\nAlways respond in ${meta.label} (${meta.nativeName}), regardless of what language the user writes in. This takes priority over the "mirror the user's language" rule above.`;
 }
 
+// Once Luna herself judges there's enough to go on (storyReady), the UI
+// still asks "anything else, or ready?" -- normally answered by tapping a
+// quick-reply chip. But if the user's own last message already says so in
+// plain words ("yes let's go", "start it now", etc., in any language),
+// that should count as the same confirmation instead of forcing a redundant
+// tap. This is a tiny, separate, cheap classification call (not part of the
+// main conversational reply) so it never leaks into what Luna actually says.
+async function detectExplicitGoAhead(genAI: GoogleGenerativeAI, lastUserMessage: string): Promise<boolean> {
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: `Does this message from a parent explicitly say they're ready/want to proceed with creating the story now (e.g. "yes let's go", "create it", "start now", "go ahead", "that's everything, make it"), in any language? Answer with ONLY the single word true or false — nothing else.`,
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 5,
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
+    const result = await model.generateContent(lastUserMessage);
+    const tokens = result.response.usageMetadata?.totalTokenCount;
+    if (tokens) trackGemini(tokens).catch(() => {});
+    return result.response.text().trim().toLowerCase().startsWith("true");
+  } catch {
+    // A classification hiccup shouldn't block anything -- the quick-reply
+    // chip is still there as the normal path.
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === "your_gemini_api_key_here") {
@@ -115,7 +145,8 @@ export async function POST(req: NextRequest) {
       } catch { /* ignore — proceed without params */ }
 
       const reply = raw.replace(/\[STORY_READY\][\s\S]*?\[\/STORY_READY\]/, "").trim();
-      return NextResponse.json({ reply, storyReady: true, storyParams });
+      const userConfirmedReady = await detectExplicitGoAhead(genAI, lastMessage);
+      return NextResponse.json({ reply, storyReady: true, storyParams, userConfirmedReady });
     }
 
     return NextResponse.json({ reply: raw.trim(), storyReady: false });

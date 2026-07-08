@@ -18,6 +18,9 @@ interface ChatResponse {
   reply: string;
   storyReady: boolean;
   storyParams?: Record<string, string>;
+  /** True when the user's own last message already explicitly said to go
+   *  ahead (e.g. "yes let's go") -- skips the redundant quick-reply chip tap. */
+  userConfirmedReady?: boolean;
 }
 
 // ─── Typing dots ──────────────────────────────────────────────────────
@@ -485,7 +488,10 @@ export default function LunaChatPanel({
       if (data.storyReady && data.storyParams) {
         setStoryReady(true);
         setStoryParams(data.storyParams);
-        setReadyConfirmed(false);
+        // Typing an explicit go-ahead ("yes let's go", "start now", etc.)
+        // counts the same as tapping the quick-reply chip -- skip straight
+        // to the duration picker + Create button instead of showing it again.
+        setReadyConfirmed(!!data.userConfirmedReady);
       }
     } catch (err) {
       console.error("[Luna] Send failed (after retry):", err);
