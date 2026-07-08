@@ -1163,6 +1163,7 @@ export default function Studio2Page() {
   const [saveValidationIssues, setSaveValidationIssues] = useState<string[]>([]);
 
   // ─── Director's Note state ──────────────────────────────────────────────────
+  const [directorNoteExpanded, setDirectorNoteExpanded] = useState(false);
   const [directorNote, setDirectorNote]     = useState("");
   const [isRevising, setIsRevising]         = useState(false);
   const [reviseError, setReviseError]       = useState<string | null>(null);
@@ -2674,7 +2675,10 @@ export default function Studio2Page() {
                 className="mt-2 mb-3 rounded-2xl p-4 flex flex-col gap-3"
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
-                <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDirectorNoteExpanded((v) => !v)}
+                  className="flex items-center gap-2 w-full text-left"
+                >
                   <Icon name="edit" size={14} style={{ color: "rgba(255,255,255,0.4)" }} />
                   <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
                     {i18nT(language, "directorsNote" as never)}
@@ -2685,8 +2689,16 @@ export default function Studio2Page() {
                       {i18nT(language, "revisingLabel" as never)}
                     </span>
                   )}
-                </div>
+                  <span
+                    className="text-fs-body transition-transform"
+                    style={{ color: "rgba(255,255,255,0.3)", marginLeft: isRevising ? 0 : "auto", transform: directorNoteExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                  >
+                    ▾
+                  </span>
+                </button>
 
+                {directorNoteExpanded && (
+                <>
                 {/* Quick chips are a pure multi-select toggle — clicking one
                     never writes into the note below. Their instructions are
                     pre-vetted, so any combination of selected chips is ready
@@ -2780,6 +2792,8 @@ export default function Studio2Page() {
 
                 {reviseError && (
                   <p className="text-fs-body" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
+                )}
+                </>
                 )}
               </div>
               );
