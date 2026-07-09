@@ -42,6 +42,44 @@ interface Answers {
 
 export const DRAFT_KEY = "ns-wizard-draft-v1";
 
+// ─── Free-text content check ────────────────────────────────────────────────
+// Sends whatever a child typed to Gemini for a quick appropriateness + sanity
+// check before the wizard advances. Fails open (approved: true) on any
+// network/server hiccup — a Gemini outage should never block a bedtime story.
+type WizardTextField = "heroName" | "world" | "companionName" | "challenge";
+
+async function validateWizardText(text: string, field: WizardTextField, language: string): Promise<{ approved: boolean; reason?: string }> {
+  try {
+    const res = await fetch("/api/validate-wizard-text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, field, language }),
+    });
+    if (!res.ok) return { approved: true };
+    return await res.json();
+  } catch {
+    return { approved: true };
+  }
+}
+
+// ─── Companion display localization ─────────────────────────────────────────
+// answers.q3_companion is built from CompanionTypeMeta.geminiLabel (always
+// English — it's what the story-generation prompt expects), so it's never
+// safe to show directly in the wizard's own UI once the language isn't
+// English. This reconstructs the same {type, name} the string was built
+// from and re-renders it with the localized label + ui.companionDisplay.
+function localizeCompanionForDisplay(companion: string, companionTypes: CompanionTypeMeta[], ui: WizardUiCopy): string {
+  if (!companion) return companion;
+  for (const ct of companionTypes) {
+    const withName = `a ${ct.geminiLabel} named `;
+    if (companion.startsWith(withName)) return ui.companionDisplay(ct.label, companion.slice(withName.length));
+    if (companion === `a ${ct.geminiLabel}`) return ui.companionDisplay(ct.label);
+  }
+  // Surprise picks / legacy values don't match the geminiLabel pattern —
+  // pass through unchanged rather than guessing.
+  return companion;
+}
+
 // ─── FairyFigure: animated Bluebell fairy portrait ────────────────────────────────────
 
 function FairyFigure({ size = 80 }: { size?: number }) {
@@ -429,7 +467,7 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
 
 type Q1Card = "own" | "magical" | "stranger" | "surprise";
 
-function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, audioUrl, childName, childAvatarUrl, bb, ui }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string; bb: BluebellCopy; ui: WizardUiCopy }) {
+function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, audioUrl, childName, childAvatarUrl, bb, ui, language }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; language: string }) {
   const [selectedCard, setSelectedCard] = useState<Q1Card | null>(null);
   const [textVal, setTextVal]           = useState(initialHero);
   const [magicChip, setMagicChip]       = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
@@ -437,6 +475,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
   const [validationError, setValidationError] = useState("");
+  const [validating, setValidating] = useState(false);
 
   useEffect(() => {
     if (!initialHero) return;
@@ -444,9 +483,17 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
     else { setSelectedCard("own"); setTextVal(initialHero); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const doConfirm = (displayName: string, heroStr: string) => {
+  // needsCheck: only freely-typed text (own name / stranger name) goes through
+  // Gemini — curated picks (magical chip, surprise) are already vetted content.
+  const doConfirm = async (displayName: string, heroStr: string, needsCheck: boolean) => {
     if (!displayName.trim()) { setValidationError(bb.emptyError); return; }
-    setTransitionMsg(bb.q1Confirm(displayName));
+    if (needsCheck) {
+      setValidating(true);
+      const result = await validateWizardText(displayName, "heroName", language);
+      setValidating(false);
+      if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
+    }
+    setTransitionMsg(bb.q1Confirm);
     setTransitioning(true);
     setTimeout(() => { setTransitioning(false); onNext(heroStr.trim()); }, 1500);
   };
@@ -467,11 +514,11 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
 
   const handleConfirm = () => {
     if (!selectedCard) return;
-    if (selectedCard === "own")     return doConfirm(childName || textVal, childName || textVal);
-    if (selectedCard === "magical") return magicChip && doConfirm(magicChip, magicChip);
-    if (selectedCard === "stranger") return doConfirm(textVal, textVal);
+    if (selectedCard === "own")     return doConfirm(childName || textVal, childName || textVal, !childName);
+    if (selectedCard === "magical") return magicChip && doConfirm(magicChip, magicChip, false);
+    if (selectedCard === "stranger") return doConfirm(textVal, textVal, true);
     if (selectedCard === "surprise" && surpriseHero) {
-      return doConfirm(surpriseHero.name, `${surpriseHero.figure} named ${surpriseHero.name}`);
+      return doConfirm(surpriseHero.name, `${surpriseHero.figure} named ${surpriseHero.name}`, false);
     }
   };
 
@@ -540,9 +587,9 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
         )}
 
         <ConfirmRow
-          confirmLabel={selectedCard === "own" && childName ? ui.yesImName(childName) : ui.thisIsMyHero}
+          confirmLabel={validating ? ui.checkingAnswer : (selectedCard === "own" && childName ? ui.yesImName(childName) : ui.thisIsMyHero)}
           onConfirm={handleConfirm}
-          disabled={!canConfirm || !selectedCard}
+          disabled={!canConfirm || !selectedCard || validating}
           onSkip={onSkip}
           skipLabel={ui.skip}
         />
@@ -554,15 +601,31 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
 
 // ─── Q2 — Story world ─────────────────────────────────────────────────────────────────────────
 
-function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, worldOptions }: { heroName: string; initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; worldOptions: WorldOptionMeta[] }) {
-  const [selected, setSelected] = useState(initialWorld);
+function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, worldOptions, language }: { initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; worldOptions: WorldOptionMeta[]; language: string }) {
+  const isCardValue = worldOptions.some((w) => w.label === initialWorld);
+  const [selected, setSelected]     = useState(isCardValue ? initialWorld : "");
+  const [customText, setCustomText] = useState(isCardValue ? "" : initialWorld);
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [validating, setValidating] = useState(false);
 
-  const confirm = (world: string) => {
+  // Custom text isn't pre-vetted like the illustrated cards, so it goes
+  // through the same Gemini check as any other free-typed wizard answer.
+  const confirm = async (world: string, needsCheck: boolean) => {
+    if (!world.trim()) return;
+    if (needsCheck) {
+      setValidating(true);
+      const result = await validateWizardText(world, "world", language);
+      setValidating(false);
+      if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
+    }
     setTransitionMsg(bb.q2Confirm(world)); setTransitioning(true);
     setTimeout(() => { setTransitioning(false); onNext(world); }, 1500);
   };
+
+  const current = customText.trim() || selected;
+  const handleConfirm = () => { if (current) confirm(current, !!customText.trim()); };
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
@@ -572,7 +635,7 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optio
   );
 
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q2(heroName)} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q2} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
           {worldOptions.map((w) => {
@@ -584,16 +647,24 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optio
                 emoji={w.emoji}
                 imageUrl={optionImages[`world-${w.id}`]}
                 selected={isSel}
-                onClick={() => setSelected(w.label)}
+                onClick={() => { setSelected(w.label); setCustomText(""); setValidationError(""); }}
               />
             );
           })}
         </div>
-        <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={() => setSelected(pickRandom(worldOptions).label)} />
+        <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={() => { setSelected(pickRandom(worldOptions).label); setCustomText(""); setValidationError(""); }} />
+        <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{ui.orDescribeWorld}</p>
+        <StoryInput
+          value={customText}
+          onChange={(v) => { setCustomText(v); setSelected(""); setValidationError(""); }}
+          placeholder={ui.describeYourWorld}
+          onSubmit={handleConfirm}
+        />
+        {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
         <ConfirmRow
-          confirmLabel={ui.thisIsTheWorld}
-          onConfirm={() => selected && confirm(selected)}
-          disabled={!selected}
+          confirmLabel={validating ? ui.checkingAnswer : ui.thisIsTheWorld}
+          onConfirm={handleConfirm}
+          disabled={!current || validating}
           onSkip={onSkip}
           skipLabel={ui.skip}
         />
@@ -604,9 +675,11 @@ function Q2View({ heroName, initialWorld, onNext, onBack, onSkip, onReset, optio
 
 // ─── Q3 — Companion ──────────────────────────────────────────────────────────────────────────────
 
-function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, companionTypes }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; companionTypes: CompanionTypeMeta[] }) {
+function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, companionTypes, language }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; companionTypes: CompanionTypeMeta[]; language: string }) {
   const [selectedType, setSelectedType] = useState<Q3CompanionTypeId | null>(null);
   const [nameVal, setNameVal]           = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [validating, setValidating]     = useState(false);
 
   // Restore prior selection when editing from summary
   useEffect(() => {
@@ -633,7 +706,13 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
     return name.trim() ? `a ${ct.geminiLabel} named ${name.trim()}` : `a ${ct.geminiLabel}`;
   };
 
-  const confirm = (type: Q3CompanionTypeId, name: string) => {
+  const confirm = async (type: Q3CompanionTypeId, name: string) => {
+    if (name.trim()) {
+      setValidating(true);
+      const result = await validateWizardText(name.trim(), "companionName", language);
+      setValidating(false);
+      if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
+    }
     const companion = buildCompanionString(type, name);
     setTransitionMsg(bb.q3Confirm(name.trim() || companionTypes.find((t) => t.id === type)!.label));
     setTransitioning(true);
@@ -669,7 +748,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
   );
 
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q3(worldName, heroName)} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q3(worldName)} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
           {companionTypes.map((ct) => (
@@ -679,7 +758,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
               emoji={ct.emoji}
               imageUrl={optionImages[`companion-${ct.id}`]}
               selected={selectedType === ct.id}
-              onClick={() => { setSelectedType(ct.id); setNameVal(""); }}
+              onClick={() => { setSelectedType(ct.id); setNameVal(""); setValidationError(""); }}
             />
           ))}
         </div>
@@ -688,6 +767,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
           const randomType = pickRandom(companionTypes);
           setSelectedType(randomType.id);
           setNameVal(pickRandom(randomType.surpriseNames));
+          setValidationError("");
         }} />
 
         {selectedType && (
@@ -699,7 +779,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
               autoFocus
               type="text"
               value={nameVal}
-              onChange={(e) => setNameVal(e.target.value)}
+              onChange={(e) => { setNameVal(e.target.value); setValidationError(""); }}
               onKeyDown={(e) => e.key === "Enter" && confirm(selectedType, nameVal)}
               placeholder={ui.namePlaceholder}
               className="w-full rounded-xl px-4 py-3 text-fs-body text-white placeholder-white/25 outline-none transition-colors"
@@ -707,12 +787,14 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
               onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(79,195,247,0.4)")}
               onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
             />
+            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
             {suggestedNames.length > 0 && (
-              <ExampleChips examples={suggestedNames} onTap={(v) => setNameVal(v)} />
+              <ExampleChips examples={suggestedNames} onTap={(v) => { setNameVal(v); setValidationError(""); }} />
             )}
             <ConfirmRow
-              confirmLabel={ui.thisIsTheCompanion}
+              confirmLabel={validating ? ui.checkingAnswer : ui.thisIsTheCompanion}
               onConfirm={() => confirm(selectedType, nameVal)}
+              disabled={validating}
               onSkip={onSkip}
               skipLabel={ui.skip}
             />
@@ -734,19 +816,24 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
 
 type Q4Phase = "input" | "reaction1" | "reaction2";
 
-function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, q4Categories }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; q4Categories: Q4CategoryMeta[] }) {
+function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, q4Categories, language }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; q4Categories: Q4CategoryMeta[]; language: string }) {
   const [selectedCat, setSelectedCat] = useState<Q4CategoryId | null>(null);
   const [textVal, setTextVal]         = useState(initialEngine);
   const [phase, setPhase]             = useState<Q4Phase>("input");
   const [confirmedEngine, setConfirmedEngine] = useState("");
   const [validationError, setValidationError] = useState("");
+  const [validating, setValidating]   = useState(false);
 
   useEffect(() => {
     if (initialEngine) { setSelectedCat("funny"); setTextVal(initialEngine); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const confirm = (engine: string) => {
+  const confirm = async (engine: string) => {
     if (!engine.trim()) { setValidationError(bb.emptyError); return; }
+    setValidating(true);
+    const result = await validateWizardText(engine.trim(), "challenge", language);
+    setValidating(false);
+    if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
     setConfirmedEngine(engine.trim());
     setTimeout(() => setPhase("reaction1"), 1500);
   };
@@ -769,7 +856,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
   const activeCat = q4Categories.find((c) => c.id === selectedCat);
 
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q4(companionName, heroName)} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q4(companionName)} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
 
         <div className="grid grid-cols-2 gap-2">
@@ -800,9 +887,9 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
               onTap={(v) => { setTextVal(v); setValidationError(""); }}
             />
             <ConfirmRow
-              confirmLabel={ui.thisIsTheChallenge}
+              confirmLabel={validating ? ui.checkingAnswer : ui.thisIsTheChallenge}
               onConfirm={() => confirm(textVal)}
-              disabled={!textVal.trim()}
+              disabled={!textVal.trim() || validating}
               onSkip={onSkip}
               skipLabel={ui.skip}
             />
@@ -826,7 +913,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
 
 // ─── Q5 — Resolution mood ───────────────────────────────────────────────────────────────────────
 
-function Q5View({ heroName, engineText, initialMood, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, moodLabels }: { heroName: string; engineText: string; initialMood?: ResolutionMood | null; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; moodLabels: Record<string, string> }) {
+function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, moodLabels }: { engineText: string; initialMood?: ResolutionMood | null; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; moodLabels: Record<string, string> }) {
   const MOODS: { id: ResolutionMood; emoji: string; isBedtime?: boolean }[] = [
     { id: "brave",     emoji: "🦱" },
     { id: "laughing",  emoji: "😂" },
@@ -837,7 +924,7 @@ function Q5View({ heroName, engineText, initialMood, onNext, onBack, onSkip, onR
   const [selectedMood, setSelectedMood] = useState<ResolutionMood | null>(initialMood ?? null);
 
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q5(engineText, heroName)} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q5(engineText)} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2.5">
           {MOODS.map((m) => (
@@ -875,7 +962,7 @@ function Q5View({ heroName, engineText, initialMood, onNext, onBack, onSkip, onR
 
 type SummaryPhase = "table" | "script" | "countdown" | "herewego";
 
-function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, bb, ui, moodLabels }: {
+function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, bb, ui, moodLabels, companionTypes }: {
   answers: Answers;
   durationMinutes: number;
   onDurationChange: (v: number) => void;
@@ -885,19 +972,23 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   bb: BluebellCopy;
   ui: WizardUiCopy;
   moodLabels: Record<string, string>;
+  companionTypes: CompanionTypeMeta[];
 }) {
   const [phase, setPhase] = useState<SummaryPhase>("table");
   const [showReady, setShowReady] = useState(false);
 
   const moodLabel = answers.q5_mood ? moodLabels[answers.q5_mood] : "";
-  const launchScript = bb.launch(moodLabel, answers.q1_hero, answers.q3_companion, answers.q2_world, answers.q4_engine);
+  // answers.q3_companion is built from the English geminiLabel (for the
+  // story-generation prompt) — re-localize it for anything the user sees.
+  const displayCompanion = localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui);
+  const launchScript = bb.launch(moodLabel, displayCompanion, answers.q2_world, answers.q4_engine);
 
   const ROWS: { label: string; value: string; step: Step }[] = [
-    { label: ui.hero,      value: answers.q1_hero,     step: "q1" },
-    { label: ui.world,     value: answers.q2_world,     step: "q2" },
-    { label: ui.companion, value: answers.q3_companion, step: "q3" },
-    { label: ui.challenge, value: answers.q4_engine,    step: "q4" },
-    { label: ui.ending,    value: moodLabel,             step: "q5" },
+    { label: ui.hero,      value: answers.q1_hero,   step: "q1" },
+    { label: ui.world,     value: answers.q2_world,  step: "q2" },
+    { label: ui.companion, value: displayCompanion,  step: "q3" },
+    { label: ui.challenge, value: answers.q4_engine, step: "q4" },
+    { label: ui.ending,    value: moodLabel,         step: "q5" },
   ];
 
   const handleCountdownDone = useCallback(() => {
@@ -1005,15 +1096,15 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 
 // ─── Generating screen ────────────────────────────────────────────────────────────────────────
 
-function GeneratingView({ heroName, worldName, seeds, durationMinutes, contentLanguage, onDone, onError, bb }: {
-  heroName: string; worldName: string;
+function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, onDone, onError, bb }: {
+  worldName: string;
   seeds: StorySeeds; durationMinutes: number;
   contentLanguage?: string;
   onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => void;
   onError: (msg: string) => void;
   bb: BluebellCopy;
 }) {
-  const messages = bb.generating(heroName, worldName);
+  const messages = bb.generating(worldName);
   const [msgIdx, setMsgIdx] = useState(0);
   const [showLong, setShowLong] = useState(false);
   const onDoneRef  = useRef(onDone);
@@ -1384,21 +1475,21 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     );
   }
 
-  if (step === "q1") return <>{GeneratingBadge}<Q1View key={resetToken} initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} bb={bb} ui={ui} /></>;
-  if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} bb={bb} ui={ui} worldOptions={worldOptions} /></>;
-  if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} bb={bb} ui={ui} companionTypes={companionTypes} /></>;
-  if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={answers.q3_companion} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} bb={bb} ui={ui} q4Categories={q4Categories} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} heroName={answers.q1_hero} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} bb={bb} ui={ui} moodLabels={moodLabels} /></>;
+  if (step === "q1") return <>{GeneratingBadge}<Q1View key={resetToken} initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} bb={bb} ui={ui} language={effectiveLanguage} /></>;
+  if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} bb={bb} ui={ui} worldOptions={worldOptions} language={effectiveLanguage} /></>;
+  if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} bb={bb} ui={ui} companionTypes={companionTypes} language={effectiveLanguage} /></>;
+  if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui)} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} bb={bb} ui={ui} q4Categories={q4Categories} language={effectiveLanguage} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} bb={bb} ui={ui} moodLabels={moodLabels} /></>;
 
   if (step === "summary") return (
     <>
       {ErrorBanner}
-      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={handleReset} bb={bb} ui={ui} moodLabels={moodLabels} />
+      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={handleReset} bb={bb} ui={ui} moodLabels={moodLabels} companionTypes={companionTypes} />
     </>
   );
 
   if (step === "generating" && seeds) return (
-    <GeneratingView heroName={answers.q1_hero} worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} onDone={handleDone} onError={handleGenError} bb={bb} />
+    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} onDone={handleDone} onError={handleGenError} bb={bb} />
   );
 
   if (step === "done") {

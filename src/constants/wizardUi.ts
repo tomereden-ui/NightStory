@@ -37,6 +37,14 @@ export interface WizardUiCopy {
   producingDrama: string;
   dramaReady: string;
   storySuffix: string;
+  /** Localized "{type} named {name}" phrase for displaying a companion choice
+   *  back to the user — separate from CompanionTypeMeta.geminiLabel, which
+   *  stays English for the story-generation prompt. */
+  companionDisplay: (typeLabel: string, name?: string) => string;
+  orDescribeWorld: string;
+  describeYourWorld: string;
+  checkingAnswer: string;
+  pleaseRephrase: string;
 }
 
 const EN: WizardUiCopy = {
@@ -75,6 +83,11 @@ const EN: WizardUiCopy = {
   producingDrama: "Producing Drama",
   dramaReady: "Drama Ready",
   storySuffix: "'s Story",
+  companionDisplay: (type, name) => name ? `${type} named ${name}` : type,
+  orDescribeWorld: "Or describe your own world...",
+  describeYourWorld: "like... a floating city made of clouds",
+  checkingAnswer: "Let me think about that...",
+  pleaseRephrase: "Hmm, could you try saying that a different way?",
 };
 
 const HE: WizardUiCopy = {
@@ -113,6 +126,11 @@ const HE: WizardUiCopy = {
   producingDrama: "מפיקים דרמה",
   dramaReady: "הדרמה מוכנה",
   storySuffix: " - הסיפור",
+  companionDisplay: (type, name) => name ? `${type} בשם ${name}` : type,
+  orDescribeWorld: "או תארו את העולם שלכם...",
+  describeYourWorld: "כמו... עיר מרחפת עשויה מעננים",
+  checkingAnswer: "רגע, אני חושבת על זה...",
+  pleaseRephrase: "הממ, אפשר לנסות לומר את זה קצת אחרת?",
 };
 
 const ES: WizardUiCopy = {
@@ -151,6 +169,11 @@ const ES: WizardUiCopy = {
   producingDrama: "Produciendo la obra",
   dramaReady: "Obra lista",
   storySuffix: ": su historia",
+  companionDisplay: (type, name) => name ? `${type}, de nombre ${name}` : type,
+  orDescribeWorld: "O describe tu propio mundo...",
+  describeYourWorld: "como... una ciudad flotante hecha de nubes",
+  checkingAnswer: "Déjame pensarlo...",
+  pleaseRephrase: "Mmm, ¿puedes intentar decirlo de otra manera?",
 };
 
 const FR: WizardUiCopy = {
@@ -189,6 +212,11 @@ const FR: WizardUiCopy = {
   producingDrama: "Production en cours",
   dramaReady: "Histoire prête",
   storySuffix: " : son histoire",
+  companionDisplay: (type, name) => name ? `${type}, du nom de ${name}` : type,
+  orDescribeWorld: "Ou décris ton propre monde...",
+  describeYourWorld: "comme... une ville flottante faite de nuages",
+  checkingAnswer: "Laisse-moi y réfléchir...",
+  pleaseRephrase: "Hmm, peux-tu essayer de le dire autrement ?",
 };
 
 const DE: WizardUiCopy = {
@@ -227,6 +255,11 @@ const DE: WizardUiCopy = {
   producingDrama: "Hörspiel wird produziert",
   dramaReady: "Hörspiel fertig",
   storySuffix: "s Geschichte",
+  companionDisplay: (type, name) => name ? `${type} namens ${name}` : type,
+  orDescribeWorld: "Oder beschreibe deine eigene Welt...",
+  describeYourWorld: "wie... eine schwebende Stadt aus Wolken",
+  checkingAnswer: "Lass mich darüber nachdenken...",
+  pleaseRephrase: "Hmm, kannst du das anders ausdrücken?",
 };
 
 const PT: WizardUiCopy = {
@@ -265,6 +298,11 @@ const PT: WizardUiCopy = {
   producingDrama: "Produzindo a peça",
   dramaReady: "Peça pronta",
   storySuffix: ": a história",
+  companionDisplay: (type, name) => name ? `${type}, de nome ${name}` : type,
+  orDescribeWorld: "Ou descreva seu próprio mundo...",
+  describeYourWorld: "tipo... uma cidade flutuante feita de nuvens",
+  checkingAnswer: "Deixe-me pensar sobre isso...",
+  pleaseRephrase: "Hmm, pode tentar dizer isso de outra forma?",
 };
 
 const IT: WizardUiCopy = {
@@ -303,6 +341,11 @@ const IT: WizardUiCopy = {
   producingDrama: "Produzione in corso",
   dramaReady: "Storia pronta",
   storySuffix: ": la sua storia",
+  companionDisplay: (type, name) => name ? `${type} di nome ${name}` : type,
+  orDescribeWorld: "Oppure descrivi il tuo mondo...",
+  describeYourWorld: "tipo... una città fluttuante fatta di nuvole",
+  checkingAnswer: "Fammi pensare...",
+  pleaseRephrase: "Mmm, puoi provare a dirlo in un altro modo?",
 };
 
 const AR: WizardUiCopy = {
@@ -341,6 +384,11 @@ const AR: WizardUiCopy = {
   producingDrama: "جاري إنتاج الدراما",
   dramaReady: "الدراما جاهزة",
   storySuffix: ": القصة",
+  companionDisplay: (type, name) => name ? `${type} باسم ${name}` : type,
+  orDescribeWorld: "أو صف عالمك الخاص...",
+  describeYourWorld: "مثل... مدينة عائمة مصنوعة من الغيوم",
+  checkingAnswer: "دعني أفكر في ذلك...",
+  pleaseRephrase: "همم، هل يمكنك تجربة قول ذلك بطريقة أخرى؟",
 };
 
 const JA: WizardUiCopy = {
@@ -379,6 +427,11 @@ const JA: WizardUiCopy = {
   producingDrama: "ドラマを制作中",
   dramaReady: "ドラマ完成",
   storySuffix: "の物語",
+  companionDisplay: (type, name) => name ? `${name}という${type}` : type,
+  orDescribeWorld: "または、あなた自身の世界を説明してください…",
+  describeYourWorld: "例えば…雲でできた浮遊都市",
+  checkingAnswer: "少し考えさせてください…",
+  pleaseRephrase: "うーん、別の言い方を試してみてもらえますか?",
 };
 
 const HI: WizardUiCopy = {
@@ -417,6 +470,11 @@ const HI: WizardUiCopy = {
   producingDrama: "नाटक तैयार हो रहा है",
   dramaReady: "नाटक तैयार है",
   storySuffix: " की कहानी",
+  companionDisplay: (type, name) => name ? `${type}, नाम ${name}` : type,
+  orDescribeWorld: "या अपनी खुद की दुनिया के बारे में बताएं...",
+  describeYourWorld: "जैसे... बादलों से बना एक तैरता हुआ शहर",
+  checkingAnswer: "मुझे इसके बारे में सोचने दो...",
+  pleaseRephrase: "हम्म, क्या आप इसे किसी और तरीके से कहने की कोशिश कर सकते हैं?",
 };
 
 const WIZARD_UI_BY_LANG: Record<string, WizardUiCopy> = { en: EN, he: HE, es: ES, fr: FR, de: DE, pt: PT, it: IT, ar: AR, ja: JA, hi: HI };
