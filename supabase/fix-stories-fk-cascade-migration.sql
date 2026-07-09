@@ -20,6 +20,17 @@
 -- (confirmed for listening_progress via the actual error message).
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- Adding a FK constraint validates every EXISTING row against it, so any
+-- row already referencing a story_id that no longer exists in `stories`
+-- (e.g. from an earlier delete that predates this fix, before cascade was
+-- in place) blocks the ALTER outright — confirmed live 2026-07-09: 1
+-- orphaned story_views row referencing a since-deleted story. These rows
+-- are for stories that no longer exist, so they're already meaningless
+-- analytics data; deleting them is correct, not just a workaround.
+DELETE FROM public.listening_progress WHERE story_id NOT IN (SELECT id FROM public.stories);
+DELETE FROM public.story_views        WHERE story_id NOT IN (SELECT id FROM public.stories);
+DELETE FROM public.story_shares       WHERE story_id NOT IN (SELECT id FROM public.stories);
+
 ALTER TABLE public.listening_progress DROP CONSTRAINT IF EXISTS listening_progress_story_id_fkey;
 ALTER TABLE public.listening_progress
   ADD CONSTRAINT listening_progress_story_id_fkey
