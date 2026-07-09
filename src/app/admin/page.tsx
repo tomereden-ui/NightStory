@@ -10,6 +10,7 @@ import ScriptTab from "@/components/studio/ScriptTab";
 import VoicePicker from "@/components/studio/VoicePicker";
 import Icon from "@/components/ui/Icon";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
+import { stripNamePrefix } from "@/utils/stripSoundCues";
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -873,6 +874,8 @@ export default function AdminPage() {
   const [parsedBlocks, setParsedBlocks]   = useState<ScriptBlock[]>([]);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [processState, setProcessState]   = useState<"idle" | "processing" | "done" | "error">("idle");
+  const [processPhase, setProcessPhase]   = useState("");
+  const [validationChanges, setValidationChanges] = useState(0);
   const [processError, setProcessError]   = useState("");
   const [addProduceLog, setAddProduceLog] = useState<string[]>([]);
   const [addProducing, setAddProducing]   = useState(false);
@@ -1009,12 +1012,21 @@ export default function AdminPage() {
     return out;
   }
 
+  // Story-meta returns a range like "4-6"; validate-blocks wants a single
+  // representative age — the midpoint reads closest to "who this is for".
+  function ageGroupToAge(ageGroup?: string): number {
+    const m = ageGroup?.match(/(\d+)-(\d+)/);
+    if (!m) return 6;
+    return Math.round((Number(m[1]) + Number(m[2])) / 2);
+  }
+
   // ── Process Script ─────────────────────────────────────────────────────────
   const handleProcessScript = async () => {
     if (!addScript.trim()) return;
     setProcessState("processing");
     setProcessError("");
     setValidationIssues([]);
+    setValidationChanges(0);
     setStoreCoverUrl(""); setStoreCoverPrompt(""); setStoreSummary("");
     const blocks = parseScriptText(addScript);
     if (!blocks.length) {
@@ -1038,19 +1050,62 @@ export default function AdminPage() {
 
     const rawBlocks = blocks.map((b) => ({ characterName: b.characterName, textPayload: b.textPayload }));
 
-    // Validate + fetch story meta in parallel
+    // Same two-pass verification the normal generation flow (studio2's
+    // handleGenerate) runs on every freshly-written script before showing it
+    // to the user — Round 2 is a policy/guidance check, Round 2.5 is a
+    // per-block age-appropriateness + typo/grammar pass. An admin-pasted
+    // script skipped both before; now it goes through the identical checks,
+    // with corrections actually applied rather than only shown as advisory.
+    setProcessPhase("Checking policy…");
     const [valRes, metaRes] = await Promise.all([
       fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks }) }),
       fetch("/api/admin/story-meta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: rawBlocks, title: addTitle }) }),
     ]);
     const [valData, metaData] = await Promise.all([valRes.json(), metaRes.json()]) as [
-      { ok: boolean; issues?: string[] },
-      { summary?: string; coverPrompt?: string }
+      { ok: boolean; issues?: string[]; blocks?: { characterName: string; textPayload: string }[] },
+      { summary?: string; coverPrompt?: string; ageGroup?: string }
     ];
     if (!valData.ok && Array.isArray(valData.issues)) setValidationIssues(valData.issues);
+
+    // Round 2 — apply the policy-corrected text, merged back into the full
+    // ScriptBlock objects (validate-script only returns characterName +
+    // textPayload, so a blind replace would drop id/blockOrder/assignedVoiceId).
+    const policyShapeOk = Array.isArray(valData.blocks) && valData.blocks.length === blocks.length;
+    let policyBlocks: ScriptBlock[] = policyShapeOk
+      ? blocks.map((b, i) => ({ ...b, textPayload: valData.blocks![i].textPayload }))
+      : blocks;
+    if (!policyShapeOk && valData.blocks) {
+      console.warn("[Admin][Validation] validate-script returned unexpected shape — using unpolicy-checked script");
+    }
+
     const coverPrompt = metaData.coverPrompt ?? `${addTitle || "Story"} — magical Pixar-style children's bedtime illustration`;
     const summary     = metaData.summary ?? "";
+    const age         = ageGroupToAge(metaData.ageGroup);
     setStoreSummary(summary); setStoreCoverPrompt(coverPrompt);
+
+    // Round 2.5 — per-block age-appropriateness + typo/grammar check.
+    setProcessPhase("Checking grammar & typos…");
+    let finalBlocks = policyBlocks;
+    try {
+      const gramRes = await fetch("/api/validate-blocks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks: policyBlocks, age, summary }),
+      });
+      const gramData = await gramRes.json() as { blocks?: ScriptBlock[]; changes?: number };
+      if (gramData.blocks?.length === policyBlocks.length) {
+        finalBlocks = gramData.blocks;
+        setValidationChanges(gramData.changes ?? 0);
+      }
+    } catch (err) {
+      console.warn("[Admin][Validation] Grammar/age check failed, using policy-checked script:", err);
+    }
+    // Strip a redundant "CharacterName:" prefix some pasted/generated scripts
+    // bake into the line itself — same cleanup the normal flow applies.
+    finalBlocks = finalBlocks.map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
+    setParsedBlocks(finalBlocks);
+
+    setProcessPhase("");
     setProcessState("done");
 
     // Fetch cover image in the background (non-blocking)
@@ -1090,6 +1145,7 @@ export default function AdminPage() {
       const coverMatch = storeCoverUrl.match(/^data:([^;]+);base64,(.+)$/);
       const produceBody: Record<string, unknown> = {
         blocks,
+        title: addTitle.trim(),
         summary: storeSummary || "",
         isPublic: addIsPublic,
         isClassic: addIsPublic && addCategory === "classics",
@@ -1594,7 +1650,7 @@ export default function AdminPage() {
           disabled={processState === "processing" || !addScript.trim()}
           className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
           style={{ background: "linear-gradient(135deg,rgba(79,195,247,0.2),rgba(167,139,250,0.2))", border: "1px solid rgba(79,195,247,0.4)", color: "#fff" }}>
-          {processState === "processing" ? "Processing…" : "⚙️ Process Script"}
+          {processState === "processing" ? (processPhase || "Processing…") : "⚙️ Process Script"}
         </button>
 
         {/* ── Preview (after script processed) ── */}
@@ -1634,11 +1690,13 @@ export default function AdminPage() {
               }
             />
 
-            {/* Validation */}
+            {/* Validation — same two-pass check the normal generation flow runs;
+                both passes already auto-applied their fixes above, this is a
+                transparency log of what changed, not an action item. */}
             {validationIssues.length > 0 && (
               <div className="rounded-xl px-4 py-3 mt-3"
                 style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.25)" }}>
-                <p className="text-fs-body font-bold mb-1" style={{ color: "#fbbf24" }}>⚠️ Policy issues to fix</p>
+                <p className="text-fs-body font-bold mb-1" style={{ color: "#fbbf24" }}>⚠️ Policy issues auto-fixed</p>
                 {validationIssues.map((issue, idx) => (
                   <p key={idx} className="text-fs-body leading-snug" style={{ color: "rgba(251,191,36,0.75)" }}>• {issue}</p>
                 ))}
@@ -1646,6 +1704,13 @@ export default function AdminPage() {
             )}
             {validationIssues.length === 0 && (
               <p className="text-center text-fs-body mt-2" style={{ color: "rgba(79,195,247,0.6)" }}>✓ Script passes policy check</p>
+            )}
+            {validationChanges > 0 ? (
+              <p className="text-center text-fs-body mt-1" style={{ color: "rgba(251,191,36,0.75)" }}>
+                ✎ Fixed {validationChanges} typo/grammar/age issue{validationChanges === 1 ? "" : "s"}
+              </p>
+            ) : (
+              <p className="text-center text-fs-body mt-1" style={{ color: "rgba(79,195,247,0.6)" }}>✓ No typos or grammar issues found</p>
             )}
 
             {/* Produce */}
