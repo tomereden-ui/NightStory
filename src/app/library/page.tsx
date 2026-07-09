@@ -6,7 +6,6 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
-import { LANGUAGE_META } from "@/lib/i18n";
 import Icon from "@/components/ui/Icon";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 
@@ -22,26 +21,6 @@ function timeAgo(ts: number, tFn: (key: string) => string): string {
   return `${days}${tFn("daysAgo")}`;
 }
 
-
-type DurationFilter = "all" | "short" | "medium" | "long";
-
-function getDurationFilters(tFn: (key: string) => string): { key: DurationFilter; label: string; icon: string }[] {
-  return [
-    { key: "all",    label: tFn("all"),    icon: "✦" },
-    { key: "short",  label: tFn("short"),  icon: "⚡" },
-    { key: "medium", label: tFn("medium"), icon: "🌙" },
-    { key: "long",   label: tFn("long"),   icon: "📖" },
-  ];
-}
-
-function matchesDuration(seconds: number, filter: DurationFilter): boolean {
-  if (filter === "all") return true;
-  const m = seconds / 60;
-  if (filter === "short")  return m < 3;
-  if (filter === "medium") return m >= 3 && m < 8;
-  if (filter === "long")   return m >= 8;
-  return true;
-}
 
 const CARD_PALETTES: [string, string][] = [
   ["#4fc3f7", "#7c3aed"],
@@ -216,7 +195,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
 
 // ── Main Library page ─────────────────────────────────────────────────────────
 
-type LibraryTab = "my-stories" | "family" | "classics" | "community";
+type LibraryTab = "all" | "my-stories" | "family" | "classics" | "community";
 
 // ── Family Stories grid with per-card child assignment ────────────────────────
 
@@ -458,7 +437,7 @@ export default function LibraryPage() {
 
   useEffect(() => {
     const saved = sessionStorage.getItem("library-tab");
-    if (saved === "classics" || saved === "community" || saved === "family") setActiveTab(saved as LibraryTab);
+    if (saved === "classics" || saved === "community" || saved === "family" || saved === "all") setActiveTab(saved as LibraryTab);
     const childId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
     setActiveChildId(childId);
   }, []);
@@ -466,6 +445,7 @@ export default function LibraryPage() {
   const [children, setChildren] = useState<DBChildProfile[]>([]);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [familyEntries, setFamilyEntries] = useState<LibraryEntry[]>([]);
+  const [allEntries, setAllEntries] = useState<LibraryEntry[]>([]);
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [recentClassics, setRecentClassics] = useState<ClassicMeta[]>([]);
   const [communityStories, setCommunityStories] = useState<Array<{id: string; title: string; emoji?: string; summary?: string; cover_url?: string; duration_seconds?: number}>>([]);
@@ -474,7 +454,6 @@ export default function LibraryPage() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [durationFilter, setDurationFilter] = useState<DurationFilter>("all");
   const recentScrollRef = useRef<HTMLDivElement>(null);
   const [recentCanScrollLeft, setRecentCanScrollLeft] = useState(false);
   const [recentCanScrollRight, setRecentCanScrollRight] = useState(false);
@@ -500,17 +479,19 @@ export default function LibraryPage() {
   // On mount: load classics, trash, all-family stories, and child profiles
   useEffect(() => {
     Promise.all([
-      fetch("/api/library/trash", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/library/trash?count=1", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/child-profiles", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/community", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/library?scope=all", { cache: "no-store" }).then((r) => r.json()),
     ])
-      .then(([trash, cls, allLib, kids, community]) => {
-        setTrashCount(Array.isArray(trash) ? (trash as unknown[]).length : 0);
+      .then(([trash, cls, allLib, kids, community, allVisible]) => {
+        setTrashCount(typeof (trash as { count?: number })?.count === "number" ? (trash as { count: number }).count : 0);
         applyClassics(Array.isArray(cls) ? cls as ClassicMeta[] : []);
         const allArr = Array.isArray(allLib) ? allLib as LibraryEntry[] : [];
         setFamilyEntries(allArr);
+        setAllEntries(Array.isArray(allVisible) ? allVisible as LibraryEntry[] : []);
         allArr.slice(0, 12).forEach((e) => { if (e.coverUrl) { new Image().src = e.coverUrl; } });
         setChildren(Array.isArray(kids) ? kids as DBChildProfile[] : []);
         if (Array.isArray(community)) setCommunityStories(community as typeof communityStories);
@@ -539,8 +520,7 @@ export default function LibraryPage() {
 
   const q = search.toLowerCase().trim();
   const filtered = entries.filter((e) => {
-    const matchesSearch = !q || e.title.toLowerCase().includes(q) || (e.summary ?? "").toLowerCase().includes(q);
-    return matchesSearch && matchesDuration(e.durationSeconds, durationFilter);
+    return !q || e.title.toLowerCase().includes(q) || (e.summary ?? "").toLowerCase().includes(q);
   });
 
   const handleDeleteConfirm = async (id: string) => {
@@ -670,6 +650,7 @@ export default function LibraryPage() {
         {/* Tab switcher — scrollable pills */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
           {([
+            { key: "all",        label: t("all") },
             { key: "my-stories", label: t("myLibraryTab") },
             { key: "family",     label: "Family Stories" },
             { key: "classics",   label: t("classicsTab") },
@@ -736,6 +717,66 @@ export default function LibraryPage() {
             onClassicUpdated={(updated) => setClassics((prev) => prev.map((c) => c.id === updated.id ? updated : c))}
           />
         </div>
+
+        {/* ── All Stories tab — this family's own stories plus every public
+             story (classics, community, any family's stories once public).
+             Read-only browsing (no delete/assign) since it mixes in stories
+             that aren't necessarily this family's to manage. ── */}
+        {activeTab === "all" && (
+          loading ? (
+            <div className="grid gap-3 pt-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)", aspectRatio: "2/3", animationDelay: `${i * 0.08}s` }} />
+              ))}
+            </div>
+          ) : allEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
+              <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🌙</span>
+              <p className="text-white/40 text-fs-body font-light tracking-wide">{t("noStories")}</p>
+            </div>
+          ) : (
+            <div
+              className="grid gap-3"
+              style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}
+            >
+              {allEntries.map((entry) => {
+                const [c1, c2] = cardPalette(entry.title);
+                return (
+                  <div key={entry.id} className="flex flex-col rounded-xl overflow-hidden transition-all select-none"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
+                      {entry.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                          <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>{entry.isClassic ? "✨" : "🌙"}</span>
+                        </div>
+                      )}
+                      {entry.isPublic && (
+                        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-fs-caption font-bold uppercase tracking-wide"
+                          style={{ background: "rgba(4,6,18,0.75)", color: "rgba(255,255,255,0.6)", backdropFilter: "blur(4px)" }}>
+                          {entry.isClassic ? t("classicsTab") : t("communityTab")}
+                        </span>
+                      )}
+                    </Link>
+                    <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/library/${entry.id}`}>
+                          <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
+                        </Link>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt, t)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        )}
 
         {/* ── Family Stories tab ── */}
         {activeTab === "family" && (
@@ -818,7 +859,7 @@ export default function LibraryPage() {
               <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
               <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
               <button
-                onClick={() => { setSearch(""); setDurationFilter("all"); }}
+                onClick={() => setSearch("")}
                 className="text-fs-body px-4 py-2 rounded-full transition-all"
                 style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
               >
@@ -890,11 +931,6 @@ export default function LibraryPage() {
                           <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
                         </Link>
                         <div className="flex items-center gap-1.5 mt-1">
-                          {entry.language && LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META] && (
-                            <span className="text-fs-body" title={LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].label}>
-                              {LANGUAGE_META[entry.language as keyof typeof LANGUAGE_META].flag}
-                            </span>
-                          )}
                           <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt, t)}</span>
                         </div>
                       </div>

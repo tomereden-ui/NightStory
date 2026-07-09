@@ -126,12 +126,15 @@ function HeroBanner({ story, progressPercent = 42, tFn }: { story: LibraryEntry;
     >
       {/* Cover art */}
       {story.coverUrl ? (
+        // Same top-biased crop as the story detail hero — generated covers
+        // are square with the character's face in the top ~15-45%, so a
+        // center crop into this short wide banner cuts the head off.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={story.coverUrl}
           alt={story.title}
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ filter: "brightness(0.75)" }}
+          style={{ filter: "brightness(0.75)", objectPosition: "50% 30%" }}
         />
       ) : (
         <div

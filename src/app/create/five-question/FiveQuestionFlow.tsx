@@ -228,7 +228,7 @@ function IllustratedCard({
   selected?: boolean; onClick: () => void; badge?: React.ReactNode;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
-  const [c1, c2] = cardPalette(label);
+  const [c1] = cardPalette(label);
 
   return (
     <button
@@ -250,21 +250,22 @@ function IllustratedCard({
           onLoad={() => setImgLoaded(true)}
         />
       )}
+      {/* Neutral loading skeleton — no fully-"finished-looking" art is ever
+          shown before the real photo, so nothing that could read as a wrong
+          answer appears first. Only the option's emoji hints at what's
+          loading, at low opacity, on a plain shimmering background. */}
       <div
-        className="absolute inset-0 flex flex-col items-center justify-center gap-1"
+        className="absolute inset-0 flex flex-col items-center justify-center"
         style={{
-          background: `radial-gradient(ellipse at 40% 35%, ${c1}55 0%, ${c2}33 50%, rgba(6,9,22,0.97) 100%)`,
+          background: "linear-gradient(100deg, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 70%)",
+          backgroundSize: "200% 100%",
+          animation: imgLoaded ? "none" : "_cardShimmer 1.6s ease-in-out infinite",
           opacity: imgLoaded ? 0 : 1,
           transition: "opacity 0.4s ease",
           pointerEvents: "none",
         }}
       >
-        <div style={{
-          position: "absolute", width: 64, height: 64, borderRadius: "50%",
-          background: `radial-gradient(circle, ${c1}44, transparent 70%)`,
-          filter: "blur(8px)",
-        }} />
-        <span className="text-fs-display relative" style={{ filter: `drop-shadow(0 0 20px ${c1}) drop-shadow(0 0 8px ${c2})` }}>{emoji}</span>
+        <span className="text-fs-display relative" style={{ opacity: 0.25 }}>{emoji}</span>
       </div>
       <div
         className="absolute inset-0"
@@ -387,6 +388,12 @@ function QuestionShell({ onBack, onReset, children, bluebellText, bluebellSpeed,
 
   return (
     <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
+      <style>{`
+        @keyframes _cardShimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
       <div className="flex items-center mb-8">
         {onBack
           ? <BackButton onClick={onBack} label={ui.back} />
@@ -1097,6 +1104,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
   const [optionImages, setOptionImages] = useState<Record<string, string>>({});
   const [imagesGenerating, setImagesGenerating] = useState(false);
+  const [imagesReady, setImagesReady] = useState(false);
 
   // Restore saved draft on mount
   useEffect(() => {
@@ -1176,7 +1184,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     async function seedImages() {
       try {
         const res = await fetch("/api/admin/seed-create-images");
-        if (!res.ok) { console.warn("[seedImages] GET failed", res.status); return; }
+        if (!res.ok) { console.warn("[seedImages] GET failed", res.status); setImagesReady(true); return; }
         const { missing, existingImageUrls } = await res.json() as {
           missing: { key: string; prompt: string }[];
           existingImageUrls: Record<string, string>;
@@ -1185,6 +1193,13 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         if (existingImageUrls && Object.keys(existingImageUrls).length > 0) {
           setOptionImages((prev) => ({ ...prev, ...existingImageUrls }));
         }
+        // Every already-cached image URL is known at this point — safe to
+        // reveal the wizard now instead of stepping through cards that each
+        // start blank/placeholder and pop in their real art a moment later.
+        // Only genuinely never-before-seen images (the `missing` list below)
+        // still need to stream in live, and those show a neutral loading
+        // skeleton rather than a placeholder that looks like finished art.
+        setImagesReady(true);
 
         if (!missing?.length) { return; }
 
@@ -1214,6 +1229,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         setImagesGenerating(false);
       } catch (e) {
         console.warn("[seedImages] seed error", e);
+        setImagesReady(true);
       }
     }
     seedImages();
@@ -1354,6 +1370,19 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const skipOrSummary = (next: Step, setDefault: () => void) => { setDefault(); nextOrSummary(next); };
 
   const resetProp = hasProgress ? handleReset : undefined;
+
+  // Wait for the option-card artwork cache lookup to resolve before showing
+  // any question step — otherwise every step starts with placeholder card
+  // art that pops to the real (already-cached) photo a moment later, which
+  // reads as "wrong image, then right image" on every single step.
+  if (["q1", "q2", "q3", "q4", "q5"].includes(step) && !imagesReady) {
+    return (
+      <div className="flex flex-col min-h-full items-center justify-center px-8 text-center gap-6">
+        <FairyFigure size={90} />
+        <p className="text-white/60 text-fs-subtitle font-light">{t("paintingImages")}</p>
+      </div>
+    );
+  }
 
   if (step === "q1") return <>{GeneratingBadge}<Q1View key={resetToken} initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} bb={bb} ui={ui} /></>;
   if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} heroName={answers.q1_hero} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} bb={bb} ui={ui} worldOptions={worldOptions} /></>;
