@@ -282,7 +282,7 @@ async function castVoicesWithGemini(
     GEMINI_CATALOG_VOICES.filter((v) => v.appPresetId && excludePresetIds.has(v.appPresetId)).map((v) => v.voiceName),
   );
 
-  const { data, ok } = await geminiPost(apiKey, "gemini-2.5-flash", {
+  const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
     contents: [{ role: "user", parts: [{ text: buildCastingPrompt(characters, excludeVoiceNames) }] }],
     generationConfig: { temperature: 0.4, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
   });

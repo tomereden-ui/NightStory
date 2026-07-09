@@ -101,7 +101,7 @@ export async function planDrama(
     `STORY SCRIPT (may be in any language — copy each dialogue line's "line" text EXACTLY as written below, character-for-character, including any Hebrew niqqud/vowel points — do not transliterate, translate, or strip diacritics):\n${scriptText}\n\n` +
     FORMAT_RULES;
 
-  const { data, ok, status } = await geminiPost(apiKey, "gemini-2.5-flash", {
+  const { data, ok, status } = await geminiPost(apiKey, "gemini-3.5-flash", {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     // Unlike generate-story's 8192 (which only needs to hold the raw dialogue
     // text once), this output repeats every line's text again inside a much

@@ -28,7 +28,7 @@ Examples of INVALID descriptions: "happiness", "the color blue", "asdfgh", "just
 Description: "${description.trim()}"`;
 
   try {
-    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: "application/json", temperature: 0, thinkingConfig: { thinkingBudget: 0 } },
     });

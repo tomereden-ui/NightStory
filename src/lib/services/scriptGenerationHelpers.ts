@@ -26,7 +26,7 @@ export async function detectGeneratedLanguage(blocks: { characterName: string; t
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       generationConfig: {
         temperature: 0,
         maxOutputTokens: 5,
@@ -174,7 +174,7 @@ export async function resolveTitleConflict(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         generationConfig: {
           temperature: 0.9,
           maxOutputTokens: 30,

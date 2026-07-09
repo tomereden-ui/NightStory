@@ -127,7 +127,7 @@ export async function analyzeLessonsForStory(blocks: ScriptBlock[], apiKey: stri
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     systemInstruction: buildLessonsSystemInstruction(language),
     generationConfig: READONLY_GENERATION_CONFIG,
   });
@@ -172,7 +172,7 @@ Return ONLY the summary text, nothing else, no quotes.`;
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     systemInstruction,
     generationConfig: { ...READONLY_GENERATION_CONFIG, maxOutputTokens: 300 },
   });

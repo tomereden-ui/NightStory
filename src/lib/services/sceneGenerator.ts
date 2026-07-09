@@ -31,7 +31,7 @@ Script:
 ${script}`;
 
   try {
-    const { data } = await geminiPost(geminiKey, "gemini-2.5-flash", {
+    const { data } = await geminiPost(geminiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       // thinkingBudget 0: scene segmentation follows explicit written rules,
       // and this runs inside produce-drama's parallel planning step where the

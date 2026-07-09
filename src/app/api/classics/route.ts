@@ -151,7 +151,7 @@ RULES:
   let blocks: ScriptBlock[] = [];
 
   try {
-    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: [{ role: "user", parts: [{ text: def.scriptPrompt }] }],
       generationConfig: { temperature: 0.8, maxOutputTokens: 3000, thinkingConfig: { thinkingBudget: 0 } },

@@ -54,7 +54,7 @@ Return ONLY valid JSON, no markdown, no explanation:
 {"approved": true} or {"approved": false, "reason": "<short kind message in ${langName}>"}`;
 
   try {
-    const { data, ok } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.2, maxOutputTokens: 512, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
     });

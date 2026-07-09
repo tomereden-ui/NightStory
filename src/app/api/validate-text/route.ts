@@ -28,7 +28,7 @@ Be PERMISSIVE — creative, unusual, or fantastical content is fine. Only reject
 Text: "${text.trim().slice(0, 800)}"`;
 
   try {
-    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: "application/json", temperature: 0, thinkingConfig: { thinkingBudget: 0 } },
     });

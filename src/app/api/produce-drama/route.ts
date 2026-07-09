@@ -95,7 +95,7 @@ async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Prom
     .slice(0, 400);
 
   try {
-    const { data, ok } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: `What language is this text written in? Reply with ONLY the ISO 639-1 two-letter code (e.g. "en", "he", "ar", "fr", "de", "es"). No explanation.\n\n${sample}` }] }],
       generationConfig: { temperature: 0, maxOutputTokens: 5, thinkingConfig: { thinkingBudget: 0 } },
     });

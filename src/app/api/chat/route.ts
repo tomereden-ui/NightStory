@@ -63,7 +63,7 @@ function languageOverride(language?: string): string {
 async function detectExplicitGoAhead(genAI: GoogleGenerativeAI, lastUserMessage: string): Promise<boolean> {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       systemInstruction: `Does this message from a parent explicitly say they're ready/want to proceed with creating the story now (e.g. "yes let's go", "create it", "start now", "go ahead", "that's everything, make it"), in any language? Answer with ONLY the single word true or false — nothing else.`,
       generationConfig: {
         temperature: 0,
@@ -104,12 +104,12 @@ export async function POST(req: NextRequest) {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       systemInstruction: loadChatGuide() + buildChildContext(childProfile) + languageOverride(language),
       generationConfig: {
         // Luna's replies are short conversational turns following an explicit
         // guide — no reasoning chain needed. Without any generationConfig,
-        // gemini-2.5-flash thinks by default, adding seconds of dead air to
+        // gemini-3.5-flash thinks by default, adding seconds of dead air to
         // every single chat turn.
         // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
         thinkingConfig: { thinkingBudget: 0 },

@@ -36,7 +36,7 @@ Return ONLY valid JSON (no markdown):
 For ageGroup, pick the range that best matches the vocabulary, themes, and complexity of this script.`;
 
   try {
-    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: "application/json", temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } },
     });

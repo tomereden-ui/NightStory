@@ -52,7 +52,7 @@ Each element: { "characterName": string, "textPayload": string }`;
   ].filter(Boolean).join("\n");
 
   try {
-    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: [{ role: "user", parts: [{ text: userMessage }] }],
       generationConfig: { temperature: 0.75, maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } },

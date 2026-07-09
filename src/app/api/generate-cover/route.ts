@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   // Step 1: Rewrite the story hint into a safe, fantastical image prompt
   let imagePrompt = prompt;
   try {
-    const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{
         role: "user",
         parts: [{ text: buildCoverRewriterPrompt(prompt, summary) }],
