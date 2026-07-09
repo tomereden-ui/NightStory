@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEntries, addEntry } from "@/lib/libraryStore";
+import { getEntrySummaries, getAllVisibleEntries, addEntry } from "@/lib/libraryStore";
+import { getFamilyContext } from "@/lib/authContext";
 import type { ScriptBlock, StoryScene } from "@/types";
 import type { CharacterProfile } from "@/lib/libraryStore";
 import type { MoralLesson } from "@/types";
@@ -7,8 +8,19 @@ import type { MoralLesson } from "@/types";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const ctx = await getFamilyContext(req);
+  if (!ctx) return NextResponse.json({ error: "No family" }, { status: 403 });
+
   const childId = req.nextUrl.searchParams.get("childId") ?? undefined;
-  return NextResponse.json(await getEntries(childId));
+  const scope = req.nextUrl.searchParams.get("scope");
+  const rawLimit = Number(req.nextUrl.searchParams.get("limit"));
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 100;
+  // List views never read blocks/scenes/profiles — don't ship every story's
+  // full script (or pay the extra view/share-count queries) on each render.
+  if (scope === "all") {
+    return NextResponse.json(await getAllVisibleEntries(ctx.familyId, { limit }));
+  }
+  return NextResponse.json(await getEntrySummaries(ctx.familyId, { childId, limit }));
 }
 
 // POST — create a draft story row the moment a script is generated in Studio,
@@ -39,6 +51,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "blocks required" }, { status: 400 });
   }
 
+  const ctx = await getFamilyContext(req);
+  if (!ctx) return NextResponse.json({ error: "No family" }, { status: 403 });
+
   const id = crypto.randomUUID();
   await addEntry({
     id,
@@ -53,7 +68,7 @@ export async function POST(req: NextRequest) {
     moralLessons: body.moralLessons,
     childIds: body.childIds,
     isDraft: true,
-  });
+  }, ctx.familyId);
 
   return NextResponse.json({ id });
 }

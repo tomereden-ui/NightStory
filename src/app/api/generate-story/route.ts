@@ -4,7 +4,8 @@ import fs from "fs";
 import path from "path";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
-import { getEntries } from "@/lib/libraryStore";
+import { getEntryTitles } from "@/lib/libraryStore";
+import { getFamilyContext } from "@/lib/authContext";
 import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage } from "@/lib/services/scriptGenerationHelpers";
 import type { ScriptBlock } from "@/types";
 
@@ -186,8 +187,8 @@ export async function POST(req: NextRequest) {
 
   let existingTitles: string[] = [];
   try {
-    const entries = await getEntries();
-    existingTitles = entries.map((e) => e.title).filter(Boolean);
+    const ctx = await getFamilyContext(req);
+    if (ctx) existingTitles = await getEntryTitles(ctx.familyId);
   } catch { /* best-effort — don't block generation if DB is unreachable */ }
 
   try {

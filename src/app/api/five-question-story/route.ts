@@ -8,7 +8,8 @@ import { MOOD_LABELS } from "@/constants/bluebellScripts";
 import type { StorySeeds } from "@/utils/buildStoryPrompt";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
-import { getEntries } from "@/lib/libraryStore";
+import { getEntryTitles } from "@/lib/libraryStore";
+import { getFamilyContext } from "@/lib/authContext";
 import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage } from "@/lib/services/scriptGenerationHelpers";
 
 export const maxDuration = 120;
@@ -118,8 +119,8 @@ export async function POST(req: NextRequest) {
 
   let existingTitles: string[] = [];
   try {
-    const entries = await getEntries();
-    existingTitles = entries.map((e) => e.title).filter(Boolean);
+    const ctx = await getFamilyContext(req);
+    if (ctx) existingTitles = await getEntryTitles(ctx.familyId);
   } catch { /* best-effort */ }
 
   const systemInstruction = buildSystemInstruction(guidance, clampedDuration, body.language, existingTitles);

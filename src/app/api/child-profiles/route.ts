@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getFamilyContext } from "@/lib/authContext";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +19,15 @@ export interface DBChildProfile {
   updated_at: number;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const ctx = await getFamilyContext(req);
+  if (!ctx) return NextResponse.json([]);
   try {
     const { data, error } = await supabase
       .from("child_profiles")
       .select("*")
+      // null = pre-migration legacy rows; visible until the backfill stamps them
+      .or(`family_id.eq.${ctx.familyId},family_id.is.null`)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -37,11 +42,14 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const ctx = await getFamilyContext(req);
+  if (!ctx) return NextResponse.json({ error: "No family" }, { status: 403 });
   try {
     const body = await req.json() as Partial<DBChildProfile>;
     const now = Date.now();
 
-    const row: DBChildProfile = {
+    const row: DBChildProfile & { family_id: string } = {
+      family_id: ctx.familyId,
       id: `cp-${now}-${Math.random().toString(36).slice(2, 7)}`,
       name: String(body.name ?? "").trim(),
       age: Math.max(1, Math.min(16, Number(body.age ?? 5))),

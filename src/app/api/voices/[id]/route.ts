@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, ensureBuckets } from "@/lib/supabase";
+import { invalidateVoicesCache } from "@/lib/voicesCache";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -76,6 +77,7 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  invalidateVoicesCache();
   return NextResponse.json(data ?? { ok: true });
 }
 
@@ -95,5 +97,6 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  invalidateVoicesCache();
   return NextResponse.json({ ok: true });
 }

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, ensureBuckets } from "@/lib/supabase";
+import { getCachedVoices, setCachedVoices, invalidateVoicesCache } from "@/lib/voicesCache";
 
 // ─── GET: list all voices ─────────────────────────────────────────────────────
 
 export async function GET() {
+  const cached = getCachedVoices();
+  if (cached) return NextResponse.json(cached);
+
   try {
     const { data, error } = await supabase
       .from("voices")
@@ -15,6 +19,7 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    setCachedVoices(data ?? []);
     return NextResponse.json(data ?? []);
   } catch (err) {
     console.error("[voices GET] unexpected:", err);
@@ -110,5 +115,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  invalidateVoicesCache();
   return NextResponse.json(data, { status: 201 });
 }

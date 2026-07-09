@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     const { jobId } = await req.json() as { jobId?: string };
     if (!jobId) return NextResponse.json({ error: "jobId required" }, { status: 400 });
 
-    const job = getJob(jobId);
+    const job = await getJob(jobId);
     if (!job) return NextResponse.json({ error: "Job not found — it may have expired (jobs live 2 h)" }, { status: 404 });
     if (!job.pendingEntry) return NextResponse.json({ error: "No pending entry for this job — story may already be saved or was produced without skipLibrarySave" }, { status: 409 });
 
