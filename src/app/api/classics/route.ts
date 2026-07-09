@@ -41,8 +41,21 @@ export async function GET() {
 
   const dbById = new Map((dbRows ?? []).map((r) => [r.id, r]));
 
+  // A trashed classic has no DB row and (once moveToTrash's cleanup runs) no
+  // Storage cache either — indistinguishable from "never generated yet"
+  // without this check. Without it, the client's background auto-generate
+  // effect (library/page.tsx) treats a deliberate delete as "pending" and
+  // silently regenerates the exact story that was just removed, seconds
+  // later, from the same hardcoded id.
+  const { data: trashedRows } = await supabase
+    .from("trash")
+    .select("id")
+    .eq("is_classic", true)
+    .in("id", CLASSIC_STORIES.map((d) => d.id));
+  const trashedIds = new Set((trashedRows ?? []).map((r) => r.id as string));
+
   const metas: ClassicMeta[] = await Promise.all(
-    CLASSIC_STORIES.map(async (def) => {
+    CLASSIC_STORIES.filter((def) => !trashedIds.has(def.id)).map(async (def) => {
       const row = dbById.get(def.id);
       if (row) {
         return {

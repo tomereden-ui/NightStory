@@ -19,9 +19,22 @@ function publicUrl(path: string): string {
 }
 
 export async function GET() {
-  const results: { id: string; status: "migrated" | "skipped" | "pending" }[] = [];
+  const results: { id: string; status: "migrated" | "skipped" | "pending" | "trashed" }[] = [];
+
+  // Don't resurrect a deliberately deleted classic — same trash-aware check
+  // as /api/classics' GET handler.
+  const { data: trashedRows } = await supabase
+    .from("trash")
+    .select("id")
+    .eq("is_classic", true)
+    .in("id", CLASSIC_STORIES.map((d) => d.id));
+  const trashedIds = new Set((trashedRows ?? []).map((r) => r.id as string));
 
   for (const def of CLASSIC_STORIES) {
+    if (trashedIds.has(def.id)) {
+      results.push({ id: def.id, status: "trashed" });
+      continue;
+    }
     // Check Storage for script.json
     const { data: files } = await supabase.storage.from(BUCKET).list(def.id);
     const fileNames = new Set((files ?? []).map((f) => f.name));
