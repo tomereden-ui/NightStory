@@ -1513,6 +1513,54 @@ export default function AdminPage() {
     }
   };
 
+  // ── Admin Services: Delete only the audio file from a story ──────────────
+  const [deleteAudioStoryId, setDeleteAudioStoryId] = useState("");
+  const [deleteAudioRunning, setDeleteAudioRunning] = useState(false);
+  const [deleteAudioLog, setDeleteAudioLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const handleDeleteAudio = async () => {
+    const id = deleteAudioStoryId.trim();
+    if (!id) return;
+
+    setDeleteAudioRunning(true);
+    setDeleteAudioLog([{ type: "info", text: `Looking up story ${id}…` }]);
+    try {
+      const lookupRes = await fetch(`/api/library/${encodeURIComponent(id)}`);
+      if (!lookupRes.ok) {
+        setDeleteAudioLog((l) => [...l, { type: "error", text: lookupRes.status === 404 ? "No story found with that ID." : `Lookup failed: ${lookupRes.statusText}` }]);
+        return;
+      }
+      const entry = await lookupRes.json() as { title: string; audioUrl?: string };
+
+      if (!entry.audioUrl) {
+        setDeleteAudioLog((l) => [...l, { type: "info", text: `"${entry.title}" already has no audio — nothing to remove.` }]);
+        return;
+      }
+
+      if (!confirm(`Delete the audio file for "${entry.title}" (${id})?\n\nScript, cover, and everything else stay as-is — only audio_url and the stored audio file are removed. Not recoverable; re-produce to regenerate.`)) {
+        setDeleteAudioLog((l) => [...l, { type: "info", text: "Cancelled." }]);
+        return;
+      }
+
+      const res = await fetch("/api/admin/delete-audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId: id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteAudioLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      setDeleteAudioLog((l) => [...l, { type: "success", text: `✅ Removed audio for "${data.title}"${data.removedFile ? "" : " (DB field cleared; storage file was already missing)"}.` }]);
+      setDeleteAudioStoryId("");
+    } catch (e) {
+      setDeleteAudioLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setDeleteAudioRunning(false);
+    }
+  };
+
   // ── Admin Services: Generate voice preview samples ───────────────────────
   const [previewVoiceId, setPreviewVoiceId] = useState("");
   const [previewRunning, setPreviewRunning] = useState(false);
@@ -2256,6 +2304,58 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {deleteLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Delete Audio Only Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.18)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🔇 Delete Audio Only</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Removes just the produced audio file and clears audio_url, by story ID — usable on any
+                    story regardless of owner. Script, cover, scenes, and everything else stay untouched.
+                    Not recoverable; re-produce the story to generate new audio.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={deleteAudioStoryId}
+                  onChange={(e) => setDeleteAudioStoryId(e.target.value)}
+                  placeholder="Story ID"
+                  disabled={deleteAudioRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+                <button
+                  onClick={handleDeleteAudio}
+                  disabled={deleteAudioRunning || !deleteAudioStoryId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171" }}>
+                  Delete Audio
+                </button>
+              </div>
+
+              {/* Log output */}
+              {deleteAudioLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {deleteAudioLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"
