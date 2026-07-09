@@ -65,7 +65,18 @@ ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.textPa
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } },
+      // The response echoes every block's full text back inside a JSON
+      // array (index/text/status per block), so its size scales with the
+      // whole script's length — 4096 was the bare API default, not a
+      // deliberate budget, and risked silently truncating mid-JSON-string on
+      // longer scripts (a cut-off response looks identical to genuinely
+      // malformed JSON from the parse error alone — see the finishReason
+      // logging below). responseMimeType constrains Gemini to its native
+      // structured-JSON mode (properly escaped strings, no markdown fences,
+      // no stray text) instead of just asking nicely in the prompt and
+      // hoping — already used by characterProfiler.ts for the same reason,
+      // just missing here.
+      generationConfig: { temperature: 0.3, maxOutputTokens: 32768, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
     });
     const tokens = result.response.usageMetadata?.totalTokenCount;
     if (tokens) trackGemini(tokens).catch(() => {});
@@ -73,7 +84,14 @@ ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.textPa
     const raw = result.response.text().trim();
     // Strip markdown fences if present
     const jsonStr = raw.replace(/^```[^\n]*\n?/, "").replace(/\n?```$/, "").trim();
-    const validated: { index: number; text: string; status: "ok" | "fixed" }[] = JSON.parse(jsonStr);
+    let validated: { index: number; text: string; status: "ok" | "fixed" }[];
+    try {
+      validated = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      const finishReason = result.response.candidates?.[0]?.finishReason ?? "unknown";
+      console.error(`[validate-blocks] Invalid JSON — finishReason=${finishReason}, length=${jsonStr.length} chars. Full response:\n${jsonStr}`);
+      throw parseErr;
+    }
 
     let changes = 0;
     const resultBlocks = [...blocks];
