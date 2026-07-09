@@ -5,7 +5,8 @@
     "usedInApp flags whether the app's own code currently references that exact voice id/name anywhere.",
     "To add a voice by hand: append an object to the matching engine's `voices` array (or a new entry",
     "under manualAdditions if it's from an engine not listed below) using the same field shape as its",
-    "neighbors. Fields you don't have data for can be set to null — nothing here is enforced by a schema."
+    "neighbors. Fields you don't have data for can be set to null — nothing here is enforced by a schema.",
+    "Each voice's castingProfile is an assessed layer (pitch/pace/energy/texture/suggestedArchetypes) using the same rubric as this app's own runtime voice-casting prompt (characterProfiler.ts) -- derived from each engine's real published signals, not measured audio. See each entry's castingProfile.assessedBy for provenance (Claude judgment vs. this app's own hand-tuned config)."
   ],
   "generatedAt": "2026-07-09T14:11:32.490Z",
   "sources": {
@@ -22,36 +23,679 @@
       "outputFormat": "PCM (16-bit) / WAV",
       "voiceCount": 30,
       "voices": [
-        { "voiceName": "Achernar", "styleDescriptor": "Soft", "usedInApp": true, "appPresetId": "Achernar", "appEmoji": "💎", "appDescription": "Soft & delicate feminine", "appGender": "female", "appStyle": "gentle" },
-        { "voiceName": "Achird", "styleDescriptor": "Friendly", "usedInApp": true, "appPresetId": "Achird", "appEmoji": "🤝", "appDescription": "Friendly & approachable masculine", "appGender": "male", "appStyle": "warm" },
-        { "voiceName": "Algenib", "styleDescriptor": "Gravelly", "usedInApp": true, "appPresetId": "Algenib", "appEmoji": "🎸", "appDescription": "Raspy & gravelly masculine", "appGender": "male", "appStyle": "dramatic" },
-        { "voiceName": "Algieba", "styleDescriptor": "Smooth", "usedInApp": true, "appPresetId": "Algieba", "appEmoji": "🧈", "appDescription": "Smooth & polished masculine", "appGender": "male", "appStyle": "calm" },
-        { "voiceName": "Alnilam", "styleDescriptor": "Firm", "usedInApp": true, "appPresetId": "Alnilam", "appEmoji": "🗿", "appDescription": "Firm & assured masculine", "appGender": "male", "appStyle": "calm" },
-        { "voiceName": "Aoede", "styleDescriptor": "Breezy", "usedInApp": true, "appPresetId": "Aoede", "appEmoji": "🌸", "appDescription": "Warm & melodic feminine", "appGender": "female", "appStyle": "warm" },
-        { "voiceName": "Autonoe", "styleDescriptor": "Bright", "usedInApp": true, "appPresetId": "Autonoe", "appEmoji": "🌟", "appDescription": "Bright & lively feminine", "appGender": "female", "appStyle": "playful" },
-        { "voiceName": "Callirrhoe", "styleDescriptor": "Easy-going", "usedInApp": true, "appPresetId": "Callirrhoe", "appEmoji": "🌊", "appDescription": "Easy-going & flowing feminine", "appGender": "female", "appStyle": "warm" },
-        { "voiceName": "Charon", "styleDescriptor": "Informative", "usedInApp": true, "appPresetId": "Charon", "appEmoji": "🌑", "appDescription": "Deep & authoritative masculine", "appGender": "male", "appStyle": "dramatic" },
-        { "voiceName": "Despina", "styleDescriptor": "Smooth", "usedInApp": true, "appPresetId": "Despina", "appEmoji": "💫", "appDescription": "Smooth & refined feminine", "appGender": "female", "appStyle": "gentle" },
-        { "voiceName": "Enceladus", "styleDescriptor": "Breathy", "usedInApp": true, "appPresetId": "Enceladus", "appEmoji": "🌫️", "appDescription": "Breathy & soft-spoken masculine", "appGender": "male", "appStyle": "gentle" },
-        { "voiceName": "Erinome", "styleDescriptor": "Clear", "usedInApp": true, "appPresetId": "Erinome", "appEmoji": "🔮", "appDescription": "Clear & expressive feminine", "appGender": "female", "appStyle": "warm" },
-        { "voiceName": "Fenrir", "styleDescriptor": "Excitable", "usedInApp": true, "appPresetId": "Fenrir", "appEmoji": "⚡", "appDescription": "Strong & excitable masculine", "appGender": "male", "appStyle": "playful" },
-        { "voiceName": "Gacrux", "styleDescriptor": "Mature", "usedInApp": true, "appPresetId": "Gacrux", "appEmoji": "🌌", "appDescription": "Mature & gravelly masculine", "appGender": "male", "appStyle": "dramatic" },
-        { "voiceName": "Iapetus", "styleDescriptor": "Clear", "usedInApp": true, "appPresetId": "Altair", "appEmoji": "🦅", "appDescription": "Firm & direct masculine", "appGender": "male", "appStyle": "calm" },
-        { "voiceName": "Kore", "styleDescriptor": "Firm", "usedInApp": true, "appPresetId": "Kore", "appEmoji": "🌿", "appDescription": "Soft & gentle feminine", "appGender": "female", "appStyle": "gentle" },
-        { "voiceName": "Laomedeia", "styleDescriptor": "Upbeat", "usedInApp": true, "appPresetId": "Laomedeia", "appEmoji": "🎶", "appDescription": "Upbeat & melodic feminine", "appGender": "female", "appStyle": "playful" },
-        { "voiceName": "Leda", "styleDescriptor": "Youthful", "usedInApp": true, "appPresetId": "Leda", "appEmoji": "✨", "appDescription": "Clear & youthful feminine", "appGender": "female", "appStyle": "playful" },
-        { "voiceName": "Orus", "styleDescriptor": "Firm", "usedInApp": true, "appPresetId": "Orus", "appEmoji": "🪨", "appDescription": "Steady & rich masculine", "appGender": "male", "appStyle": "calm" },
-        { "voiceName": "Puck", "styleDescriptor": "Upbeat", "usedInApp": true, "appPresetId": "Puck", "appEmoji": "🎭", "appDescription": "Playful & upbeat", "appGender": "neutral", "appStyle": "playful" },
-        { "voiceName": "Pulcherrima", "styleDescriptor": "Forward", "usedInApp": true, "appPresetId": "Isonoe", "appEmoji": "🍃", "appDescription": "Smooth & delicate feminine", "appGender": "female", "appStyle": "gentle" },
-        { "voiceName": "Rasalgethi", "styleDescriptor": "Informative", "usedInApp": true, "appPresetId": "Rasalgethi", "appEmoji": "📖", "appDescription": "Informational & articulate", "appGender": "male", "appStyle": "dramatic" },
-        { "voiceName": "Sadachbia", "styleDescriptor": "Lively", "usedInApp": true, "appPresetId": "Sadachbia", "appEmoji": "🎠", "appDescription": "Lively & spirited", "appGender": "neutral", "appStyle": "playful" },
-        { "voiceName": "Sadaltager", "styleDescriptor": "Knowledgeable", "usedInApp": true, "appPresetId": "Sadaltager", "appEmoji": "🎓", "appDescription": "Knowledgeable & measured", "appGender": "male", "appStyle": "calm" },
-        { "voiceName": "Schedar", "styleDescriptor": "Even", "usedInApp": true, "appPresetId": "Schedar", "appEmoji": "⚖️", "appDescription": "Even & steady", "appGender": "neutral", "appStyle": "calm" },
-        { "voiceName": "Sulafat", "styleDescriptor": "Warm", "usedInApp": true, "appPresetId": "Sulafat", "appEmoji": "🌺", "appDescription": "Warm & inviting feminine", "appGender": "female", "appStyle": "warm" },
-        { "voiceName": "Umbriel", "styleDescriptor": "Easy-going", "usedInApp": true, "appPresetId": "Umbriel", "appEmoji": "🌙", "appDescription": "Easy-going & mellow masculine", "appGender": "male", "appStyle": "gentle" },
-        { "voiceName": "Vindemiatrix", "styleDescriptor": "Gentle", "usedInApp": true, "appPresetId": "Vindemiatrix", "appEmoji": "🍇", "appDescription": "Gentle & nurturing feminine", "appGender": "female", "appStyle": "gentle" },
-        { "voiceName": "Zephyr", "styleDescriptor": "Bright", "usedInApp": true, "appPresetId": "Zephyr", "appEmoji": "🌬", "appDescription": "Bright & airy neutral", "appGender": "neutral", "appStyle": "calm" },
-        { "voiceName": "Zubenelgenubi", "styleDescriptor": "Casual", "usedInApp": true, "appPresetId": "Zubenelgenubi", "appEmoji": "☁️", "appDescription": "Casual & relaxed", "appGender": "neutral", "appStyle": "playful" }
+        {
+          "voiceName": "Achernar",
+          "styleDescriptor": "Soft",
+          "usedInApp": true,
+          "appPresetId": "Achernar",
+          "appEmoji": "💎",
+          "appDescription": "Soft & delicate feminine",
+          "appGender": "female",
+          "appStyle": "gentle",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "breathy",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "gentle lullaby narrator",
+              "shy young character"
+            ]
+          }
+        },
+        {
+          "voiceName": "Achird",
+          "styleDescriptor": "Friendly",
+          "usedInApp": true,
+          "appPresetId": "Achird",
+          "appEmoji": "🤝",
+          "appDescription": "Friendly & approachable masculine",
+          "appGender": "male",
+          "appStyle": "warm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "friendly neighbor",
+              "approachable father figure"
+            ]
+          }
+        },
+        {
+          "voiceName": "Algenib",
+          "styleDescriptor": "Gravelly",
+          "usedInApp": true,
+          "appPresetId": "Algenib",
+          "appEmoji": "🎸",
+          "appDescription": "Raspy & gravelly masculine",
+          "appGender": "male",
+          "appStyle": "dramatic",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "weary/deliberate",
+            "texture": "gravelly",
+            "ageCharacter": "elder",
+            "suggestedArchetypes": [
+              "gruff villain",
+              "grumpy troll",
+              "tough guard"
+            ]
+          }
+        },
+        {
+          "voiceName": "Algieba",
+          "styleDescriptor": "Smooth",
+          "usedInApp": true,
+          "appPresetId": "Algieba",
+          "appEmoji": "🧈",
+          "appDescription": "Smooth & polished masculine",
+          "appGender": "male",
+          "appStyle": "calm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "suave narrator",
+              "charming rogue"
+            ]
+          }
+        },
+        {
+          "voiceName": "Alnilam",
+          "styleDescriptor": "Firm",
+          "usedInApp": true,
+          "appPresetId": "Alnilam",
+          "appEmoji": "🗿",
+          "appDescription": "Firm & assured masculine",
+          "appGender": "male",
+          "appStyle": "calm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "authority figure",
+              "knight",
+              "teacher"
+            ]
+          }
+        },
+        {
+          "voiceName": "Aoede",
+          "styleDescriptor": "Breezy",
+          "usedInApp": true,
+          "appPresetId": "Aoede",
+          "appEmoji": "🌸",
+          "appDescription": "Warm & melodic feminine",
+          "appGender": "female",
+          "appStyle": "warm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "warm narrator",
+              "kind older sister"
+            ]
+          }
+        },
+        {
+          "voiceName": "Autonoe",
+          "styleDescriptor": "Bright",
+          "usedInApp": true,
+          "appPresetId": "Autonoe",
+          "appEmoji": "🌟",
+          "appDescription": "Bright & lively feminine",
+          "appGender": "female",
+          "appStyle": "playful",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "cheerful child",
+              "excitable fairy"
+            ]
+          }
+        },
+        {
+          "voiceName": "Callirrhoe",
+          "styleDescriptor": "Easy-going",
+          "usedInApp": true,
+          "appPresetId": "Callirrhoe",
+          "appEmoji": "🌊",
+          "appDescription": "Easy-going & flowing feminine",
+          "appGender": "female",
+          "appStyle": "warm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "laid-back friend",
+              "calm mermaid"
+            ]
+          }
+        },
+        {
+          "voiceName": "Charon",
+          "styleDescriptor": "Informative",
+          "usedInApp": true,
+          "appPresetId": "Charon",
+          "appEmoji": "🌑",
+          "appDescription": "Deep & authoritative masculine",
+          "appGender": "male",
+          "appStyle": "dramatic",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "elder",
+            "suggestedArchetypes": [
+              "wise narrator",
+              "storyteller",
+              "sage"
+            ]
+          }
+        },
+        {
+          "voiceName": "Despina",
+          "styleDescriptor": "Smooth",
+          "usedInApp": true,
+          "appPresetId": "Despina",
+          "appEmoji": "💫",
+          "appDescription": "Smooth & refined feminine",
+          "appGender": "female",
+          "appStyle": "gentle",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "gentle princess",
+              "soothing narrator"
+            ]
+          }
+        },
+        {
+          "voiceName": "Enceladus",
+          "styleDescriptor": "Breathy",
+          "usedInApp": true,
+          "appPresetId": "Enceladus",
+          "appEmoji": "🌫️",
+          "appDescription": "Breathy & soft-spoken masculine",
+          "appGender": "male",
+          "appStyle": "gentle",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "slow/measured",
+            "energy": "weary/deliberate",
+            "texture": "breathy",
+            "ageCharacter": "elder",
+            "suggestedArchetypes": [
+              "tired old wizard",
+              "gentle ghost",
+              "sleepy character"
+            ]
+          }
+        },
+        {
+          "voiceName": "Erinome",
+          "styleDescriptor": "Clear",
+          "usedInApp": true,
+          "appPresetId": "Erinome",
+          "appEmoji": "🔮",
+          "appDescription": "Clear & expressive feminine",
+          "appGender": "female",
+          "appStyle": "warm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "articulate narrator",
+              "teacher",
+              "clear-voiced heroine"
+            ]
+          }
+        },
+        {
+          "voiceName": "Fenrir",
+          "styleDescriptor": "Excitable",
+          "usedInApp": true,
+          "appPresetId": "Fenrir",
+          "appEmoji": "⚡",
+          "appDescription": "Strong & excitable masculine",
+          "appGender": "male",
+          "appStyle": "playful",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "energetic hero",
+              "excitable animal sidekick",
+              "young warrior"
+            ]
+          }
+        },
+        {
+          "voiceName": "Gacrux",
+          "styleDescriptor": "Mature",
+          "usedInApp": true,
+          "appPresetId": "Gacrux",
+          "appEmoji": "🌌",
+          "appDescription": "Mature & gravelly masculine",
+          "appGender": "male",
+          "appStyle": "dramatic",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "gravelly",
+            "ageCharacter": "elder",
+            "suggestedArchetypes": [
+              "king",
+              "wise grandfather",
+              "dragon"
+            ]
+          }
+        },
+        {
+          "voiceName": "Iapetus",
+          "styleDescriptor": "Clear",
+          "usedInApp": true,
+          "appPresetId": "Altair",
+          "appEmoji": "🦅",
+          "appDescription": "Firm & direct masculine",
+          "appGender": "male",
+          "appStyle": "calm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "reliable narrator",
+              "calm father figure"
+            ]
+          }
+        },
+        {
+          "voiceName": "Kore",
+          "styleDescriptor": "Firm",
+          "usedInApp": true,
+          "appPresetId": "Kore",
+          "appEmoji": "🌿",
+          "appDescription": "Soft & gentle feminine",
+          "appGender": "female",
+          "appStyle": "gentle",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "gentle but firm mother",
+              "kind teacher"
+            ]
+          }
+        },
+        {
+          "voiceName": "Laomedeia",
+          "styleDescriptor": "Upbeat",
+          "usedInApp": true,
+          "appPresetId": "Laomedeia",
+          "appEmoji": "🎶",
+          "appDescription": "Upbeat & melodic feminine",
+          "appGender": "female",
+          "appStyle": "playful",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "playful fairy",
+              "excited child",
+              "upbeat sidekick"
+            ]
+          }
+        },
+        {
+          "voiceName": "Leda",
+          "styleDescriptor": "Youthful",
+          "usedInApp": true,
+          "appPresetId": "Leda",
+          "appEmoji": "✨",
+          "appDescription": "Clear & youthful feminine",
+          "appGender": "female",
+          "appStyle": "playful",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "child",
+            "suggestedArchetypes": [
+              "young girl hero",
+              "playful sprite"
+            ]
+          }
+        },
+        {
+          "voiceName": "Orus",
+          "styleDescriptor": "Firm",
+          "usedInApp": true,
+          "appPresetId": "Orus",
+          "appEmoji": "🪨",
+          "appDescription": "Steady & rich masculine",
+          "appGender": "male",
+          "appStyle": "calm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "steady mentor",
+              "knight captain"
+            ]
+          }
+        },
+        {
+          "voiceName": "Puck",
+          "styleDescriptor": "Upbeat",
+          "usedInApp": true,
+          "appPresetId": "Puck",
+          "appEmoji": "🎭",
+          "appDescription": "Playful & upbeat",
+          "appGender": "neutral",
+          "appStyle": "playful",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "child",
+            "suggestedArchetypes": [
+              "mischievous sprite",
+              "trickster",
+              "playful animal"
+            ]
+          }
+        },
+        {
+          "voiceName": "Pulcherrima",
+          "styleDescriptor": "Forward",
+          "usedInApp": true,
+          "appPresetId": "Isonoe",
+          "appEmoji": "🍃",
+          "appDescription": "Smooth & delicate feminine",
+          "appGender": "female",
+          "appStyle": "gentle",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "confident heroine",
+              "forward-speaking princess"
+            ]
+          }
+        },
+        {
+          "voiceName": "Rasalgethi",
+          "styleDescriptor": "Informative",
+          "usedInApp": true,
+          "appPresetId": "Rasalgethi",
+          "appEmoji": "📖",
+          "appDescription": "Informational & articulate",
+          "appGender": "male",
+          "appStyle": "dramatic",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "scholar",
+              "narrator",
+              "wise advisor"
+            ]
+          }
+        },
+        {
+          "voiceName": "Sadachbia",
+          "styleDescriptor": "Lively",
+          "usedInApp": true,
+          "appPresetId": "Sadachbia",
+          "appEmoji": "🎠",
+          "appDescription": "Lively & spirited",
+          "appGender": "neutral",
+          "appStyle": "playful",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "lively sidekick",
+              "energetic creature"
+            ]
+          }
+        },
+        {
+          "voiceName": "Sadaltager",
+          "styleDescriptor": "Knowledgeable",
+          "usedInApp": true,
+          "appPresetId": "Sadaltager",
+          "appEmoji": "🎓",
+          "appDescription": "Knowledgeable & measured",
+          "appGender": "male",
+          "appStyle": "calm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "teacher",
+              "wise owl",
+              "mentor"
+            ]
+          }
+        },
+        {
+          "voiceName": "Schedar",
+          "styleDescriptor": "Even",
+          "usedInApp": true,
+          "appPresetId": "Schedar",
+          "appEmoji": "⚖️",
+          "appDescription": "Even & steady",
+          "appGender": "neutral",
+          "appStyle": "calm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "balanced narrator",
+              "neutral guide character"
+            ]
+          }
+        },
+        {
+          "voiceName": "Sulafat",
+          "styleDescriptor": "Warm",
+          "usedInApp": true,
+          "appPresetId": "Sulafat",
+          "appEmoji": "🌺",
+          "appDescription": "Warm & inviting feminine",
+          "appGender": "female",
+          "appStyle": "warm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "loving mother",
+              "warm grandmother",
+              "comforting narrator"
+            ]
+          }
+        },
+        {
+          "voiceName": "Umbriel",
+          "styleDescriptor": "Easy-going",
+          "usedInApp": true,
+          "appPresetId": "Umbriel",
+          "appEmoji": "🌙",
+          "appDescription": "Easy-going & mellow masculine",
+          "appGender": "male",
+          "appStyle": "gentle",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "laid-back friend",
+              "gentle giant"
+            ]
+          }
+        },
+        {
+          "voiceName": "Vindemiatrix",
+          "styleDescriptor": "Gentle",
+          "usedInApp": true,
+          "appPresetId": "Vindemiatrix",
+          "appEmoji": "🍇",
+          "appDescription": "Gentle & nurturing feminine",
+          "appGender": "female",
+          "appStyle": "gentle",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "breathy",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "gentle nurse",
+              "kind fairy godmother"
+            ]
+          }
+        },
+        {
+          "voiceName": "Zephyr",
+          "styleDescriptor": "Bright",
+          "usedInApp": true,
+          "appPresetId": "Zephyr",
+          "appEmoji": "🌬",
+          "appDescription": "Bright & airy neutral",
+          "appGender": "neutral",
+          "appStyle": "calm",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "airy narrator",
+              "breeze spirit",
+              "neutral guide"
+            ]
+          }
+        },
+        {
+          "voiceName": "Zubenelgenubi",
+          "styleDescriptor": "Casual",
+          "usedInApp": true,
+          "appPresetId": "Zubenelgenubi",
+          "appEmoji": "☁️",
+          "appDescription": "Casual & relaxed",
+          "appGender": "neutral",
+          "appStyle": "playful",
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "casual friend",
+              "laid-back sidekick"
+            ]
+          }
+        }
       ]
     },
     {
@@ -60,32 +704,611 @@
       "notes": "Live query of this account's voice library, excluding category=cloned (private family voice clones). 'premade' = ElevenLabs' own stock voices; 'professional' = added to this account from ElevenLabs' public Voice Library (sharing.status=copied) — still public voices, not private recordings.",
       "voiceCount": 26,
       "voices": [
-        { "voiceId": "pNInz6obpgDQGcFmaJgB", "name": "Adam - Dominant, Firm", "category": "premade", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": null, "useCase": "social_media", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/d6905d7a-dd26-4187-bfff-1bd3a5ea7cac.mp3", "usedInApp": true },
-        { "voiceId": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice - Clear, Engaging Educator", "category": "premade", "gender": "female", "age": "middle_aged", "accent": "british", "descriptive": "professional", "useCase": "informative_educational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/Xb7hH8MSUJpSbSDYk0k2/d10f7534-11f6-41fe-a012-2de1e482d336.mp3", "usedInApp": true },
-        { "voiceId": "hpp4J3VqNfWAUOO0d1Us", "name": "Bella - Professional, Bright, Warm", "category": "premade", "gender": "female", "age": "middle_aged", "accent": "american", "descriptive": "professional", "useCase": "informative_educational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/hpp4J3VqNfWAUOO0d1Us/dab0f5ba-3aa4-48a8-9fad-f138fea1126d.mp3", "usedInApp": false },
-        { "voiceId": "pqHfZKP75CvOlQylNhV4", "name": "Bill - Wise, Mature, Balanced", "category": "premade", "gender": "male", "age": "old", "accent": "american", "descriptive": "crisp", "useCase": "advertisement", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/pqHfZKP75CvOlQylNhV4/d782b3ff-84ba-4029-848c-acf01285524d.mp3", "usedInApp": true },
-        { "voiceId": "nPczCjzI2devNBz1zQrb", "name": "Brian - Deep, Resonant and Comforting", "category": "premade", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": "classy", "useCase": "social_media", "previewUrl": "https://api.us.elevenlabs.io/v1/voices/nPczCjzI2devNBz1zQrb/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiIyZGQzZTcyYy00ZmQzLTQyZjEtOTNlYS1hYmM1ZDRlNWFhMWQubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D", "usedInApp": true },
-        { "voiceId": "N2lVS1w4EtoT3dr4eOWO", "name": "Callum - Husky Trickster", "category": "premade", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": null, "useCase": "characters_animation", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/N2lVS1w4EtoT3dr4eOWO/ac833bd8-ffda-4938-9ebc-b0f99ca25481.mp3", "usedInApp": false },
-        { "voiceId": "IKne3meq5aSn9XLyUdCD", "name": "Charlie - Deep, Confident, Energetic", "category": "premade", "gender": "male", "age": "young", "accent": "australian", "descriptive": "hyped", "useCase": "conversational", "previewUrl": "https://api.us.elevenlabs.io/v1/voices/IKne3meq5aSn9XLyUdCD/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiIxMDJkZTZmMi0yMmVkLTQzZTAtYTFmMS0xMTFmYTc1YzU0ODEubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D", "usedInApp": true },
-        { "voiceId": "iP95p4xoKVk53GoZ742B", "name": "Chris - Charming, Down-to-Earth", "category": "premade", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": "casual", "useCase": "conversational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/iP95p4xoKVk53GoZ742B/3f4bde72-cc48-40dd-829f-57fbf906f4d7.mp3", "usedInApp": false },
-        { "voiceId": "onwK4e9ZLuTAKqWW03F9", "name": "Daniel - Steady Broadcaster", "category": "premade", "gender": "male", "age": "middle_aged", "accent": "british", "descriptive": "formal", "useCase": "informative_educational", "previewUrl": "https://api.us.elevenlabs.io/v1/voices/onwK4e9ZLuTAKqWW03F9/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiI3ZWVlMDIzNi0xYTcyLTRiODYtYjMwMy01ZGNhZGMwMDdiYTkubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D", "usedInApp": false },
-        { "voiceId": "cjVigY5qzO86Huf0OWal", "name": "Eric - Smooth, Trustworthy", "category": "premade", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": "classy", "useCase": "conversational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/cjVigY5qzO86Huf0OWal/d098fda0-6456-4030-b3d8-63aa048c9070.mp3", "usedInApp": false },
-        { "voiceId": "JBFqnCBsd6RMkjVDRZzb", "name": "George - Warm, Captivating Storyteller", "category": "premade", "gender": "male", "age": "middle_aged", "accent": "british", "descriptive": "mature", "useCase": "narrative_story", "previewUrl": "https://api.us.elevenlabs.io/v1/voices/JBFqnCBsd6RMkjVDRZzb/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiJlNjIwNmQxYS0wNzIxLTQ3ODctYWFmYi0wNmE2ZTcwNWNhYzUubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D", "usedInApp": true },
-        { "voiceId": "SOYHLrjzK2X1ezoPC6cr", "name": "Harry - Fierce Warrior", "category": "premade", "gender": "male", "age": "young", "accent": "american", "descriptive": "rough", "useCase": "characters_animation", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/SOYHLrjzK2X1ezoPC6cr/86d178f6-f4b6-4e0e-85be-3de19f490794.mp3", "usedInApp": true },
-        { "voiceId": "cgSgspJ2msm6clMCkdW9", "name": "Jessica - Playful, Bright, Warm", "category": "premade", "gender": "female", "age": "young", "accent": "american", "descriptive": "cute", "useCase": "conversational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/cgSgspJ2msm6clMCkdW9/56a97bf8-b69b-448f-846c-c3a11683d45a.mp3", "usedInApp": true },
-        { "voiceId": "FGY2WhTYpPnrIDTdsKH5", "name": "Laura - Enthusiast, Quirky Attitude", "category": "premade", "gender": "female", "age": "young", "accent": "american", "descriptive": "sassy", "useCase": "social_media", "previewUrl": "https://api.us.elevenlabs.io/v1/voices/FGY2WhTYpPnrIDTdsKH5/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiI2NzM0MTc1OS1hZDA4LTQxYTUtYmU2ZS1kZTEyZmU0NDg2MTgubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D", "usedInApp": false },
-        { "voiceId": "TX3LPaxmHKxFdv7VOQHJ", "name": "Liam - Energetic, Social Media Creator", "category": "premade", "gender": "male", "age": "young", "accent": "american", "descriptive": "confident", "useCase": "social_media", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/TX3LPaxmHKxFdv7VOQHJ/63148076-6363-42db-aea8-31424308b92c.mp3", "usedInApp": true },
-        { "voiceId": "pFZP5JQG7iQjIQuC4Bku", "name": "Lily - Velvety Actress", "category": "premade", "gender": "female", "age": "middle_aged", "accent": "british", "descriptive": "confident", "useCase": "informative_educational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/pFZP5JQG7iQjIQuC4Bku/89b68b35-b3dd-4348-a84a-a3c13a3c2b30.mp3", "usedInApp": false },
-        { "voiceId": "XrExE9yKIg1WjnnlVkGX", "name": "Matilda - Knowledgable, Professional", "category": "premade", "gender": "female", "age": "middle_aged", "accent": "american", "descriptive": "upbeat", "useCase": "informative_educational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/XrExE9yKIg1WjnnlVkGX/b930e18d-6b4d-466e-bab2-0ae97c6d8535.mp3", "usedInApp": true },
-        { "voiceId": "SAz9YHcvj6GT2YYXdXww", "name": "River - Relaxed, Neutral, Informative", "category": "premade", "gender": "neutral", "age": "middle_aged", "accent": "american", "descriptive": "calm", "useCase": "conversational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/SAz9YHcvj6GT2YYXdXww/e6c95f0b-2227-491a-b3d7-2249240decb7.mp3", "usedInApp": false },
-        { "voiceId": "CwhRBWXzGAHq8TQ4Fs17", "name": "Roger - Laid-Back, Casual, Resonant", "category": "premade", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": "classy", "useCase": "conversational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/CwhRBWXzGAHq8TQ4Fs17/58ee3ff5-f6f2-4628-93b8-e38eb31806b0.mp3", "usedInApp": false },
-        { "voiceId": "EXAVITQu4vr4xnSDxMaL", "name": "Sarah - Mature, Reassuring, Confident", "category": "premade", "gender": "female", "age": "young", "accent": "american", "descriptive": "professional", "useCase": "entertainment_tv", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/EXAVITQu4vr4xnSDxMaL/01a3e33c-6e99-4ee7-8543-ff2216a32186.mp3", "usedInApp": true },
-        { "voiceId": "bIHbv24MWmeRgasZH58o", "name": "Will - Relaxed Optimist", "category": "premade", "gender": "male", "age": "young", "accent": "american", "descriptive": "chill", "useCase": "conversational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/bIHbv24MWmeRgasZH58o/8caf8f3d-ad29-4980-af41-53f20c72d7a4.mp3", "usedInApp": false },
-        { "voiceId": "bfGb7JTLUnZebZRiFYyq", "name": "Adam - Distinct, Deep and Engaging", "category": "professional", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": "deep", "useCase": "narrative_story", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/database/workspace/b3709ae8839847b6a804736de5e5651c/voices/bfGb7JTLUnZebZRiFYyq/sQiMNu3kolXvAQGhCb2s.mp3", "usedInApp": false },
-        { "voiceId": "cCYjmrGZaI86GUJ7F2Nn", "name": "David - Deep, Warm, Narration", "category": "professional", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": "serious", "useCase": "narrative_story", "previewUrl": "https://api.us.elevenlabs.io/v1/voices/cCYjmrGZaI86GUJ7F2Nn/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJjdXN0b20iLCJ3b3Jrc3BhY2VfaWQiOiJhMjY2ZjQ0ZDg1MDU0NDhkOGZmNzdmMjc1Mzc5M2I3YiIsImZpbGVuYW1lIjoia2JkVEQ3b2FxS1ZxQzVOMHRqQXIubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D", "usedInApp": false },
-        { "voiceId": "BIvP0GN1cAtSRTxNHnWS", "name": "Ellen - Serious, Direct and Confident", "category": "professional", "gender": "female", "age": "young", "accent": "german", "descriptive": "casual", "useCase": "conversational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/database/workspace/43f935d877d74f6bb4f429c51b687423/voices/BIvP0GN1cAtSRTxNHnWS/ZIkioQ15FEgRXe1XJXoG.mp3", "usedInApp": false },
-        { "voiceId": "EkK5I93UQWFDigLMpZcX", "name": "James - Husky, Engaging and Bold", "category": "professional", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": "deep", "useCase": "narrative_story", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/database/workspace/48ab3aae468d4e9baded4b1693820088/voices/EkK5I93UQWFDigLMpZcX/xvjT3EK4vD3zlwfawHeV.mp3", "usedInApp": false },
-        { "voiceId": "1t1EeRixsJrKbiF1zwM6", "name": "Jerry B - Realistic and Conversational", "category": "professional", "gender": "male", "age": "middle_aged", "accent": "american", "descriptive": "casual", "useCase": "conversational", "previewUrl": "https://storage.googleapis.com/eleven-public-prod/database/workspace/5f71481a3f1e44d38a4bb9ffd235ea8a/voices/1t1EeRixsJrKbiF1zwM6/nUVmLiZIhiZy7jONcGxj.mp3", "usedInApp": false }
+        {
+          "voiceId": "pNInz6obpgDQGcFmaJgB",
+          "name": "Adam - Dominant, Firm",
+          "category": "premade",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": null,
+          "useCase": "social_media",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/d6905d7a-dd26-4187-bfff-1bd3a5ea7cac.mp3",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "authoritative father",
+              "commanding leader",
+              "villain"
+            ]
+          }
+        },
+        {
+          "voiceId": "Xb7hH8MSUJpSbSDYk0k2",
+          "name": "Alice - Clear, Engaging Educator",
+          "category": "premade",
+          "gender": "female",
+          "age": "middle_aged",
+          "accent": "british",
+          "descriptive": "professional",
+          "useCase": "informative_educational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/Xb7hH8MSUJpSbSDYk0k2/d10f7534-11f6-41fe-a012-2de1e482d336.mp3",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "teacher",
+              "articulate narrator",
+              "queen"
+            ]
+          }
+        },
+        {
+          "voiceId": "hpp4J3VqNfWAUOO0d1Us",
+          "name": "Bella - Professional, Bright, Warm",
+          "category": "premade",
+          "gender": "female",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "professional",
+          "useCase": "informative_educational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/hpp4J3VqNfWAUOO0d1Us/dab0f5ba-3aa4-48a8-9fad-f138fea1126d.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "warm mother",
+              "professional narrator"
+            ]
+          }
+        },
+        {
+          "voiceId": "pqHfZKP75CvOlQylNhV4",
+          "name": "Bill - Wise, Mature, Balanced",
+          "category": "premade",
+          "gender": "male",
+          "age": "old",
+          "accent": "american",
+          "descriptive": "crisp",
+          "useCase": "advertisement",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/pqHfZKP75CvOlQylNhV4/d782b3ff-84ba-4029-848c-acf01285524d.mp3",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "wise grandfather",
+              "elder sage"
+            ]
+          }
+        },
+        {
+          "voiceId": "nPczCjzI2devNBz1zQrb",
+          "name": "Brian - Deep, Resonant and Comforting",
+          "category": "premade",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "classy",
+          "useCase": "social_media",
+          "previewUrl": "https://api.us.elevenlabs.io/v1/voices/nPczCjzI2devNBz1zQrb/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiIyZGQzZTcyYy00ZmQzLTQyZjEtOTNlYS1hYmM1ZDRlNWFhMWQubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "comforting narrator",
+              "gentle giant",
+              "father figure"
+            ]
+          }
+        },
+        {
+          "voiceId": "N2lVS1w4EtoT3dr4eOWO",
+          "name": "Callum - Husky Trickster",
+          "category": "premade",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": null,
+          "useCase": "characters_animation",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/N2lVS1w4EtoT3dr4eOWO/ac833bd8-ffda-4938-9ebc-b0f99ca25481.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "raspy",
+            "suggestedArchetypes": [
+              "trickster",
+              "mischievous villain",
+              "goblin"
+            ]
+          }
+        },
+        {
+          "voiceId": "IKne3meq5aSn9XLyUdCD",
+          "name": "Charlie - Deep, Confident, Energetic",
+          "category": "premade",
+          "gender": "male",
+          "age": "young",
+          "accent": "australian",
+          "descriptive": "hyped",
+          "useCase": "conversational",
+          "previewUrl": "https://api.us.elevenlabs.io/v1/voices/IKne3meq5aSn9XLyUdCD/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiIxMDJkZTZmMi0yMmVkLTQzZTAtYTFmMS0xMTFmYTc1YzU0ODEubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "energetic young hero",
+              "adventurous friend"
+            ]
+          }
+        },
+        {
+          "voiceId": "iP95p4xoKVk53GoZ742B",
+          "name": "Chris - Charming, Down-to-Earth",
+          "category": "premade",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "casual",
+          "useCase": "conversational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/iP95p4xoKVk53GoZ742B/3f4bde72-cc48-40dd-829f-57fbf906f4d7.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "friendly neighbor",
+              "easy-going dad"
+            ]
+          }
+        },
+        {
+          "voiceId": "onwK4e9ZLuTAKqWW03F9",
+          "name": "Daniel - Steady Broadcaster",
+          "category": "premade",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "british",
+          "descriptive": "formal",
+          "useCase": "informative_educational",
+          "previewUrl": "https://api.us.elevenlabs.io/v1/voices/onwK4e9ZLuTAKqWW03F9/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiI3ZWVlMDIzNi0xYTcyLTRiODYtYjMwMy01ZGNhZGMwMDdiYTkubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "formal narrator",
+              "royal herald"
+            ]
+          }
+        },
+        {
+          "voiceId": "cjVigY5qzO86Huf0OWal",
+          "name": "Eric - Smooth, Trustworthy",
+          "category": "premade",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "classy",
+          "useCase": "conversational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/cjVigY5qzO86Huf0OWal/d098fda0-6456-4030-b3d8-63aa048c9070.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "trustworthy mentor",
+              "kind uncle"
+            ]
+          }
+        },
+        {
+          "voiceId": "JBFqnCBsd6RMkjVDRZzb",
+          "name": "George - Warm, Captivating Storyteller",
+          "category": "premade",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "british",
+          "descriptive": "mature",
+          "useCase": "narrative_story",
+          "previewUrl": "https://api.us.elevenlabs.io/v1/voices/JBFqnCBsd6RMkjVDRZzb/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiJlNjIwNmQxYS0wNzIxLTQ3ODctYWFmYi0wNmE2ZTcwNWNhYzUubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "slow/measured",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "quintessential narrator",
+              "warm grandfather"
+            ]
+          }
+        },
+        {
+          "voiceId": "SOYHLrjzK2X1ezoPC6cr",
+          "name": "Harry - Fierce Warrior",
+          "category": "premade",
+          "gender": "male",
+          "age": "young",
+          "accent": "american",
+          "descriptive": "rough",
+          "useCase": "characters_animation",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/SOYHLrjzK2X1ezoPC6cr/86d178f6-f4b6-4e0e-85be-3de19f490794.mp3",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "raspy",
+            "suggestedArchetypes": [
+              "young warrior",
+              "fierce hero",
+              "boy adventurer"
+            ]
+          }
+        },
+        {
+          "voiceId": "cgSgspJ2msm6clMCkdW9",
+          "name": "Jessica - Playful, Bright, Warm",
+          "category": "premade",
+          "gender": "female",
+          "age": "young",
+          "accent": "american",
+          "descriptive": "cute",
+          "useCase": "conversational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/cgSgspJ2msm6clMCkdW9/56a97bf8-b69b-448f-846c-c3a11683d45a.mp3",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "playful girl",
+              "cheerful fairy",
+              "cute sidekick"
+            ]
+          }
+        },
+        {
+          "voiceId": "FGY2WhTYpPnrIDTdsKH5",
+          "name": "Laura - Enthusiast, Quirky Attitude",
+          "category": "premade",
+          "gender": "female",
+          "age": "young",
+          "accent": "american",
+          "descriptive": "sassy",
+          "useCase": "social_media",
+          "previewUrl": "https://api.us.elevenlabs.io/v1/voices/FGY2WhTYpPnrIDTdsKH5/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJwcmVtYWRlIiwiZmlsZW5hbWUiOiI2NzM0MTc1OS1hZDA4LTQxYTUtYmU2ZS1kZTEyZmU0NDg2MTgubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "quirky sidekick",
+              "sassy young character"
+            ]
+          }
+        },
+        {
+          "voiceId": "TX3LPaxmHKxFdv7VOQHJ",
+          "name": "Liam - Energetic, Social Media Creator",
+          "category": "premade",
+          "gender": "male",
+          "age": "young",
+          "accent": "american",
+          "descriptive": "confident",
+          "useCase": "social_media",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/TX3LPaxmHKxFdv7VOQHJ/63148076-6363-42db-aea8-31424308b92c.mp3",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "confident young hero",
+              "energetic friend"
+            ]
+          }
+        },
+        {
+          "voiceId": "pFZP5JQG7iQjIQuC4Bku",
+          "name": "Lily - Velvety Actress",
+          "category": "premade",
+          "gender": "female",
+          "age": "middle_aged",
+          "accent": "british",
+          "descriptive": "confident",
+          "useCase": "informative_educational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/pFZP5JQG7iQjIQuC4Bku/89b68b35-b3dd-4348-a84a-a3c13a3c2b30.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "slow/measured",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "elegant queen",
+              "sophisticated narrator"
+            ]
+          }
+        },
+        {
+          "voiceId": "XrExE9yKIg1WjnnlVkGX",
+          "name": "Matilda - Knowledgable, Professional",
+          "category": "premade",
+          "gender": "female",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "upbeat",
+          "useCase": "informative_educational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/XrExE9yKIg1WjnnlVkGX/b930e18d-6b4d-466e-bab2-0ae97c6d8535.mp3",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "knowledgeable teacher",
+              "wise fairy"
+            ]
+          }
+        },
+        {
+          "voiceId": "SAz9YHcvj6GT2YYXdXww",
+          "name": "River - Relaxed, Neutral, Informative",
+          "category": "premade",
+          "gender": "neutral",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "calm",
+          "useCase": "conversational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/SAz9YHcvj6GT2YYXdXww/e6c95f0b-2227-491a-b3d7-2249240decb7.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "neutral calm narrator",
+              "gender-neutral guide character"
+            ]
+          }
+        },
+        {
+          "voiceId": "CwhRBWXzGAHq8TQ4Fs17",
+          "name": "Roger - Laid-Back, Casual, Resonant",
+          "category": "premade",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "classy",
+          "useCase": "conversational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/CwhRBWXzGAHq8TQ4Fs17/58ee3ff5-f6f2-4628-93b8-e38eb31806b0.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "laid-back uncle",
+              "relaxed narrator"
+            ]
+          }
+        },
+        {
+          "voiceId": "EXAVITQu4vr4xnSDxMaL",
+          "name": "Sarah - Mature, Reassuring, Confident",
+          "category": "premade",
+          "gender": "female",
+          "age": "young",
+          "accent": "american",
+          "descriptive": "professional",
+          "useCase": "entertainment_tv",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/EXAVITQu4vr4xnSDxMaL/01a3e33c-6e99-4ee7-8543-ff2216a32186.mp3",
+          "usedInApp": true,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "reassuring mother",
+              "confident heroine",
+              "narrator"
+            ]
+          }
+        },
+        {
+          "voiceId": "bIHbv24MWmeRgasZH58o",
+          "name": "Will - Relaxed Optimist",
+          "category": "premade",
+          "gender": "male",
+          "age": "young",
+          "accent": "american",
+          "descriptive": "chill",
+          "useCase": "conversational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/premade/voices/bIHbv24MWmeRgasZH58o/8caf8f3d-ad29-4980-af41-53f20c72d7a4.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "easy-going friend",
+              "optimistic young hero"
+            ]
+          }
+        },
+        {
+          "voiceId": "bfGb7JTLUnZebZRiFYyq",
+          "name": "Adam - Distinct, Deep and Engaging",
+          "category": "professional",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "deep",
+          "useCase": "narrative_story",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/database/workspace/b3709ae8839847b6a804736de5e5651c/voices/bfGb7JTLUnZebZRiFYyq/sQiMNu3kolXvAQGhCb2s.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "engaging narrator",
+              "deep-voiced storyteller"
+            ]
+          }
+        },
+        {
+          "voiceId": "cCYjmrGZaI86GUJ7F2Nn",
+          "name": "David - Deep, Warm, Narration",
+          "category": "professional",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "serious",
+          "useCase": "narrative_story",
+          "previewUrl": "https://api.us.elevenlabs.io/v1/voices/cCYjmrGZaI86GUJ7F2Nn/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJjdXN0b20iLCJ3b3Jrc3BhY2VfaWQiOiJhMjY2ZjQ0ZDg1MDU0NDhkOGZmNzdmMjc1Mzc5M2I3YiIsImZpbGVuYW1lIjoia2JkVEQ3b2FxS1ZxQzVOMHRqQXIubXAzIiwidGltZXN0YW1wIjoxNzgzNjA1NjAwMDAwMDAwfQ%3D%3D",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "serious narrator",
+              "deep storyteller"
+            ]
+          }
+        },
+        {
+          "voiceId": "BIvP0GN1cAtSRTxNHnWS",
+          "name": "Ellen - Serious, Direct and Confident",
+          "category": "professional",
+          "gender": "female",
+          "age": "young",
+          "accent": "german",
+          "descriptive": "casual",
+          "useCase": "conversational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/database/workspace/43f935d877d74f6bb4f429c51b687423/voices/BIvP0GN1cAtSRTxNHnWS/ZIkioQ15FEgRXe1XJXoG.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "direct/serious character",
+              "no-nonsense heroine"
+            ]
+          }
+        },
+        {
+          "voiceId": "EkK5I93UQWFDigLMpZcX",
+          "name": "James - Husky, Engaging and Bold",
+          "category": "professional",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "deep",
+          "useCase": "narrative_story",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/database/workspace/48ab3aae468d4e9baded4b1693820088/voices/EkK5I93UQWFDigLMpZcX/xvjT3EK4vD3zlwfawHeV.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "raspy",
+            "suggestedArchetypes": [
+              "bold adventurer narrator",
+              "husky-voiced hero"
+            ]
+          }
+        },
+        {
+          "voiceId": "1t1EeRixsJrKbiF1zwM6",
+          "name": "Jerry B - Realistic and Conversational",
+          "category": "professional",
+          "gender": "male",
+          "age": "middle_aged",
+          "accent": "american",
+          "descriptive": "casual",
+          "useCase": "conversational",
+          "previewUrl": "https://storage.googleapis.com/eleven-public-prod/database/workspace/5f71481a3f1e44d38a4bb9ffd235ea8a/voices/1t1EeRixsJrKbiF1zwM6/nUVmLiZIhiZy7jONcGxj.mp3",
+          "usedInApp": false,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "realistic conversational character",
+              "everyman"
+            ]
+          }
+        }
       ]
     },
     {
@@ -93,40 +1316,693 @@
       "notes": "Full catalog has 2066 voices across 40+ locales; scoped here to what this app actually configures (Chirp3-HD for en-US locale-agnostic resolution, WaveNet for he-IL — see resolveGCVoiceName() in src/lib/services/ttsService.ts). Used only as a fallback when GOOGLE_CLOUD_TTS_API_KEY is set.",
       "voiceCount": 34,
       "voices": [
-        { "voiceName": "en-US-Chirp3-HD-Achernar", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Achird", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Algenib", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Algieba", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Alnilam", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Aoede", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Autonoe", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Callirrhoe", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Charon", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Despina", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Enceladus", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Erinome", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Fenrir", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Gacrux", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Iapetus", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Kore", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Laomedeia", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Leda", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Orus", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Puck", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Pulcherrima", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Rasalgethi", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Sadachbia", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Sadaltager", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Schedar", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Sulafat", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Umbriel", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Vindemiatrix", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Zephyr", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "en-US-Chirp3-HD-Zubenelgenubi", "languageCode": "en-US", "model": "Chirp3-HD", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "he-IL-Wavenet-A", "languageCode": "he-IL", "model": "WaveNet", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "he-IL-Wavenet-B", "languageCode": "he-IL", "model": "WaveNet", "gender": "MALE", "sampleRateHz": 24000 },
-        { "voiceName": "he-IL-Wavenet-C", "languageCode": "he-IL", "model": "WaveNet", "gender": "FEMALE", "sampleRateHz": 24000 },
-        { "voiceName": "he-IL-Wavenet-D", "languageCode": "he-IL", "model": "WaveNet", "gender": "MALE", "sampleRateHz": 24000 }
+        {
+          "voiceName": "en-US-Chirp3-HD-Achernar",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "breathy",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "gentle lullaby narrator",
+              "shy young character"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Achird",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "friendly neighbor",
+              "approachable father figure"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Algenib",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "weary/deliberate",
+            "texture": "gravelly",
+            "ageCharacter": "elder",
+            "suggestedArchetypes": [
+              "gruff villain",
+              "grumpy troll",
+              "tough guard"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Algieba",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "suave narrator",
+              "charming rogue"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Alnilam",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "authority figure",
+              "knight",
+              "teacher"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Aoede",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "warm narrator",
+              "kind older sister"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Autonoe",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "cheerful child",
+              "excitable fairy"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Callirrhoe",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "laid-back friend",
+              "calm mermaid"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Charon",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "elder",
+            "suggestedArchetypes": [
+              "wise narrator",
+              "storyteller",
+              "sage"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Despina",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "gentle princess",
+              "soothing narrator"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Enceladus",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "slow/measured",
+            "energy": "weary/deliberate",
+            "texture": "breathy",
+            "ageCharacter": "elder",
+            "suggestedArchetypes": [
+              "tired old wizard",
+              "gentle ghost",
+              "sleepy character"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Erinome",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "articulate narrator",
+              "teacher",
+              "clear-voiced heroine"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Fenrir",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "energetic hero",
+              "excitable animal sidekick",
+              "young warrior"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Gacrux",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "gravelly",
+            "ageCharacter": "elder",
+            "suggestedArchetypes": [
+              "king",
+              "wise grandfather",
+              "dragon"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Iapetus",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "reliable narrator",
+              "calm father figure"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Kore",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "gentle but firm mother",
+              "kind teacher"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Laomedeia",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "playful fairy",
+              "excited child",
+              "upbeat sidekick"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Leda",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "child",
+            "suggestedArchetypes": [
+              "young girl hero",
+              "playful sprite"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Orus",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "steady mentor",
+              "knight captain"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Puck",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "child",
+            "suggestedArchetypes": [
+              "mischievous sprite",
+              "trickster",
+              "playful animal"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Pulcherrima",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "confident heroine",
+              "forward-speaking princess"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Rasalgethi",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "scholar",
+              "narrator",
+              "wise advisor"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Sadachbia",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "fast/erratic",
+            "energy": "bouncy/excitable",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "lively sidekick",
+              "energetic creature"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Sadaltager",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "teacher",
+              "wise owl",
+              "mentor"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Schedar",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "balanced narrator",
+              "neutral guide character"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Sulafat",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "loving mother",
+              "warm grandmother",
+              "comforting narrator"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Umbriel",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-low",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "smooth",
+            "ageCharacter": "middle-aged adult",
+            "suggestedArchetypes": [
+              "laid-back friend",
+              "gentle giant"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Vindemiatrix",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "slow/measured",
+            "energy": "calm/steady",
+            "texture": "breathy",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "gentle nurse",
+              "kind fairy godmother"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Zephyr",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "airy narrator",
+              "breeze spirit",
+              "neutral guide"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "en-US-Chirp3-HD-Zubenelgenubi",
+          "languageCode": "en-US",
+          "model": "Chirp3-HD",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "Claude (LLM judgment from the engine's real signals — name/labels/style tag/gender; not measured from audio, no acoustic-analysis tool exists here)",
+            "pitch": "mid",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "ageCharacter": "young adult",
+            "suggestedArchetypes": [
+              "casual friend",
+              "laid-back sidekick"
+            ],
+            "note": "Inherited from the Gemini TTS assessment for the same voice name (Google Cloud's Chirp3-HD tier shares voice names with Gemini's native TTS catalog; not officially confirmed to be the identical underlying model, but the shared naming is a strong signal)."
+          }
+        },
+        {
+          "voiceName": "he-IL-Wavenet-A",
+          "languageCode": "he-IL",
+          "model": "WaveNet",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "This app's own hand-tuned WAVENET_VOICE_MAP (src/lib/services/ttsService.ts) — not a fresh Claude assessment.",
+            "pitch": "mid-high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "smooth",
+            "suggestedArchetypes": [
+              "warm narrator/lead female",
+              "lighter female (+2st pitch variant)"
+            ]
+          }
+        },
+        {
+          "voiceName": "he-IL-Wavenet-B",
+          "languageCode": "he-IL",
+          "model": "WaveNet",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "This app's own hand-tuned WAVENET_VOICE_MAP (src/lib/services/ttsService.ts) — not a fresh Claude assessment.",
+            "pitch": "mid-low",
+            "pace": "natural",
+            "energy": "calm/steady",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "narrator/deep male",
+              "child/young male (+3st variant)",
+              "lighter adult male (+2st variant)",
+              "older/authority male (-2st variant)"
+            ]
+          }
+        },
+        {
+          "voiceName": "he-IL-Wavenet-C",
+          "languageCode": "he-IL",
+          "model": "WaveNet",
+          "gender": "FEMALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "This app's own hand-tuned WAVENET_VOICE_MAP (src/lib/services/ttsService.ts) — not a fresh Claude assessment.",
+            "pitch": "high",
+            "pace": "natural",
+            "energy": "warm/engaging",
+            "texture": "clear",
+            "suggestedArchetypes": [
+              "brighter female",
+              "deeper/older female (-2st variant)"
+            ]
+          }
+        },
+        {
+          "voiceName": "he-IL-Wavenet-D",
+          "languageCode": "he-IL",
+          "model": "WaveNet",
+          "gender": "MALE",
+          "sampleRateHz": 24000,
+          "castingProfile": {
+            "assessedBy": "This app's own hand-tuned WAVENET_VOICE_MAP (src/lib/services/ttsService.ts) — not a fresh Claude assessment.",
+            "pitch": "low",
+            "pace": "slow/measured",
+            "energy": "weary/deliberate",
+            "texture": "gravelly",
+            "suggestedArchetypes": [
+              "gruff/beast male",
+              "lighter adult male (+2st variant)"
+            ]
+          }
+        }
       ]
     }
   ],
