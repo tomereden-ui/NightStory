@@ -866,7 +866,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             {summary && (
               <div className="px-4 pt-3 pb-4" style={{ background: "rgba(10,12,20,1)" }}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Story</p>
+                  <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>Summary</p>
                   <button
                     onClick={toggleSummaryPlay}
                     className="flex items-center gap-1 px-2 py-0.5 rounded-full text-fs-body font-medium transition-all active:scale-95"
@@ -926,64 +926,52 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           />
         )}
 
-        {/* Full script panel — shares the same frame/coloring/title identity
-            as the Director's Note and Moral Lessons panels below it. */}
-        <div
-          className="mb-4 rounded-2xl p-4"
-          style={{
-            background: "linear-gradient(160deg, rgba(139,92,246,0.09), rgba(79,195,247,0.05))",
-            border: "1px solid rgba(139,92,246,0.25)",
-            boxShadow: "0 0 28px rgba(139,92,246,0.06)",
-          }}
-        >
-          <span className="text-fs-heading font-bold tracking-tight flex items-center gap-1.5 mb-2" style={{ color: "#E9D8FD" }}>
-            <Icon name="checklist" size={16} />
-            {t("scriptPanelTitle")}
-          </span>
+        {/* Script panel — shares the same frame/coloring/title identity, and
+            now the same collapsible-header interaction pattern, as the
+            Director's Note and Moral Lessons panels below it. */}
+        {(() => {
+          const pendingCount = totalExpectedBlocks ? Math.max(0, totalExpectedBlocks - blocks.length) : 0;
+          const isChecking = pendingCount > 0;
+          return (
+            <div
+              className="mb-4 rounded-2xl p-4 flex flex-col gap-3"
+              style={{
+                background: "linear-gradient(160deg, rgba(139,92,246,0.09), rgba(79,195,247,0.05))",
+                border: "1px solid rgba(139,92,246,0.25)",
+                boxShadow: "0 0 28px rgba(139,92,246,0.06)",
+              }}
+            >
+              <button
+                onClick={() => setScriptExpanded((v) => !v)}
+                className="flex items-center gap-2 w-full text-left"
+              >
+                <Icon name="checklist" size={16} style={{ color: "#E9D8FD" }} />
+                <span className="text-fs-heading font-bold tracking-tight" style={{ color: "#E9D8FD" }}>
+                  {t("scriptPanelTitle")}
+                </span>
+                {isChecking && (
+                  <span className="ml-auto flex items-center gap-1.5 text-fs-body" style={{ color: "rgba(79,195,247,0.7)" }}>
+                    <span className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0"
+                      style={{ borderColor: "rgba(79,195,247,0.2)", borderTopColor: "#4fc3f7" }} />
+                    Checking {blocks.length} / {totalExpectedBlocks}
+                  </span>
+                )}
+                <span
+                  className="text-fs-body transition-transform"
+                  style={{ color: "rgba(196,181,253,0.5)", marginLeft: isChecking ? 0 : "auto", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                >
+                  ▾
+                </span>
+              </button>
 
-          {/* Stats row */}
-          {(() => {
-            const pendingCount = totalExpectedBlocks ? Math.max(0, totalExpectedBlocks - blocks.length) : 0;
-            const isChecking = pendingCount > 0;
-            return (
-              <div className="flex items-center justify-between mb-2">
+              {scriptExpanded && (
                 <p className="text-white/30 text-fs-body">
                   {speechBlocks.length} lines · {sfxBlocks.length} sfx · ~{estMin}:{String(estSec).padStart(2, "0")} min
                 </p>
-                <div className="flex items-center gap-1.5">
-                  {isChecking ? (
-                    <>
-                      <span className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0"
-                        style={{ borderColor: "rgba(79,195,247,0.2)", borderTopColor: "#4fc3f7" }} />
-                      <span className="text-fs-body font-semibold" style={{ color: "rgba(79,195,247,0.7)" }}>
-                        Checking {blocks.length} / {totalExpectedBlocks}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-                      <span className="text-teal text-fs-body font-semibold tracking-widest">{t("ready")}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Script expand toggle */}
-          <button
-            onClick={() => setScriptExpanded((v) => !v)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
-            style={{
-              background: scriptExpanded ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.04)",
-              border: scriptExpanded ? "1px solid rgba(79,195,247,0.2)" : "1px solid rgba(255,255,255,0.07)",
-              color: scriptExpanded ? "rgba(79,195,247,0.7)" : "rgba(255,255,255,0.3)",
-            }}
-          >
-            <span>{scriptExpanded ? t("hideScript") : t("viewFullScript")}</span>
-            <Icon name={scriptExpanded ? "collapse" : "expand"} size={14} />
-          </button>
-        </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Block list — collapsed by default */}
         {scriptExpanded && blocks.map((block, idx) => (

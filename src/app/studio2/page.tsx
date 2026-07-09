@@ -25,7 +25,7 @@ import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/Chi
 import LunaChatPanel from "@/components/studio/LunaChatPanel";
 import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
-import { fetchBankAvatars, resolveCharacterAvatar, buildDiceBearUrl, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
+import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
 import { useAuth } from "@/context/AuthContext";
 import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
@@ -783,7 +783,7 @@ function CharacterCard({
   const ringIdle = "linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))";
   const glowActive = "0 0 20px rgba(79,195,247,0.35), 0 0 36px rgba(167,139,250,0.2)";
   const accentColor = "rgba(79,195,247,0.8)";
-  const displayUrl = avatarUrl || buildDiceBearUrl(characterName, "adult");
+  const showImage = !!avatarUrl && !imgError;
 
   return (
     <div className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ minWidth: 72 }}>
@@ -801,10 +801,13 @@ function CharacterCard({
             width: size, height: size, borderRadius: "50%",
             overflow: "hidden", background: "#07091a",
           }}>
-            {!imgError ? (
+            {showImage ? (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={displayUrl} alt={characterName} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={() => setImgError(true)} />
+              <img src={avatarUrl} alt={characterName} style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={() => setImgError(true)} />
             ) : (
+              // No real avatar yet (still generating) or it failed to load —
+              // show initials instead of a generic stock/DiceBear avatar that
+              // would just get swapped out a moment later.
               <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
                 background: "linear-gradient(135deg,rgba(30,80,120,0.5),rgba(60,20,120,0.5))" }}>
                 <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: accentColor }}>{characterName.charAt(0).toUpperCase()}</span>
@@ -1028,7 +1031,6 @@ function PromptTabContent({
         if (!meta) return null;
         return (
           <div className="flex items-center justify-center gap-1.5 py-1.5">
-            <span className="text-fs-heading">{meta.flag}</span>
             <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
               Story will be generated in <span style={{ color: "rgba(255,255,255,0.55)" }}>{meta.label}</span>
             </span>
@@ -1423,6 +1425,18 @@ export default function Studio2Page() {
       .finally(() => { creatingDraftRef.current = false; });
   }, [loaded, scriptBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons]);
 
+  // The autosave effect below intentionally does NOT list storyTitle/summary/
+  // coverUrl/coverPrompt/scenes/characterProfiles as deps — only a real
+  // scriptBlocks change should reschedule its debounce timer. But it still
+  // needs their CURRENT values when the timer fires, not whatever they were
+  // when the timer was scheduled — reading them via the effect's own closure
+  // would silently revert a title (or summary/scenes/etc.) edited *after*
+  // scheduling back to its stale value once the pending autosave fires. This
+  // ref is updated on every render, so the timeout callback below always
+  // reads the latest values regardless of when it was scheduled.
+  const latestMetaRef = useRef({ storyTitle, summary, coverUrl, coverPrompt, scenes, characterProfiles });
+  latestMetaRef.current = { storyTitle, summary, coverUrl, coverPrompt, scenes, characterProfiles };
+
   // Auto-save to Supabase — debounced 3s after any script change. Also
   // updates the live story row (when one exists) at the same moment, not
   // just the recoverable version-history snapshot — otherwise a crash or
@@ -1435,10 +1449,11 @@ export default function Studio2Page() {
     if (!loaded || scriptBlocks.length === 0 || !editingStoryId) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
+      const { storyTitle: latestTitle, summary: latestSummary, coverUrl: latestCoverUrl, coverPrompt: latestCoverPrompt, scenes: latestScenes, characterProfiles: latestCharacterProfiles } = latestMetaRef.current;
       fetch("/api/script-saves", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storyId: editingStoryId, blocks: scriptBlocks, summary, coverUrl, coverPrompt, isAutosave: true }),
+        body: JSON.stringify({ storyId: editingStoryId, blocks: scriptBlocks, summary: latestSummary, coverUrl: latestCoverUrl, coverPrompt: latestCoverPrompt, isAutosave: true }),
       })
         .then(() => setSavesRefreshKey((k) => k + 1))
         .catch(() => {});
@@ -1448,14 +1463,17 @@ export default function Studio2Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           blocks: scriptBlocks,
-          title: storyTitle || undefined,
-          summary: summary || undefined,
-          scenes: scenes.length ? scenes : undefined,
-          characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined,
+          title: latestTitle || undefined,
+          summary: latestSummary || undefined,
+          scenes: latestScenes.length ? latestScenes : undefined,
+          characterProfiles: Object.keys(latestCharacterProfiles).length ? latestCharacterProfiles : undefined,
           moralLessons: moralLessons.length ? moralLessons : undefined,
         }),
       }).catch(() => {});
-    }, 3000);
+    // 8s debounce — long enough that continuous typing doesn't fire a pair of
+    // full-script writes (~1s each round trip) every few seconds, short enough
+    // that a crash still loses at most a few seconds of work.
+    }, 8000);
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
   // moralLessons is included here (unlike other fields read via closure below)
   // because it often finishes analyzing *after* this effect last ran for a
@@ -1514,13 +1532,19 @@ export default function Studio2Page() {
     if (!uniqueChars.length) return;
     const bank = await fetchBankAvatars();
 
-    // Set fast bank-lookup defaults immediately (visible before async avatar matching)
+    // Set bank-lookup defaults immediately only for characters we already
+    // know won't get a real generated avatar (Narrator always uses the fixed
+    // voice avatar; named characters with no description keep the bank pick
+    // as their final avatar). Everyone else is left unset here — showing a
+    // generic bank/DiceBear pick for a couple of seconds and then swapping
+    // it for the real one reads as a bug, not a nice progressive reveal.
     const defaultTypes: Record<string, CharacterType> = {};
     const defaultAvatars: Record<string, string> = {};
     for (const name of uniqueChars) {
       const t: CharacterType = (storyCharacters?.[name]?.type as CharacterType) ?? (name === "Narrator" ? "narrator" : "adult");
       defaultTypes[name] = t;
-      defaultAvatars[name] = resolveCharacterAvatar(name, t, bank, voicePool);
+      const willRegenerate = name !== "Narrator" && (!storyCharacters || !!storyCharacters[name]?.visualDescription);
+      if (!willRegenerate) defaultAvatars[name] = resolveCharacterAvatar(name, t, bank, voicePool);
     }
     setCharacterTypes(defaultTypes);
     setCharacterAvatars(defaultAvatars);
@@ -1545,13 +1569,13 @@ export default function Studio2Page() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ description: visualDescription, type }),
               });
-              if (!res.ok) return;
-              const { avatarUrl } = await res.json() as { avatarUrl: string | null };
-              if (avatarUrl) {
-                setCharacterAvatars((prev) => ({ ...prev, [name]: avatarUrl }));
-                setCharacterTypes((prev) => ({ ...prev, [name]: type as CharacterType }));
-              }
-            } catch { /* keep bank fallback */ }
+              const data = res.ok ? await res.json() as { avatarUrl: string | null } : null;
+              const finalUrl = data?.avatarUrl || resolveCharacterAvatar(name, type as CharacterType, bank, voicePool);
+              setCharacterAvatars((prev) => ({ ...prev, [name]: finalUrl }));
+              setCharacterTypes((prev) => ({ ...prev, [name]: type as CharacterType }));
+            } catch {
+              setCharacterAvatars((prev) => ({ ...prev, [name]: resolveCharacterAvatar(name, type as CharacterType, bank, voicePool) }));
+            }
           })
       );
     } else {
@@ -1573,19 +1597,22 @@ export default function Studio2Page() {
           const type = (typeof profile === "string" ? profile : profile.type) as CharacterType;
           const desc = typeof profile === "object" ? profile.visualDescription : undefined;
           refined[name] = type;
-          refinedAvatars[name] = resolveCharacterAvatar(name, type, bank, voicePool);
-          // If we got a visual description, generate a proper avatar instead of bank hash
-          if (desc && name !== "Narrator") {
+          const willRegenerate = !!desc && name !== "Narrator";
+          if (!willRegenerate) refinedAvatars[name] = resolveCharacterAvatar(name, type, bank, voicePool);
+          // If we got a visual description, generate a proper avatar instead of
+          // showing the bank pick first — leave this character's avatar unset
+          // until the real one (or, on failure, the bank fallback) is ready.
+          if (willRegenerate) {
             fetch("/api/generate-avatar", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ description: desc, type }),
             }).then((r) => r.json()).then(({ avatarUrl }: { avatarUrl: string | null }) => {
-              if (avatarUrl) {
-                setCharacterAvatars((prev) => ({ ...prev, [name]: avatarUrl }));
-                setCharacterTypes((prev) => ({ ...prev, [name]: type }));
-              }
-            }).catch(() => { /* keep bank fallback */ });
+              setCharacterAvatars((prev) => ({ ...prev, [name]: avatarUrl || resolveCharacterAvatar(name, type, bank, voicePool) }));
+              setCharacterTypes((prev) => ({ ...prev, [name]: type }));
+            }).catch(() => {
+              setCharacterAvatars((prev) => ({ ...prev, [name]: resolveCharacterAvatar(name, type, bank, voicePool) }));
+            });
           }
         }
         setCharacterTypes(refined);
@@ -1805,6 +1832,12 @@ export default function Studio2Page() {
     if (scriptBlocks.length === 0 || isSaving) return;
     setIsSaving(true);
     setSaveLabel("saving");
+    // Capture before it's cleared below — the re-check after saving is a full
+    // Gemini pass over the whole script, only worth paying for when the
+    // script content itself actually changed. A title/summary-only edit
+    // (metaDirty, tracked separately) shouldn't spend a minute re-verifying
+    // text that was already checked and hasn't moved.
+    const scriptContentChanged = hasUnsavedChanges;
     // Clear any issues surfaced by a previous save's check — the list below
     // the script panel should only ever reflect the check that just ran.
     setSaveValidationIssues([]);
@@ -1818,6 +1851,19 @@ export default function Studio2Page() {
       setScriptBlocks(cleanedBlocks);
     }
 
+    // fetch() only rejects on a network failure — a 403/500 response still
+    // resolves normally, so every save below explicitly checks r.ok and
+    // throws with the real reason. Without this, a failed PATCH (expired
+    // session, permission error, bad payload) would show "Saved ✓" while
+    // silently changing nothing — exactly indistinguishable from success.
+    async function saveOrThrow(label: string, res: Response) {
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`${label} failed (${res.status})${body ? `: ${body.slice(0, 200)}` : ""}`);
+      }
+      return res;
+    }
+
     try {
       const saves: Promise<unknown>[] = [];
 
@@ -1829,7 +1875,7 @@ export default function Studio2Page() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ storyId: editingStoryId, blocks: cleanedBlocks, summary, coverUrl, coverPrompt, isAutosave: false, label: storyTitle || undefined }),
-          })
+          }).then((r) => saveOrThrow("Version snapshot", r))
         );
 
         // Update script blocks (and title/summary) on the library entry
@@ -1838,7 +1884,7 @@ export default function Studio2Page() {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ blocks: cleanedBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined }),
-          })
+          }).then((r) => saveOrThrow("Story update", r))
         );
 
         // Upload new cover if one was generated but not yet persisted as a CDN URL
@@ -1850,11 +1896,9 @@ export default function Studio2Page() {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ mimeType: coverPayload.mimeType, data: coverPayload.data }),
-            }).then(async (r) => {
-              if (r.ok) {
-                const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
-                setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
-              }
+            }).then((r) => saveOrThrow("Cover upload", r)).then(async (r) => {
+              const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
+              setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
             })
           );
         }
@@ -1866,8 +1910,9 @@ export default function Studio2Page() {
       setMetaDirty(false);
       setHasUnsavedChanges(false);
       setTimeout(() => setSaveLabel("idle"), 2500);
-    } catch {
+    } catch (err) {
       setSaveLabel("idle");
+      setSaveValidationIssues([err instanceof Error ? err.message : "Save failed — please try again."]);
     } finally {
       setIsSaving(false);
     }
@@ -1876,7 +1921,10 @@ export default function Studio2Page() {
     // user just edited and saved. Unlike the creation-time pass, this does
     // NOT silently apply Gemini's rewrite — the user already chose this
     // wording deliberately; we only surface what it flagged so they can
-    // decide whether to fix it themselves.
+    // decide whether to fix it themselves. Skipped entirely for a
+    // metadata-only save (title/summary/cover) — there's no new script text
+    // to re-check, so this would just be a slow no-op spinner.
+    if (!scriptContentChanged) return;
     setIsValidating(true);
     try {
       const res = await fetch("/api/validate-script", {
@@ -1894,7 +1942,7 @@ export default function Studio2Page() {
     } finally {
       setIsValidating(false);
     }
-  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving, editingStoryId, storyTitle, moralLessons, characterProfiles, scenes]);
+  }, [scriptBlocks, summary, coverUrl, coverPrompt, isSaving, editingStoryId, storyTitle, moralLessons, characterProfiles, scenes, hasUnsavedChanges]);
 
   // ─── Load a save into the studio ────────────────────────────────────────────
 
@@ -2567,6 +2615,11 @@ export default function Studio2Page() {
                   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
                   if (!match) return;
                   coverBase64Ref.current = { mimeType: match[1], data: match[2] };
+                  // Shown immediately as a preview — but this alone is only
+                  // local state, not yet persisted. If the PATCH below fails,
+                  // the preview would otherwise keep showing the new image
+                  // with no indication it never actually saved, reverting
+                  // silently on next reload.
                   setCoverUrl(dataUrl);
                   if (editingStoryId) {
                     fetch(`/api/library/${editingStoryId}/cover`, {
@@ -2577,8 +2630,13 @@ export default function Studio2Page() {
                       if (r.ok) {
                         const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
                         setCoverUrl(persistedUrl);
+                      } else {
+                        const body = await r.text().catch(() => "");
+                        setSaveValidationIssues([`Cover upload failed (${r.status})${body ? `: ${body.slice(0, 200)}` : ""} — the preview shown is not saved.`]);
                       }
-                    }).catch(() => {});
+                    }).catch(() => {
+                      setSaveValidationIssues(["Cover upload failed: network error — the preview shown is not saved."]);
+                    });
                   }
                 };
                 reader.readAsDataURL(file);
