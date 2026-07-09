@@ -16,7 +16,13 @@ create table if not exists public.avatar_bank (
   created_at   timestamptz default now()
 );
 
--- 3. HNSW index for fast cosine similarity (better than IVFFlat at <100k rows, no training required)
+-- 3. If avatar_bank already existed (e.g. data copied from another project),
+-- the CREATE TABLE above no-ops and the copy may have dropped the
+-- vector(768) dimension modifier. The HNSW index below needs a fixed
+-- dimension to build — this restores it (no-op if already vector(768)).
+alter table public.avatar_bank alter column prompt_embedding type vector(768);
+
+-- HNSW index for fast cosine similarity (better than IVFFlat at <100k rows, no training required)
 create index if not exists idx_avatar_bank_embedding
   on public.avatar_bank
   using hnsw (prompt_embedding vector_cosine_ops)
