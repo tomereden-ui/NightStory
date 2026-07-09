@@ -885,7 +885,7 @@ export default function LunaChatPanel({
         </div>
 
         {!hasUserMessages && !listening && (
-          <p className="text-center mt-2 px-2 font-medium" style={{ fontSize: "var(--fs-caption)", color: "rgba(167,139,250,0.85)" }}>
+          <p className="text-center mt-2 px-2 font-semibold" style={{ fontSize: "calc(var(--fs-caption) * 2)", lineHeight: 1.35, color: "rgba(167,139,250,0.95)" }}>
             {writeItAllHint}
           </p>
         )}
