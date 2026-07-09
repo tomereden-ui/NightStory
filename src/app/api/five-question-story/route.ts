@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Gemini returned non-JSON output after retries." }, { status: 502 });
     }
 
-    const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], seeds.q1_hero, undefined, raw.characters ?? {});
+    const characterVoiceMap = await assignVoicesToCharacters(raw.blocks ?? [], seeds.q1_hero, undefined, raw.characters ?? {}, apiKey);
     // The user's default narrator voice always wins for the narrator — nature-
     // based casting would otherwise assign it something else from the moment
     // the story is generated, visible immediately in Studio's Cast section.

@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
     const heroName = body.hero ?? "";
     // Gemini's preset pool now voices every language, so casting no longer
     // needs a separate Hebrew EL-voice path.
-    const characterVoiceMap = assignVoicesToCharacters(raw.blocks ?? [], heroName, body.primaryVoiceId, raw.characters ?? {});
+    const characterVoiceMap = await assignVoicesToCharacters(raw.blocks ?? [], heroName, body.primaryVoiceId, raw.characters ?? {}, apiKey);
     // The user's default narrator voice always wins for the narrator — nature-
     // based casting would otherwise assign it something else from the moment
     // the story is generated, visible immediately in Studio's Cast section.

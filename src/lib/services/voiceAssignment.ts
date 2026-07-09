@@ -1,6 +1,8 @@
 import { PRESET_VOICES, type PresetVoiceConfig } from "@/config/presetVoices";
 import { HEBREW_VOICE_POOL, type HebrewVoice, type VoiceAgeGroup } from "@/config/hebrewVoices";
 import type { VoiceGender, VoiceStyle } from "@/types";
+import { geminiPost, geminiText } from "@/lib/geminiClient";
+import voiceCatalog from "../../../config/voice-catalog.json";
 
 interface NamedBlock {
   characterName: string;
@@ -126,24 +128,25 @@ function scoreVoice(v: PresetVoiceConfig, need: VoiceNeed): number {
 }
 
 /**
- * Assigns a preset voice id to every distinct speaking character. When the LLM
- * supplies a `characters` map, voices are matched to each character's nature —
- * gender (hard preference) and vocal style (soft preference) — while keeping
- * assignments distinct so two characters don't collide on the same voice until
- * the pool is exhausted. Without character profiles it degrades to stable,
- * distinct, order-based assignment (the previous behaviour).
- *
- * The hero always keeps the child's chosen `primaryVoiceId`.
+ * Deterministic fallback: assigns a preset voice id to every distinct
+ * speaking character by scoring gender (hard preference) and vocal style
+ * (soft preference) against each candidate. This is the synchronous, free,
+ * always-available path used when the Gemini casting call (below) isn't
+ * possible or fails — kept as its own function so a network hiccup never
+ * blocks story generation.
  */
-export function assignVoicesToCharacters(
+function assignVoicesToCharactersDeterministic(
   blocks: NamedBlock[],
   heroName: string,
   primaryVoiceId: string = PRESET_VOICES[0].id,
   characters: Record<string, CharacterProfile> = {},
+  excludeNames: Set<string> = new Set(),
+  excludeVoiceIds: Set<string> = new Set(),
 ): Record<string, string> {
   const uniqueNames: string[] = [];
   for (const b of blocks) {
     if (b.characterName === "SFX") continue;
+    if (excludeNames.has(b.characterName)) continue;
     if (!uniqueNames.includes(b.characterName)) uniqueNames.push(b.characterName);
   }
 
@@ -154,7 +157,9 @@ export function assignVoicesToCharacters(
 
   // Hero keeps their chosen voice; every other character draws from the rest.
   const pool = PRESET_VOICES.filter((p) => p.id !== primaryVoiceId);
-  const used = new Set<string>();
+  // Seeded with voices a prior pass (e.g. Gemini casting) already used, so
+  // this pass can never collide with an assignment it doesn't know about.
+  const used = new Set<string>(excludeVoiceIds);
 
   const assignments: Record<string, string> = {};
   const heroPrefix = heroName.toLowerCase().slice(0, 5);
@@ -186,6 +191,177 @@ export function assignVoicesToCharacters(
   }
 
   return assignments;
+}
+
+// ── Gemini-backed casting ────────────────────────────────────────────────────
+// The deterministic scorer above only ever compares a character's gender/style
+// against a voice's own gender/style — it can't reason about "Peter Pan should
+// sound youthful, mischievous, heroic" the way a real casting judgment could.
+// config/voice-catalog.json carries each Gemini TTS voice's real pitch/pace/
+// energy/texture and suggested archetypes (see that file's _readme) — feeding
+// that to Gemini and asking it to actually reason about the match produces a
+// materially better cast than keyword-scoring, for the cost of one extra call.
+
+interface CatalogCastingProfile {
+  pitch: string;
+  pace: string;
+  energy: string;
+  texture: string;
+  ageCharacter?: string;
+  suggestedArchetypes: string[];
+}
+interface CatalogGeminiVoice {
+  voiceName: string;
+  styleDescriptor: string;
+  appPresetId: string | null;
+  appGender: string | null;
+  castingProfile?: CatalogCastingProfile;
+}
+
+const GEMINI_CATALOG_VOICES: CatalogGeminiVoice[] =
+  ((voiceCatalog as { engines: Array<{ engine: string; voices: CatalogGeminiVoice[] }> })
+    .engines.find((e) => e.engine === "Gemini TTS")?.voices ?? []);
+
+// Real Gemini engine voice name (e.g. "Iapetus") -> this app's own preset id
+// (e.g. "Altair") -- most voices map 1:1, but Altair/Isonoe are app-only
+// aliases for Iapetus/Pulcherrima (see config/presetVoices.ts).
+const PRESET_ID_BY_GEMINI_NAME = new Map(PRESET_VOICES.map((p) => [p.geminiVoiceName, p.id]));
+
+function buildCastingPrompt(characters: Record<string, CharacterProfile>, excludeVoiceNames: Set<string>): string {
+  const voiceLines = GEMINI_CATALOG_VOICES.filter((v) => !excludeVoiceNames.has(v.voiceName)).map((v) => {
+    const cp = v.castingProfile;
+    const traits = cp
+      ? `pitch: ${cp.pitch}, pace: ${cp.pace}, energy: ${cp.energy}, texture: ${cp.texture}${cp.ageCharacter ? `, age character: ${cp.ageCharacter}` : ""} — good fit for: ${cp.suggestedArchetypes.join(", ")}`
+      : v.styleDescriptor;
+    return `- "${v.voiceName}" (${v.appGender ?? "unspecified gender"}): ${traits}`;
+  }).join("\n");
+
+  const charLines = Object.entries(characters).map(([name, p]) =>
+    `- "${name}": type=${p.type ?? "unspecified"}, gender=${p.gender ?? "unspecified"}, persona=${p.voicePersona ?? "unspecified"}, appearance="${p.visualDescription ?? "none given"}"`
+  ).join("\n");
+
+  return `You are a professional voice casting director for a children's bedtime audio drama.
+
+Below is every available voice, with its real vocal qualities (pitch, pace, energy, texture) and the kinds of characters it tends to suit. Below that is a list of characters from a story, each needing exactly one voice.
+
+For EACH character, choose the single best-matching voice by genuinely reasoning about how that voice's actual qualities (not just its label) would suit that character's nature — personality, role, gender, apparent age, and appearance — the way a real casting director would.
+
+RULES:
+- Every character MUST get a DIFFERENT voice from every other character.
+- Only choose from the exact voice names listed below, spelled exactly as given.
+- Gender should usually match the character unless there's a clear narrative reason not to.
+
+AVAILABLE VOICES:
+${voiceLines}
+
+CHARACTERS TO CAST:
+${charLines}
+
+Return ONLY valid JSON, no markdown, no explanation — a map of character name to chosen voice name:
+{ "CharacterName": "VoiceName", ... }`;
+}
+
+/**
+ * Calls Gemini to cast every character in `characters` against the full
+ * voice catalog's real casting-profile data. Returns app preset ids (not raw
+ * engine voice names) keyed by character name, containing only characters
+ * Gemini validly cast to a real, distinct voice — callers should fill any
+ * gaps (missing/invalid/duplicate picks) with the deterministic scorer.
+ */
+async function castVoicesWithGemini(
+  characters: Record<string, CharacterProfile>,
+  apiKey: string,
+  excludePresetIds: Set<string> = new Set(),
+): Promise<Record<string, string>> {
+  if (Object.keys(characters).length === 0) return {};
+
+  // Translate excluded app preset ids (e.g. the hero's already-chosen voice)
+  // to the real Gemini voice names the prompt/response actually use, so
+  // Gemini isn't offered a voice that's unavailable and never double-books it.
+  const excludeVoiceNames = new Set(
+    GEMINI_CATALOG_VOICES.filter((v) => v.appPresetId && excludePresetIds.has(v.appPresetId)).map((v) => v.voiceName),
+  );
+
+  const { data, ok } = await geminiPost(apiKey, "gemini-2.5-flash", {
+    contents: [{ role: "user", parts: [{ text: buildCastingPrompt(characters, excludeVoiceNames) }] }],
+    generationConfig: { temperature: 0.4, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
+  });
+  if (!ok) return {};
+
+  const raw = geminiText(data).replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+  let picks: Record<string, string>;
+  try {
+    picks = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+
+  const assignments: Record<string, string> = {};
+  const usedPresetIds = new Set<string>(excludePresetIds);
+  for (const [name, geminiVoiceName] of Object.entries(picks)) {
+    if (!characters[name]) continue; // Gemini invented a name not in our request
+    const presetId = PRESET_ID_BY_GEMINI_NAME.get(geminiVoiceName);
+    if (!presetId || usedPresetIds.has(presetId)) continue; // invalid, excluded, or duplicate pick — leave for the deterministic fallback
+    assignments[name] = presetId;
+    usedPresetIds.add(presetId);
+  }
+  return assignments;
+}
+
+/**
+ * Assigns a preset voice id to every distinct speaking character. Casts via
+ * Gemini (reasoning over the full catalog's real pitch/pace/energy/texture
+ * data) when an apiKey is supplied; any character Gemini doesn't validly
+ * cast (call failure, invalid JSON, duplicate/unknown voice name) falls back
+ * to the deterministic gender/style scorer, so this never blocks story
+ * generation on a network hiccup. Without an apiKey or character profiles it
+ * degrades straight to the deterministic path (the original behaviour).
+ *
+ * The hero always keeps the child's chosen `primaryVoiceId`.
+ */
+export async function assignVoicesToCharacters(
+  blocks: NamedBlock[],
+  heroName: string,
+  primaryVoiceId: string = PRESET_VOICES[0].id,
+  characters: Record<string, CharacterProfile> = {},
+  apiKey?: string,
+): Promise<Record<string, string>> {
+  if (!apiKey || Object.keys(characters).length === 0) {
+    return assignVoicesToCharactersDeterministic(blocks, heroName, primaryVoiceId, characters);
+  }
+
+  // Hero is never sent to Gemini for casting — the child already chose that
+  // voice, so exclude the hero (and the narrator, cast for pitch/gravitas
+  // rather than character nature) from the pool Gemini reasons over. We still
+  // need to know who's excluded for the deterministic pass below.
+  const heroPrefix = heroName.toLowerCase().slice(0, 5);
+  const isHeroName = (name: string) => {
+    const lower = name.toLowerCase();
+    return !!heroName && lower.includes(heroPrefix) && !lower.includes("narrat");
+  };
+  const castableCharacters = Object.fromEntries(
+    Object.entries(characters).filter(([name]) => !isHeroName(name)),
+  );
+
+  let geminiAssignments: Record<string, string> = {};
+  try {
+    geminiAssignments = await castVoicesWithGemini(castableCharacters, apiKey, new Set([primaryVoiceId]));
+  } catch (err) {
+    console.warn("[voiceAssignment] Gemini casting call failed, using deterministic fallback:", err);
+  }
+
+  // Fill any character Gemini didn't validly cast (including ones missing
+  // from `characters` entirely, e.g. minor characters the profiler skipped)
+  // with the deterministic scorer — excluding both the character names
+  // Gemini already handled AND the voice ids it already used, so the two
+  // passes can never collide on the same voice.
+  const alreadyCastNames = new Set(Object.keys(geminiAssignments));
+  const alreadyUsedVoiceIds = new Set(Object.values(geminiAssignments));
+  const fallback = assignVoicesToCharactersDeterministic(
+    blocks, heroName, primaryVoiceId, characters, alreadyCastNames, alreadyUsedVoiceIds,
+  );
+
+  return { ...fallback, ...geminiAssignments };
 }
 
 /**

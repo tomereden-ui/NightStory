@@ -60,7 +60,7 @@ export async function reassignVoicesForStory(
     ...(existingNarratorProfile ? { [narratorName]: existingNarratorProfile } : {}),
   };
 
-  const voiceMap = assignVoicesToCharacters(entry.blocks, "", undefined, characterProfiles);
+  const voiceMap = await assignVoicesToCharacters(entry.blocks, "", undefined, characterProfiles, apiKey);
   if (narratorVoiceId) voiceMap[narratorName] = narratorVoiceId;
 
   let changedCount = 0;
