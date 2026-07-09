@@ -33,7 +33,11 @@ ${script}`;
   try {
     const { data } = await geminiPost(geminiKey, "gemini-2.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.4 },
+      // thinkingBudget 0: scene segmentation follows explicit written rules,
+      // and this runs inside produce-drama's parallel planning step where the
+      // slowest call gates the whole phase — default-on thinking was quietly
+      // making this the long pole.
+      generationConfig: { temperature: 0.4, thinkingConfig: { thinkingBudget: 0 } },
     });
     const text = geminiText(data).replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const raw = JSON.parse(text) as Array<{

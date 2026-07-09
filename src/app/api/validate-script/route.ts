@@ -9,12 +9,6 @@ interface RawBlock {
   textPayload: string;
 }
 
-interface ValidateResponse {
-  ok: boolean;
-  blocks: RawBlock[];
-  issues: string[];
-}
-
 function readGuidance(): string {
   try {
     return fs.readFileSync(path.join(process.cwd(), "config", "story-guidance.txt"), "utf-8");
@@ -36,30 +30,35 @@ export async function POST(req: NextRequest) {
 
   const guidance = readGuidance();
 
+  // Gemini returns ONLY the blocks it changed (by index) instead of echoing
+  // the complete corrected script — on a clean script (the common case,
+  // since input here was usually just generated against the same guidance)
+  // that collapses output from ~2.5K tokens (~12s of pure output generation
+  // for a 40-block story, measured) to near-zero. The route reassembles the
+  // full corrected array below, so callers still get the same {ok, blocks,
+  // issues} response shape as before.
   const systemInstruction = `You are a quality reviewer for NightStory, a children's bedtime audio drama app.
-You will receive a script as a JSON array of blocks, each with exactly two fields: "characterName" and "textPayload".
+You will receive a script as a JSON array of blocks, each with exactly two fields: "characterName" and "textPayload". Array positions are zero-indexed.
 Check it against the story guidance below.
 
 ${guidance}
 
 Your task:
 1. Read every block carefully against the guidance rules.
-2. Fix ALL violations — rewrite textPayload values as needed, preserving the story's intent.
-3. ALWAYS return this EXACT JSON shape (no other keys, no nesting changes):
+2. Identify real violations and write a corrected textPayload for each violating block, preserving the story's intent. Only flag genuine violations — never rewrite for stylistic preference.
+3. ALWAYS return this EXACT JSON shape (no other keys):
 {
   "ok": true,
-  "blocks": [
-    { "characterName": "Narrator", "textPayload": "[warmly] Once upon a time..." },
-    { "characterName": "SFX", "textPayload": "[SFX: soft wind | 3s]" }
+  "fixes": [
+    { "index": 3, "textPayload": "[warmly] The corrected line text..." }
   ],
   "issues": []
 }
 
 Rules for the response:
-- "ok" is true if the script was already clean, false if you had to fix real violations.
-- "blocks" MUST be the COMPLETE corrected script — every block, in order, each with ONLY "characterName" and "textPayload" fields. No extra keys.
+- "ok" is true if the script was already clean, false if you found real violations.
+- "fixes" contains ONLY blocks you actually changed, identified by their zero-based index in the input array. Empty array [] if the script is already clean. Do NOT echo unchanged blocks — never include a block whose text you did not modify.
 - "issues" is an array of plain strings describing what was wrong and what you changed. Empty array [] if nothing needed fixing.
-- The blocks array must have exactly the same number of entries as the input script.
 
 Return ONLY the raw JSON object. No markdown fences, no explanation outside the JSON.`;
 
@@ -71,20 +70,53 @@ Return ONLY the raw JSON object. No markdown fences, no explanation outside the 
 
   try {
     const genAI  = new GoogleGenerativeAI(apiKey);
-    const model  = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
+    const model  = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction,
+      generationConfig: {
+        temperature: 0.2,
+        // Enough for dozens of fixed blocks; a script needing more than that
+        // is broken input, and truncation degrades to a 502 the callers
+        // already handle (admin falls back to the unpolicy-checked script).
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json",
+        // Reviewing against explicit written rules needs no reasoning chain —
+        // thinking was adding a measured ~18s (and up to 4K thought tokens)
+        // per call on top of the response itself.
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
     const result = await model.generateContent(`Review this script:\n\n${scriptJson}`);
     const _t = result.response.usageMetadata?.totalTokenCount;
     if (_t) trackGemini(_t).catch(() => {});
     const text   = result.response.text().trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
 
-    let parsed: ValidateResponse;
+    let parsed: { ok?: boolean; fixes?: { index?: number; textPayload?: string }[]; issues?: string[] };
     try {
       parsed = JSON.parse(text);
     } catch {
+      const finishReason = result.response.candidates?.[0]?.finishReason ?? "unknown";
+      console.error(`[validate-script] Invalid JSON — finishReason=${finishReason}, length=${text.length} chars`);
       return NextResponse.json({ error: "Gemini returned non-JSON output.", raw: text }, { status: 502 });
     }
 
-    return NextResponse.json(parsed);
+    // Reassemble the full corrected script so the response shape callers
+    // depend on ({ok, blocks, issues}) is unchanged.
+    const corrected = blocks.map((b) => ({ characterName: b.characterName, textPayload: b.textPayload }));
+    let applied = 0;
+    for (const fix of parsed.fixes ?? []) {
+      if (typeof fix.index === "number" && fix.index >= 0 && fix.index < corrected.length && typeof fix.textPayload === "string" && fix.textPayload.trim()) {
+        corrected[fix.index] = { ...corrected[fix.index], textPayload: fix.textPayload };
+        applied++;
+      }
+    }
+
+    return NextResponse.json({
+      ok: parsed.ok !== false && applied === 0,
+      blocks: corrected,
+      issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+    });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }

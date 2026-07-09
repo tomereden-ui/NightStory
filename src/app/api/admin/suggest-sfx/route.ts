@@ -57,7 +57,7 @@ Respond ONLY with valid JSON (no markdown):
   try {
     const { data } = await geminiPost(apiKey, "gemini-2.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.3 },
+      generationConfig: { responseMimeType: "application/json", temperature: 0.3, thinkingConfig: { thinkingBudget: 0 } },
     });
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     const parsed = JSON.parse(text as string) as { suggestions: SfxSuggestion[] };

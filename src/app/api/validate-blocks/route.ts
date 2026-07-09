@@ -36,9 +36,9 @@ STORY SUMMARY: ${summary || "not provided"}
 Review each script block's spoken text. The leading bracketed performance tag (e.g. "[warmly]") is a
 delivery direction, not spoken text — never edit or count it as part of the review.
 For each block:
-- If it is age-appropriate, aligns with the story lessons, and free of typos/grammar errors → return it unchanged, status "ok"
+- If it is age-appropriate, aligns with the story lessons, and free of typos/grammar errors → it needs nothing; do NOT include it in your response
 - If it has a minor issue (slightly scary word, vocabulary too complex for age ${age}, conflicts with lessons,
-  a typo, or a medium-to-high severity grammar error) → rewrite ONLY the spoken text to fix it, status "fixed"
+  a typo, or a medium-to-high severity grammar error) → rewrite ONLY the spoken text to fix it and include it with status "fixed"
 
 Rules for age ${age}:
 - No death, violence, or genuine fear
@@ -52,10 +52,10 @@ Rules for typos/grammar:
   onomatopoeia (POP, WHOOSH), or a character's own speech quirks are not grammar errors.
 - Only fix what a careful proofreader would call clearly wrong, never a stylistic preference.
 
-Return ONLY a valid JSON array — no markdown, no explanation:
-[{"index":0,"text":"...","status":"ok"},{"index":1,"text":"...","status":"fixed"},...]
+Return ONLY a valid JSON array containing ONLY the blocks you fixed — no markdown, no explanation:
+[{"index":1,"text":"the corrected spoken text","status":"fixed"},...]
 
-Return exactly ${textBlocks.length} objects, one per block listed below.
+Return an empty array [] if every block is already fine. Never echo blocks that needed no change — the app keeps unlisted blocks exactly as they are.
 
 BLOCKS:
 ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.textPayload)}`).join("\n")}`;
@@ -65,18 +65,19 @@ ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.textPa
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      // The response echoes every block's full text back inside a JSON
-      // array (index/text/status per block), so its size scales with the
-      // whole script's length — 4096 was the bare API default, not a
-      // deliberate budget, and risked silently truncating mid-JSON-string on
-      // longer scripts (a cut-off response looks identical to genuinely
-      // malformed JSON from the parse error alone — see the finishReason
-      // logging below). responseMimeType constrains Gemini to its native
-      // structured-JSON mode (properly escaped strings, no markdown fences,
-      // no stray text) instead of just asking nicely in the prompt and
-      // hoping — already used by characterProfiler.ts for the same reason,
-      // just missing here.
-      generationConfig: { temperature: 0.3, maxOutputTokens: 32768, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
+      // The response now contains ONLY the blocks Gemini fixed (the merge
+      // loop below has always applied just the status==="fixed" entries, so
+      // unlisted blocks pass through untouched) — on a clean script that's
+      // an empty array instead of a full echo of every block's text, which
+      // was costing ~10s+ of pure output generation per call and, at the
+      // old 4096 default cap, silently truncating mid-JSON on longer
+      // scripts. 8192 comfortably fits dozens of fixed blocks; a parse
+      // failure (see finishReason logging below) degrades to returning the
+      // original blocks unchanged, same as before. responseMimeType keeps
+      // Gemini in native structured-JSON mode (properly escaped strings, no
+      // markdown fences) — same as characterProfiler.ts.
+      // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+      generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
     });
     const tokens = result.response.usageMetadata?.totalTokenCount;
     if (tokens) trackGemini(tokens).catch(() => {});
@@ -97,11 +98,17 @@ ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.textPa
     const resultBlocks = [...blocks];
     for (const item of validated) {
       const original = textBlocks[item.index];
-      if (!original) continue;
-      if (item.status === "fixed") {
-        resultBlocks[original._idx] = { ...resultBlocks[original._idx], textPayload: item.text };
-        changes++;
-      }
+      if (!original || item.status !== "fixed" || !item.text?.trim()) continue;
+      // The prompt tells Gemini to rewrite ONLY the spoken text, so its
+      // replacement usually comes back without the leading [performance tag]
+      // — re-attach the original's tag or the fixed line silently loses its
+      // delivery direction (confirmed live: "[curious] What is that
+      // twinkeling lihgt..." came back fixed but tagless).
+      const originalTag = original.textPayload.match(/^(\[[^\]]+\]\s*)/)?.[1] ?? "";
+      const replacementHasTag = /^\[[^\]]+\]/.test(item.text.trim());
+      const newText = originalTag && !replacementHasTag ? `${originalTag}${item.text.trim()}` : item.text.trim();
+      resultBlocks[original._idx] = { ...resultBlocks[original._idx], textPayload: newText };
+      changes++;
     }
 
     return NextResponse.json({ blocks: resultBlocks, changes });

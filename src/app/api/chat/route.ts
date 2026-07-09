@@ -106,6 +106,14 @@ export async function POST(req: NextRequest) {
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: loadChatGuide() + buildChildContext(childProfile) + languageOverride(language),
+      generationConfig: {
+        // Luna's replies are short conversational turns following an explicit
+        // guide — no reasoning chain needed. Without any generationConfig,
+        // gemini-2.5-flash thinks by default, adding seconds of dead air to
+        // every single chat turn.
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     });
 
     // Empty messages = initial greeting trigger
