@@ -383,9 +383,6 @@ function CharacterCard({ characterName, voice, avatarUrl, isOpen, onOpen }: {
               </div>
             )}
           </div>
-          {isNarrator && (
-            <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-fs-body leading-none">👑</div>
-          )}
         </div>
         <div className="flex flex-col items-center gap-0.5 w-full">
           <p className="text-fs-body font-semibold text-center leading-tight truncate w-full px-1"
