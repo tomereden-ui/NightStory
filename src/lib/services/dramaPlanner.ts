@@ -85,6 +85,7 @@ export async function planDrama(
   blocks: ScriptBlock[],
   apiKey: string,
   durationMinutes = 3,
+  existingTitle?: string,
 ): Promise<DramaScript> {
   const scriptText = blocks
     .map((b) => `${b.characterName}: ${b.textPayload}`)
@@ -102,7 +103,15 @@ export async function planDrama(
 
   const { data, ok, status } = await geminiPost(apiKey, "gemini-2.5-flash", {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.4, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } },
+    // Unlike generate-story's 8192 (which only needs to hold the raw dialogue
+    // text once), this output repeats every line's text again inside a much
+    // heavier per-track JSON structure (id/timing/voice_style/etc. for every
+    // line, plus SFX tracks) — 8192 was just the bare API default, not a
+    // deliberate budget, and was silently truncating mid-JSON on longer
+    // stories (a cut-off response looks identical to genuinely malformed
+    // JSON — see the finishReason check below). The model supports up to
+    // ~65K; 32768 gives generous headroom without reaching for the max.
+    generationConfig: { temperature: 0.4, maxOutputTokens: 32768, thinkingConfig: { thinkingBudget: 0 } },
     safetySettings: [
       { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_ONLY_HIGH" },
@@ -138,12 +147,24 @@ export async function planDrama(
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`Drama planner returned invalid JSON: ${raw.slice(0, 300)}`);
+    // A response cut off mid-JSON (hit maxOutputTokens) looks identical to
+    // genuinely malformed JSON from the parse error alone — finishReason
+    // tells them apart. Log the full response server-side (the thrown
+    // message stays short — it surfaces in the job's user-facing error).
+    const finishReason = data?.candidates?.[0]?.finishReason ?? "unknown";
+    console.error(`[dramaPlanner] Invalid JSON — finishReason=${finishReason}, length=${raw.length} chars. Full response:\n${raw}`);
+    throw new Error(`Drama planner returned invalid JSON (finishReason=${finishReason}): ${raw.slice(0, 300)}`);
   }
 
   parsed.tracks = parsed.tracks
     .sort((a, b) => a.start_ms - b.start_ms)
     .map((t, i) => ({ ...t, id: `t${i + 1}` }));
+
+  // Respect a caller-supplied title (e.g. one an admin typed in by hand)
+  // instead of the one Gemini invented above — cheaper than reworking the
+  // prompt to skip title generation, and callers that don't have a title
+  // of their own simply don't pass this, so behavior there is unchanged.
+  if (existingTitle?.trim()) parsed.title = existingTitle.trim();
 
   return parsed;
 }

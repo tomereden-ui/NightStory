@@ -5,6 +5,7 @@ import type { CharacterProfile } from "@/lib/libraryStore";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 min — POST returns immediately; production runs in background
 import { createJob, updateJob, pruneJobs } from "@/lib/jobs";
+import { getFamilyContext } from "@/lib/authContext";
 import { pickGeminiVoice as pickGeminiVoiceForChar } from "@/config/ttsDefaults";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -228,6 +229,8 @@ async function runProduction(
   characterProfiles?: Record<string, CharacterProfile>,
   skipLibrarySave?: boolean,
   moralLessons?: MoralLesson[],
+  familyId?: string,
+  existingTitle?: string,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -283,7 +286,7 @@ async function runProduction(
 
     // Run drama planning, voice profiling, language detection, and scene generation all in parallel
     const [drama, voiceProfiles, scriptLanguage, scenes] = await Promise.all([
-      planDrama(blocks, geminiKey, durationMinutes),
+      planDrama(blocks, geminiKey, durationMinutes, existingTitle),
       profileCharacters(blocks, geminiKey, characterDescriptions, characterTypes),
       detectScriptLanguage(blocks, geminiKey),
       generateScenes(blocks, geminiKey),
@@ -360,9 +363,15 @@ async function runProduction(
     let sfxLibraryHits = 0;
     console.log(`[${ts()}][ElementStore] Loaded ${elementCache.size} cached elements for story ${storyId}`);
 
-    // Process dialogue in small parallel batches — 3 concurrent keeps Gemini TTS
-    // quota comfortable while cutting wall-clock time by ~3×.
-    const DIALOGUE_BATCH = 3;
+    // Process dialogue in parallel batches. 3 was originally chosen to stay
+    // comfortably under Gemini TTS's per-minute rate limit on a lower tier;
+    // on the account's current paid tier that ceiling is far higher, so 3
+    // concurrent requests was leaving most of the available throughput (and
+    // most of a story's production wall-clock time) unused. synthesizeGemini
+    // already retries 429s using Google's own Retry-After hint, so a batch
+    // that does overshoot the real limit degrades gracefully instead of
+    // failing — this is safe to raise further if quota headroom allows.
+    const DIALOGUE_BATCH = Number(process.env.TTS_DIALOGUE_BATCH) || 6;
     for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += DIALOGUE_BATCH) {
       const batch = dialogueTracks.slice(batchStart, batchStart + DIALOGUE_BATCH);
       let batchFromCache = false;
@@ -539,33 +548,38 @@ async function runProduction(
     }
 
     // ── Step 3b: Upload newly generated elements to element-audio bucket ─────
-    // Done in parallel after all synthesis is complete so it doesn't block TTS.
-    if (pendingUploads.length > 0) {
-      await Promise.all(pendingUploads.map(async (pu) => {
-        try {
-          const audioUrl = await uploadElementAudio(storyId, pu.hash, pu.localPath);
-          const durationMs = audioDurationMs(pu.localPath);
-          newElements.push({
-            id: `el-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-            storyId,
-            elementType: pu.type,
-            contentHash: pu.hash,
-            audioUrl,
-            durationMs,
-            characterName: pu.char,
-            textPayload: pu.text,
-            createdAt: Date.now(),
-          });
-          // Save SFX clips to global library for cross-story reuse
-          if (pu.type === "sfx") {
-            saveSfxLibraryEntry(pu.text, durationMs, audioUrl).catch(() => {});
-          }
-        } catch (uploadErr) {
-          console.warn(`[${ts()}][ElementStore] Upload failed for ${pu.hash.slice(0, 8)}:`, uploadErr);
+    // This uploads to the *cache* bucket for future re-produces/cross-story
+    // reuse — mixing below only reads the local files already written to
+    // jobTmp, so it doesn't need to wait on this. Kick it off here but don't
+    // await it until right before it's actually needed (newElements is only
+    // read once, at the DB-persist step after mixing/upload/library-save),
+    // letting the cache upload run concurrently with the rest of production
+    // instead of serializing in front of it.
+    const elementUploadPromise = pendingUploads.length === 0 ? Promise.resolve() : Promise.all(pendingUploads.map(async (pu) => {
+      try {
+        const audioUrl = await uploadElementAudio(storyId, pu.hash, pu.localPath);
+        const durationMs = audioDurationMs(pu.localPath);
+        newElements.push({
+          id: `el-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          storyId,
+          elementType: pu.type,
+          contentHash: pu.hash,
+          audioUrl,
+          durationMs,
+          characterName: pu.char,
+          textPayload: pu.text,
+          createdAt: Date.now(),
+        });
+        // Save SFX clips to global library for cross-story reuse
+        if (pu.type === "sfx") {
+          saveSfxLibraryEntry(pu.text, durationMs, audioUrl).catch(() => {});
         }
-      }));
+      } catch (uploadErr) {
+        console.warn(`[${ts()}][ElementStore] Upload failed for ${pu.hash.slice(0, 8)}:`, uploadErr);
+      }
+    })).then(() => {
       console.log(`[${ts()}][ElementStore] Uploaded ${newElements.length}/${pendingUploads.length} new elements`);
-    }
+    });
 
     // ── Step 4: Audio mixing ────────────────────────────────────────────
     updateJob(jobId, {
@@ -742,17 +756,22 @@ async function runProduction(
       updateJob(jobId, { pendingEntry: entry, durationSeconds: Math.round(adjustedTotal / 1000) });
     } else {
       try {
-        await addEntry(entry);
+        await addEntry(entry, familyId);
       } catch (err) {
         console.warn(`[${ts()}][produce-drama] addEntry failed, retrying once:`, err);
         try {
-          await addEntry(entry);
+          await addEntry(entry, familyId);
         } catch (retryErr) {
           libraryError = retryErr instanceof Error ? retryErr.message : "Failed to save to library";
           console.error(`[${ts()}][produce-drama] addEntry retry failed:`, libraryError);
         }
       }
     }
+
+    // Wait for the element-audio cache upload kicked off before mixing —
+    // it's had the entire mixing/cover/library-save duration to finish in
+    // the background, so this is normally an instant no-op by now.
+    await elementUploadPromise;
 
     // ── Persist new element records to DB (non-fatal if it fails) ────────────
     if (newElements.length > 0) {
@@ -811,6 +830,7 @@ export async function POST(req: NextRequest) {
       isClassic?: boolean;
       skipLibrarySave?: boolean;
       moralLessons?: MoralLesson[];
+      title?: string;
     };
     try {
       body = await req.json();
@@ -842,8 +862,12 @@ export async function POST(req: NextRequest) {
       ? { data: body.coverImageData, mimeType: body.coverImageMimeType }
       : undefined;
 
+    // Resolve the caller's family before the request context is gone, so the
+    // produced story row is stamped with its owner.
+    const familyCtx = await getFamilyContext(req).catch(() => null);
+
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave, body.moralLessons);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave, body.moralLessons, familyCtx?.familyId, body.title);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

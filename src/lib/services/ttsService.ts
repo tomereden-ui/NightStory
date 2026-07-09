@@ -315,6 +315,34 @@ interface GeminiTTSOptions {
   perAttemptTimeoutMs?: number; // default 25_000
 }
 
+// Once Gemini TTS reports its *daily* quota is exhausted (not a transient
+// per-minute rate limit), every subsequent line in this process would
+// otherwise repeat the same 5-attempt, ~90s backoff dance for nothing — the
+// quota won't recover for hours. Remember the cooldown and skip straight to
+// the fallback for the rest of it, instead of rediscovering the same 429 on
+// every single line of a multi-line production.
+let geminiQuotaExhaustedUntil = 0;
+
+// Google's RESOURCE_EXHAUSTED body always includes a "Please retry in
+// <Xh Ym Zs>" hint — trust it over our own guess whenever it's present,
+// whether the wait is 4 seconds (a per-minute burst limit clearing) or 17
+// hours (a daily quota). A fixed 10s/20s/30s backoff schedule has no
+// relationship to the real reset window either way.
+function parseRetryAfterMs(body: string): number | null {
+  const m = body.match(/retry in (?:(\d+)h)?\s*(?:(\d+)m)?\s*([\d.]+)s/);
+  if (!m) return null;
+  const [, h, min, s] = m;
+  return ((Number(h) || 0) * 3600 + (Number(min) || 0) * 60 + (Number(s) || 0)) * 1000;
+}
+
+// "generate_requests_per_*_day" in the metric name marks it a daily quota
+// (as opposed to a short per-minute burst limit) — worth remembering at the
+// module level so every other line in this production skips straight to the
+// fallback, since it won't recover within any retry window we'd wait for.
+function isDailyQuotaError(body: string): boolean {
+  return /_per_day\b/.test(body);
+}
+
 async function synthesizeGemini(
   text: string,
   voiceName: string,
@@ -324,6 +352,9 @@ async function synthesizeGemini(
   language?: string,
   opts?: GeminiTTSOptions,
 ): Promise<{ mimeType: string }> {
+  if (Date.now() < geminiQuotaExhaustedUntil) {
+    throw new Error(`TTS rate limited (429): daily quota exhausted, cooling down until ${new Date(geminiQuotaExhaustedUntil).toISOString()}`);
+  }
   const maxAttempts = opts?.maxAttempts ?? 5;
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   // gemini-3.1-flash-tts-preview was blocked/erroring when tested via Voice
@@ -370,7 +401,26 @@ async function synthesizeGemini(
         `  body:    ${body429.slice(0, 600)}`,
       );
       lastError = `TTS rate limited (429): ${body429.slice(0, 200)}`;
-      const wait429 = Math.min(30_000, attempt * 10_000);
+      const retryAfterMs = parseRetryAfterMs(body429);
+
+      if (isDailyQuotaError(body429)) {
+        // Daily quota, not a transient burst limit — retrying now is guaranteed
+        // to fail again for hours. Stop immediately and remember it so every
+        // other line in this production (and beyond) skips straight to the
+        // fallback instead of re-discovering the same 429 one at a time.
+        const cooldownMs = retryAfterMs ?? 60 * 60_000; // unparseable — assume 1h and re-check
+        geminiQuotaExhaustedUntil = Date.now() + cooldownMs;
+        console.warn(`[${ts()}][TTS] Gemini daily quota exhausted — skipping Gemini until ${new Date(geminiQuotaExhaustedUntil).toISOString()}`);
+        break;
+      }
+
+      // Short-lived burst limit (e.g. the 10 RPM ceiling) — Google tells us
+      // exactly how long until it clears (seen as low as ~4s, up to ~1min in
+      // practice), which is almost always more accurate than a fixed
+      // 10s/20s/30s guess. Still capped defensively in case a future error
+      // shape reports something unexpectedly large without the "_per_day"
+      // marker we check above.
+      const wait429 = retryAfterMs !== null ? Math.min(45_000, retryAfterMs + 500) : Math.min(30_000, attempt * 10_000);
       if (attempt < maxAttempts) { await sleep(wait429); continue; }
       break;
     }
