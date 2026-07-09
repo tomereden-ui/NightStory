@@ -642,6 +642,20 @@ export default function LunaChatPanel({
   };
   const quickReplyHint = QUICK_REPLY_HINT_LABELS[language] ?? "Quick reply";
 
+  // Shown only before the child's first message — once they've replied, Luna's
+  // already asking follow-ups one at a time, so the tip no longer applies.
+  // Reappears if they start over, since hasUserMessages resets to false too.
+  const WRITE_IT_ALL_LABELS: Record<string, string> = {
+    he: "💡 טיפ: אפשר גם פשוט לכתוב את כל הרעיון בבת אחת!",
+    ar: "💡 نصيحة: يمكنك أيضًا كتابة فكرتك كاملة دفعة واحدة!",
+    fr: "💡 Astuce : tu peux aussi écrire toute ton idée d'un coup !",
+    es: "💡 Consejo: ¡también puedes escribir toda tu idea de una vez!",
+    de: "💡 Tipp: Du kannst auch einfach deine ganze Idee auf einmal schreiben!",
+    it: "💡 Suggerimento: puoi anche scrivere subito tutta la tua idea!",
+    pt: "💡 Dica: você também pode escrever toda a sua ideia de uma vez!",
+  };
+  const writeItAllHint = WRITE_IT_ALL_LABELS[language] ?? "💡 Tip: you can also just write your whole idea at once!";
+
   return (
     <div className="flex flex-col gap-4">
 
@@ -869,6 +883,12 @@ export default function LunaChatPanel({
             <Icon name="send" size={14} className="text-white" />
           </button>
         </div>
+
+        {!hasUserMessages && !listening && (
+          <p className="text-center mt-2 px-2 font-medium" style={{ fontSize: "var(--fs-caption)", color: "rgba(167,139,250,0.85)" }}>
+            {writeItAllHint}
+          </p>
+        )}
 
         {micSupported && (
           <p className="text-center mt-1.5" style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.13)" }}>
