@@ -99,10 +99,12 @@ export default function StoryDetailPage() {
   }, [entry, voicePool]);
 
   // Persist block/voice changes for owned stories only — public/community/
-  // classic entries aren't the viewer's to modify.
+  // classic entries aren't the viewer's to modify. isOwn (real family_id
+  // match) not isPublic — a family's own story can be public and still
+  // theirs to edit.
   const handleScriptBlocksChange = useCallback((blocks: ScriptBlock[]) => {
     setScriptBlocks(blocks);
-    if (entry && !entry.isPublic && !entry.isClassic) {
+    if (entry && entry.isOwn && !entry.isClassic) {
       fetch(`/api/library/${entry.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -242,7 +244,12 @@ export default function StoryDetailPage() {
 
   const handleEdit = useCallback(() => {
     if (!entry) return;
-    const isOwned = !entry.isPublic && !entry.isClassic;
+    // isOwn (real family_id match), not isPublic — a family's own story can
+    // be shared/public and still be editable in place by that family. Using
+    // isPublic here previously made any of the user's own public stories
+    // silently fork into a brand-new draft on every "edit", so title/cover
+    // changes never touched the original row.
+    const isOwned = !!entry.isOwn && !entry.isClassic;
     writeDraft({
       promptText: "",
       scriptBlocks: entry.blocks,
@@ -298,7 +305,7 @@ export default function StoryDetailPage() {
   }
 
   // Only the owner can delete — public/community/classic entries aren't theirs to remove.
-  const isOwned = !entry.isPublic && !entry.isClassic;
+  const isOwned = !!entry.isOwn && !entry.isClassic;
 
   return (
     <div className="cosmic-page min-h-full">
@@ -316,8 +323,11 @@ export default function StoryDetailPage() {
         {/* Atmospheric cover area */}
         <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
           {entry.coverUrl ? (
+            // Generated covers are square with the main character's face
+            // consistently in the top ~15-45%, not centered — a plain
+            // center crop into this short wide banner cuts the head off.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover ken-burns" />
+            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover ken-burns" style={{ objectPosition: "50% 30%" }} />
           ) : (
             <div
               className="w-full h-full"

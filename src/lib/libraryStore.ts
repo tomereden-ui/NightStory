@@ -22,6 +22,11 @@ export interface LibraryEntry {
   emoji?: string;      // classic stories only
   isPublic?: boolean;
   isClassic?: boolean;
+  /** True when the requesting family actually owns this row (family_id matches,
+   *  or the row predates the family migration). Undefined when fetched without
+   *  a familyId (no session). isPublic alone does NOT imply non-ownership — a
+   *  family's own story can be public. Only getEntry() sets this. */
+  isOwn?: boolean;
   childIds?: string[]; // which children this story belongs to (null = unscoped / pre-migration)
   favoritedBy?: string[]; // child profile ids who've favorited this story ("My List")
   shareMessage?: string;
@@ -62,8 +67,10 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
              : undefined,
     favoritedBy: Array.isArray(row.favorited_by) ? row.favorited_by as string[] : undefined,
     shareMessage: row.share_message ?? undefined,
-    viewCount: viewCounts?.[row.id] ?? 0,
-    shareCount: shareCounts?.[row.id] ?? 0,
+    // Post-migration, stories carry trigger-maintained counter columns; the
+    // tally maps remain as the legacy fallback until the migration runs.
+    viewCount: row.view_count ?? viewCounts?.[row.id] ?? 0,
+    shareCount: row.share_count ?? shareCounts?.[row.id] ?? 0,
     scenes: Array.isArray(row.scenes) ? (row.scenes as StoryScene[]) : undefined,
     characterProfiles: row.character_profiles && typeof row.character_profiles === "object" && !Array.isArray(row.character_profiles)
       ? (row.character_profiles as Record<string, CharacterProfile>)
@@ -79,9 +86,13 @@ function toTrashEntry(row: any): TrashEntry { // eslint-disable-line
 
 // ─── Library ──────────────────────────────────────────────────────────────────
 
-export async function addEntry(entry: LibraryEntry): Promise<void> {
+export async function addEntry(entry: LibraryEntry, familyId?: string): Promise<void> {
   await ensureBuckets();
   const { error } = await supabase.from("stories").upsert({
+    // Stamp ownership when the caller knows it (user-facing creates). Left
+    // out otherwise (classics/admin), so an upsert never nulls an existing
+    // story's family_id.
+    ...(familyId ? { family_id: familyId } : {}),
     id: entry.id,
     title: entry.title,
     summary: entry.summary,
@@ -113,9 +124,92 @@ export async function updateMoralLessons(id: string, moralLessons: MoralLesson[]
   if (error) throw new Error(`updateMoralLessons: ${error.message}`);
 }
 
-// User's private stories. Pass childId to scope to a specific child; omit for all.
-export async function getEntries(childId?: string): Promise<LibraryEntry[]> {
+// Columns needed to render list/grid views (Home rails, Library grid). Deliberately
+// excludes blocks/scenes/character_profiles/moral_lessons — the full script JSON is
+// by far the heaviest part of a story row, and list views never read it. The story
+// detail page fetches the full entry separately via getEntry.
+const LIST_COLUMNS =
+  "id, title, summary, audio_url, cover_url, duration_seconds, created_at, language, emoji, is_public, is_classic, child_ids, child_id, favorited_by, share_message, is_draft";
+// Trigger-maintained counters added by the scale migration — requested
+// separately so the list still works before the migration has run.
+const COUNTER_COLUMNS = ", view_count, share_count";
+
+// Lightweight, family-scoped list view — one DB round trip, no script
+// payloads. View/share counts come from the trigger-maintained counter
+// columns (or 0 before the migration runs). Use this for anything that
+// renders a list; use getEntries only when full blocks are genuinely needed.
+export async function getEntrySummaries(
+  familyId: string,
+  opts?: { childId?: string; limit?: number },
+): Promise<LibraryEntry[]> {
+  const run = async (columns: string) => {
+    let q = supabase
+      .from("stories")
+      .select(columns)
+      // family_id is null only on rows created before the scale migration's
+      // backfill; those were globally visible anyway, so including them here
+      // is strictly no worse — and the branch matches nothing post-backfill.
+      .or(`family_id.eq.${familyId},family_id.is.null`)
+      .eq("is_public", false)
+      .eq("is_draft", false);
+    if (opts?.childId) q = q.filter("child_ids", "cs", JSON.stringify([opts.childId]));
+    return q.order("created_at", { ascending: false }).limit(opts?.limit ?? 100);
+  };
+
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS);
+  // Counter columns don't exist until the scale migration runs — retry without.
+  if (error && /view_count|share_count/.test(error.message)) {
+    ({ data, error } = await run(LIST_COLUMNS));
+  }
+  if (error) throw new Error(`getEntrySummaries: ${error.message}`);
+  return (data ?? []).map((row) => toEntry(row));
+}
+
+// "All Stories" view — this family's own stories (private, same as
+// getEntrySummaries) PLUS every public story (classics, community, any other
+// family's stories once they've been made public). Never includes another
+// family's private stories — those only match if family_id equals ours.
+export async function getAllVisibleEntries(
+  familyId: string,
+  opts?: { limit?: number },
+): Promise<LibraryEntry[]> {
+  const run = async (columns: string) => {
+    return supabase
+      .from("stories")
+      .select(columns)
+      .or(`family_id.eq.${familyId},family_id.is.null,is_public.eq.true`)
+      .eq("is_draft", false)
+      .order("created_at", { ascending: false })
+      .limit(opts?.limit ?? 150);
+  };
+
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS);
+  if (error && /view_count|share_count/.test(error.message)) {
+    ({ data, error } = await run(LIST_COLUMNS));
+  }
+  if (error) throw new Error(`getAllVisibleEntries: ${error.message}`);
+  return (data ?? []).map((row) => toEntry(row));
+}
+
+// Just the titles of this family's stories — used by generation routes to
+// avoid duplicate titles without dragging full scripts across the wire.
+export async function getEntryTitles(familyId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("stories")
+    .select("title")
+    .or(`family_id.eq.${familyId},family_id.is.null`)
+    .eq("is_public", false)
+    .eq("is_draft", false);
+  if (error) throw new Error(`getEntryTitles: ${error.message}`);
+  return (data ?? []).map((r) => r.title as string).filter(Boolean);
+}
+
+// Full private stories including blocks. Admin/maintenance routes call this
+// without a familyId (whole-table pass is their job); user-facing routes must
+// pass one so the query is scoped to the caller's own family.
+export async function getEntries(childId?: string, familyId?: string): Promise<LibraryEntry[]> {
   let q = supabase.from("stories").select("*").eq("is_public", false).eq("is_draft", false);
+  if (familyId) q = q.eq("family_id", familyId);
   if (childId) q = q.filter("child_ids", "cs", JSON.stringify([childId]));
   const { data, error } = await q.order("created_at", { ascending: false });
   if (error) throw new Error(`getEntries: ${error.message}`);
@@ -151,7 +245,10 @@ export async function getPublicEntries(): Promise<LibraryEntry[]> {
   return (data ?? []).map((row) => toEntry(row));
 }
 
-export async function getEntry(id: string): Promise<LibraryEntry | undefined> {
+// Fetch one story. When familyId is provided (user-facing routes), private
+// stories belonging to a different family are treated as not-found; public
+// stories (classics/community/shared) stay readable by anyone.
+export async function getEntry(id: string, familyId?: string): Promise<LibraryEntry | undefined> {
   const { data, error } = await supabase
     .from("stories")
     .select("*")
@@ -159,6 +256,16 @@ export async function getEntry(id: string): Promise<LibraryEntry | undefined> {
     .maybeSingle();
   if (error) throw new Error(`getEntry: ${error.message}`);
   if (!data) return undefined;
+  if (familyId && !data.is_public && data.family_id && data.family_id !== familyId) return undefined;
+
+  // Same ownership rule the write routes enforce (family_id matches, or the
+  // row predates the family migration and has no family_id yet) — mirrored
+  // here so the client can tell "my own public story" apart from "someone
+  // else's public story" instead of conflating isPublic with non-ownership.
+  const isOwn = familyId ? (data.family_id === familyId || !data.family_id) : undefined;
+
+  // Trigger-maintained counters (post-migration); legacy tally as fallback.
+  if (typeof data.view_count === "number") return { ...toEntry(data), isOwn };
 
   const [viewsResult, sharesResult] = await Promise.all([
     supabase.from("story_views").select("story_id").eq("story_id", id),
@@ -167,25 +274,44 @@ export async function getEntry(id: string): Promise<LibraryEntry | undefined> {
   const viewCounts = { [id]: (viewsResult.data ?? []).length };
   const shareCounts = { [id]: (sharesResult.data ?? []).length };
 
-  return toEntry(data, viewCounts, shareCounts);
+  return { ...toEntry(data, viewCounts, shareCounts), isOwn };
 }
 
 // ─── Trash ────────────────────────────────────────────────────────────────────
 
-export async function getTrash(): Promise<TrashEntry[]> {
+// Badge-count only — skips the TTL purge (the real trash view still runs it)
+// and transfers a number instead of every deleted story's full script.
+export async function getTrashCount(familyId?: string): Promise<number> {
+  const cutoff = Date.now() - TRASH_TTL_MS;
+  let q = supabase
+    .from("trash")
+    .select("id", { count: "exact", head: true })
+    .gte("deleted_at", cutoff);
+  if (familyId) q = q.or(`family_id.eq.${familyId},family_id.is.null`);
+  const { count, error } = await q;
+  if (error) throw new Error(`getTrashCount: ${error.message}`);
+  return count ?? 0;
+}
+
+export async function getTrash(familyId?: string): Promise<TrashEntry[]> {
   const cutoff = Date.now() - TRASH_TTL_MS;
   await supabase.from("trash").delete().lt("deleted_at", cutoff);
-  const { data, error } = await supabase
+  let q = supabase
     .from("trash")
     .select("*")
     .order("deleted_at", { ascending: false });
+  if (familyId) q = q.or(`family_id.eq.${familyId},family_id.is.null`);
+  const { data, error } = await q;
   if (error) throw new Error(`getTrash: ${error.message}`);
   return (data ?? []).map(toTrashEntry);
 }
 
-export async function moveToTrash(id: string): Promise<boolean> {
+export async function moveToTrash(id: string, familyId?: string): Promise<boolean> {
   const { data } = await supabase.from("stories").select("*").eq("id", id).maybeSingle();
   if (!data) return false;
+  // Ownership guard — a caller can only trash their own family's stories
+  // (legacy rows with no family yet remain deletable, as before).
+  if (familyId && data.family_id && data.family_id !== familyId) return false;
 
   const { error: insertErr } = await supabase.from("trash").upsert({ ...data, deleted_at: Date.now() });
   if (insertErr) throw new Error(`moveToTrash (insert): ${insertErr.message}`);
@@ -211,9 +337,10 @@ export async function moveToTrash(id: string): Promise<boolean> {
   return true;
 }
 
-export async function restoreFromTrash(id: string): Promise<boolean> {
+export async function restoreFromTrash(id: string, familyId?: string): Promise<boolean> {
   const { data } = await supabase.from("trash").select("*").eq("id", id).maybeSingle();
   if (!data) return false;
+  if (familyId && data.family_id && data.family_id !== familyId) return false;
   const { deleted_at: _del, ...rest } = data; // eslint-disable-line
   const { error: insertErr } = await supabase.from("stories").upsert(rest);
   if (insertErr) throw new Error(`restoreFromTrash (insert): ${insertErr.message}`);
@@ -223,13 +350,18 @@ export async function restoreFromTrash(id: string): Promise<boolean> {
   return true;
 }
 
-export async function deleteFromTrashForever(id: string): Promise<boolean> {
-  const { data } = await supabase.from("trash").select("id").eq("id", id).maybeSingle();
+export async function deleteFromTrashForever(id: string, familyId?: string): Promise<boolean> {
+  const { data } = await supabase.from("trash").select("id, family_id").eq("id", id).maybeSingle();
   if (!data) return false;
+  if (familyId && data.family_id && data.family_id !== familyId) return false;
   await supabase.from("trash").delete().eq("id", id);
   return true;
 }
 
-export async function emptyTrash(): Promise<void> {
-  await supabase.from("trash").delete().neq("id", "");
+export async function emptyTrash(familyId?: string): Promise<void> {
+  const q = supabase.from("trash").delete();
+  const { error } = familyId
+    ? await q.or(`family_id.eq.${familyId},family_id.is.null`)
+    : await q.neq("id", "");
+  if (error) throw new Error(`emptyTrash: ${error.message}`);
 }
