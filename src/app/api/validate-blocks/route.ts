@@ -83,8 +83,15 @@ ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareTe
       // original blocks unchanged, same as before. responseMimeType keeps
       // Gemini in native structured-JSON mode (properly escaped strings, no
       // markdown fences) — same as characterProfiler.ts.
+      // A capped thinking budget (was 0) lets Gemini actually reason per
+      // block instead of pattern-matching across three judgment axes (age/
+      // lessons/grammar) at once in a single pass — measured live at +409
+      // tokens (~$0.00016) and +~1.5-1.8s per call, worth it if it catches
+      // typos the zero-thinking pass was missing. Capped well below the
+      // ~4K/~18s an unbounded budget cost on the sibling validate-script
+      // check.
       // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
-      generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 2048 } },
     });
     const tokens = result.response.usageMetadata?.totalTokenCount;
     if (tokens) trackGemini(tokens).catch(() => {});
