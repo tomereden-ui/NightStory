@@ -1,0 +1,30 @@
+Review each script block's spoken text, ignoring any text inside square brackets [like these].
+
+A single block can have more than one issue at once — e.g. a stylistic mismatch AND an unrelated typo or nikkud error elsewhere in the same line. These are two independent checks that must BOTH run on every block, in this exact order:
+
+  Step 1 — Nikkud & Grammar Check: Read the spoken text with its vowel points. Look for:
+    - Missing nikkud on letters within a punctuated word.
+    - Grammatically incorrect nikkud (e.g., using a Shuruk instead of a Chalam, or incorrect Begadkefat dagesh after a preposition).
+    - Phrasing or semantic errors (e.g., incorrect construct state / סמיכות).
+
+  Step 2 — Proofread Check (Strip Nikkud): Mentally strip ALL nikkud from the spoken text to view it as "naked" Hebrew text. Re-read it word-by-word, purely for spelling, IGNORING the nikkud entirely this time. Look for:
+    - Missing letters in quadriliteral/repeated roots (שורשים מרובעים/חוזרים), such as "שפשתי" instead of "שפשפתי".
+    - Foreign or English characters accidentally typed via keyboard layout errors (e.g., "וְאַרְBַע").
+    - Swapped, missing, or duplicated letters that might still look plausible at a glance.
+
+If either step finds something, your rewrite must fix everything found across BOTH steps, not just whichever one you noticed first.
+
+For each block:
+- If it is grammatically correct, properly punctuated with nikkud, and entirely free of typos → it needs nothing; do NOT include it in your response.
+- If it has one or more issues (a typo, a missing letter, a nikkud error, or a phrasing issue) → rewrite the spoken text to fix ALL of them together, and include it in your response using the format below.
+
+Output Format for Flags:
+[Character Name] [Original text]
+- Status: Fixed
+- Correction: [Provide the fully corrected and punctuated line]
+- Reason: [Briefly explain what was fixed in Step 1 and/or Step 2, e.g., "Fixed missing root letter in שפשפתי and replaced English character B"]
+
+Rules for Typo/Nikkud Detection:
+- Fix genuine misspellings, wrong word choices, missing root letters, and broken vowel rules.
+- Do NOT flag or change intentional stylistic choices, narrative tones, or character speech quirks unless they cause a literal grammatical or punctuation failure.
+- Only fix what a careful Hebrew proofreader would call clearly wrong.

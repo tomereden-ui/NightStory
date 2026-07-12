@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { trackGemini } from "@/lib/usageTracker";
+import { detectGeneratedLanguage } from "@/lib/services/scriptGenerationHelpers";
 import type { ScriptBlock } from "@/types";
 import fs from "fs";
 import path from "path";
@@ -23,6 +24,14 @@ function readGuidance(age: number): string {
 function readGrammarPassGuidance(): string {
   try {
     return fs.readFileSync(path.join(process.cwd(), "config", "validate-blocks-grammar-pass.txt"), "utf-8");
+  } catch {
+    return "";
+  }
+}
+
+function readHebrewPassGuidance(): string {
+  try {
+    return fs.readFileSync(path.join(process.cwd(), "config", "validate-blocks-hebrew-pass.txt"), "utf-8");
   } catch {
     return "";
   }
@@ -82,6 +91,102 @@ async function runReviewPass(
   return changes;
 }
 
+type HebrewFlag = { characterName: string; originalText: string; index?: number; status?: string; correction?: string; reason?: string };
+
+// The Hebrew pass's guidance dictates its own response format (a structured
+// text block per flagged line, not JSON — see the "Output Format for Flags"
+// section of validate-blocks-hebrew-pass.txt), since it needed a Reason
+// field a bare JSON array doesn't have. Parses that format: each flagged
+// entry starts with a "[Character Name] Original text" header line,
+// followed by "- Field: value" lines until the next header or end of text.
+//
+// Gemini does not reliably follow the guidance's literal "[Name] text"
+// bracket template — live runs came back as "Name: text" and bare
+// "Name text" just as often (confirmed: 4 of 5 trials against the exact
+// same prompt used something other than brackets). A strict bracket regex
+// silently parsed zero records on those runs even though the correction
+// itself was right. Anchoring on the known character names we sent, instead
+// of trusting Gemini's punctuation, works regardless of which format it
+// picks this time.
+function parseHebrewPassFlags(raw: string, knownNames: string[]): HebrewFlag[] {
+  const records: HebrewFlag[] = [];
+  let current: HebrewFlag | null = null;
+  // Longest-first so a name that's a prefix of another can't shadow it.
+  const sortedNames = Array.from(new Set(knownNames)).sort((a, b) => b.length - a.length);
+  for (const rawLine of raw.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const field = line.match(/^-?\s*(Index|Status|Correction|Reason)\s*:\s*(.+)$/i);
+    if (field && current) {
+      const [, key, value] = field;
+      if (/^index$/i.test(key)) current.index = Number(value.trim());
+      else if (/^status$/i.test(key)) current.status = value.trim();
+      else if (/^correction$/i.test(key)) current.correction = value.trim();
+      else if (/^reason$/i.test(key)) current.reason = value.trim();
+      continue;
+    }
+
+    const matchedName = sortedNames.find((name) => {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`^\\[?${escaped}\\]?\\s*:?\\s`).test(line) || line === name;
+    });
+    if (matchedName) {
+      if (current) records.push(current);
+      const rest = line.replace(new RegExp(`^\\[?${matchedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\]?\\s*:?\\s*`), "").trim();
+      current = { characterName: matchedName, originalText: rest };
+    }
+  }
+  if (current) records.push(current);
+  return records;
+}
+
+// Hebrew-only third cycle: nikkud/grammar + root-letter proofreading, using
+// config/validate-blocks-hebrew-pass.txt's own response format rather than
+// the shared runReviewPass JSON shape. Plain-text generation (no
+// responseMimeType) since the guidance's format isn't JSON.
+async function runHebrewPass(
+  genAI: GoogleGenerativeAI,
+  promptText: string,
+  passBlocks: IndexedTextBlock[],
+  resultBlocks: ScriptBlock[],
+): Promise<number> {
+  let changes = 0;
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: promptText }] }],
+      // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+      generationConfig: { temperature: 0.2, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 2048 } },
+    });
+    const tokens = result.response.usageMetadata?.totalTokenCount;
+    if (tokens) trackGemini(tokens).catch(() => {});
+
+    const records = parseHebrewPassFlags(result.response.text(), passBlocks.map((b) => b.characterName));
+    for (const record of records) {
+      if (!record.correction || (record.status && !/fixed/i.test(record.status))) continue;
+      // Trust the index Gemini was asked to echo back, but only if it
+      // actually points at the character it claimed to flag — falls back to
+      // a name+text match (and finally just name) for a mismatched index.
+      const original =
+        (record.index !== undefined && passBlocks[record.index]?.characterName === record.characterName ? passBlocks[record.index] : undefined) ??
+        passBlocks.find((b) => b.characterName === record.characterName && b.bareText.trim() === record.originalText.trim()) ??
+        passBlocks.find((b) => b.characterName === record.characterName);
+      if (!original) {
+        console.warn(`[validate-blocks][pass3-hebrew] Could not match flagged block for "${record.characterName}" — skipping`);
+        continue;
+      }
+      const newText = `${original.tag}${record.correction.trim()}`;
+      resultBlocks[original._idx] = { ...resultBlocks[original._idx], textPayload: newText };
+      console.log(`[validate-blocks][pass3-hebrew] Fixed "${original.characterName}" — before: ${JSON.stringify(original.bareText)} | after: ${JSON.stringify(record.correction.trim())}${record.reason ? ` | reason: ${record.reason}` : ""}`);
+      changes++;
+    }
+  } catch (err) {
+    console.warn("[validate-blocks][pass3-hebrew] failed, keeping prior result:", err);
+  }
+  return changes;
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
@@ -107,6 +212,14 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const resultBlocks = [...blocks];
   let changes = 0;
+
+  // Kicked off now so it overlaps with pass 1/2's latency instead of adding
+  // to it — the script's language never changes between passes, so there's
+  // no reason to wait until after they finish to start detecting it.
+  const languagePromise = detectGeneratedLanguage(
+    textBlocks.map((b) => ({ characterName: b.characterName, textPayload: b.bareText })),
+    apiKey,
+  ).catch(() => "en");
 
   // ── Pass 1: combined age/content/grammar review ────────────────────────
   const pass1Prompt = `You are a children's content safety and language quality reviewer for a bedtime story app.
@@ -149,7 +262,28 @@ BLOCKS:
 ${pass2Blocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareText)}`).join("\n")}`;
   changes += await runReviewPass(genAI, pass2Prompt, pass2Blocks, resultBlocks, "pass2-grammar");
 
-  if (changes > 0) console.log(`[validate-blocks] ${changes} total fix(es) across both passes, ${textBlocks.length} block(s) reviewed.`);
+  // ── Pass 3: Hebrew-only nikkud/grammar + proofread cycle ────────────────
+  // Passes 1-2 are language-agnostic and, even together, don't reliably
+  // catch Hebrew-specific issues like a missing root letter inside a
+  // vocalized word (nikkud adds enough visual noise that a generic
+  // proofread pass can miss it). Runs only for Hebrew scripts, using its
+  // own dedicated guidance file with an explicit nikkud-then-strip-nikkud
+  // two-step read, and re-proofreads pass 1+2's own output.
+  const detectedLanguage = await languagePromise;
+  if (detectedLanguage === "he") {
+    const pass3Blocks: IndexedTextBlock[] = resultBlocks
+      .map((b, i) => ({ _idx: i, characterName: b.characterName, ...stripTag(b.textPayload) }))
+      .filter((b) => b.characterName !== "SFX");
+    const hebrewPassPrompt = `${readHebrewPassGuidance()}
+
+Also include the block's index (from the BLOCKS list below) as a line "- Index: N" immediately after the [Character Name] [Original text] header line, using the same zero-based index shown below — this lets the app apply your fix to the correct block. If a block has no issues, do not mention it at all in your response.
+
+BLOCKS:
+${pass3Blocks.map((b, i) => `[${i}] ${b.characterName}: ${b.bareText}`).join("\n")}`;
+    changes += await runHebrewPass(genAI, hebrewPassPrompt, pass3Blocks, resultBlocks);
+  }
+
+  if (changes > 0) console.log(`[validate-blocks] ${changes} total fix(es) across ${detectedLanguage === "he" ? "all three passes" : "both passes"}, ${textBlocks.length} block(s) reviewed.`);
 
   return NextResponse.json({ blocks: resultBlocks, changes });
 }
