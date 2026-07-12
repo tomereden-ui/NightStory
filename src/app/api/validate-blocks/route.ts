@@ -2,8 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { trackGemini } from "@/lib/usageTracker";
 import type { ScriptBlock } from "@/types";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
+
+// Same external-guidance pattern as validate-script (config/story-guidance.txt)
+// and the Hebrew letter check (config/hebrew-letter-check.txt) — the actual
+// review criteria live in a plain-text file editable without touching code.
+// {{AGE}} is filled in per-request since the reviewed age varies per story.
+function readGuidance(age: number): string {
+  try {
+    const raw = fs.readFileSync(path.join(process.cwd(), "config", "validate-blocks-guidance.txt"), "utf-8");
+    return raw.replace(/\{\{AGE\}\}/g, String(age));
+  } catch {
+    return "";
+  }
+}
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -33,24 +48,7 @@ CHILD AGE: ${age} years old
 STORY LESSONS: ${lessons.length ? lessons.join(", ") : "none specified"}
 STORY SUMMARY: ${summary || "not provided"}
 
-Review each script block's spoken text. The leading bracketed performance tag (e.g. "[warmly]") is a
-delivery direction, not spoken text — never edit or count it as part of the review.
-For each block:
-- If it is age-appropriate, aligns with the story lessons, and free of typos/grammar errors → it needs nothing; do NOT include it in your response
-- If it has a minor issue (slightly scary word, vocabulary too complex for age ${age}, conflicts with lessons,
-  a typo, or a medium-to-high severity grammar error) → rewrite ONLY the spoken text to fix it and include it with status "fixed"
-
-Rules for age ${age}:
-- No death, violence, or genuine fear
-- Simple vocabulary a ${age}-year-old understands
-- Only gentle tension that resolves warmly
-- Reinforce the story's lessons where natural
-
-Rules for typos/grammar:
-- Fix genuine misspellings, wrong word choices, subject-verb agreement errors, and missing or duplicated words.
-- Do NOT flag or change intentional stylistic choices — short sentence fragments, exclamations, playful
-  onomatopoeia (POP, WHOOSH), or a character's own speech quirks are not grammar errors.
-- Only fix what a careful proofreader would call clearly wrong, never a stylistic preference.
+${readGuidance(age)}
 
 Return ONLY a valid JSON array containing ONLY the blocks you fixed — no markdown, no explanation:
 [{"index":1,"text":"the corrected spoken text","status":"fixed"},...]
