@@ -1113,6 +1113,30 @@ export default function AdminPage() {
     // Strip a redundant "CharacterName:" prefix some pasted/generated scripts
     // bake into the line itself — same cleanup the normal flow applies.
     finalBlocks = finalBlocks.map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
+
+    // Hebrew-only: same final letter-consistency pass generate-story and
+    // five-question-story run automatically — repairs any word where a
+    // couple of mid-word Hebrew letters were accidentally rendered in Latin
+    // script (see config/hebrew-letter-check.txt), which would otherwise
+    // mispronounce through TTS. An admin-pasted script has no language field
+    // of its own, so detect it from the finished text first.
+    setProcessPhase("Checking Hebrew lettering…");
+    try {
+      const langRes = await fetch("/api/detect-language", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: finalBlocks }),
+      });
+      const langData = await langRes.json() as { language?: string };
+      if (langData.language === "he") {
+        const hebRes = await fetch("/api/fix-hebrew-mixup", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: finalBlocks }),
+        });
+        const hebData = await hebRes.json() as { blocks?: ScriptBlock[] };
+        if (hebData.blocks?.length === finalBlocks.length) finalBlocks = hebData.blocks;
+      }
+    } catch (err) {
+      console.warn("[Admin][Validation] Hebrew letter check failed, using script unchanged:", err);
+    }
+
     setParsedBlocks(finalBlocks);
 
     setProcessPhase("");
