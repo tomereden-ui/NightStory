@@ -60,7 +60,7 @@ export default function StudioAudioBar({
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
         onEnded={() => { setPlaying(false); setCurrentTime(0); }}
       />
-      <div className="mx-auto px-4 pb-6" style={{ maxWidth: 448 }}>
+      <div className="mx-auto px-4 pb-20" style={{ maxWidth: 448 }}>
         <div
           className="rounded-2xl px-4 py-3.5"
           style={{

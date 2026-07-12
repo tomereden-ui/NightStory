@@ -2362,6 +2362,7 @@ export default function Studio2Page() {
             onGenerating={() => {
               setScriptBlocks([]);
               setMoralLessons([]);
+              setScenes([]);
             }}
             onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
@@ -2375,6 +2376,7 @@ export default function Studio2Page() {
               setLessons([]);
               setLessonImplementations([]);
               setMoralLessons([]);
+              setScenes(draft.scenes ?? []);
               setActiveTab("script");
               setTotalExpectedBlocks(rawBlocks.length);
               setIsValidating(true);

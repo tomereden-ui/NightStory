@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import type { DraftState } from "@/lib/draftStore";
-import type { ScriptBlock } from "@/types";
+import type { ScriptBlock, StoryScene } from "@/types";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import Icon from "@/components/ui/Icon";
 import LanguageToggle from "@/components/ui/LanguageToggle";
@@ -496,9 +496,9 @@ export default function LunaChatPanel({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language, narratorVoiceId: getNarratorVoiceId() }),
         });
-        const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; error?: string };
+        const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; scenes?: StoryScene[]; error?: string };
         if (!res.ok) throw new Error(data.error || "Generation failed");
-        onScriptReady({ promptText, scriptBlocks: data.blocks ?? [], summary: data.summary ?? "", coverPrompt: data.coverPrompt ?? "", storyTitle: data.title ?? "" });
+        onScriptReady({ promptText, scriptBlocks: data.blocks ?? [], summary: data.summary ?? "", coverPrompt: data.coverPrompt ?? "", storyTitle: data.title ?? "", scenes: data.scenes ?? [] });
       } catch (err) {
         // The server already returns a clear, localized reason when there is
         // one (e.g. a safety-filter block) -- only fall back to the generic
@@ -633,7 +633,7 @@ export default function LunaChatPanel({
           narratorVoiceId: getNarratorVoiceId(),
         }),
       });
-      const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; error?: string; blocked?: boolean; suggestedRewrite?: Record<string, string> };
+      const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; scenes?: StoryScene[]; error?: string; blocked?: boolean; suggestedRewrite?: Record<string, string> };
       if (!res.ok) {
         if (data.blocked && data.suggestedRewrite) setSuggestedRewrite(data.suggestedRewrite);
         throw new Error(data.error || "Generation failed");
@@ -644,6 +644,7 @@ export default function LunaChatPanel({
         summary: data.summary ?? "",
         coverPrompt: data.coverPrompt ?? "",
         storyTitle: data.title ?? "",
+        scenes: data.scenes ?? [],
       }, durationMinutes);
     } catch (err) {
       // Surface the server's actual (already localized) reason when it gave
