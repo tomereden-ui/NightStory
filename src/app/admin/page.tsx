@@ -97,6 +97,48 @@ function Divider({ title }: { title: string }) {
   );
 }
 
+// ─── Add Story draft persistence ────────────────────────────────────────────
+// Everything in the Add Story form (and everything Process Script computes
+// from it) is saved to localStorage so an accidental refresh or navigating
+// away never loses a pasted script or its reviewed cast — cleared only when
+// resetAddStory() runs.
+
+const ADD_STORY_DRAFT_KEY = "nightstory_admin_add_story_draft";
+
+interface AddStoryDraft {
+  addTitle: string;
+  addScript: string;
+  addIsPublic: boolean;
+  addCategory: "classics" | "community";
+  parsedBlocks: ScriptBlock[];
+  validationIssues: string[];
+  processState: "idle" | "processing" | "done" | "error";
+  validationChanges: number;
+  storeCoverUrl: string;
+  storeCoverPrompt: string;
+  storeSummary: string;
+  characterAvatars: Record<string, string>;
+  characterTypes: Record<string, CharacterType>;
+  castProfiles: Record<string, CharacterProfile>;
+  scriptLanguage: string;
+}
+
+function loadAddStoryDraft(): Partial<AddStoryDraft> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(ADD_STORY_DRAFT_KEY);
+    if (!raw) return {};
+    const draft = JSON.parse(raw) as Partial<AddStoryDraft>;
+    // "processing" only ever meant an in-flight async call in the tab that
+    // saved it — that call died with the reload, so resurrecting it would
+    // leave Process Script's button stuck disabled with nothing running.
+    if (draft.processState === "processing") draft.processState = "idle";
+    return draft;
+  } catch {
+    return {};
+  }
+}
+
 // ─── Cast + direction components (mirrors studio) ─────────────────────────────
 
 type CharacterType = "child" | "adult" | "animal" | "narrator";
@@ -955,16 +997,22 @@ function SfxLibrarySeeder() {
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
 
+  // Everything typed/processed into the Add Story form survives a refresh or
+  // navigating away — an admin pasting a long script and reviewing cast
+  // assignments shouldn't lose that work to an accidental reload. Kept only
+  // until resetAddStory() runs (the "Reset" / "Add another story" buttons).
+  const [addStoryDraft] = useState<Partial<AddStoryDraft>>(() => loadAddStoryDraft());
+
   // ── Add Story fields ──────────────────────────────────────────────────────
-  const [addTitle, setAddTitle]           = useState("");
-  const [addScript, setAddScript]         = useState("");
-  const [addIsPublic, setAddIsPublic]     = useState(true);
-  const [addCategory, setAddCategory]     = useState<"classics" | "community">("classics");
-  const [parsedBlocks, setParsedBlocks]   = useState<ScriptBlock[]>([]);
-  const [validationIssues, setValidationIssues] = useState<string[]>([]);
-  const [processState, setProcessState]   = useState<"idle" | "processing" | "done" | "error">("idle");
+  const [addTitle, setAddTitle]           = useState(addStoryDraft.addTitle ?? "");
+  const [addScript, setAddScript]         = useState(addStoryDraft.addScript ?? "");
+  const [addIsPublic, setAddIsPublic]     = useState(addStoryDraft.addIsPublic ?? true);
+  const [addCategory, setAddCategory]     = useState<"classics" | "community">(addStoryDraft.addCategory ?? "classics");
+  const [parsedBlocks, setParsedBlocks]   = useState<ScriptBlock[]>(addStoryDraft.parsedBlocks ?? []);
+  const [validationIssues, setValidationIssues] = useState<string[]>(addStoryDraft.validationIssues ?? []);
+  const [processState, setProcessState]   = useState<"idle" | "processing" | "done" | "error">(addStoryDraft.processState ?? "idle");
   const [processPhase, setProcessPhase]   = useState("");
-  const [validationChanges, setValidationChanges] = useState(0);
+  const [validationChanges, setValidationChanges] = useState(addStoryDraft.validationChanges ?? 0);
   const [processError, setProcessError]   = useState("");
   const [addProduceLog, setAddProduceLog] = useState<string[]>([]);
   const [addProducing, setAddProducing]   = useState(false);
@@ -977,10 +1025,10 @@ export default function AdminPage() {
   const coverUploadRef                  = useRef<HTMLInputElement | null>(null);
 
   // ── Cover preview & story meta ────────────────────────────────────────────
-  const [storeCoverUrl, setStoreCoverUrl]         = useState(""); // base64 data URL from generate-cover
+  const [storeCoverUrl, setStoreCoverUrl]         = useState(addStoryDraft.storeCoverUrl ?? ""); // base64 data URL from generate-cover
   const [storeCoverLoading, setStoreCoverLoading] = useState(false);
-  const [storeCoverPrompt, setStoreCoverPrompt]   = useState("");
-  const [storeSummary, setStoreSummary]           = useState("");
+  const [storeCoverPrompt, setStoreCoverPrompt]   = useState(addStoryDraft.storeCoverPrompt ?? "");
+  const [storeSummary, setStoreSummary]           = useState(addStoryDraft.storeSummary ?? "");
 
   // ── Explicit DB save (after production) ──────────────────────────────────
   const [addSaving, setAddSaving]       = useState(false);
@@ -990,14 +1038,37 @@ export default function AdminPage() {
   // ── Cast / voice pool ─────────────────────────────────────────────────────
   const [voicePool, setVoicePool]               = useState<Voice[]>(PRESET_VOICE_POOL);
   const [bankAvatars, setBankAvatars]           = useState<BankAvatar[]>([]);
-  const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
+  const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>(addStoryDraft.characterAvatars ?? {});
   const [openDirectSheet, setOpenDirectSheet]   = useState<string | null>(null);
-  const [characterTypes, setCharacterTypes]     = useState<Record<string, CharacterType>>({});
+  const [characterTypes, setCharacterTypes]     = useState<Record<string, CharacterType>>(addStoryDraft.characterTypes ?? {});
   // Nature (gender/ageBucket/category/visualDescription) per cast member,
   // classified once during Process Script — feeds the Direction Sheet's
   // Auto Assign buttons, same profiles produce-drama itself uses at cast time.
-  const [castProfiles, setCastProfiles]         = useState<Record<string, CharacterProfile>>({});
-  const [scriptLanguage, setScriptLanguage]     = useState<string>("en");
+  const [castProfiles, setCastProfiles]         = useState<Record<string, CharacterProfile>>(addStoryDraft.castProfiles ?? {});
+  const [scriptLanguage, setScriptLanguage]     = useState<string>(addStoryDraft.scriptLanguage ?? "en");
+
+  // Persist every field above into localStorage (debounced) so an accidental
+  // refresh or navigating away never loses a pasted script or its processed
+  // cast — cleared only by resetAddStory().
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      try {
+        const draft: AddStoryDraft = {
+          addTitle, addScript, addIsPublic, addCategory, parsedBlocks, validationIssues,
+          processState, validationChanges, storeCoverUrl, storeCoverPrompt, storeSummary,
+          characterAvatars, characterTypes, castProfiles, scriptLanguage,
+        };
+        localStorage.setItem(ADD_STORY_DRAFT_KEY, JSON.stringify(draft));
+      } catch {
+        // localStorage full/unavailable — draft persistence is best-effort
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [
+    addTitle, addScript, addIsPublic, addCategory, parsedBlocks, validationIssues,
+    processState, validationChanges, storeCoverUrl, storeCoverPrompt, storeSummary,
+    characterAvatars, characterTypes, castProfiles, scriptLanguage,
+  ]);
 
   // ── Classics list ─────────────────────────────────────────────────────────
   const [classics, setClassics]         = useState<ClassicMeta[]>([]);
@@ -1395,6 +1466,7 @@ export default function AdminPage() {
     setAddSaving(false); setAddSaveError(""); setAddSaved(false);
     setCharacterAvatars({}); setOpenDirectSheet(null); setCharacterTypes({});
     setCastProfiles({}); setScriptLanguage("en");
+    try { localStorage.removeItem(ADD_STORY_DRAFT_KEY); } catch { /* best-effort */ }
   };
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
