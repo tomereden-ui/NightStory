@@ -13,6 +13,7 @@ import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { stripNamePrefix } from "@/utils/stripSoundCues";
 import type { CharacterProfile } from "@/lib/libraryStore";
 import type { CharacterClassification } from "@/lib/services/characterClassifier";
+import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -206,18 +207,69 @@ function AvatarGallery({ currentUrl, characterType, onSelect }: {
   );
 }
 
-function DirectionSheet({ characterName, voice, voicePool, avatarUrl, characterType, onAvatarChange, onVoiceChange, onClose }: {
+function DirectionSheet({
+  characterName, voice, voicePool, avatarUrl, characterType, characterProfile,
+  otherAssignedVoiceIds, otherAssignedAvatarUrls, storyLanguage,
+  onAvatarChange, onVoiceChange, onClose,
+}: {
   characterName: string;
   voice: Voice | undefined;
   voicePool: Voice[];
   avatarUrl?: string;
   characterType: CharacterType;
+  /** This character's nature (gender/type/ageBucket/category/visualDescription) — feeds Auto Assign's matching. */
+  characterProfile?: CharacterProfile;
+  /** Voice ids already assigned to OTHER characters in this story — Auto Assign avoids picking these when possible. */
+  otherAssignedVoiceIds?: Set<string>;
+  /** Avatar URLs already assigned to OTHER characters in this story — avatar Auto Assign avoids picking these when possible. */
+  otherAssignedAvatarUrls?: Set<string>;
+  storyLanguage?: string;
   onAvatarChange: (url: string, type: CharacterType) => void;
   onVoiceChange: (voiceId: string) => void;
   onClose: () => void;
 }) {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker]   = useState(false);
+  const [avatarMatching, setAvatarMatching]     = useState(false);
+  const isNarrator = characterType === "narrator" || characterProfile?.type === "narrator" || characterName === "Narrator";
+
+  // Same nature-based casting logic as Studio's Direction Sheet — an
+  // instant, local, deterministic lookup against the static preset catalog.
+  const handleAutoAssign = () => {
+    if (isNarrator) return;
+    const bestId = pickBestVoiceForCharacter(characterProfile, storyLanguage, otherAssignedVoiceIds);
+    if (bestId) {
+      onVoiceChange(bestId);
+      setShowVoicePicker(false);
+    }
+  };
+
+  // Same AI avatar-bank match (findBestAvatarForCharacter) produce-drama runs
+  // automatically at generation time, exposed here for the same per-character
+  // "Auto Assign" button Studio has.
+  const handleAvatarAutoAssign = async () => {
+    if (isNarrator || avatarMatching || !characterProfile) return;
+    setAvatarMatching(true);
+    try {
+      const res = await fetch("/api/match-avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profile: characterProfile,
+          excludeUrls: otherAssignedAvatarUrls ? Array.from(otherAssignedAvatarUrls) : undefined,
+        }),
+      });
+      const data = await res.json() as { avatarUrl?: string | null };
+      if (data.avatarUrl) {
+        onAvatarChange(data.avatarUrl, characterType);
+        setShowAvatarPicker(false);
+      }
+    } catch {
+      // best-effort — the manual gallery picker below is always available
+    } finally {
+      setAvatarMatching(false);
+    }
+  };
 
   return (
     <>
@@ -295,6 +347,24 @@ function DirectionSheet({ characterName, voice, voicePool, avatarUrl, characterT
             </button>
             {showAvatarPicker && (
               <div className="px-3 pb-3">
+                {!isNarrator && (
+                <button
+                  onClick={handleAvatarAutoAssign}
+                  disabled={avatarMatching}
+                  className="w-full mb-2 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.35)", color: "#A78BFA" }}
+                  title="Match this character's nature (type/gender/age) to the best-fitting avatar"
+                >
+                  {avatarMatching ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(167,139,250,0.25)", borderTopColor: "#A78BFA" }} />
+                      Matching…
+                    </>
+                  ) : (
+                    <>✨ Auto Assign</>
+                  )}
+                </button>
+                )}
                 <AvatarGallery currentUrl={avatarUrl} characterType={characterType}
                   onSelect={(url, type) => { onAvatarChange(url, type); setShowAvatarPicker(false); }} />
               </div>
@@ -329,6 +399,16 @@ function DirectionSheet({ characterName, voice, voicePool, avatarUrl, characterT
             </button>
             {showVoicePicker && (
               <div className="px-3 pb-3">
+                {!isNarrator && (
+                <button
+                  onClick={handleAutoAssign}
+                  className="w-full mb-2 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
+                  style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
+                  title="Match this character's nature (gender/style/age) to the best-fitting voice"
+                >
+                  ✨ Auto Assign
+                </button>
+                )}
                 <VoicePicker inline voices={voicePool} selectedVoiceId={voice?.id ?? ""}
                   onSelect={(voiceId) => { onVoiceChange(voiceId); setShowVoicePicker(false); }}
                   onClose={() => setShowVoicePicker(false)} />
@@ -402,11 +482,17 @@ function CharacterCard({ characterName, voice, avatarUrl, isOpen, onOpen }: {
   );
 }
 
-function CharacterCards({ blocks, voicePool, avatars, characterTypes, openCharacter, onOpen, onClose, onAvatarChange, onVoiceChange }: {
+function CharacterCards({
+  blocks, voicePool, avatars, characterTypes, characterProfiles, storyLanguage,
+  openCharacter, onOpen, onClose, onAvatarChange, onVoiceChange,
+}: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
   avatars: Record<string, string>;
   characterTypes: Record<string, CharacterType>;
+  /** Nature per cast member (gender/ageBucket/category/visualDescription) — feeds Auto Assign. */
+  characterProfiles?: Record<string, CharacterProfile>;
+  storyLanguage?: string;
   openCharacter: string | null;
   onOpen: (name: string) => void;
   onClose: () => void;
@@ -451,6 +537,10 @@ function CharacterCards({ blocks, voicePool, avatars, characterTypes, openCharac
           voicePool={voicePool}
           avatarUrl={avatars[openCharacter]}
           characterType={characterTypes[openCharacter] ?? (openCharacter === "Narrator" ? "narrator" : "adult")}
+          characterProfile={characterProfiles?.[openCharacter]}
+          otherAssignedVoiceIds={new Set(cast.filter((c) => c.characterName !== openCharacter && c.voice).map((c) => c.voice!.id))}
+          otherAssignedAvatarUrls={new Set(cast.filter((c) => c.characterName !== openCharacter && avatars[c.characterName]).map((c) => avatars[c.characterName]))}
+          storyLanguage={storyLanguage}
           onAvatarChange={(url, type) => onAvatarChange(openCharacter, url, type)}
           onVoiceChange={(voiceId) => onVoiceChange(openCharacter, voiceId)}
           onClose={onClose}
@@ -903,6 +993,11 @@ export default function AdminPage() {
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
   const [openDirectSheet, setOpenDirectSheet]   = useState<string | null>(null);
   const [characterTypes, setCharacterTypes]     = useState<Record<string, CharacterType>>({});
+  // Nature (gender/ageBucket/category/visualDescription) per cast member,
+  // classified once during Process Script — feeds the Direction Sheet's
+  // Auto Assign buttons, same profiles produce-drama itself uses at cast time.
+  const [castProfiles, setCastProfiles]         = useState<Record<string, CharacterProfile>>({});
+  const [scriptLanguage, setScriptLanguage]     = useState<string>("en");
 
   // ── Classics list ─────────────────────────────────────────────────────────
   const [classics, setClassics]         = useState<ClassicMeta[]>([]);
@@ -1093,23 +1188,52 @@ export default function AdminPage() {
     const age         = ageGroupToAge(metaData.ageGroup);
     setStoreSummary(summary); setStoreCoverPrompt(coverPrompt);
 
-    // Round 2.5 — per-block age-appropriateness + typo/grammar check.
-    setProcessPhase("Checking grammar & typos…");
+    // Round 2.5 — per-block age-appropriateness + typo/grammar check, run
+    // alongside AI cast classification (same classify-characters call
+    // handleProduceStory used to run alone, right before production) — both
+    // only need policyBlocks/summary, so there's no reason to serialize them.
+    // Classifying here means the Direction Sheet's Auto Assign buttons (both
+    // voice and avatar) have real nature profiles to match against as soon as
+    // the admin opens the cast sheet, instead of only at production time.
+    setProcessPhase("Checking grammar, typos & casting…");
     let finalBlocks = policyBlocks;
-    try {
-      const gramRes = await fetch("/api/validate-blocks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    const [gramResult, classifyResult] = await Promise.allSettled([
+      fetch("/api/validate-blocks", {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ blocks: policyBlocks, age, summary }),
-      });
-      const gramData = await gramRes.json() as { blocks?: ScriptBlock[]; changes?: number };
-      if (gramData.blocks?.length === policyBlocks.length) {
-        finalBlocks = gramData.blocks;
-        setValidationChanges(gramData.changes ?? 0);
-      }
-    } catch (err) {
-      console.warn("[Admin][Validation] Grammar/age check failed, using policy-checked script:", err);
+      }).then((r) => r.json()) as Promise<{ blocks?: ScriptBlock[]; changes?: number }>,
+      fetch("/api/classify-characters", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ characters: uniqueChars, summary: summary || addTitle }),
+      }).then((r) => r.json()) as Promise<Record<string, CharacterClassification>>,
+    ]);
+
+    if (gramResult.status === "fulfilled" && gramResult.value.blocks?.length === policyBlocks.length) {
+      finalBlocks = gramResult.value.blocks;
+      setValidationChanges(gramResult.value.changes ?? 0);
+    } else if (gramResult.status === "rejected") {
+      console.warn("[Admin][Validation] Grammar/age check failed, using policy-checked script:", gramResult.reason);
     }
+
+    if (classifyResult.status === "fulfilled") {
+      const profiles: Record<string, CharacterProfile> = {};
+      const types: Record<string, CharacterType> = {};
+      for (const [name, c] of Object.entries(classifyResult.value)) {
+        types[name] = c.type as CharacterType;
+        profiles[name] = {
+          type: c.type as CharacterProfile["type"],
+          visualDescription: c.visualDescription,
+          gender: c.gender as CharacterProfile["gender"],
+          ageBucket: c.ageBucket,
+          category: c.category,
+        };
+      }
+      setCharacterTypes((prev) => ({ ...prev, ...types }));
+      setCastProfiles(profiles);
+    } else {
+      console.warn("[Admin][Validation] Character classification failed — Auto Assign will retry it at Produce Story:", classifyResult.reason);
+    }
+
     // Strip a redundant "CharacterName:" prefix some pasted/generated scripts
     // bake into the line itself — same cleanup the normal flow applies.
     finalBlocks = finalBlocks.map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
@@ -1119,13 +1243,15 @@ export default function AdminPage() {
     // couple of mid-word Hebrew letters were accidentally rendered in Latin
     // script (see config/hebrew-letter-check.txt), which would otherwise
     // mispronounce through TTS. An admin-pasted script has no language field
-    // of its own, so detect it from the finished text first.
+    // of its own, so detect it from the finished text first — reused below
+    // for Auto Assign's voice matching too.
     setProcessPhase("Checking Hebrew lettering…");
     try {
       const langRes = await fetch("/api/detect-language", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: finalBlocks }),
       });
       const langData = await langRes.json() as { language?: string };
+      if (langData.language) setScriptLanguage(langData.language);
       if (langData.language === "he") {
         const hebRes = await fetch("/api/fix-hebrew-mixup", {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: finalBlocks }),
@@ -1170,25 +1296,36 @@ export default function AdminPage() {
       // character name -- NOT nested under a "types" field. Both the coarse
       // type (for voice casting) and the full profile (type/gender/ageBucket/
       // category/visualDescription, for AI avatar matching in produce-drama)
-      // come from this single call.
-      log("Classifying characters…");
+      // come from this single call. Process Script already ran this once (to
+      // feed the Direction Sheet's Auto Assign buttons) — reuse castProfiles
+      // if it covers the full cast rather than paying for a second call, and
+      // only fall back to a fresh classification if it's missing anyone.
       const charNames = Array.from(new Set(blocks.map((b) => b.characterName)));
-      const classifyRes = await fetch("/api/classify-characters", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characters: charNames, summary: storeSummary || addTitle }),
-      });
-      const classification = await classifyRes.json() as Record<string, CharacterClassification>;
       const characterTypes: Record<string, string> = {};
       const characterProfiles: Record<string, CharacterProfile> = {};
-      for (const [name, c] of Object.entries(classification)) {
-        characterTypes[name] = c.type;
-        characterProfiles[name] = {
-          type: c.type as CharacterProfile["type"],
-          visualDescription: c.visualDescription,
-          gender: c.gender as CharacterProfile["gender"],
-          ageBucket: c.ageBucket,
-          category: c.category,
-        };
+      const missingProfiles = charNames.filter((n) => !castProfiles[n]);
+      if (missingProfiles.length === 0) {
+        for (const name of charNames) {
+          characterProfiles[name] = castProfiles[name];
+          characterTypes[name] = castProfiles[name].type;
+        }
+      } else {
+        log("Classifying characters…");
+        const classifyRes = await fetch("/api/classify-characters", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ characters: charNames, summary: storeSummary || addTitle }),
+        });
+        const classification = await classifyRes.json() as Record<string, CharacterClassification>;
+        for (const [name, c] of Object.entries(classification)) {
+          characterTypes[name] = c.type;
+          characterProfiles[name] = {
+            type: c.type as CharacterProfile["type"],
+            visualDescription: c.visualDescription,
+            gender: c.gender as CharacterProfile["gender"],
+            ageBucket: c.ageBucket,
+            category: c.category,
+          };
+        }
       }
 
       // 2. Kick off production — use pre-generated cover if available
@@ -1257,6 +1394,7 @@ export default function AdminPage() {
     setStoreCoverUrl(""); setStoreCoverLoading(false); setStoreCoverPrompt(""); setStoreSummary("");
     setAddSaving(false); setAddSaveError(""); setAddSaved(false);
     setCharacterAvatars({}); setOpenDirectSheet(null); setCharacterTypes({});
+    setCastProfiles({}); setScriptLanguage("en");
   };
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1827,6 +1965,8 @@ export default function AdminPage() {
                   voicePool={voicePool}
                   avatars={characterAvatars}
                   characterTypes={characterTypes}
+                  characterProfiles={castProfiles}
+                  storyLanguage={scriptLanguage}
                   openCharacter={openDirectSheet}
                   onOpen={setOpenDirectSheet}
                   onClose={() => setOpenDirectSheet(null)}
@@ -1923,6 +2063,8 @@ export default function AdminPage() {
                 voicePool={voicePool}
                 avatars={characterAvatars}
                 characterTypes={characterTypes}
+                characterProfiles={castProfiles}
+                storyLanguage={scriptLanguage}
                 openCharacter={openDirectSheet}
                 onOpen={setOpenDirectSheet}
                 onClose={() => setOpenDirectSheet(null)}
