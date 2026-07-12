@@ -1165,8 +1165,12 @@ export default function AdminPage() {
           out.push({ id: uid(), blockOrder: out.length, characterName: "SFX", assignedVoiceId: "", textPayload });
         } else {
           if (!voiceMap[charName]) {
+            // Cosmetic only — the cast sheet's preview badge before Produce
+            // Story runs. Actual narration always uses the profile's default
+            // (see runProduction's narratorVoiceId override), regardless of
+            // what's parsed here.
             voiceMap[charName] = charName.toLowerCase() === "narrator"
-              ? "Aoede"
+              ? getNarratorVoiceId()
               : CHAR_VOICE_POOL[voiceIdx++ % CHAR_VOICE_POOL.length];
           }
           // rest may already be the full spoken text ("[Name] text"), just a

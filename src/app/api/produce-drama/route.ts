@@ -377,9 +377,17 @@ async function runProduction(
     // character. Nature-based casting at generation time already assigns
     // *something* to every character including "Narrator", so a
     // "only if unset" guard here would (and did) almost never fire --
-    // this must be unconditional to actually be the default.
+    // this must be unconditional to actually be the default. Story guidance
+    // has Gemini translate "Narrator" into the story's own language (e.g.
+    // "קריין"/"המספר" in Hebrew), so the literal key "Narrator" alone won't
+    // match for non-English scripts (admin-pasted Hebrew scripts hit this
+    // every time) — also look up the real key via characterTypes' type field,
+    // which survives translation, same fix generate-story already applies.
     if (narratorVoiceId) {
-      (voiceOverrides as Record<string, { geminiVoiceName?: string }>)["Narrator"] = { geminiVoiceName: narratorVoiceId };
+      const overridesByName = voiceOverrides as Record<string, { geminiVoiceName?: string }>;
+      overridesByName["Narrator"] = { geminiVoiceName: narratorVoiceId };
+      const narratorKey = Object.entries(characterTypes ?? {}).find(([, type]) => type === "narrator")?.[0];
+      if (narratorKey) overridesByName[narratorKey] = { geminiVoiceName: narratorVoiceId };
     }
 
     const skippedLines: string[] = [];
