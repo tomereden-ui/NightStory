@@ -48,6 +48,12 @@ export interface WizardUiCopy {
   short: string;
   medium: string;
   long: string;
+  /** Unit suffix shown after a duration number, e.g. "5 min" / "5 דק׳". */
+  minutesUnit: string;
+  /** Luna chat's "create story" button while the request is in flight. */
+  writingYourStory: string;
+  /** Luna chat's "create story" button before it's clicked. */
+  createMyStoryButton: string;
   readyToHearStory: string;
   lunaLabel: string;
   areYouReady: string;
@@ -99,6 +105,9 @@ const EN: WizardUiCopy = {
   short: "Short",
   medium: "Medium",
   long: "Long",
+  minutesUnit: "min",
+  writingYourStory: "Writing your story…",
+  createMyStoryButton: "Create my story!",
   readyToHearStory: "Ready to hear the story?",
   lunaLabel: "Luna",
   areYouReady: "Are you ready?",
@@ -147,6 +156,9 @@ const HE: WizardUiCopy = {
   short: "קצר",
   medium: "בינוני",
   long: "ארוך",
+  minutesUnit: "דק׳",
+  writingYourStory: "כותבים את הסיפור שלך…",
+  createMyStoryButton: "צרו את הסיפור שלי!",
   readyToHearStory: "מוכנים לשמוע את הסיפור?",
   lunaLabel: "לונה",
   areYouReady: "מוכנים?",
@@ -195,6 +207,9 @@ const ES: WizardUiCopy = {
   short: "Corta",
   medium: "Media",
   long: "Larga",
+  minutesUnit: "min",
+  writingYourStory: "Escribiendo tu historia…",
+  createMyStoryButton: "¡Crea mi historia!",
   readyToHearStory: "¿Listos para escuchar la historia?",
   lunaLabel: "Luna",
   areYouReady: "¿Listos?",
@@ -243,6 +258,9 @@ const FR: WizardUiCopy = {
   short: "Courte",
   medium: "Moyenne",
   long: "Longue",
+  minutesUnit: "min",
+  writingYourStory: "Écriture de votre histoire…",
+  createMyStoryButton: "Créer mon histoire !",
   readyToHearStory: "Prêt à écouter l'histoire ?",
   lunaLabel: "Luna",
   areYouReady: "Prêts ?",
@@ -291,6 +309,9 @@ const DE: WizardUiCopy = {
   short: "Kurz",
   medium: "Mittel",
   long: "Lang",
+  minutesUnit: "Min",
+  writingYourStory: "Deine Geschichte wird geschrieben…",
+  createMyStoryButton: "Erstelle meine Geschichte!",
   readyToHearStory: "Bereit, die Geschichte zu hören?",
   lunaLabel: "Luna",
   areYouReady: "Bereit?",
@@ -339,6 +360,9 @@ const PT: WizardUiCopy = {
   short: "Curta",
   medium: "Média",
   long: "Longa",
+  minutesUnit: "min",
+  writingYourStory: "Escrevendo sua história…",
+  createMyStoryButton: "Criar minha história!",
   readyToHearStory: "Pronto para ouvir a história?",
   lunaLabel: "Luna",
   areYouReady: "Prontos?",
@@ -387,6 +411,9 @@ const IT: WizardUiCopy = {
   short: "Breve",
   medium: "Media",
   long: "Lunga",
+  minutesUnit: "min",
+  writingYourStory: "Sto scrivendo la tua storia…",
+  createMyStoryButton: "Crea la mia storia!",
   readyToHearStory: "Pronti ad ascoltare la storia?",
   lunaLabel: "Luna",
   areYouReady: "Pronti?",
@@ -435,6 +462,9 @@ const AR: WizardUiCopy = {
   short: "قصيرة",
   medium: "متوسطة",
   long: "طويلة",
+  minutesUnit: "دقيقة",
+  writingYourStory: "نكتب قصتك…",
+  createMyStoryButton: "أنشئ قصتي!",
   readyToHearStory: "هل أنت مستعد لسماع القصة؟",
   lunaLabel: "لونا",
   areYouReady: "هل أنتم مستعدون؟",
@@ -483,6 +513,9 @@ const JA: WizardUiCopy = {
   short: "短い",
   medium: "普通",
   long: "長い",
+  minutesUnit: "分",
+  writingYourStory: "物語を書いています…",
+  createMyStoryButton: "物語を作る!",
   readyToHearStory: "物語を聞く準備はいいですか?",
   lunaLabel: "ルナ",
   areYouReady: "準備はいいですか?",
@@ -531,6 +564,9 @@ const HI: WizardUiCopy = {
   short: "छोटी",
   medium: "मध्यम",
   long: "लंबी",
+  minutesUnit: "मिनट",
+  writingYourStory: "आपकी कहानी लिखी जा रही है…",
+  createMyStoryButton: "मेरी कहानी बनाएं!",
   readyToHearStory: "कहानी सुनने के लिए तैयार हैं?",
   lunaLabel: "लूना",
   areYouReady: "तैयार हैं?",

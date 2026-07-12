@@ -8,6 +8,7 @@ import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import Icon from "@/components/ui/Icon";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import OwlAvatar from "@/components/ui/OwlAvatar";
+import { LunaWorkingBanner } from "@/components/studio/LunaWorkingCard";
 import { getWizardUi } from "@/constants/wizardUi";
 import type { Language } from "@/types";
 
@@ -168,10 +169,12 @@ function MessageBubble({
 
 const CHAT_DRAFT_KEY_PREFIX = "ns-chat-draft-v1";
 
+// Labels come from wizardUi at render time (language-dependent) — this only
+// holds the language-independent value/icon pairing.
 const CHAT_DURATION_PRESETS = [
-  { value: 3, icon: "⚡", label: "Short",  desc: "~3 min" },
-  { value: 5, icon: "🌙", label: "Medium", desc: "~5 min" },
-  { value: 8, icon: "✨", label: "Long",   desc: "~8 min" },
+  { value: 3, icon: "⚡", labelKey: "short" as const },
+  { value: 5, icon: "🌙", labelKey: "medium" as const },
+  { value: 8, icon: "✨", labelKey: "long" as const },
 ];
 
 export default function LunaChatPanel({
@@ -847,8 +850,8 @@ export default function LunaChatPanel({
           {/* Duration picker */}
           <div className="rounded-2xl px-4 py-3" style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
             <div className="flex items-center justify-between mb-2.5">
-              <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>Story length</span>
-              <span className="text-fs-body font-bold tabular-nums" style={{ color: "#4fc3f7" }}>{durationMinutes} min</span>
+              <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>{wizardUi.storyLength}</span>
+              <span className="text-fs-body font-bold tabular-nums" style={{ color: "#4fc3f7" }}>{durationMinutes} {wizardUi.minutesUnit}</span>
             </div>
             <div className="flex gap-2">
               {CHAT_DURATION_PRESETS.map((p) => (
@@ -862,8 +865,8 @@ export default function LunaChatPanel({
                   }
                 >
                   <span className="text-fs-heading mb-0.5">{p.icon}</span>
-                  <span className="text-fs-body font-bold" style={{ color: durationMinutes === p.value ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>{p.label}</span>
-                  <span className="text-fs-body" style={{ color: durationMinutes === p.value ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>{p.desc}</span>
+                  <span className="text-fs-body font-bold" style={{ color: durationMinutes === p.value ? "#4fc3f7" : "rgba(255,255,255,0.45)" }}>{wizardUi[p.labelKey]}</span>
+                  <span className="text-fs-body" style={{ color: durationMinutes === p.value ? "rgba(79,195,247,0.6)" : "rgba(255,255,255,0.2)" }}>~{p.value} {wizardUi.minutesUnit}</span>
                 </button>
               ))}
             </div>
@@ -872,9 +875,9 @@ export default function LunaChatPanel({
                 onChange={(e) => setDurationMinutes(+e.target.value)}
                 className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
               <div className="flex justify-between text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>
-                <span>1 min</span>
+                <span>1 {wizardUi.minutesUnit}</span>
                 <span style={{ color: "rgba(255,255,255,0.12)" }}>· · · · · · · · ·</span>
-                <span>10 min</span>
+                <span>10 {wizardUi.minutesUnit}</span>
               </div>
             </div>
           </div>
@@ -903,13 +906,15 @@ export default function LunaChatPanel({
             </div>
           )}
 
+          {creating && <LunaWorkingBanner label={wizardUi.writingYourStory} />}
+
           <button
             onClick={() => handleCreateStory()}
             disabled={creating}
             className="w-full py-4 rounded-2xl font-bold text-white text-fs-heading transition-all active:scale-[0.98] disabled:opacity-70"
             style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)", boxShadow: "0 0 28px rgba(139,92,246,0.4), 0 0 14px rgba(79,195,247,0.3)" }}
           >
-            {creating ? "✨ Writing your story…" : "🌟 Create my story!"}
+            {creating ? `✨ ${wizardUi.writingYourStory}` : `🌟 ${wizardUi.createMyStoryButton}`}
           </button>
         </div>
       )}
