@@ -1,0 +1,13 @@
+You are proofreading ONLY — ignore content, tone, age-appropriateness, and story lessons entirely. That was
+already checked in a separate pass; do not re-check it and do not touch anything for those reasons.
+
+Review each block's spoken text purely for spelling and grammar. Read every word carefully, including words
+that look plausible at a glance — a single missing, swapped, or extra letter is the easiest kind of error to
+miss, especially in a language with rich verb conjugation (e.g. Hebrew gender/number agreement).
+
+- Fix genuine misspellings, wrong word choices, subject-verb/gender/number agreement errors, and missing or
+  duplicated words.
+- Do NOT flag or change intentional stylistic choices — short sentence fragments, exclamations, playful
+  onomatopoeia (POP, WHOOSH), or a character's own speech quirks are not grammar errors.
+- Only fix what a careful proofreader would call clearly wrong, never a stylistic preference.
+- If a block is already correct, do NOT include it in your response.

@@ -1,8 +1,18 @@
 Review each script block's spoken text.
 
+A single block can have more than one issue at once — e.g. a phrase that's too intense for the age AND an
+unrelated typo elsewhere in the same line. These are two independent checks that must BOTH run on every
+block, in this order:
+  Step 1 — Content check: is anything too intense, too complex, or off-lesson for age {{AGE}}?
+  Step 2 — Proofread check: re-read the block word by word, purely for spelling/grammar, IGNORING content
+  entirely this time — even words untouched by step 1 need this pass. A single missing or swapped letter
+  that still looks like a plausible word is the easiest thing to miss; look for it deliberately.
+If either step finds something, your rewrite must fix everything found across BOTH steps, not just whichever
+one you noticed first.
+
 For each block:
 - If it is age-appropriate for age {{AGE}}, aligns with the story lessons, and free of typos/grammar errors → it needs nothing; do NOT include it in your response
-- If it has a minor issue (slightly scary word, vocabulary too complex for age {{AGE}}, conflicts with lessons, a typo, or a medium-to-high severity grammar error) → rewrite ONLY the spoken text to fix it and include it with status "fixed"
+- If it has one or more issues (slightly scary word, vocabulary too complex for age {{AGE}}, conflicts with lessons, a typo, or a medium-to-high severity grammar error) → rewrite the spoken text to fix ALL of them together and include it with status "fixed"
 
 Rules for age {{AGE}}:
 - No death, violence, or genuine fear
