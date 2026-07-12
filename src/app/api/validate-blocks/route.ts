@@ -111,8 +111,10 @@ ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareTe
       // held onto, no detection needed.
       const newText = `${original.tag}${item.text.trim()}`;
       resultBlocks[original._idx] = { ...resultBlocks[original._idx], textPayload: newText };
+      console.log(`[validate-blocks] Fixed "${original.characterName}" (age/content/grammar) — before: ${JSON.stringify(original.bareText)} | after: ${JSON.stringify(item.text.trim())}`);
       changes++;
     }
+    if (changes > 0) console.log(`[validate-blocks] ${changes} block(s) fixed out of ${textBlocks.length} reviewed.`);
 
     return NextResponse.json({ blocks: resultBlocks, changes });
   } catch (err) {
