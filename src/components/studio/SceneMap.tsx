@@ -73,29 +73,55 @@ export default function SceneMap({ scenes, blocks, onSceneClick, totalDurationSe
 
   return (
     <div className="mb-5">
+      {/* Section header — tap to expand/collapse, same panel style as the
+          other collapsed panels in this app (Story Journey, Family Voices,
+          Family Members): bordered card, icon chip, gradient title. The
+          plain text-row header this replaced was easy to miss entirely. */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-2 w-full text-left mb-3"
+        className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all active:scale-[0.99]"
+        style={{
+          background: "linear-gradient(135deg, rgba(79,195,247,0.10) 0%, rgba(139,92,246,0.06) 100%)",
+          border: "1px solid rgba(79,195,247,0.22)",
+        }}
       >
+        <div className="flex items-center gap-3">
+          <div
+            className="flex items-center justify-center rounded-xl flex-shrink-0"
+            style={{ width: 38, height: 38, background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.3)" }}
+          >
+            <span style={{ fontSize: 18 }}>🎬</span>
+          </div>
+
+          <div className="text-left">
+            <p
+              className="font-bold tracking-wide"
+              style={{
+                fontSize: "var(--fs-body)",
+                background: "linear-gradient(90deg, #4fc3f7, #a78bfa)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Story Scenes
+            </p>
+            <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+              {scenes.length} scene{scenes.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
+
         <span
-          className="text-fs-body font-bold uppercase tracking-widest"
-          style={{ color: "rgba(255,255,255,0.28)" }}
-        >
-          Story Scenes
-        </span>
-        <span className="text-fs-label" style={{ color: "rgba(255,255,255,0.2)" }}>
-          ({scenes.length})
-        </span>
-        <span
-          className="ml-auto text-fs-body transition-transform"
-          style={{ color: "rgba(255,255,255,0.28)", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+          className="text-white/30 flex-shrink-0 transition-transform"
+          style={{ fontSize: 22, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
         </span>
       </button>
 
       {expanded && (
-        <div className="flex flex-col">
+        <div className="flex flex-col pt-3">
           {scenes.map((scene, idx) => {
             const duration = durations[idx] ?? 0;
             const characters = charactersInScene(scene, blocks);

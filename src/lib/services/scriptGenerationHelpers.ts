@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import fs from "fs";
+import path from "path";
 import type { ScriptBlock } from "@/types";
 
 // ─── Language detection ─────────────────────────────────────────────────────────
@@ -194,4 +196,63 @@ export async function resolveTitleConflict(
   }
 
   return title;
+}
+
+// ─── Hebrew letter-consistency check ────────────────────────────────────────
+// Hebrew generations occasionally come back with a narrow rendering defect:
+// one or two letters mid-word swapped to visually similar Latin characters
+// (e.g. "שlום" instead of "שלום"), which mispronounces the word when spoken
+// through TTS. This runs only for Hebrew stories, as a final pass over the
+// already-finished script, and only ever applies the specific corrections
+// Gemini reports — never touches SFX blocks (always English) or a line's
+// leading performance tag (also always English by design; see the LANGUAGE
+// section in generate-story's buildSystemInstruction).
+function readHebrewLetterCheckGuide(): string {
+  try {
+    return fs.readFileSync(path.join(process.cwd(), "config", "hebrew-letter-check.txt"), "utf-8");
+  } catch {
+    return "";
+  }
+}
+
+export async function fixHebrewLatinMixup(blocks: ScriptBlock[], apiKey: string): Promise<ScriptBlock[]> {
+  const guide = readHebrewLetterCheckGuide();
+  if (!guide) return blocks;
+
+  const checkable = blocks
+    .map((b, index) => ({ index, characterName: b.characterName, textPayload: b.textPayload }))
+    .filter((b) => b.characterName !== "SFX");
+  if (checkable.length === 0) return blocks;
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.5-flash",
+      systemInstruction: guide,
+      generationConfig: {
+        temperature: 0, maxOutputTokens: 8192, responseMimeType: "application/json",
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
+    const payload = checkable.map((b) => ({ index: b.index, text: b.textPayload }));
+    const result = await model.generateContent(JSON.stringify(payload));
+    const raw = result.response.text().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+    const corrections = JSON.parse(raw) as Array<{ index?: unknown; text?: unknown }>;
+    if (!Array.isArray(corrections) || corrections.length === 0) return blocks;
+
+    const byIndex = new Map<number, string>();
+    for (const c of corrections) {
+      if (c && typeof c.index === "number" && typeof c.text === "string" && c.text.trim()) {
+        byIndex.set(c.index, c.text);
+      }
+    }
+    if (byIndex.size === 0) return blocks;
+
+    console.log(`[fixHebrewLatinMixup] corrected ${byIndex.size} line(s) with a Hebrew/Latin letter mixup`);
+    return blocks.map((b, i) => byIndex.has(i) ? { ...b, textPayload: byIndex.get(i)! } : b);
+  } catch (err) {
+    console.warn("[fixHebrewLatinMixup] check failed, returning blocks unchanged:", err);
+    return blocks;
+  }
 }

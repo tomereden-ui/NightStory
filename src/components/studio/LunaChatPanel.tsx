@@ -238,7 +238,11 @@ export default function LunaChatPanel({
   const [storyParams, setStoryParams]       = useState<Record<string, string> | null>(null);
   const [creating, setCreating]             = useState(false);
   const [createError, setCreateError]       = useState<string | null>(null);
-  const [greeted, setGreeted]               = useState(false);
+  // Populated only when generation was blocked by the safety filter -- an
+  // AI-reworded version of the flagged fields that removes just the
+  // ambiguity, offered as a one-tap "try this instead" the user approves,
+  // never auto-retried silently (see suggestSaferRewrite in the API route).
+  const [suggestedRewrite, setSuggestedRewrite] = useState<Record<string, string> | null>(null);
   const [topResetConfirm, setTopResetConfirm] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(5);
   const [readyConfirmed, setReadyConfirmed] = useState(false);
@@ -355,13 +359,20 @@ export default function LunaChatPanel({
 
   const chatDraftKey = `${CHAT_DRAFT_KEY_PREFIX}-${activeChild?.id ?? "no-child"}`;
   // On mount, this restore effect and the greeting effect below both run in
-  // the SAME initial effect flush, off the same render's closure -- so
-  // setGreeted(true) here isn't visible to the greeting effect's `if
-  // (greeted) return` check yet (state updates only apply on the next
-  // render). Without this ref, reopening the Chat tab would restore the
-  // saved conversation and then immediately overwrite it with a fresh
-  // greeting. A ref is mutated synchronously, so it's visible right away.
+  // the SAME initial effect flush, off the same render's closure -- so a
+  // state update here isn't visible to the greeting effect's guards yet
+  // (state updates only apply on the next render). Without this ref,
+  // reopening the Chat tab would restore the saved conversation and then
+  // immediately overwrite it with a fresh greeting. A ref is mutated
+  // synchronously, so it's visible right away -- same reasoning applies to
+  // firstMsgSent and greetedLanguageRef below.
   const skipGreetingRef = useRef(false);
+  // Tracks which language the currently-shown greeting was actually fetched
+  // in -- see the full explanation on the greeting effect below. Declared
+  // here (not next to that effect) because the restore-draft effect right
+  // below needs to reset it too, and reading it before its declaration
+  // would be a temporal-dead-zone error.
+  const greetedLanguageRef = useRef<string | null>(null);
 
   useEffect(() => {
     greetAbortRef.current?.abort();
@@ -386,7 +397,6 @@ export default function LunaChatPanel({
           // panel should only appear after the user re-confirms "let's go" in
           // this visit, not immediately on reopening a past conversation.
           if (parsed.durationMinutes) setDurationMinutes(parsed.durationMinutes);
-          setGreeted(true);
           firstMsgSent.current = true;
           restored = true;
         }
@@ -399,8 +409,8 @@ export default function LunaChatPanel({
       setStoryReady(false);
       setStoryParams(null);
       setReadyConfirmed(false);
-      setGreeted(false);
       firstMsgSent.current = false;
+      greetedLanguageRef.current = null;
     }
   }, [activeChild?.id, stopSpeaking]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -413,10 +423,31 @@ export default function LunaChatPanel({
   }, [messages, storyReady, storyParams, readyConfirmed, durationMinutes, chatDraftKey]);
 
   // ─── Greeting ────────────────────────────────────────────────────────
+  // greetedLanguageRef tracks which language the currently-shown greeting
+  // was actually fetched in (a ref, not a one-shot "greeted" boolean) --
+  // because `language` (storyLang) can resolve asynchronously shortly
+  // after mount (studio2 loads a persisted story-language override from
+  // localStorage in its own effect, after this component has already
+  // mounted), a one-shot guard would let the greeting fire once in
+  // whatever the default language happened to be at that instant and then
+  // never correct itself, even though every later reply in the
+  // conversation reads the current `language` value fresh and gets it
+  // right. Reset in handleDiscard() and on the restore-draft "not
+  // restored" path above so a fresh greeting is always forced then,
+  // regardless of whether `language` happens to already match.
 
   useEffect(() => {
-    if (greeted || skipGreetingRef.current) return;
-    setGreeted(true);
+    // skipGreetingRef: a real saved conversation was restored -- never touch
+    // its greeting, even if the app's language has since moved on.
+    // firstMsgSent: the user has actually sent a message this session --
+    // once that's true the language picker is hidden anyway, so nothing
+    // should be pulling the rug out from under a real conversation. Both
+    // are refs (not state) so they're accurate even within the same effect
+    // flush as the restore-draft effect above, before its own state updates
+    // have applied to a new render yet.
+    if (skipGreetingRef.current || firstMsgSent.current) return;
+    if (greetedLanguageRef.current === language) return;
+    greetedLanguageRef.current = language;
     setLoading(true);
 
     const ctrl = new AbortController();
@@ -451,7 +482,7 @@ export default function LunaChatPanel({
     };
 
     attemptGreeting().finally(() => setLoading(false));
-  }, [greeted, activeChild, language]);
+  }, [activeChild, language]);
 
   // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -487,11 +518,15 @@ export default function LunaChatPanel({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language, narratorVoiceId: getNarratorVoiceId() }),
         });
-        if (!res.ok) throw new Error("Generation failed");
-        const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string };
+        const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; error?: string };
+        if (!res.ok) throw new Error(data.error || "Generation failed");
         onScriptReady({ promptText, scriptBlocks: data.blocks ?? [], summary: data.summary ?? "", coverPrompt: data.coverPrompt ?? "", storyTitle: data.title ?? "" });
-      } catch {
-        setMessages((prev) => [...prev, { role: "model", content: "Oops! 🌙\nCouldn't create the story.\nTry describing it a little differently!" }]);
+      } catch (err) {
+        // The server already returns a clear, localized reason when there is
+        // one (e.g. a safety-filter block) -- only fall back to the generic
+        // line for genuinely unexpected failures (network drop, etc.).
+        const serverMessage = err instanceof Error && err.message && err.message !== "Generation failed" ? err.message : null;
+        setMessages((prev) => [...prev, { role: "model", content: serverMessage ?? "Oops! 🌙\nCouldn't create the story.\nTry describing it a little differently!" }]);
         setLoading(false);
       }
       return;
@@ -574,7 +609,8 @@ export default function LunaChatPanel({
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setStoryReady(false);
     setStoryParams(null);
-    setGreeted(false);
+    greetedLanguageRef.current = null;
+    skipGreetingRef.current = false;
     setReadyConfirmed(false);
     setTopResetConfirm(false);
     setDurationMinutes(5);
@@ -593,10 +629,15 @@ export default function LunaChatPanel({
     handleDiscard();
   }
 
-  async function handleCreateStory() {
+  // overrideFields lets the "try this instead" button retry with the
+  // AI-reworded hero/setting/plot without mutating storyParams itself --
+  // if the reworded attempt ALSO fails for some unrelated reason, the
+  // original wording is still there to fall back to.
+  async function handleCreateStory(overrideFields?: Record<string, string>) {
     if (!storyParams || creating) return;
     setCreating(true);
     setCreateError(null);
+    setSuggestedRewrite(null);
     onGenerating?.();
     try {
       const res = await fetch("/api/generate-story", {
@@ -604,9 +645,9 @@ export default function LunaChatPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "wizard",
-          hero: storyParams.hero ?? "",
-          setting: storyParams.setting ?? "",
-          plot: storyParams.plot ?? "",
+          hero: overrideFields?.hero ?? storyParams.hero ?? "",
+          setting: overrideFields?.setting ?? storyParams.setting ?? "",
+          plot: overrideFields?.plot ?? storyParams.plot ?? "",
           primaryVoiceId: storyParams.primaryVoiceId ?? "v1",
           durationMinutes,
           childAgeGroup: getChildAgeGroup(),
@@ -614,17 +655,24 @@ export default function LunaChatPanel({
           narratorVoiceId: getNarratorVoiceId(),
         }),
       });
-      if (!res.ok) throw new Error("Generation failed");
-      const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string };
+      const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; error?: string; blocked?: boolean; suggestedRewrite?: Record<string, string> };
+      if (!res.ok) {
+        if (data.blocked && data.suggestedRewrite) setSuggestedRewrite(data.suggestedRewrite);
+        throw new Error(data.error || "Generation failed");
+      }
       onScriptReady({
-        promptText: [storyParams.hero, storyParams.plot].filter(Boolean).join(" — "),
+        promptText: [overrideFields?.hero ?? storyParams.hero, overrideFields?.plot ?? storyParams.plot].filter(Boolean).join(" — "),
         scriptBlocks: data.blocks ?? [],
         summary: data.summary ?? "",
         coverPrompt: data.coverPrompt ?? "",
         storyTitle: data.title ?? "",
       }, durationMinutes);
-    } catch {
-      setCreateError("Couldn't write the story — please try again! ✨");
+    } catch (err) {
+      // Surface the server's actual (already localized) reason when it gave
+      // one -- e.g. a safety-filter block -- instead of always showing the
+      // same generic line regardless of cause.
+      const serverMessage = err instanceof Error && err.message && err.message !== "Generation failed" ? err.message : null;
+      setCreateError(serverMessage ?? "Couldn't write the story — please try again! ✨");
       setCreating(false);
     }
   }
@@ -683,6 +731,32 @@ export default function LunaChatPanel({
     pt: "💡 Dica: você também pode escrever toda a sua ideia de uma vez!",
   };
   const writeItAllHint = WRITE_IT_ALL_LABELS[language] ?? "💡 Tip: you can also just write your whole idea at once!";
+
+  // Shown only when a generation attempt was blocked by the safety filter
+  // and the server sent back a reworded suggestion (see suggestSaferRewrite
+  // in /api/generate-story) -- a caption above the suggested text, and the
+  // button that retries with it.
+  const TRY_THIS_INSTEAD_LABELS: Record<string, string> = {
+    he: "אולי זה יעבוד יותר טוב:",
+    ar: "قد يعمل هذا بشكل أفضل:",
+    fr: "Ceci pourrait mieux fonctionner :",
+    es: "Esto podría funcionar mejor:",
+    de: "Das könnte besser funktionieren:",
+    it: "Questo potrebbe funzionare meglio:",
+    pt: "Isso pode funcionar melhor:",
+  };
+  const tryThisInsteadLabel = TRY_THIS_INSTEAD_LABELS[language] ?? "This might work better:";
+
+  const TRY_THIS_BUTTON_LABELS: Record<string, string> = {
+    he: "נסו את זה ✨",
+    ar: "جرّب هذا ✨",
+    fr: "Essayer ceci ✨",
+    es: "Probar esto ✨",
+    de: "Das versuchen ✨",
+    it: "Prova questo ✨",
+    pt: "Tentar isso ✨",
+  };
+  const tryThisButtonLabel = TRY_THIS_BUTTON_LABELS[language] ?? "Try this ✨";
 
   return (
     <div className="flex flex-col gap-4">
@@ -775,12 +849,12 @@ export default function LunaChatPanel({
             </span>
             <button
               onClick={() => setReadyConfirmed(true)}
-              className="flex items-center gap-2 py-2.5 px-6 rounded-full text-fs-body font-bold transition-all active:scale-95"
+              className="flex items-center gap-2 py-2.5 px-6 rounded-full text-fs-body font-semibold transition-all active:scale-95"
               style={{
-                background: "linear-gradient(135deg, rgba(251,191,36,0.22), rgba(245,158,11,0.15))",
-                border: "1.5px solid rgba(251,191,36,0.6)",
-                color: "#fcd34d",
-                boxShadow: "0 0 20px rgba(251,191,36,0.25)",
+                background: "rgba(251,191,36,0.08)",
+                border: "1px solid rgba(251,191,36,0.28)",
+                color: "#fbd98a",
+                boxShadow: "0 0 8px rgba(251,191,36,0.06)",
               }}
             >
               <span>✨</span>
@@ -833,8 +907,29 @@ export default function LunaChatPanel({
           {createError && (
             <p className="text-center text-fs-body" style={{ color: "#f87171" }}>{createError}</p>
           )}
+
+          {/* A safety-filter block came with an AI-reworded version that
+              removes just the ambiguity -- shown for the user to approve,
+              never applied automatically. */}
+          {suggestedRewrite && (
+            <div className="rounded-2xl px-4 py-3 flex flex-col gap-2" style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
+              <p className="text-fs-body font-semibold" style={{ color: "rgba(79,195,247,0.75)" }}>{tryThisInsteadLabel}</p>
+              <p className="text-fs-body italic" style={{ color: "rgba(255,255,255,0.7)" }}>
+                {[suggestedRewrite.hero, suggestedRewrite.setting, suggestedRewrite.plot, suggestedRewrite.promptText].filter(Boolean).join(" — ")}
+              </p>
+              <button
+                onClick={() => handleCreateStory(suggestedRewrite)}
+                disabled={creating}
+                className="self-start px-4 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95 disabled:opacity-50"
+                style={{ background: "rgba(79,195,247,0.18)", border: "1.5px solid #4fc3f7", color: "#4fc3f7" }}
+              >
+                {tryThisButtonLabel}
+              </button>
+            </div>
+          )}
+
           <button
-            onClick={handleCreateStory}
+            onClick={() => handleCreateStory()}
             disabled={creating}
             className="w-full py-4 rounded-2xl font-bold text-white text-fs-heading transition-all active:scale-[0.98] disabled:opacity-70"
             style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)", boxShadow: "0 0 28px rgba(139,92,246,0.4), 0 0 14px rgba(79,195,247,0.3)" }}

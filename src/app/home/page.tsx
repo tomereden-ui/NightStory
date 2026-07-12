@@ -845,7 +845,10 @@ export default function HomePage() {
           )}
 
           {/* ── Family Stories ── */}
-          {familyStories.length > 0 && (
+          {/* Only meaningful once there's more than one child profile —
+              with a single child, "family" stories and "your" stories are
+              the same list, so this rail would just duplicate the one above. */}
+          {children.length > 1 && familyStories.length > 0 && (
             <Rail
               title="Family Stories"
               action={{ label: t("viewAll"), href: "/library" }}

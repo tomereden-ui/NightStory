@@ -33,6 +33,12 @@ import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 // ─── Draft key — separate from Studio so drafts don't cross-contaminate ──────
 const DRAFT_KEY = "nightstory_studio2_draft_v1";
 
+// Sticky override for the story-creation default language — set only when
+// the user explicitly picks a language in one of the creation panels (Chat
+// or Step-by-step). Absent this, new creation sessions default to whatever
+// the app's own UI language currently is.
+const STORY_LANG_OVERRIDE_KEY = "nightstory_story_lang_override";
+
 // Same admin gate used by /admin — see src/app/admin/page.tsx
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -283,7 +289,6 @@ function CharacterCards({
   avatars,
   characterTypes,
   characterProfiles,
-  onDirectCharacter,
   onAvatarChange,
   onVoiceChange,
   storyLanguage,
@@ -293,7 +298,6 @@ function CharacterCards({
   avatars: Record<string, string>;
   characterTypes: Record<string, CharacterType>;
   characterProfiles: Record<string, CharacterProfile>;
-  onDirectCharacter: (characterName: string, instruction: string) => void;
   onAvatarChange: (characterName: string, url: string, type: CharacterType) => void;
   onVoiceChange: (characterName: string, voiceId: string) => void;
   /** The story's actual content language — falls back to UI language if not provided. */
@@ -352,7 +356,9 @@ function CharacterCards({
           otherAssignedVoiceIds={new Set(
             cast.filter((c) => c.characterName !== openCharacter && c.voice).map((c) => c.voice!.id)
           )}
-          onDirect={(instruction) => onDirectCharacter(openCharacter, instruction)}
+          otherAssignedAvatarUrls={new Set(
+            Object.entries(avatars).filter(([name, url]) => name !== openCharacter && url).map(([, url]) => url)
+          )}
           onAvatarChange={(url, type) => onAvatarChange(openCharacter, url, type)}
           onVoiceChange={(voiceId) => onVoiceChange(openCharacter, voiceId)}
           onClose={() => setOpenCharacter(null)}
@@ -362,10 +368,6 @@ function CharacterCards({
     </div>
   );
 }
-
-const CHAR_CHIPS = [
-  "More gentle", "More dramatic", "More playful", "Shorter lines", "More expressive",
-];
 
 // ─── Avatar picker gallery ────────────────────────────────────────────────────
 
@@ -465,7 +467,7 @@ function DirectionSheet({
   characterType,
   characterProfile,
   otherAssignedVoiceIds,
-  onDirect,
+  otherAssignedAvatarUrls,
   onAvatarChange,
   onVoiceChange,
   onClose,
@@ -480,7 +482,8 @@ function DirectionSheet({
   characterProfile?: CharacterProfile;
   /** Voice ids already assigned to OTHER characters in this story — Auto Assign avoids picking these when possible. */
   otherAssignedVoiceIds?: Set<string>;
-  onDirect: (instruction: string) => void;
+  /** Avatar URLs already assigned to OTHER characters in this story — avatar Auto Assign avoids picking these when possible. */
+  otherAssignedAvatarUrls?: Set<string>;
   onAvatarChange: (url: string, type: CharacterType) => void;
   onVoiceChange: (voiceId: string) => void;
   onClose: () => void;
@@ -488,10 +491,9 @@ function DirectionSheet({
   storyLanguage?: string;
 }) {
   const { language } = useLanguage();
-  const [note, setNote] = useState("");
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker]   = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [avatarMatching, setAvatarMatching]     = useState(false);
   // Gemini translates the literal word "Narrator" into the story's own
   // language (e.g. "קריין" in Hebrew), so name checks alone miss it for any
   // non-English story — characterProfile/characterType survive translation
@@ -511,20 +513,38 @@ function DirectionSheet({
     }
   };
 
-  const submit = (instruction: string) => {
-    const trimmed = instruction.trim();
-    if (!trimmed) return;
-    onDirect(isNarrator
-      ? `For the Narrator: ${trimmed}`
-      : `For the character "${characterName}": ${trimmed}`);
-    setNote("");
-    onClose();
+  // Unlike voice Auto Assign (an instant local lookup against the static
+  // preset catalog), avatar matching is an AI call against the avatar bank
+  // (findBestAvatarForCharacter, same one produce-drama runs automatically
+  // at generation time) — so this needs a network round trip and a loading
+  // state.
+  const handleAvatarAutoAssign = async () => {
+    if (isNarrator || avatarMatching || !characterProfile) return;
+    setAvatarMatching(true);
+    try {
+      const res = await fetch("/api/match-avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profile: characterProfile,
+          excludeUrls: otherAssignedAvatarUrls ? Array.from(otherAssignedAvatarUrls) : undefined,
+        }),
+      });
+      const data = await res.json() as { avatarUrl?: string | null };
+      if (data.avatarUrl) {
+        onAvatarChange(data.avatarUrl, characterType);
+        setShowAvatarPicker(false);
+      }
+    } catch {
+      // best-effort — the manual gallery picker below is always available
+    } finally {
+      setAvatarMatching(false);
+    }
   };
 
   // Accent colours per section
   const avatarAccent = "#A78BFA"; // violet
   const voiceAccent  = "#4FC3F7"; // cyan
-  const directAccent = "#FCD34D"; // amber
 
   return (
     <>
@@ -637,6 +657,24 @@ function DirectionSheet({
             {/* Expandable gallery */}
             {showAvatarPicker && (
               <div className="px-3 pb-3">
+                {!isNarrator && (
+                <button
+                  onClick={handleAvatarAutoAssign}
+                  disabled={avatarMatching}
+                  className="w-full mb-2 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.35)", color: avatarAccent }}
+                  title="Match this character's nature (type/gender/age) to the best-fitting avatar"
+                >
+                  {avatarMatching ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(167,139,250,0.25)", borderTopColor: avatarAccent }} />
+                      Matching…
+                    </>
+                  ) : (
+                    <>✨ Auto Assign</>
+                  )}
+                </button>
+                )}
                 <AvatarGallery
                   currentUrl={avatarUrl}
                   characterType={characterType}
@@ -697,62 +735,6 @@ function DirectionSheet({
                 />
               </div>
             )}
-          </div>
-
-          {/* ── SECTION 3: DIRECTION ── */}
-          <div className="rounded-2xl overflow-hidden"
-            style={{ background: "rgba(120,80,0,0.1)", border: "1px solid rgba(252,211,77,0.15)" }}>
-            <div className="px-4 pt-3 pb-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "rgba(252,211,77,0.1)", border: "1px solid rgba(252,211,77,0.25)" }}>
-                  <span style={{ fontSize: "var(--fs-body)" }}>✏️</span>
-                </div>
-                <div>
-                  <p className="text-fs-body font-black uppercase tracking-widest" style={{ color: directAccent }}>
-                    {i18nT(language, "directThisCharacter")}
-                  </p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
-                    Shape how they perform in this story
-                  </p>
-                </div>
-              </div>
-
-              {/* Quick chips */}
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {CHAR_CHIPS.map((chip) => (
-                  <button key={chip} onClick={() => submit(chip)}
-                    className="text-fs-body px-3 py-1.5 rounded-full font-semibold transition-all active:scale-95"
-                    style={{ background: "rgba(252,211,77,0.08)", border: "1px solid rgba(252,211,77,0.22)", color: "#FCD34D" }}>
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom text input */}
-            <div className="px-3 pb-3">
-              <div className="flex gap-2 items-center rounded-xl px-3 py-2"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(252,211,77,0.15)" }}>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") submit(note); if (e.key === "Escape") onClose(); }}
-                  placeholder={i18nT(language, "customDirection")}
-                  className="flex-1 bg-transparent outline-none text-fs-body text-white/80 placeholder-white/20"
-                />
-                <button onClick={() => submit(note)} disabled={!note.trim()}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
-                  style={note.trim()
-                    ? { background: "rgba(252,211,77,0.2)", border: "1px solid rgba(252,211,77,0.45)", color: "#FCD34D" }
-                    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.15)" }
-                  }>
-                  <Icon name="submit" size={13} />
-                </button>
-              </div>
-            </div>
           </div>
 
         </div>
@@ -1104,7 +1086,40 @@ export default function Studio2Page() {
   // diverge when editing an EXISTING story while the UI is set to something
   // else. Used to decide whether to show Hebrew EL voices, so it must reflect
   // the real story, not just whatever language the UI happens to show now.
+  //
+  // Default for a brand-new creation session: mirrors the app's own UI
+  // language, unless the user has explicitly picked a different language in
+  // one of the creation panels before -- that pick is sticky (persisted in
+  // localStorage) and wins over the app language until changed again via the
+  // same in-panel picker. See setStoryLangOverride below.
   const [storyLang, setStoryLang]           = useState<string>(language);
+  // Tracks whether storyLang currently holds a sticky user pick (as opposed
+  // to just the live app-language default) -- a ref because it must be
+  // readable synchronously inside the effects below, before their own
+  // setStoryLang call has triggered a re-render.
+  const storyLangOverrideRef = useRef<string | null>(null);
+
+  // Load a persisted sticky override once, on mount.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORY_LANG_OVERRIDE_KEY);
+      if (saved) {
+        storyLangOverrideRef.current = saved;
+        setStoryLang(saved);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Used by the in-panel language pickers (Chat + Step-by-step) only --
+  // an explicit user choice there is sticky: persisted and preferred over
+  // the app language for every future new creation session, until changed
+  // again via one of those same pickers.
+  const setStoryLangOverride = useCallback((lang: string) => {
+    storyLangOverrideRef.current = lang;
+    try { localStorage.setItem(STORY_LANG_OVERRIDE_KEY, lang); } catch { /* ignore */ }
+    setStoryLang(lang);
+  }, []);
+
   // Bumped to force-remount FiveQuestionFlow for a full reset (its own state
   // — step, answers, etc. — is internal, so a key change is the clean way to
   // clear it from the parent without duplicating its reset logic here).
@@ -1115,6 +1130,19 @@ export default function Studio2Page() {
   // (which would leave earlier answers in the old language) isn't possible.
   const [wizardStarted, setWizardStarted]   = useState(false);
   const [scriptResetConfirm, setScriptResetConfirm] = useState(false);
+
+  // Absent a sticky override, and before any new creation session has
+  // actually started (no chat/wizard progress, no story generated yet),
+  // the default keeps following the app's own UI language live -- e.g. if
+  // the user changes it from the Profile screen. Once real progress exists
+  // this intentionally stops (via the chatLocked/wizardStarted guards),
+  // so it never retroactively changes the language of an in-progress or
+  // already-generated story.
+  useEffect(() => {
+    if (storyLangOverrideRef.current) return;
+    if (chatLocked || wizardStarted || scriptBlocks.length > 0) return;
+    setStoryLang(language);
+  }, [language, chatLocked, wizardStarted, scriptBlocks.length]);
 
   // ─── Lesson state ───────────────────────────────────────────────────────────
   const [lessons, setLessons]               = useState<string[]>([]);
@@ -2320,7 +2348,7 @@ export default function Studio2Page() {
           <LunaChatPanel
             activeChild={activeChild}
             storyLanguage={storyLang}
-            onStoryLanguageChange={setStoryLang}
+            onStoryLanguageChange={setStoryLangOverride}
             onFirstMessage={() => setChatLocked(true)}
             onDiscard={() => setChatLocked(false)}
             onGenerating={() => {
@@ -2441,7 +2469,7 @@ export default function Studio2Page() {
                   value={storyLang as Language}
                   onLanguageChange={(lang) => {
                     try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
-                    setStoryLang(lang);
+                    setStoryLangOverride(lang);
                     setWizardResetKey((k) => k + 1);
                     setWizardResetConfirm(false);
                     setWizardStarted(false);
@@ -2683,7 +2711,6 @@ export default function Studio2Page() {
                     avatars={characterAvatars}
                     characterTypes={characterTypes}
                     characterProfiles={characterProfiles}
-                    onDirectCharacter={(_, instruction) => handleRevise(instruction)}
                     onAvatarChange={handleAvatarChange}
                     onVoiceChange={handleCharacterVoiceChange}
                   />

@@ -10,7 +10,7 @@ import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup } from "@/lib/services/scriptGenerationHelpers";
 
 export const maxDuration = 120;
 
@@ -245,7 +245,14 @@ export async function POST(req: NextRequest) {
       ? body.language
       : await detectGeneratedLanguage(splitBlocks, apiKey);
 
-    return NextResponse.json({ blocks: splitBlocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: remappedScenes, language: detectedLanguage });
+    // Hebrew-only: repair any words where Gemini accidentally rendered a
+    // couple of mid-word letters in Latin script instead of Hebrew (see
+    // config/hebrew-letter-check.txt) -- a TTS mispronunciation otherwise.
+    const finalBlocks = detectedLanguage === "he"
+      ? await fixHebrewLatinMixup(splitBlocks, apiKey)
+      : splitBlocks;
+
+    return NextResponse.json({ blocks: finalBlocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: remappedScenes, language: detectedLanguage });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -6,11 +6,85 @@ import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup } from "@/lib/services/scriptGenerationHelpers";
 import type { ScriptBlock } from "@/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
+
+// Shown when Gemini's safety filter blocks a request that read as
+// completely benign — a real (if occasional) false-positive category for
+// non-English content in particular. Kept short and warm, matching the
+// tone of the other kid-facing validation messages in this app (see
+// /api/validate-wizard-text, /api/chat's clarification loop).
+const BLOCKED_CONTENT_MESSAGES: Record<string, string> = {
+  en: "That idea touched something our safety filter didn't like — try describing it a little differently! ✨",
+  he: "הרעיון הזה נגע במשהו שמסנן הבטיחות שלנו לא אהב — נסו לתאר אותו קצת אחרת! ✨",
+  ar: "لامست هذه الفكرة شيئًا لم يعجب مرشح الأمان لدينا — جربوا وصفها بطريقة مختلفة قليلاً! ✨",
+  fr: "Cette idée a touché quelque chose que notre filtre de sécurité n'a pas aimé — essayez de la décrire un peu différemment ! ✨",
+  es: "Esa idea tocó algo que nuestro filtro de seguridad no permitió — ¡intenta describirla de otra manera! ✨",
+  de: "Diese Idee hat etwas berührt, das unser Sicherheitsfilter nicht mochte — versuch, sie ein wenig anders zu beschreiben! ✨",
+  it: "Quell'idea ha toccato qualcosa che il nostro filtro di sicurezza non ha gradito — prova a descriverla in modo un po' diverso! ✨",
+  pt: "Essa ideia tocou em algo que nosso filtro de segurança não permitiu — tente descrevê-la de um jeito um pouco diferente! ✨",
+  ja: "そのアイデアは安全フィルターに引っかかってしまいました — 少し違う言い方で説明してみてください! ✨",
+  hi: "उस विचार ने हमारे सुरक्षा फ़िल्टर को कुछ ऐसा छुआ जो उसे पसंद नहीं आया — कृपया इसे थोड़ा अलग तरीके से बताएं! ✨",
+};
+
+// After a genuine safety-filter block, offer the user a one-tap "try this
+// instead" option rather than a dead end. Most real blocks in practice turn
+// out to be a linguistic-ambiguity false positive (a word/phrase that reads
+// one way in context but pattern-matches a sensitive category out of it) --
+// this asks Gemini to reword ONLY that ambiguity while preserving every
+// specific story detail exactly, so the suggestion still reads as "their
+// story," not a different one. Deliberately never auto-retried server-side:
+// the reworded text is surfaced to the user to accept or edit, not silently
+// substituted -- an automated loop whose job is to route around a
+// child-safety classifier is the wrong thing to build here, even for a
+// confirmed false positive.
+async function suggestSaferRewrite(genAI: GoogleGenerativeAI, body: GenerateStoryRequest): Promise<Record<string, string> | null> {
+  const fields: Record<string, string> = {};
+  if (body.mode === "prompt" && body.promptText) {
+    fields.promptText = body.promptText;
+  } else {
+    if (body.hero) fields.hero = body.hero;
+    if (body.setting) fields.setting = body.setting;
+    if (body.plot) fields.plot = body.plot;
+  }
+  if (Object.keys(fields).length === 0) return null;
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.5-flash",
+      generationConfig: {
+        temperature: 0.3, maxOutputTokens: 512, responseMimeType: "application/json",
+        // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
+    const prompt = `A children's bedtime-story element below was flagged by an automated safety filter, even though it reads as completely appropriate for a bedtime story. Filters like this occasionally misfire on wording that is linguistically ambiguous between an innocent meaning and an unrelated one out of context (e.g. a possessive word that can mean either "my uncle" or something else entirely, depending on context).
+
+Reword each field to remove ONLY that kind of ambiguity, in the SAME language it's already written in. Preserve every specific detail EXACTLY — the same characters, named objects, actions, relationships, and setting. Do not soften, remove, generalize, or invent any story element; this must still read as the same story, just phrased less ambiguously.
+
+Fields (JSON):
+${JSON.stringify(fields)}
+
+Return ONLY a JSON object with the exact same keys, each containing the reworded text.`;
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    for (const key of Object.keys(fields)) {
+      const val = parsed[key];
+      if (typeof val === "string" && val.trim()) out[key] = val.trim();
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  } catch (err) {
+    // Best-effort only -- never let a failure here affect the main blocked-
+    // response path (the user still gets the plain "please rephrase" message).
+    console.warn("[generate-story] suggestSaferRewrite failed:", err);
+    return null;
+  }
+}
 
 export interface GenerateStoryRequest {
   mode: "wizard" | "prompt";
@@ -216,16 +290,41 @@ export async function POST(req: NextRequest) {
     const maxLengthAttempts = 3;
 
     for (let attempt = 1; attempt <= maxLengthAttempts; attempt++) {
-      let result;
+      // result.response.text() throws (not the generateContent() call itself)
+      // when Gemini's safety filter blocks the response -- so it must be
+      // inside the same try/catch as generateContent(), not read afterward,
+      // or a blocked attempt crashes straight past all retry logic below
+      // with an opaque 500 instead of getting a retry like every other
+      // failure mode here.
+      let text: string;
       try {
-        result = await model.generateContent(currentPrompt);
+        const result = await model.generateContent(currentPrompt);
+        const _t = result.response.usageMetadata?.totalTokenCount;
+        if (_t) trackGemini(_t).catch(() => {});
+        text = result.response.text().trim();
       } catch (err) {
-        console.warn(`[generate-story] Gemini attempt ${attempt} failed, retrying once:`, err);
-        result = await model.generateContent(currentPrompt);
+        console.warn(`[generate-story] Gemini attempt ${attempt} failed (${err instanceof Error ? err.message : "unknown error"}), retrying once:`, err);
+        try {
+          const retryResult = await model.generateContent(currentPrompt);
+          const _t = retryResult.response.usageMetadata?.totalTokenCount;
+          if (_t) trackGemini(_t).catch(() => {});
+          text = retryResult.response.text().trim();
+        } catch (err2) {
+          if (attempt === maxLengthAttempts) {
+            const blocked = err2 instanceof Error && /PROHIBITED_CONTENT|blocked/i.test(err2.message);
+            const suggestedRewrite = blocked ? await suggestSaferRewrite(genAI, body) : null;
+            return NextResponse.json({
+              error: blocked
+                ? (BLOCKED_CONTENT_MESSAGES[body.language ?? "en"] ?? BLOCKED_CONTENT_MESSAGES.en)
+                : (err2 instanceof Error ? err2.message : "Story generation failed."),
+              blocked,
+              ...(suggestedRewrite ? { suggestedRewrite } : {}),
+            }, { status: blocked ? 422 : 502 });
+          }
+          console.warn(`[generate-story] Attempt ${attempt} failed twice (${err2 instanceof Error ? err2.message : "unknown error"}), moving to next attempt.`);
+          continue;
+        }
       }
-      const _t = result.response.usageMetadata?.totalTokenCount;
-      if (_t) trackGemini(_t).catch(() => {});
-      const text = result.response.text().trim();
       const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
 
       try {
@@ -338,7 +437,14 @@ export async function POST(req: NextRequest) {
       ? body.language
       : await detectGeneratedLanguage(splitBlocks, apiKey);
 
-    return NextResponse.json({ blocks: splitBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes: remappedScenes, language: detectedLanguage });
+    // Hebrew-only: repair any words where Gemini accidentally rendered a
+    // couple of mid-word letters in Latin script instead of Hebrew (see
+    // config/hebrew-letter-check.txt) -- a TTS mispronunciation otherwise.
+    const finalBlocks = detectedLanguage === "he"
+      ? await fixHebrewLatinMixup(splitBlocks, apiKey)
+      : splitBlocks;
+
+    return NextResponse.json({ blocks: finalBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes: remappedScenes, language: detectedLanguage });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -11,6 +11,8 @@ import VoicePicker from "@/components/studio/VoicePicker";
 import Icon from "@/components/ui/Icon";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { stripNamePrefix } from "@/utils/stripSoundCues";
+import type { CharacterProfile } from "@/lib/libraryStore";
+import type { CharacterClassification } from "@/lib/services/characterClassifier";
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -988,25 +990,36 @@ export default function AdminPage() {
     for (const line of lines) {
       // First [...] on the line is the character/SFX tag; everything after is textPayload
       const m = line.match(/^\[([^\]]+)\](.*)/);
-      if (!m) continue;
-      const charName = m[1].trim();
-      const rest = m[2].trim();
-      if (charName.startsWith("SFX")) {
-        // Store entire original bracket as textPayload so validate-script sees the full SFX block
-        const textPayload = `[${charName}]${rest ? " " + rest : ""}`;
-        out.push({ id: uid(), blockOrder: out.length, characterName: "SFX", assignedVoiceId: "", textPayload });
-      } else {
-        if (!voiceMap[charName]) {
-          voiceMap[charName] = charName.toLowerCase() === "narrator"
-            ? "Aoede"
-            : CHAR_VOICE_POOL[voiceIdx++ % CHAR_VOICE_POOL.length];
-        }
-        if (rest) {
+      if (m) {
+        const charName = m[1].trim();
+        const rest = m[2].trim();
+        if (charName.startsWith("SFX")) {
+          // Store entire original bracket as textPayload so validate-script sees the full SFX block
+          const textPayload = `[${charName}]${rest ? " " + rest : ""}`;
+          out.push({ id: uid(), blockOrder: out.length, characterName: "SFX", assignedVoiceId: "", textPayload });
+        } else {
+          if (!voiceMap[charName]) {
+            voiceMap[charName] = charName.toLowerCase() === "narrator"
+              ? "Aoede"
+              : CHAR_VOICE_POOL[voiceIdx++ % CHAR_VOICE_POOL.length];
+          }
+          // rest may already be the full spoken text ("[Name] text"), just a
+          // performance tag with the dialogue on the next line(s) ("[Name]
+          // [gently]"), or empty (name-only cue line) — any non-bracket
+          // lines that follow are appended below as continued dialogue, so
+          // multi-line pasted scripts don't silently lose their text.
           out.push({ id: uid(), blockOrder: out.length, characterName: charName, assignedVoiceId: voiceMap[charName], textPayload: rest });
         }
+      } else if (out.length > 0 && out[out.length - 1].characterName !== "SFX") {
+        const last = out[out.length - 1];
+        last.textPayload = last.textPayload ? `${last.textPayload} ${line}` : line;
       }
     }
-    return out;
+    // Drop cue-only blocks that never picked up any spoken text (e.g. a
+    // trailing name/tag line with nothing after it in the pasted script).
+    return out
+      .filter((b) => b.characterName === "SFX" || b.textPayload.replace(/^\[[^\]]+\]\s*/, "").trim())
+      .map((b, i) => ({ ...b, blockOrder: i }));
   }
 
   // Story-meta returns a range like "4-6"; validate-blocks wants a single
@@ -1127,15 +1140,32 @@ export default function AdminPage() {
     setJobId(null);
     const log = (msg: string) => setAddProduceLog((p) => [...p, msg]);
     try {
-      // 1. Classify characters
+      // 1. Classify characters — same AI classifier the normal new-story flow
+      // uses (classify-characters wraps classifyCharacters directly), and
+      // its response is the classification map itself, flat, keyed by
+      // character name -- NOT nested under a "types" field. Both the coarse
+      // type (for voice casting) and the full profile (type/gender/ageBucket/
+      // category/visualDescription, for AI avatar matching in produce-drama)
+      // come from this single call.
       log("Classifying characters…");
       const charNames = Array.from(new Set(blocks.map((b) => b.characterName)));
       const classifyRes = await fetch("/api/classify-characters", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ characters: charNames, summary: storeSummary || addTitle }),
       });
-      const classifyData = await classifyRes.json() as { types?: Record<string, string> };
-      const characterTypes = classifyData.types ?? {};
+      const classification = await classifyRes.json() as Record<string, CharacterClassification>;
+      const characterTypes: Record<string, string> = {};
+      const characterProfiles: Record<string, CharacterProfile> = {};
+      for (const [name, c] of Object.entries(classification)) {
+        characterTypes[name] = c.type;
+        characterProfiles[name] = {
+          type: c.type as CharacterProfile["type"],
+          visualDescription: c.visualDescription,
+          gender: c.gender as CharacterProfile["gender"],
+          ageBucket: c.ageBucket,
+          category: c.category,
+        };
+      }
 
       // 2. Kick off production — use pre-generated cover if available
       log("Starting production (audio + cover)…");
@@ -1147,6 +1177,11 @@ export default function AdminPage() {
         isPublic: addIsPublic,
         isClassic: addIsPublic && addCategory === "classics",
         characterTypes,
+        // Lets produce-drama run the same AI avatar-bank matching
+        // (findBestAvatarForCharacter) the normal generation flow gets —
+        // without this, admin-added stories silently fell back to a blind
+        // hash-based avatar pick instead of a real profile match.
+        characterProfiles,
         durationMinutes: 5,
         skipLibrarySave: true,
       };

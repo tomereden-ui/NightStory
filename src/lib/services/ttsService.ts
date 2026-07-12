@@ -450,11 +450,18 @@ async function synthesizeGemini(
       if (attempt < maxAttempts) { await sleep(wait429); continue; }
       break;
     }
-    if (res.status === 500 && attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 1500); continue; }
     if (!res.ok) {
       const errBody = await res.text().catch(() => "");
       lastError = `TTS ${res.status}: ${errBody.slice(0, 300)}`;
       console.error(`[${ts()}][Gemini TTS] HTTP ${res.status}:`, errBody.slice(0, 500));
+      // Give any non-ok status (not just 500) the same small retry budget
+      // instead of switching provider/voice on the very first hiccup — a
+      // genuinely permanent failure (bad key, malformed request) still
+      // exhausts this budget and falls through below exactly as before, it
+      // just costs a couple extra seconds first instead of an immediate
+      // give-up that risks an audible mid-story voice change for what's
+      // often just a one-off transient blip.
+      if (attempt < Math.min(3, maxAttempts)) { await sleep(attempt * 1500); continue; }
       break;
     }
     const json = await res.json();
@@ -523,6 +530,8 @@ const HE_EL_VOICE_MAP: Record<string, string> = {
 
 // ── Public API ────────────────────────────────────────────────────────────────────────────────
 
+export type TtsProvider = "elevenlabs" | "gemini" | "chirp3hd";
+
 export async function synthesizeLine(
   line: string,
   voiceId: string,
@@ -537,7 +546,18 @@ export async function synthesizeLine(
   similarityBoost?: number,
   useSpeakerBoost?: boolean,
   speed?: number,
-): Promise<{ mimeType?: string }> {
+  // When true, skip the Gemini attempt(s) entirely and go straight to the
+  // fallback provider. Set by the caller once a character has already
+  // needed the fallback earlier in the SAME production run — without this,
+  // each line is an independent coin flip between Gemini and the fallback
+  // provider, so a character's voice can audibly change line to line
+  // whenever Gemini has a transient hiccup on just one of their lines
+  // (rate limit, a 500, or 3.1's documented intermittent zero-audio bug).
+  // Forcing every subsequent line for that character onto the same
+  // fallback keeps them consistent for the rest of the story instead of
+  // drifting back and forth.
+  forceFallback = false,
+): Promise<{ mimeType?: string; provider: TtsProvider }> {
   // Strip performance tags [warmly] etc. for providers that don't interpret them
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
@@ -561,7 +581,7 @@ export async function synthesizeLine(
       useSpeakerBoost,
       speed,
     );
-    return {};
+    return { provider: "elevenlabs" };
   }
 
   // Gemini is the primary engine for every language — confirmed Hebrew-capable
@@ -570,30 +590,37 @@ export async function synthesizeLine(
   // 3.1 wins when both are enabled, 2.5 is the safety-net default.
   const engineSettings = await getEngineSettings();
   const geminiModel = engineSettings.gemini31 ? "gemini-3.1-flash-tts-preview" : "gemini-2.5-flash-preview-tts";
-  try {
-    console.log(`[${ts()}][Gemini TTS] text → (${geminiModel})`, JSON.stringify(line));
-    return await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, geminiModel);
-  } catch (primaryErr) {
-    console.warn(`[${ts()}][Gemini TTS] ${geminiModel} failed, falling back:`, primaryErr);
 
-    // 3.1 has a confirmed intermittent failure mode: HTTP 200, finishReason
-    // "OTHER", zero audio bytes, despite reporting real audio tokens spent.
-    // It's biased per (voice, text) pair rather than a clean transient
-    // error, so synthesizeGemini's own retry budget doesn't always clear it.
-    // Retry once on 2.5 with the SAME voice before falling through to the
-    // fallbacks below, which change voice identity (Hebrew EL remap / Chirp
-    // remap) — 2.5 shares the identical prebuilt voice catalog and has shown
-    // zero failures of this kind in testing, so the character still sounds
-    // like themselves and we avoid a voice swap for what's usually a
-    // one-model hiccup.
-    if (geminiModel !== "gemini-2.5-flash-preview-tts") {
-      try {
-        console.log(`[${ts()}][Gemini TTS] retrying on gemini-2.5-flash-preview-tts (same voice)`);
-        return await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, "gemini-2.5-flash-preview-tts");
-      } catch (sameVoiceFallbackErr) {
-        console.warn(`[${ts()}][Gemini TTS] 2.5 same-voice fallback also failed:`, sameVoiceFallbackErr);
+  if (!forceFallback) {
+    try {
+      console.log(`[${ts()}][Gemini TTS] text → (${geminiModel})`, JSON.stringify(line));
+      const result = await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, geminiModel);
+      return { ...result, provider: "gemini" };
+    } catch (primaryErr) {
+      console.warn(`[${ts()}][Gemini TTS] ${geminiModel} failed, falling back:`, primaryErr);
+
+      // 3.1 has a confirmed intermittent failure mode: HTTP 200, finishReason
+      // "OTHER", zero audio bytes, despite reporting real audio tokens spent.
+      // It's biased per (voice, text) pair rather than a clean transient
+      // error, so synthesizeGemini's own retry budget doesn't always clear it.
+      // Retry once on 2.5 with the SAME voice before falling through to the
+      // fallbacks below, which change voice identity (Hebrew EL remap / Chirp
+      // remap) — 2.5 shares the identical prebuilt voice catalog and has shown
+      // zero failures of this kind in testing, so the character still sounds
+      // like themselves and we avoid a voice swap for what's usually a
+      // one-model hiccup.
+      if (geminiModel !== "gemini-2.5-flash-preview-tts") {
+        try {
+          console.log(`[${ts()}][Gemini TTS] retrying on gemini-2.5-flash-preview-tts (same voice)`);
+          const result = await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, "gemini-2.5-flash-preview-tts");
+          return { ...result, provider: "gemini" };
+        } catch (sameVoiceFallbackErr) {
+          console.warn(`[${ts()}][Gemini TTS] 2.5 same-voice fallback also failed:`, sameVoiceFallbackErr);
+        }
       }
     }
+  } else {
+    console.log(`[${ts()}][TTS] forceFallback set for voice "${voiceId}" — skipping Gemini, going straight to fallback`);
   }
 
   // Fallback 1 — Hebrew: ElevenLabs' curated pool, hand-verified for Hebrew pronunciation
@@ -605,7 +632,7 @@ export async function synthesizeLine(
       // Hebrew prosody tuning: lower stability allows natural intonation variance;
       // higher style exaggeration pushes the voice away from flat/robotic delivery.
       await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.30, style ?? 0.60, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
-      return { mimeType: "audio/mpeg" };
+      return { mimeType: "audio/mpeg", provider: "elevenlabs" };
     }
     console.warn(`[${ts()}][HE] ELEVENLABS_API_KEY not set — using WaveNet fallback for Hebrew`);
   }
@@ -616,7 +643,7 @@ export async function synthesizeLine(
   if (gcTtsKey && engineSettings.chirp3hd) {
     // Pass raw line — synthesizeChirp3HD converts [tags] to SSML internally
     await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, effectiveLang, geminiOpts);
-    return { mimeType: "audio/mpeg" };
+    return { mimeType: "audio/mpeg", provider: "chirp3hd" };
   }
 
   throw new Error("Gemini TTS failed and no fallback provider (ElevenLabs/Google Cloud TTS) is configured.");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock, MoralLesson } from "@/types";
 import type { CharacterProfile } from "@/lib/libraryStore";
+import type { TtsProvider } from "@/lib/services/ttsService";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 min — POST returns immediately; production runs in background
@@ -396,6 +397,24 @@ async function runProduction(
     let sfxLibraryHits = 0;
     console.log(`[${ts()}][ElementStore] Loaded ${elementCache.size} cached elements for story ${storyId}`);
 
+    // Once a character's line has needed the TTS fallback provider (Hebrew
+    // EL remap / Chirp3-HD) instead of Gemini, every LATER line for that
+    // same character in this production is forced onto the same fallback
+    // rather than re-attempting Gemini. Without this, each line is an
+    // independent coin flip: a transient Gemini hiccup on just one of a
+    // character's lines (a burst rate limit, a 500, or 3.1's documented
+    // intermittent zero-audio bug) silently swaps to a different-sounding
+    // provider for only that line, while the character's other lines stay
+    // on Gemini — audible as the same character's voice changing mid-story.
+    // Forcing consistency from the first fallback onward turns that into at
+    // most one clean switch point instead of an unpredictable back-and-forth.
+    // Scoped to this single production run (a fresh Map per runProduction
+    // call) — a later regeneration gets a clean shot at Gemini again.
+    // Concurrent lines for the same character within one batch can still
+    // race past this check before the flag is set; the fix caps how far
+    // that can drift rather than eliminating every possible case.
+    const characterEngineState = new Map<string, TtsProvider>();
+
     // Process dialogue in parallel batches. 3 was originally chosen to stay
     // comfortably under Gemini TTS's per-minute rate limit on a lower tier;
     // on the account's current paid tier that ceiling is far higher, so 3
@@ -454,7 +473,13 @@ async function runProduction(
             const persona = profile?.persona;
             try {
               const vs = useELForChar ? override?.voiceSettings : undefined;
-              await synthesizeLine(
+              // Explicit EL-cloned voices are never in question (useELForChar
+              // pins the provider by design) — the consistency guard only
+              // matters for the Gemini-primary path. The map only ever holds
+              // fallback providers (see the .set() below), so presence alone
+              // means "this character already needed a fallback."
+              const forceFallback = !useELForChar && characterEngineState.has(charName);
+              const { provider } = await synthesizeLine(
                 line, voice, ttsKey, outPath, persona, useELForChar,
                 vs?.stability ?? profile?.stability,
                 vs?.style ?? profile?.style,
@@ -463,7 +488,12 @@ async function runProduction(
                 vs?.similarity_boost,
                 vs?.use_speaker_boost,
                 vs?.speed,
+                forceFallback,
               );
+              if (!useELForChar && provider !== "gemini" && characterEngineState.get(charName) !== provider) {
+                characterEngineState.set(charName, provider);
+                console.warn(`[${ts()}][TTS] "${charName}" switched to ${provider} fallback for the rest of this production (Gemini TTS failed on a line)`);
+              }
               const resolvedPath = [`${track.id}.mp3`, `${track.id}.wav`]
                 .map((n) => path.join(jobTmp, n))
                 .find((p) => fs.existsSync(p));
