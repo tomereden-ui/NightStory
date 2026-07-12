@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
+import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
 import { getAllCreateOptionSpecs, optionStorageKey } from "@/config/createFlowImages";
 
@@ -26,6 +27,19 @@ async function ensureBucket() {
   }
 }
 
+// The storage filename only changes when the whole prompt catalogue's shared
+// version prefix is bumped (expensive — regenerates every card at once), so
+// editing a single prompt reuses the same URL for a genuinely different
+// image. A browser (or any intermediate cache) that already fetched that URL
+// once has no signal the underlying bytes changed and can keep serving the
+// stale copy indefinitely — confirmed live: the origin was serving the new
+// image correctly while a client still showed the old one. Appending a hash
+// of the prompt as a query string means the URL itself changes the moment a
+// prompt is edited, without needing a full version bump.
+function cacheBust(prompt: string): string {
+  return crypto.createHash("sha1").update(prompt).digest("hex").slice(0, 8);
+}
+
 export async function GET() {
   await ensureBucket();
   const { data: existingFiles } = await supabase.storage.from(BUCKET).list("", { limit: 200 });
@@ -40,7 +54,8 @@ export async function GET() {
   for (const s of allSpecs) {
     const key = optionStorageKey(s.type, s.id);
     if (existingNames.has(key)) {
-      existingImageUrls[`${s.type}-${s.id}`] = supabase.storage.from(BUCKET).getPublicUrl(key).data.publicUrl;
+      const base = supabase.storage.from(BUCKET).getPublicUrl(key).data.publicUrl;
+      existingImageUrls[`${s.type}-${s.id}`] = `${base}?v=${cacheBust(s.prompt)}`;
     }
   }
 
@@ -121,5 +136,5 @@ export async function POST(req: NextRequest) {
   const imageKey = storageKey.replace(/\.(jpg|png)$/, "").replace(/^v\d+-/, "");
   const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(storageKey).data.publicUrl;
   console.log("[seed-create-images] Generated + cached:", storageKey, "→ key:", imageKey);
-  return NextResponse.json({ ok: true, imageKey, url: publicUrl });
+  return NextResponse.json({ ok: true, imageKey, url: `${publicUrl}?v=${cacheBust(prompt)}` });
 }

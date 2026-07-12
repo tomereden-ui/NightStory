@@ -80,7 +80,7 @@ export const HERO_IMAGE_PROMPTS: Record<string, string> = {
   familyFriend:
     "A joyful group hug between a child, a parent, and a friend, warm golden light rays and soft sparkles floating around them, glowing sunset background. Pixar 3D animated movie style, deeply heartwarming, cinematic.",
   animal:
-    "A confident, happy lion standing tall on a dramatic clifftop with its mane flowing in the wind, chest out and head held high, a joyful wolf and proud eagle beside it, warm golden sunset light. Pixar 3D animated movie style, bold, heroic, radiating courage and strength, cinematic.",
+    "A single confident, happy lion standing tall and proud alone on a dramatic mountain peak, mane flowing majestically in the wind, chest out, head held high, joyful triumphant expression, warm golden sunset light, epic sky behind. Pixar 3D animated movie style, bold and heroic, radiating courage and strength, cinematic.",
 };
 
 export interface CreateOptionSpec {
