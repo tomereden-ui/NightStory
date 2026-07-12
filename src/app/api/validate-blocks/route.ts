@@ -33,8 +33,17 @@ export async function POST(req: NextRequest) {
 
   if (!blocks?.length) return NextResponse.json({ blocks: [] });
 
-  // SFX blocks need no text validation — pass them straight through
-  const indexedBlocks = blocks.map((b, i) => ({ ...b, _idx: i }));
+  // SFX blocks need no text validation — pass them straight through. Strip
+  // each block's leading [performance tag] before it ever reaches Gemini —
+  // rather than sending it and instructing Gemini not to touch it (the old
+  // approach, which occasionally lost the tag anyway: confirmed live,
+  // "[curious] What is that twinkeling lihgt..." came back fixed but
+  // tagless). Gemini now never sees it, so it can't drop or reword it —
+  // the original tag is simply re-prepended once the fix comes back.
+  const indexedBlocks = blocks.map((b, i) => {
+    const tagMatch = b.textPayload.match(/^(\[[^\]]+\]\s*)/);
+    return { ...b, _idx: i, tag: tagMatch?.[1] ?? "", bareText: tagMatch ? b.textPayload.slice(tagMatch[1].length) : b.textPayload };
+  });
   const sfxPass = indexedBlocks.filter((b) => b.characterName === "SFX");
   const textBlocks = indexedBlocks.filter((b) => b.characterName !== "SFX");
 
@@ -56,7 +65,7 @@ Return ONLY a valid JSON array containing ONLY the blocks you fixed — no markd
 Return an empty array [] if every block is already fine. Never echo blocks that needed no change — the app keeps unlisted blocks exactly as they are.
 
 BLOCKS:
-${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.textPayload)}`).join("\n")}`;
+${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareText)}`).join("\n")}`;
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -97,14 +106,10 @@ ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.textPa
     for (const item of validated) {
       const original = textBlocks[item.index];
       if (!original || item.status !== "fixed" || !item.text?.trim()) continue;
-      // The prompt tells Gemini to rewrite ONLY the spoken text, so its
-      // replacement usually comes back without the leading [performance tag]
-      // — re-attach the original's tag or the fixed line silently loses its
-      // delivery direction (confirmed live: "[curious] What is that
-      // twinkeling lihgt..." came back fixed but tagless).
-      const originalTag = original.textPayload.match(/^(\[[^\]]+\]\s*)/)?.[1] ?? "";
-      const replacementHasTag = /^\[[^\]]+\]/.test(item.text.trim());
-      const newText = originalTag && !replacementHasTag ? `${originalTag}${item.text.trim()}` : item.text.trim();
+      // Gemini never saw the tag (stripped before the prompt was built above),
+      // so its reply is always bare spoken text — just re-prepend the tag we
+      // held onto, no detection needed.
+      const newText = `${original.tag}${item.text.trim()}`;
       resultBlocks[original._idx] = { ...resultBlocks[original._idx], textPayload: newText };
       changes++;
     }

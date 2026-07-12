@@ -1,5 +1,4 @@
-Review each script block's spoken text. The leading bracketed performance tag (e.g. "[warmly]") is a
-delivery direction, not spoken text — never edit or count it as part of the review.
+Review each script block's spoken text.
 
 For each block:
 - If it is age-appropriate for age {{AGE}}, aligns with the story lessons, and free of typos/grammar errors → it needs nothing; do NOT include it in your response
