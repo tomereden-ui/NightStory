@@ -23,6 +23,7 @@ import { SCENE_CHARS } from "@/config/sceneCharacters";
 import { LANGUAGE_META, t as i18nT } from "@/lib/i18n";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
 import LunaChatPanel from "@/components/studio/LunaChatPanel";
+import { LunaWorkingHero, LunaWorkingBanner } from "@/components/studio/LunaWorkingCard";
 import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
@@ -1190,6 +1191,10 @@ export default function Studio2Page() {
 
   // ─── Content validation state ───────────────────────────────────────────────
   const [isValidating, setIsValidating]     = useState(false);
+  // Which of the two validation rounds is actually running right now — shown
+  // in a LunaWorkingBanner above the script so the wait reads as real
+  // progress instead of an undifferentiated stall.
+  const [validatingPhase, setValidatingPhase] = useState("");
   const [totalExpectedBlocks, setTotalExpectedBlocks] = useState<number | undefined>(undefined);
   // Issues found by re-running the policy check (validate-script) after a
   // manual save — cleared at the start of every Save Version click so a
@@ -1747,6 +1752,7 @@ export default function Studio2Page() {
       if (cp) fetchCover(cp, sm);
 
       // Round 2 — policy check + auto-fix (validate-script)
+      setValidatingPhase("Luna is checking your story's guidelines…");
       const childAge = activeChild?.age ?? 6;
       let policyBlocks = rawBlocks;
       try {
@@ -1778,6 +1784,7 @@ export default function Studio2Page() {
       }
 
       // Round 2.5 — per-block age/content check (validate-blocks)
+      setValidatingPhase("Luna is proofreading it…");
       let blocks: ScriptBlock[];
       try {
         const valRes = await fetch("/api/validate-blocks", {
@@ -1802,6 +1809,7 @@ export default function Studio2Page() {
           setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
           if (i === blocks.length - 1) {
             setIsValidating(false);
+            setValidatingPhase("");
             setTotalExpectedBlocks(undefined);
             writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, forkedFromTitle: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls, scenes: rawScenes }, DRAFT_KEY);
             void analyzeLessons(blocks, null, resolvedLanguage);
@@ -2370,6 +2378,7 @@ export default function Studio2Page() {
               setActiveTab("script");
               setTotalExpectedBlocks(rawBlocks.length);
               setIsValidating(true);
+              setValidatingPhase("Luna is proofreading it…");
               if (draft.coverPrompt) fetchCover(draft.coverPrompt, draft.summary);
               const childAge = activeChild?.age ?? 6;
               fetch("/api/validate-blocks", {
@@ -2387,6 +2396,7 @@ export default function Studio2Page() {
                       setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
                       if (i === blocks.length - 1) {
                         setIsValidating(false);
+                        setValidatingPhase("");
                         setTotalExpectedBlocks(undefined);
                         writeDraft({ ...draft, scriptBlocks: blocks, coverUrl: "" }, DRAFT_KEY);
                         void analyzeLessons(blocks, null);
@@ -2402,6 +2412,7 @@ export default function Studio2Page() {
                       setScriptBlocks((prev) => [...prev, block]);
                       if (i === rawBlocks.length - 1) {
                         setIsValidating(false);
+                        setValidatingPhase("");
                         setTotalExpectedBlocks(undefined);
                         writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
                         void analyzeLessons(rawBlocks, null);
@@ -2507,6 +2518,7 @@ export default function Studio2Page() {
                 setCharacterDescriptions({});
                 setTotalExpectedBlocks(rawBlocks.length);
                 setIsValidating(true);
+                setValidatingPhase("Luna is proofreading it…");
                 if (cp) fetchCover(cp, sm);
                 const childAge = activeChild?.age ?? 6;
                 fetch("/api/validate-blocks", {
@@ -2524,6 +2536,7 @@ export default function Studio2Page() {
                         setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
                         if (i === blocks.length - 1) {
                           setIsValidating(false);
+                          setValidatingPhase("");
                           setTotalExpectedBlocks(undefined);
                           writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang }, DRAFT_KEY);
                           void analyzeLessons(blocks, null);
@@ -2538,6 +2551,7 @@ export default function Studio2Page() {
                         setScriptBlocks((prev) => [...prev, block]);
                         if (i === rawBlocks.length - 1) {
                           setIsValidating(false);
+                          setValidatingPhase("");
                           setTotalExpectedBlocks(undefined);
                           writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
                           void analyzeLessons(rawBlocks, null);
@@ -2591,41 +2605,12 @@ export default function Studio2Page() {
             {/* ── In-tab generating placeholder ────────────────────────────── */}
             {generating && (
               <div className="flex flex-col gap-3">
-                {/* Hero card */}
-                <div className="relative w-full rounded-3xl overflow-hidden flex flex-col items-center justify-center"
-                  style={{ minHeight: 200, background: "radial-gradient(ellipse at 50% 60%, rgba(45,27,105,0.9) 0%, rgba(10,20,60,0.95) 55%, rgba(6,9,20,1) 100%)", border: "1px solid rgba(139,92,246,0.2)" }}>
-                  {/* Glow halos */}
-                  <div className="absolute w-48 h-48 rounded-full animate-pulse pointer-events-none"
-                    style={{ background: "radial-gradient(circle, rgba(79,195,247,0.12) 0%, transparent 70%)", animationDuration: "2.4s" }} />
-                  <div className="absolute w-32 h-32 rounded-full animate-pulse pointer-events-none"
-                    style={{ background: "radial-gradient(circle, rgba(139,92,246,0.16) 0%, transparent 70%)", animationDuration: "1.8s", animationDelay: "0.6s" }} />
-                  {/* Orbital ring */}
-                  <div className="relative flex items-center justify-center mb-5">
-                    <div className="absolute w-16 h-16 rounded-full animate-spin"
-                      style={{ border: "2px solid transparent", borderTopColor: "rgba(79,195,247,0.7)", borderRightColor: "rgba(139,92,246,0.4)", animationDuration: "1.8s" }} />
-                    <div className="absolute w-11 h-11 rounded-full animate-spin"
-                      style={{ border: "1.5px solid transparent", borderBottomColor: "rgba(167,139,250,0.5)", animationDuration: "2.6s", animationDirection: "reverse" }} />
-                    <span className="text-fs-title relative z-10">✨</span>
-                  </div>
-                  {/* Text */}
-                  <p className="text-fs-body font-bold text-white/80 tracking-wide transition-all duration-500">{GEN_STEPS[genStep]}</p>
-                  {lessons.length > 0 && (
-                    <p className="text-fs-body mt-1.5" style={{ color: "rgba(139,92,246,0.75)" }}>
-                      Weaving in {lessons.join(" · ")}
-                    </p>
-                  )}
-                  {/* Step progress bar */}
-                  <div className="flex gap-1.5 mt-4 items-center">
-                    {GEN_STEPS.map((_, i) => (
-                      <div key={i} className="rounded-full transition-all duration-500"
-                        style={{
-                          width: i === genStep ? 20 : 6,
-                          height: 6,
-                          background: i <= genStep ? "#4fc3f7" : "rgba(79,195,247,0.2)",
-                        }} />
-                    ))}
-                  </div>
-                </div>
+                <LunaWorkingHero
+                  label={GEN_STEPS[genStep]}
+                  subtitle={lessons.length > 0 ? `Weaving in ${lessons.join(" · ")}` : undefined}
+                  steps={GEN_STEPS}
+                  currentStep={genStep}
+                />
                 {/* Block skeletons */}
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="rounded-2xl overflow-hidden animate-pulse"
@@ -2643,7 +2628,9 @@ export default function Studio2Page() {
             )}
 
             {/* ── Actual script once generation is done ────────────────────── */}
-            {!generating && (<><ScriptTab
+            {!generating && (<>
+              {isValidating && validatingPhase && <LunaWorkingBanner label={validatingPhase} />}
+              <ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
               storyLanguage={storyLang}
@@ -2785,6 +2772,7 @@ export default function Studio2Page() {
                   boxShadow: "0 0 28px rgba(139,92,246,0.06)",
                 }}
               >
+                {isRevising && <LunaWorkingBanner label={i18nT(language, "revisingLabel" as never)} />}
                 <button
                   onClick={() => setDirectorNoteExpanded((v) => !v)}
                   className="flex items-center gap-2 w-full text-left"
@@ -2793,15 +2781,9 @@ export default function Studio2Page() {
                   <span className="text-fs-heading font-bold tracking-tight" style={{ color: "#E9D8FD" }}>
                     {i18nT(language, "directorsNote" as never)}
                   </span>
-                  {isRevising && (
-                    <span className="ml-auto flex items-center gap-1.5 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.5)" }} />
-                      {i18nT(language, "revisingLabel" as never)}
-                    </span>
-                  )}
                   <span
                     className="text-fs-body transition-transform"
-                    style={{ color: "rgba(196,181,253,0.5)", marginLeft: isRevising ? 0 : "auto", transform: directorNoteExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                    style={{ color: "rgba(196,181,253,0.5)", marginLeft: "auto", transform: directorNoteExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
                   >
                     ▾
                   </span>
