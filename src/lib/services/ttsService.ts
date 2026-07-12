@@ -1,7 +1,35 @@
 import fs from "fs";
 import { trackELTts, trackGeminiTts } from "@/lib/usageTracker";
+import { supabase } from "@/lib/supabase";
+import { DEFAULT_ENGINE_SETTINGS, type EngineSettings } from "@/config/ttsEngines";
 
 const ts = () => new Date().toTimeString().slice(0, 8);
+
+// ── Engine settings (admin-configurable via the Voice Manager screen) ──────
+// A story production run calls synthesizeLine() once per script line — cache
+// briefly so that doesn't turn into a Supabase read per line.
+let engineSettingsCache: { value: EngineSettings; fetchedAt: number } | null = null;
+const ENGINE_SETTINGS_TTL_MS = 60_000;
+
+async function getEngineSettings(): Promise<EngineSettings> {
+  if (engineSettingsCache && Date.now() - engineSettingsCache.fetchedAt < ENGINE_SETTINGS_TTL_MS) {
+    return engineSettingsCache.value;
+  }
+  const value: EngineSettings = { ...DEFAULT_ENGINE_SETTINGS };
+  try {
+    const { data, error } = await supabase.from("tts_engine_settings").select("engine, enabled");
+    if (!error) {
+      for (const row of data ?? []) {
+        if (row.engine in value) (value as Record<string, boolean>)[row.engine] = row.enabled;
+      }
+    }
+  } catch {
+    // Table missing / Supabase not configured — defaults match current
+    // production behavior exactly, so this never changes anything silently.
+  }
+  engineSettingsCache = { value, fetchedAt: Date.now() };
+  return value;
+}
 
 export function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
   const numChannels = 1;
@@ -351,20 +379,18 @@ async function synthesizeGemini(
   systemInstruction?: string,
   language?: string,
   opts?: GeminiTTSOptions,
+  model: string = "gemini-2.5-flash-preview-tts",
 ): Promise<{ mimeType: string }> {
   if (Date.now() < geminiQuotaExhaustedUntil) {
     throw new Error(`TTS rate limited (429): daily quota exhausted, cooling down until ${new Date(geminiQuotaExhaustedUntil).toISOString()}`);
   }
   const maxAttempts = opts?.maxAttempts ?? 5;
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
-  // gemini-3.1-flash-tts-preview was blocked/erroring when tested via Voice
-  // Manager. gemini-2.5-flash-preview-tts is the model actually working today
-  // (voices/preview/route.ts, seed-bluebell-audio/route.ts) -- same request
-  // shape, different model id. Now this app's primary TTS engine for all
-  // languages, so it needs to be the reliable one.
+  // Model version is admin-configurable via the Voice Manager Engine Settings
+  // panel (getEngineSettings) — synthesizeLine() resolves it and passes it in.
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+    `${model}:generateContent?key=${apiKey}`;
 
   // Gemini 3.1 Flash TTS does NOT support systemInstruction.
   // Expressiveness comes from inline [audio tags] already in the line text.
@@ -538,14 +564,36 @@ export async function synthesizeLine(
     return {};
   }
 
-  // Gemini 2.5 Flash TTS is now the primary engine for every language —
-  // confirmed Hebrew-capable per Google's own docs (no per-voice restriction),
-  // and this is the same model already verified reliable via Voice Manager.
+  // Gemini is the primary engine for every language — confirmed Hebrew-capable
+  // per Google's own docs (no per-voice restriction). Model version (2.5 vs
+  // 3.1) is admin-configurable via the Voice Manager Engine Settings panel;
+  // 3.1 wins when both are enabled, 2.5 is the safety-net default.
+  const engineSettings = await getEngineSettings();
+  const geminiModel = engineSettings.gemini31 ? "gemini-3.1-flash-tts-preview" : "gemini-2.5-flash-preview-tts";
   try {
-    console.log(`[${ts()}][Gemini TTS] text →`, JSON.stringify(line));
-    return await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts);
+    console.log(`[${ts()}][Gemini TTS] text → (${geminiModel})`, JSON.stringify(line));
+    return await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, geminiModel);
   } catch (primaryErr) {
-    console.warn(`[${ts()}][Gemini TTS] Primary engine failed, falling back:`, primaryErr);
+    console.warn(`[${ts()}][Gemini TTS] ${geminiModel} failed, falling back:`, primaryErr);
+
+    // 3.1 has a confirmed intermittent failure mode: HTTP 200, finishReason
+    // "OTHER", zero audio bytes, despite reporting real audio tokens spent.
+    // It's biased per (voice, text) pair rather than a clean transient
+    // error, so synthesizeGemini's own retry budget doesn't always clear it.
+    // Retry once on 2.5 with the SAME voice before falling through to the
+    // fallbacks below, which change voice identity (Hebrew EL remap / Chirp
+    // remap) — 2.5 shares the identical prebuilt voice catalog and has shown
+    // zero failures of this kind in testing, so the character still sounds
+    // like themselves and we avoid a voice swap for what's usually a
+    // one-model hiccup.
+    if (geminiModel !== "gemini-2.5-flash-preview-tts") {
+      try {
+        console.log(`[${ts()}][Gemini TTS] retrying on gemini-2.5-flash-preview-tts (same voice)`);
+        return await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, "gemini-2.5-flash-preview-tts");
+      } catch (sameVoiceFallbackErr) {
+        console.warn(`[${ts()}][Gemini TTS] 2.5 same-voice fallback also failed:`, sameVoiceFallbackErr);
+      }
+    }
   }
 
   // Fallback 1 — Hebrew: ElevenLabs' curated pool, hand-verified for Hebrew pronunciation
@@ -562,9 +610,10 @@ export async function synthesizeLine(
     console.warn(`[${ts()}][HE] ELEVENLABS_API_KEY not set — using WaveNet fallback for Hebrew`);
   }
 
-  // Fallback 2 — Google Cloud Chirp3-HD, if configured
+  // Fallback 2 — Google Cloud Chirp3-HD, if configured and not disabled via
+  // the Engine Settings panel
   const gcTtsKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
-  if (gcTtsKey) {
+  if (gcTtsKey && engineSettings.chirp3hd) {
     // Pass raw line — synthesizeChirp3HD converts [tags] to SSML internally
     await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, effectiveLang, geminiOpts);
     return { mimeType: "audio/mpeg" };

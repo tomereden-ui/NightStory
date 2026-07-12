@@ -45,13 +45,16 @@ A child just typed this as ${FIELD_DESCRIPTION[field]}:
 
 Check TWO things:
 1. Is it appropriate for a bedtime story context — no real violence, gore, sexual content, hate speech, or content that would frighten a young child beyond gentle, resolvable tension?
-2. Does it make sense as an answer here — not empty, not random gibberish, not spam, not wildly off-topic for what's being asked?
+2. Is it CLEAR — can you actually tell what they mean? Reject only real gibberish, an empty/near-empty answer, spam, or something wildly off-topic for what's being asked. Short, simple, or unusual answers are fine as long as their meaning is clear — do not reject something just because it's brief or unconventional.
 
 If both checks pass, approve it.
-If either fails, reject it and write a SHORT (one sentence), warm, encouraging message in ${langName} asking the child to try again with something else — never scold or explain exactly what was wrong, just kindly invite a new idea, in a tone a friendly bedtime-story fairy narrator would use.
+
+If it fails on appropriateness (check 1): write a SHORT (one sentence), warm message in ${langName} that doesn't scold or explain exactly what was wrong — just kindly invite a different idea, in the tone of a friendly bedtime-story fairy narrator.
+
+If it fails on clarity (check 2): write a SHORT (one sentence) message in ${langName} that plainly tells the child you couldn't quite understand what they meant and asks them to try describing it differently. Be direct that it wasn't clear — do NOT soften this into "that's an interesting idea, but..." or any similar phrasing that implies you understood and are rejecting it anyway. The child should come away knowing the problem was clarity, not that their idea was bad.
 
 Return ONLY valid JSON, no markdown, no explanation:
-{"approved": true} or {"approved": false, "reason": "<short kind message in ${langName}>"}`;
+{"approved": true} or {"approved": false, "reason": "<short message in ${langName}>"}`;
 
   try {
     const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {

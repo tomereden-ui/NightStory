@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import type { Job } from "@/lib/jobs";
 import type { DramaScript, DramaTrack } from "@/lib/services/dramaPlanner";
 import Icon from "@/components/ui/Icon";
+import { stripPerformanceTag } from "@/utils/stripPerformanceTag";
 
 interface Props {
   job: Job;
@@ -194,7 +195,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <p className="text-fs-body font-bold uppercase tracking-widest mb-1" style={{ color: "#4fc3f7" }}>
             {activeTrack.character}
           </p>
-          <p className="text-white/75 text-fs-body leading-relaxed">{activeTrack.line}</p>
+          <p className="text-white/75 text-fs-body leading-relaxed">{stripPerformanceTag(activeTrack.line ?? "")}</p>
         </div>
       )}
 
@@ -260,7 +261,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
                           : "rgba(245,158,11,0.7)"
                         : "rgba(79,195,247,0.7)",
                   }}
-                  title={t.type === "dialogue" ? `${t.character}: ${t.line?.slice(0, 40)}` : t.description}
+                  title={t.type === "dialogue" ? `${t.character}: ${stripPerformanceTag(t.line ?? "").slice(0, 40)}` : t.description}
                 />
               );
             })}
@@ -310,7 +311,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
                 <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "#4fc3f7" }}>
                   {t.character}
                 </span>
-                <span className="text-fs-body text-white/55 leading-relaxed">{t.line}</span>
+                <span className="text-fs-body text-white/55 leading-relaxed">{stripPerformanceTag(t.line ?? "")}</span>
               </div>
             ))}
           </div>

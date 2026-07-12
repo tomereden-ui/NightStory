@@ -91,7 +91,7 @@ export default function StoryDetailPage() {
       const avatars: Record<string, string> = {};
       for (const name of uniqueChars) {
         const type: CharacterType = entry.characterProfiles?.[name]?.type ?? (name === "Narrator" ? "narrator" : "adult");
-        avatars[name] = resolveCharacterAvatar(name, type, bank, voicePool);
+        avatars[name] = resolveCharacterAvatar(name, type, bank, voicePool, entry.characterProfiles?.[name]?.avatarUrl);
       }
       setCharacterAvatars(avatars);
     })();
@@ -262,6 +262,13 @@ export default function StoryDetailPage() {
       language: entry.language,
       audioUrl: isOwned ? entry.audioUrl : undefined,
       moralLessons: entry.moralLessons,
+      // Without profiles the Studio falls back to re-classifying the whole
+      // cast from scratch (fresh Gemini pass + Imagen avatar generation),
+      // producing different cast art than this story page shows. Passing the
+      // persisted profiles (incl. each character's matched avatarUrl) keeps
+      // Studio's cast identical to the story card's.
+      characterProfiles: entry.characterProfiles,
+      scenes: entry.scenes,
     }, "nightstory_studio2_draft_v1");
     router.push("/studio2");
   }, [entry, router]);
@@ -482,7 +489,7 @@ export default function StoryDetailPage() {
         {/* Cast panel — read-only */}
         {entry.blocks.length > 0 && (
           <div className="mt-4 mb-1">
-            <ReadOnlyCastPanel blocks={entry.blocks} />
+            <ReadOnlyCastPanel blocks={entry.blocks} characterAvatars={characterAvatars} />
           </div>
         )}
 
@@ -507,6 +514,7 @@ export default function StoryDetailPage() {
             characterAvatars={characterAvatars}
             storyId={entry.id}
             scenes={entry.scenes}
+            totalDurationSeconds={entry.durationSeconds}
             readOnlyScript
             hideDurationPicker
             hideProduceButton

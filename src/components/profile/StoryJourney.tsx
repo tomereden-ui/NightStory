@@ -478,28 +478,51 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function StoryJourney() {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const { t } = useLanguage();
 
   return (
     <div className="mb-7">
-      {/* Section header */}
+      {/* Section header — tap to expand/collapse, styled like the Family
+          Voices panel below it (rounded card, icon chip, gradient title). */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between mb-3"
+        className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all active:scale-[0.99] mb-3"
+        style={{
+          background: "linear-gradient(135deg, rgba(167,139,250,0.10) 0%, rgba(79,195,247,0.06) 100%)",
+          border: "1px solid rgba(167,139,250,0.22)",
+        }}
       >
-        <div>
-          <p className="text-white/55 text-fs-body font-bold tracking-widest uppercase text-left">
-            {t("storyJourneyTitle" as TranslationKey)}
-          </p>
-          <p className="text-white/25 text-fs-body mt-0.5 text-left">{t("monthlyReflection" as TranslationKey)}</p>
-          <p className="text-white/18 text-fs-body mt-1 text-left" style={{ lineHeight: 1.5 }}>
-            {t("privacyGuardNote" as TranslationKey)}
-          </p>
+        <div className="flex items-center gap-3">
+          <div
+            className="flex items-center justify-center rounded-xl flex-shrink-0"
+            style={{ width: 38, height: 38, background: "rgba(167,139,250,0.18)", border: "1px solid rgba(167,139,250,0.3)" }}
+          >
+            <span style={{ fontSize: 18 }}>✨</span>
+          </div>
+
+          <div className="text-left">
+            <p
+              className="font-bold tracking-wide"
+              style={{
+                fontSize: "var(--fs-body)",
+                background: "linear-gradient(90deg, #a78bfa, #4fc3f7)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              {t("storyJourneyTitle" as TranslationKey)}
+            </p>
+            <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+              {t("monthlyReflection" as TranslationKey)}
+            </p>
+          </div>
         </div>
+
         <span
-          className="text-white/30 text-fs-body transition-transform"
-          style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+          className="text-white/30 flex-shrink-0 transition-transform"
+          style={{ fontSize: 22, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
         </span>
@@ -507,6 +530,11 @@ export default function StoryJourney() {
 
       {expanded && (
         <div>
+          {/* Privacy note — only shown once opened, alongside the actual content it explains */}
+          <p className="text-white/18 text-fs-body mb-3 leading-relaxed">
+            {t("privacyGuardNote" as TranslationKey)}
+          </p>
+
           {/* Mock notice */}
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-2xl mb-3"

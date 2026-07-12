@@ -124,13 +124,13 @@ export default function ClassicDetailPage() {
       if (cancelled) return;
       const avatars: Record<string, string> = {};
       for (const name of uniqueChars) {
-        const type: CharacterType = name.toLowerCase().includes("narrat") ? "narrator" : "adult";
-        avatars[name] = resolveCharacterAvatar(name, type, bank, voicePool);
+        const type: CharacterType = characterProfiles?.[name]?.type ?? (name.toLowerCase().includes("narrat") ? "narrator" : "adult");
+        avatars[name] = resolveCharacterAvatar(name, type, bank, voicePool, characterProfiles?.[name]?.avatarUrl);
       }
       setCharacterAvatars(avatars);
     })();
     return () => { cancelled = true; };
-  }, [blocks, voicePool]);
+  }, [blocks, voicePool, characterProfiles]);
   const [summaryPlaying, setSummaryPlaying] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -632,7 +632,7 @@ export default function ClassicDetailPage() {
         {/* Cast panel — read-only */}
         {isReady && blocks!.length > 0 && (
           <div className="mt-4 mb-1">
-            <ReadOnlyCastPanel blocks={blocks!} />
+            <ReadOnlyCastPanel blocks={blocks!} characterAvatars={characterAvatars} />
           </div>
         )}
 
@@ -655,6 +655,7 @@ export default function ClassicDetailPage() {
               characterAvatars={characterAvatars}
               storyId={meta.id}
               scenes={scenes}
+              totalDurationSeconds={meta.durationSeconds}
               readOnlyScript
               hideDurationPicker
               hideProduceButton

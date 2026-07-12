@@ -11,7 +11,7 @@ function audioResponse(buf: Buffer, contentType: string): NextResponse {
 }
 
 interface SynthesizeBody {
-  engine: "elevenlabs" | "gemini" | "chirp3hd";
+  engine: "elevenlabs" | "gemini" | "gemini31" | "chirp3hd";
   voiceId: string;
   text: string;
   /** Detected/selected content language — used for EL's language_code hint and to pick Chirp3-HD's locale-suffixed voice name. */
@@ -68,16 +68,11 @@ async function synthesizeElevenLabs(body: SynthesizeBody): Promise<NextResponse>
   return audioResponse(buf, "audio/mpeg");
 }
 
-async function synthesizeGemini(body: SynthesizeBody): Promise<NextResponse> {
+async function synthesizeGemini(body: SynthesizeBody, model: string): Promise<NextResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
 
-  // gemini-3.1-flash-tts-preview (ttsService.ts's production model) was
-  // blocked/erroring when tested here. gemini-2.5-flash-preview-tts is the
-  // model actually working today in voices/preview/route.ts (Voice Bank
-  // preview generation) and seed-bluebell-audio/route.ts — same request
-  // shape, just a different model id, so used here for a reliable tool.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -179,7 +174,8 @@ export async function POST(req: NextRequest) {
 
   try {
     if (body.engine === "elevenlabs") return await synthesizeElevenLabs(body);
-    if (body.engine === "gemini") return await synthesizeGemini(body);
+    if (body.engine === "gemini") return await synthesizeGemini(body, "gemini-2.5-flash-preview-tts");
+    if (body.engine === "gemini31") return await synthesizeGemini(body, "gemini-3.1-flash-tts-preview");
     if (body.engine === "chirp3hd") return await synthesizeChirp3HD(body);
     return NextResponse.json({ error: `Unknown engine "${body.engine}".` }, { status: 400 });
   } catch (err) {

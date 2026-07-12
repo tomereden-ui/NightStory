@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import type { ScriptBlock, Voice } from "@/types";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
 import Icon from "@/components/ui/Icon";
+import { stripPerformanceTag } from "@/utils/stripPerformanceTag";
 
 interface SpeechPlayerModalProps {
   block: ScriptBlock;
@@ -89,7 +90,7 @@ export default function SpeechPlayerModal({
 
           {/* Block text */}
           {!isLoading && (
-            <p className="text-white/65 text-fs-body leading-relaxed line-clamp-4">{block.textPayload}</p>
+            <p className="text-white/65 text-fs-body leading-relaxed line-clamp-4">{stripPerformanceTag(block.textPayload)}</p>
           )}
 
           {/* Controls */}

@@ -21,14 +21,17 @@ interface ComboResult {
   error?: string;
 }
 
-async function generateOne(voiceId: string, language: PreviewLanguage): Promise<ComboResult> {
+async function generateOne(voiceId: string, language: PreviewLanguage, customText?: string): Promise<ComboResult> {
   const isGeminiPreset = GEMINI_PRESET_IDS.has(voiceId);
   const isElPool = EL_POOL_IDS.has(voiceId);
   if (!isGeminiPreset && !isElPool) {
     return { voiceId, language, ok: false, error: "Unknown voice id" };
   }
 
-  const text = PREVIEW_SAMPLE_TEXT[language];
+  // A custom sentence from the Voice Manager "Regenerate Previews" panel
+  // overrides the per-language canned sample for every language — the admin
+  // asked for this specific sentence, not a translated equivalent of it.
+  const text = customText?.trim() || PREVIEW_SAMPLE_TEXT[language];
   const requestedPath = path.join(os.tmpdir(), `voice_preview_${voiceId}_${language}_${Date.now()}.wav`);
   // synthesizeGemini/synthesizeChirp3HD may silently write to a different
   // extension than the one requested, depending on the audio format the
@@ -84,17 +87,30 @@ async function generateOne(voiceId: string, language: PreviewLanguage): Promise<
 }
 
 export async function POST(req: NextRequest) {
-  let body: { voiceId?: string; applyAll?: boolean };
+  let body: { voiceId?: string; applyAll?: boolean; text?: string; engines?: string[] };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
+  // Engine-scoped regeneration (Voice Manager "Regenerate Previews" panel):
+  // restrict applyAll's voice universe to whichever engines are enabled —
+  // Gemini presets if either gemini engine is in the list, EL pool voices if
+  // elevenlabs is. Falls back to everything when engines isn't provided, so
+  // the existing admin/page.tsx "Generate ALL" button keeps working as-is.
+  const scopedIds = (): string[] => {
+    if (!body.engines) return [...Array.from(GEMINI_PRESET_IDS), ...Array.from(EL_POOL_IDS)];
+    const ids: string[] = [];
+    if (body.engines.includes("gemini25") || body.engines.includes("gemini31")) ids.push(...Array.from(GEMINI_PRESET_IDS));
+    if (body.engines.includes("elevenlabs")) ids.push(...Array.from(EL_POOL_IDS));
+    return ids;
+  };
+
   const targetVoiceIds = body.voiceId
     ? [body.voiceId]
     : body.applyAll
-      ? [...Array.from(GEMINI_PRESET_IDS), ...Array.from(EL_POOL_IDS)]
+      ? scopedIds()
       : null;
 
   if (!targetVoiceIds) {
@@ -106,7 +122,7 @@ export async function POST(req: NextRequest) {
   const results: ComboResult[] = [];
   for (const voiceId of targetVoiceIds) {
     for (const language of PREVIEW_LANGUAGES) {
-      results.push(await generateOne(voiceId, language));
+      results.push(await generateOne(voiceId, language, body.text));
     }
   }
 

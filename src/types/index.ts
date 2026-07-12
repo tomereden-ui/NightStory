@@ -16,6 +16,18 @@ export type VoiceGender = "male" | "female" | "neutral";
 
 export type VoiceStyle = "warm" | "playful" | "calm" | "dramatic" | "gentle";
 
+/** Age granularity for a story character, beyond CharacterProfile.type's
+ *  coarse child/adult/animal split — lets avatar matching distinguish e.g. a
+ *  "young prince" from an "elderly grandfather" instead of both just being
+ *  generic "adult". */
+export type AgeBucket = "toddler" | "child" | "teen" | "young_adult" | "middle_aged" | "elderly";
+
+/** What kind of being a story character is. CharacterProfile.type's "animal"
+ *  really means "any non-human" (trees, balloons and dragons all share it) —
+ *  category splits that properly so avatar matching maps people to people,
+ *  animals to animals, objects to objects. */
+export type CharacterCategory = "human" | "animal" | "plant" | "object" | "fantasy";
+
 export interface Voice {
   id: string;
   name: string;

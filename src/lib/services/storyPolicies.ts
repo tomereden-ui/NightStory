@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { classifyCharacters } from "@/lib/services/characterClassifier";
+import { findBestAvatarForCharacter } from "@/lib/services/avatarBankService";
 import { getLessonsCatalog } from "@/constants/lessonsUi";
 import { LANGUAGE_META } from "@/lib/i18n";
 import { trackGemini } from "@/lib/usageTracker";
@@ -19,18 +20,29 @@ import type { ScriptBlock, MoralLesson, Language } from "@/types";
 // Moved here from admin/reassign-voices/route.ts so admin/refresh-story can
 // reuse the exact same logic instead of duplicating it.
 
+// Gemini's own guidance translates the literal word "Narrator" into the
+// story's language (e.g. "קריין"/"המספר" in Hebrew), so a plain "Narrator"
+// check misses it for any non-English story. Prefer characterProfiles' type
+// field (survives translation), then fall back to the known translated
+// narrator names — older entries either have no profiles at all or profiles
+// saved before type:"narrator" was reliably stamped (confirmed live: The
+// Giving Tree's "המספר" was persisted as type:"adult", which let a retrofit
+// re-classify the narrator as a regular cast member).
+const NARRATOR_NAMES = new Set(["Narrator", "קריין", "המספר", "מספר"]);
+
+function findNarratorName(entry: LibraryEntry): string {
+  const byType = Object.entries(entry.characterProfiles ?? {}).find(([, p]) => p.type === "narrator")?.[0];
+  if (byType) return byType;
+  const byName = entry.blocks.map((b) => b.characterName).find((n) => NARRATOR_NAMES.has(n));
+  return byName ?? "Narrator";
+}
+
 export async function reassignVoicesForStory(
   entry: LibraryEntry,
   apiKey: string,
   narratorVoiceId: string | undefined,
 ): Promise<{ blocks: ScriptBlock[]; characterProfiles: Record<string, CharacterProfile>; changedCount: number }> {
-  // Gemini's own guidance translates the literal word "Narrator" into the
-  // story's language (e.g. "קריין" in Hebrew), so a plain name check misses
-  // it for any non-English story. Find the real key via characterProfiles'
-  // type field instead, which survives translation, and fall back to the
-  // literal "Narrator" for older entries saved before profiles were persisted.
-  const narratorName = Object.entries(entry.characterProfiles ?? {}).find(([, p]) => p.type === "narrator")?.[0]
-    ?? "Narrator";
+  const narratorName = findNarratorName(entry);
 
   const seen = new Set<string>();
   const nonNarratorChars = entry.blocks
@@ -48,7 +60,13 @@ export async function reassignVoicesForStory(
     freshProfiles = Object.fromEntries(
       Object.entries(classified).map(([name, c]) => [
         name,
-        { type: c.type as CharacterProfile["type"], visualDescription: c.visualDescription },
+        {
+          type: c.type as CharacterProfile["type"],
+          visualDescription: c.visualDescription,
+          gender: c.gender as CharacterProfile["gender"],
+          ageBucket: c.ageBucket,
+          category: c.category,
+        },
       ]),
     );
   }
@@ -73,6 +91,99 @@ export async function reassignVoicesForStory(
   });
 
   return { blocks, characterProfiles, changedCount };
+}
+
+// ─── Cast avatars ───────────────────────────────────────────────────────────
+// Retrofit for stories saved before profile-based avatar matching shipped —
+// re-classifies every non-narrator character from the script (same pattern
+// as reassignVoicesForStory above, and for the same reason: gender/ageBucket
+// are fields classifyCharacters only started emitting after this system
+// shipped, so re-using whatever's already persisted would just re-match
+// against still-incomplete data). Works even on a story with zero saved
+// profiles — only needs entry.blocks. Run sequentially (not Promise.all like
+// the production-time matcher) so excludeUrls can steer later characters
+// away from portraits already claimed earlier in this same cast — not
+// latency-sensitive here.
+
+export async function reassignAvatarsForStory(
+  entry: LibraryEntry,
+  apiKey: string,
+): Promise<{ characterProfiles: Record<string, CharacterProfile>; changedCount: number }> {
+  if (!entry.blocks?.length) {
+    return { characterProfiles: entry.characterProfiles ?? {}, changedCount: 0 };
+  }
+
+  const narratorName = findNarratorName(entry);
+
+  const seen = new Set<string>();
+  const nonNarratorChars = entry.blocks
+    .map((b) => b.characterName)
+    .filter((c) => c !== "SFX" && c !== narratorName && !seen.has(c) && seen.add(c));
+
+  let freshProfiles: Record<string, CharacterProfile> = {};
+  if (nonNarratorChars.length > 0) {
+    const scriptSample = entry.blocks
+      .filter((b) => b.characterName !== "SFX")
+      .slice(0, 40)
+      .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
+      .join("\n");
+    const classified = await classifyCharacters(nonNarratorChars, entry.summary, scriptSample, apiKey);
+    freshProfiles = Object.fromEntries(
+      Object.entries(classified).map(([name, c]) => [
+        name,
+        {
+          type: c.type as CharacterProfile["type"],
+          visualDescription: c.visualDescription,
+          gender: c.gender as CharacterProfile["gender"],
+          ageBucket: c.ageBucket,
+          category: c.category,
+        },
+      ]),
+    );
+  }
+
+  // The narrator keeps (or gains) an explicit type:"narrator" profile rather
+  // than being re-classified — the CAST row's avatar resolution shows the
+  // selected narrator voice's avatar for type "narrator", so stamping the
+  // type correctly here is what actually fixes older entries whose narrator
+  // was persisted as a plain "adult" (and then wrongly got bank art).
+  const narratorAppears = entry.blocks.some((b) => b.characterName === narratorName);
+  const existingNarratorProfile = entry.characterProfiles?.[narratorName];
+  const mergedProfiles: Record<string, CharacterProfile> = {
+    ...freshProfiles,
+    ...(narratorAppears || existingNarratorProfile
+      ? {
+          [narratorName]: {
+            visualDescription: "warm wise storyteller",
+            gender: "neutral" as const,
+            ...existingNarratorProfile,
+            type: "narrator" as const,
+          },
+        }
+      : {}),
+  };
+
+  const usedUrls = new Set<string>();
+  let changedCount = 0;
+  const updated: Record<string, CharacterProfile> = {};
+  for (const [name, profile] of Object.entries(mergedProfiles)) {
+    // Narrator's displayed avatar comes from the selected narrator voice, not
+    // the bank — don't spend a match call or stamp bank art on it.
+    if (profile.type === "narrator") {
+      if (entry.characterProfiles?.[name]?.type !== "narrator") changedCount++;
+      updated[name] = profile;
+      continue;
+    }
+    const avatarUrl = await findBestAvatarForCharacter(profile, apiKey, usedUrls);
+    if (avatarUrl) usedUrls.add(avatarUrl);
+    if (avatarUrl && avatarUrl !== profile.avatarUrl) {
+      changedCount++;
+      updated[name] = { ...profile, avatarUrl };
+    } else {
+      updated[name] = profile;
+    }
+  }
+  return { characterProfiles: updated, changedCount };
 }
 
 // ─── Moral lessons ──────────────────────────────────────────────────────────

@@ -11,6 +11,37 @@ import { PRESET_VOICES } from "@/config/presetVoices";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
 import { generateScenes } from "@/lib/services/sceneGenerator";
+import { findBestAvatarForCharacter } from "@/lib/services/avatarBankService";
+
+// Match every character's persisted profile (type/gender/visualDescription)
+// to a real avatar-bank portrait — same profile data already driving
+// nature-based voice casting below, applied to images so a newly produced
+// story's cast avatars are correct from the start instead of relying on the
+// read side's deterministic-but-blind hash fallback. Best-effort per
+// character: a failed match just leaves avatarUrl unset. Called from inside
+// the existing Promise.all planning block so it overlaps with drama
+// planning/scene generation instead of adding to the critical path.
+async function matchAvatarsForProfiles(
+  characterProfiles: Record<string, CharacterProfile> | undefined,
+  geminiKey: string,
+): Promise<Record<string, CharacterProfile> | undefined> {
+  if (!characterProfiles || Object.keys(characterProfiles).length === 0) return characterProfiles;
+  const entries = await Promise.all(
+    Object.entries(characterProfiles).map(async ([name, profile]) => {
+      // Narrator's displayed avatar comes from the selected narrator voice,
+      // not the bank — skip the match call entirely.
+      if (profile.type === "narrator") return [name, profile] as const;
+      try {
+        const avatarUrl = await findBestAvatarForCharacter(profile, geminiKey);
+        return [name, avatarUrl ? { ...profile, avatarUrl } : profile] as const;
+      } catch (err) {
+        console.warn(`[produce-drama] avatar match failed for "${name}":`, err);
+        return [name, profile] as const;
+      }
+    }),
+  );
+  return Object.fromEntries(entries);
+}
 
 /**
  * Builds character → voice overrides from the user's per-block voice assignments
@@ -284,12 +315,14 @@ async function runProduction(
       progress: 5,
     });
 
-    // Run drama planning, voice profiling, language detection, and scene generation all in parallel
-    const [drama, voiceProfiles, scriptLanguage, scenes] = await Promise.all([
+    // Run drama planning, voice profiling, language detection, scene generation,
+    // and cast-avatar matching all in parallel
+    const [drama, voiceProfiles, scriptLanguage, scenes, characterProfilesWithAvatars] = await Promise.all([
       planDrama(blocks, geminiKey, durationMinutes, existingTitle),
       profileCharacters(blocks, geminiKey, characterDescriptions, characterTypes),
       detectScriptLanguage(blocks, geminiKey),
       generateScenes(blocks, geminiKey),
+      matchAvatarsForProfiles(characterProfiles, geminiKey),
     ]);
     console.log(`[${ts()}][TTS] Detected language: ${scriptLanguage}`);
     updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 18 });
@@ -747,7 +780,7 @@ async function runProduction(
       childIds: childIds?.length ? childIds : undefined,
       isPublic: isPublic ?? false,
       isClassic: isClassic ?? false,
-      characterProfiles: characterProfiles && Object.keys(characterProfiles).length ? characterProfiles : undefined,
+      characterProfiles: characterProfilesWithAvatars && Object.keys(characterProfilesWithAvatars).length ? characterProfilesWithAvatars : undefined,
       moralLessons: moralLessons?.length ? moralLessons : undefined,
     };
 

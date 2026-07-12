@@ -13,11 +13,14 @@ import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getNarratorVoiceId, setNarratorVoiceId } from "@/lib/narratorPreference";
 import { PREVIEW_LANGUAGES } from "@/config/voicePreviewSamples";
-import type { UsageTotals } from "@/lib/usageTracker";
 import type { ChildProfile } from "@/types";
 import Icon from "@/components/ui/Icon";
 import { type IconName } from "@/lib/icons";
 import { supabaseAuth } from "@/lib/supabaseAuth";
+
+// Shown until /api/app-version resolves (or if it fails) — kept in sync with
+// the DB seed in supabase/app-settings-migration.sql.
+const DEFAULT_APP_VERSION = "1.3.0";
 
 // ─── SVG icon helper ──────────────────────────────────────────────────────────
 
@@ -390,51 +393,6 @@ function SettingRow({
   );
 }
 
-// ─── API usage row ────────────────────────────────────────────────────────────
-
-function UsageRow({
-  iconName, accent, label, sub, value, unit, cost,
-}: {
-  iconName: IconName; accent: string; label: string; sub: string;
-  value: string; unit: string; cost?: string;
-}) {
-  return (
-    <div
-      className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl"
-      style={{ background: `${accent}08`, border: `1px solid ${accent}18` }}
-    >
-      <div
-        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: `${accent}15`, border: `1px solid ${accent}28`, color: accent }}
-      >
-        <Icon name={iconName} size={18} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-white/80 text-fs-body font-semibold">{label}</p>
-        <p className="text-white/30 text-fs-body mt-0.5">{sub}</p>
-      </div>
-      <div className="text-right flex-shrink-0">
-        <p className="text-fs-body font-bold" style={{ color: accent }}>{value}</p>
-        <p className="text-fs-body text-white/25 mt-0.5">{unit}</p>
-        {cost && <p className="text-fs-body mt-0.5 font-semibold" style={{ color: `${accent}99` }}>~{cost}</p>}
-      </div>
-    </div>
-  );
-}
-
-// ─── Cost estimator ───────────────────────────────────────────────────────────
-
-function estimateCosts(u: UsageTotals) {
-  const geminiText  = (u.gemini_tokens / 1_000_000) * 0.15;
-  const geminiTts   = (u.gemini_tts_chars / 1_000) * 0.05;
-  const geminiImage = (u.gemini_image_calls ?? 0) * 0.04;
-  const elTts       = (u.el_tts_chars / 1_000) * 0.30;
-  const elSfx       = (u.el_sfx_chars / 1_000) * 0.08;
-  const total       = geminiText + geminiTts + geminiImage + elTts + elSfx;
-  const fmtCost     = (n: number) => n < 0.01 ? "<$0.01" : `$${n.toFixed(2)}`;
-  return { geminiText: fmtCost(geminiText), geminiTts: fmtCost(geminiTts), geminiImage: fmtCost(geminiImage), elTts: fmtCost(elTts), elSfx: fmtCost(elSfx), total: fmtCost(total) };
-}
-
 // ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
@@ -443,14 +401,6 @@ function SectionHeader({ label }: { label: string }) {
       {label}
     </p>
   );
-}
-
-// ─── Number formatter ─────────────────────────────────────────────────────────
-
-function fmt(n: number) {
-  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M`
-    : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K`
-    : String(n);
 }
 
 // ─── AgeGroup helper ──────────────────────────────────────────────────────────
@@ -695,13 +645,13 @@ export default function ProfilePage() {
   const { mode, setMode } = useViewMode();
   const { user, signOut } = useAuth();
   const router = useRouter();
-  const [usage, setUsage] = useState<UsageTotals | null>(null);
+  const [appVersion, setAppVersion] = useState(DEFAULT_APP_VERSION);
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
   const [narratorOpen, setNarratorOpen] = useState(false);
-  const [apiExpanded, setApiExpanded] = useState(false);
+  const [familyMembersOpen, setFamilyMembersOpen] = useState(false);
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -784,9 +734,9 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/usage", { cache: "no-store" })
+    fetch("/api/app-version", { cache: "no-store" })
       .then((r) => r.json())
-      .then((data) => setUsage(data as UsageTotals))
+      .then((data: { version?: string }) => { if (data.version) setAppVersion(data.version); })
       .catch(() => {});
   }, []);
 
@@ -915,103 +865,117 @@ export default function ProfilePage() {
 
           {/* ── Family Members ───────────────────────────────────────── */}
           <div className="mb-7">
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-bold text-fs-heading" style={{ color: "#e2e8f0" }}>{t("familyMembers")}</p>
-              <span className="text-fs-label px-2 py-0.5 rounded-full" style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa" }}>
-                {familyMembers.length} member{familyMembers.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {/* Member list */}
-            <div className="flex flex-col gap-2 mb-3">
-              {familyMembers.map((m) => (
-                <div key={m.user_id} className="flex items-center justify-between px-4 py-3 rounded-2xl"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold"
-                      style={{
-                        background: m.role === "owner"
-                          ? "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.15))"
-                          : "rgba(255,255,255,0.05)",
-                        border: m.role === "owner"
-                          ? "1px solid rgba(167,139,250,0.4)"
-                          : "1px solid rgba(255,255,255,0.1)",
-                        fontSize: "var(--fs-body)",
-                        color: m.role === "owner" ? "#a78bfa" : "rgba(255,255,255,0.35)",
-                      }}>
-                      {m.role === "owner" ? "✦" : "·"}
-                    </div>
-                    <div>
-                      <p className="text-fs-body font-medium" style={{ color: "#e2e8f0" }}>
-                        {m.user_id === user?.id ? (user?.email ?? t("you")) : t("familyMember")}
-                      </p>
-                      <p className="text-fs-label" style={{ color: "rgba(148,163,184,0.5)" }}>{m.role === "owner" ? t("roleOwner" as never) : t("roleMember" as never)}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Invite button */}
+            {/* Section header — tap to expand/collapse, same panel style as
+                Story Journey / Family Voices above it. */}
             <button
-              onClick={handleInvite}
-              disabled={inviteLoading}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold transition-opacity"
+              onClick={() => setFamilyMembersOpen((v) => !v)}
+              className="w-full flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all active:scale-[0.99] mb-3"
               style={{
-                background: "linear-gradient(135deg, rgba(167,139,250,0.15), rgba(79,195,247,0.10))",
-                border: "1px solid rgba(167,139,250,0.3)",
-                color: "#a78bfa",
-                fontSize: 14,
-                opacity: inviteLoading ? 0.6 : 1,
+                background: "linear-gradient(135deg, rgba(167,139,250,0.10) 0%, rgba(79,195,247,0.06) 100%)",
+                border: "1px solid rgba(167,139,250,0.22)",
               }}
             >
-              <span style={{ fontSize: 16 }}>🔗</span>
-              {inviteLoading ? t("generatingLink") : inviteCopied ? `✓ ${t("linkCopied")}` : t("inviteFamilyMember")}
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center rounded-xl flex-shrink-0"
+                  style={{ width: 38, height: 38, background: "rgba(167,139,250,0.18)", border: "1px solid rgba(167,139,250,0.3)" }}
+                >
+                  <span style={{ fontSize: 18 }}>👪</span>
+                </div>
+
+                <div className="text-left">
+                  <p
+                    className="font-bold tracking-wide"
+                    style={{
+                      fontSize: "var(--fs-body)",
+                      background: "linear-gradient(90deg, #a78bfa, #4fc3f7)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {t("familyMembers")}
+                  </p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+                    {familyMembers.length} member{familyMembers.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+
+              <span
+                className="text-white/30 flex-shrink-0 transition-transform"
+                style={{ fontSize: 22, transform: familyMembersOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+              >
+                ▾
+              </span>
             </button>
 
-            {inviteLink && (
-              <div className="mt-2 px-3 py-2 rounded-xl flex items-center gap-2"
-                style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
-                <p className="flex-1 text-fs-label truncate" style={{ color: "rgba(148,163,184,0.7)" }}>{inviteLink}</p>
-                <button onClick={() => { navigator.clipboard.writeText(inviteLink); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); }}
-                  style={{ color: "#4fc3f7", fontSize: 12, whiteSpace: "nowrap" }}>{t("copyLink" as never)}</button>
+            {familyMembersOpen && (
+              <div>
+                {/* Member list */}
+                <div className="flex flex-col gap-2 mb-3">
+                  {familyMembers.map((m) => (
+                    <div key={m.user_id} className="flex items-center justify-between px-4 py-3 rounded-2xl"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold"
+                          style={{
+                            background: m.role === "owner"
+                              ? "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.15))"
+                              : "rgba(255,255,255,0.05)",
+                            border: m.role === "owner"
+                              ? "1px solid rgba(167,139,250,0.4)"
+                              : "1px solid rgba(255,255,255,0.1)",
+                            fontSize: "var(--fs-body)",
+                            color: m.role === "owner" ? "#a78bfa" : "rgba(255,255,255,0.35)",
+                          }}>
+                          {m.role === "owner" ? "✦" : "·"}
+                        </div>
+                        <div>
+                          <p className="text-fs-body font-medium" style={{ color: "#e2e8f0" }}>
+                            {m.user_id === user?.id ? (user?.email ?? t("you")) : t("familyMember")}
+                          </p>
+                          <p className="text-fs-label" style={{ color: "rgba(148,163,184,0.5)" }}>{m.role === "owner" ? t("roleOwner" as never) : t("roleMember" as never)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Invite button */}
+                <button
+                  onClick={handleInvite}
+                  disabled={inviteLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold transition-opacity"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(167,139,250,0.15), rgba(79,195,247,0.10))",
+                    border: "1px solid rgba(167,139,250,0.3)",
+                    color: "#a78bfa",
+                    fontSize: 14,
+                    opacity: inviteLoading ? 0.6 : 1,
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>🔗</span>
+                  {inviteLoading ? t("generatingLink") : inviteCopied ? `✓ ${t("linkCopied")}` : t("inviteFamilyMember")}
+                </button>
+
+                {inviteLink && (
+                  <div className="mt-2 px-3 py-2 rounded-xl flex items-center gap-2"
+                    style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
+                    <p className="flex-1 text-fs-label truncate" style={{ color: "rgba(148,163,184,0.7)" }}>{inviteLink}</p>
+                    <button onClick={() => { navigator.clipboard.writeText(inviteLink); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); }}
+                      style={{ color: "#4fc3f7", fontSize: 12, whiteSpace: "nowrap" }}>{t("copyLink" as never)}</button>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* ── Sign out ─────────────────────────────────────────────── */}
-          <div className="mb-3">
-            <button
-              onClick={async () => { await signOut(); router.replace("/login"); }}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold"
-              style={{
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.2)",
-                color: "#fca5a5",
-                fontSize: 14,
-              }}
-            >
-              {t("signOut")}
-            </button>
-          </div>
-
-          {/* ── Privacy & Delete account ──────────────────────────────── */}
-          <div className="mb-7 flex items-center justify-between gap-3">
-            <a href="/privacy" style={{ fontSize: 12, color: "rgba(148,163,184,0.35)", textDecoration: "underline", flexShrink: 0 }}>
+          {/* ── Privacy ──────────────────────────────────────────────── */}
+          <div className="mb-7">
+            <a href="/privacy" style={{ fontSize: 12, color: "rgba(148,163,184,0.35)", textDecoration: "underline" }}>
               {t("privacyPolicy")}
             </a>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 rounded-xl font-medium transition-all active:scale-[0.97]"
-              style={{
-                background: "rgba(239,68,68,0.07)",
-                border: "1px solid rgba(239,68,68,0.16)",
-                color: "rgba(239,68,68,0.5)",
-                fontSize: 12,
-              }}
-            >
-              {t("deleteAccount")}
-            </button>
           </div>
 
           {/* ── Display mode ─────────────────────────────────────────── */}
@@ -1042,87 +1006,52 @@ export default function ProfilePage() {
             <TextSizePicker />
           </div>
 
-          {/* ── API Usage ─────────────────────────────────────────────── */}
-          <div>
-            <SectionHeader label={t("apiUsage")} />
-
-            {usage && (() => {
-              const costs = estimateCosts(usage);
-              return (
-                <button
-                  onClick={() => setApiExpanded((v) => !v)}
-                  className="w-full mb-3 px-4 py-3 rounded-2xl flex items-center justify-between transition-all active:scale-[0.99]"
-                  style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.15)" }}
-                >
-                  <div className="text-start">
-                    <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>{t("estimatedSpend" as never)}</p>
-                    <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>{t("estimatedSpendNote" as never)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-fs-subtitle font-bold" style={{ color: "#4fc3f7" }}>{costs.total}</p>
-                    <span style={{ color: "rgba(79,195,247,0.4)", fontSize: 10, transform: apiExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
-                  </div>
-                </button>
-              );
-            })()}
-
-            {apiExpanded && (
-              <div className="flex flex-col gap-2">
-                <UsageRow iconName="sparkles" accent="#4fc3f7" label="Gemini · Text"
-                  sub={usage ? `${fmt(usage.gemini_calls)} request${usage.gemini_calls !== 1 ? "s" : ""}` : "—"}
-                  value={usage ? fmt(usage.gemini_tokens) : "—"} unit="tokens"
-                  cost={usage ? estimateCosts(usage).geminiText : undefined} />
-                <UsageRow iconName="mic" accent="#38bdf8" label="Gemini · TTS"
-                  sub={usage ? `${fmt(usage.gemini_tts_calls)} synthesis call${usage.gemini_tts_calls !== 1 ? "s" : ""}` : "—"}
-                  value={usage ? fmt(usage.gemini_tts_chars) : "—"} unit="chars"
-                  cost={usage ? estimateCosts(usage).geminiTts : undefined} />
-                <UsageRow iconName="sparkles" accent="#34d399" label="Gemini · Images"
-                  sub={usage ? `${fmt(usage.gemini_image_calls ?? 0)} image${(usage.gemini_image_calls ?? 0) !== 1 ? "s" : ""} generated` : "—"}
-                  value={usage ? fmt(usage.gemini_image_calls ?? 0) : "—"} unit="images"
-                  cost={usage ? estimateCosts(usage).geminiImage : undefined} />
-                <UsageRow iconName="sparkles" accent="#6ee7b7" label="Pollinations · Images"
-                  sub={usage ? `${fmt(usage.pollinations_calls ?? 0)} image${(usage.pollinations_calls ?? 0) !== 1 ? "s" : ""} generated` : "—"}
-                  value={usage ? fmt(usage.pollinations_calls ?? 0) : "—"} unit="images" />
-                <UsageRow iconName="waveform" accent="#F59E0B" label="ElevenLabs · TTS"
-                  sub={usage ? `${fmt(usage.el_tts_calls)} synthesis call${usage.el_tts_calls !== 1 ? "s" : ""}` : "—"}
-                  value={usage ? fmt(usage.el_tts_chars) : "—"} unit="chars"
-                  cost={usage ? estimateCosts(usage).elTts : undefined} />
-                <UsageRow iconName="music" accent="#A78BFA" label="ElevenLabs · SFX"
-                  sub={usage ? `${fmt(usage.el_sfx_calls)} generation${usage.el_sfx_calls !== 1 ? "s" : ""}` : "—"}
-                  value={usage ? fmt(usage.el_sfx_chars) : "—"} unit="prompt chars"
-                  cost={usage ? estimateCosts(usage).elSfx : undefined} />
-              </div>
-            )}
-          </div>
-
         </div>
       </div>
 
-      {/* App version / build info */}
-      {(() => {
-        const BUILD_LABEL = "Jun 12 · v4";
-        const badge = process.env.NEXT_PUBLIC_BUILD_TIME
-          ? (() => {
-              const d = new Date(process.env.NEXT_PUBLIC_BUILD_TIME!);
-              return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
-                + " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-            })()
-          : BUILD_LABEL;
-        return (
-          <div className="flex justify-center pb-6 pt-2">
-            <span
-              className="text-fs-body font-mono px-2.5 py-1 rounded-full"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.18)",
-                border: "1px solid rgba(255,255,255,0.07)",
-              }}
-            >
-              {badge}
-            </span>
-          </div>
-        );
-      })()}
+      {/* ── Sign out — bottom, directly above the version badge ────────── */}
+      <div className="px-5 flex flex-col gap-2.5">
+        <button
+          onClick={async () => { await signOut(); router.replace("/login"); }}
+          className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold"
+          style={{
+            background: "rgba(239,68,68,0.08)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            color: "#fca5a5",
+            fontSize: 14,
+          }}
+        >
+          {t("signOut")}
+        </button>
+
+        {/* ── Delete account — just below sign out ────────────────────── */}
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="w-full flex items-center justify-center py-2.5 rounded-xl font-medium transition-all active:scale-[0.97]"
+          style={{
+            background: "rgba(239,68,68,0.04)",
+            border: "1px solid rgba(239,68,68,0.1)",
+            color: "rgba(239,68,68,0.45)",
+            fontSize: 12,
+          }}
+        >
+          {t("deleteAccount")}
+        </button>
+      </div>
+
+      {/* App version — sourced from the DB (app_settings.app_version) */}
+      <div className="flex justify-center pb-6 pt-3">
+        <span
+          className="text-fs-body font-mono px-2.5 py-1 rounded-full"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            color: "rgba(255,255,255,0.18)",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          v{appVersion}
+        </span>
+      </div>
 
       {/* Delete account confirmation modal */}
       {showDeleteConfirm && (

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import type { DraftState } from "@/lib/draftStore";
 import type { ScriptBlock } from "@/types";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import Icon from "@/components/ui/Icon";
 import LanguageToggle from "@/components/ui/LanguageToggle";
+import { getWizardUi } from "@/constants/wizardUi";
 import type { Language } from "@/types";
 
 interface Message {
@@ -238,7 +239,6 @@ export default function LunaChatPanel({
   const [creating, setCreating]             = useState(false);
   const [createError, setCreateError]       = useState<string | null>(null);
   const [greeted, setGreeted]               = useState(false);
-  const [discardConfirm, setDiscardConfirm] = useState(false);
   const [topResetConfirm, setTopResetConfirm] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(5);
   const [readyConfirmed, setReadyConfirmed] = useState(false);
@@ -528,6 +528,11 @@ export default function LunaChatPanel({
       // to add?" question per the STORY_READY prompt rule — no separate
       // synthetic follow-up needed (a leftover from before that rule existed
       // was both redundant and always hardcoded in English regardless of story language).
+      // Always sync to the latest turn's actual readiness -- a prior turn may
+      // have been storyReady (e.g. a restored draft), but if the user then
+      // types something unclear, this turn correctly comes back with
+      // storyReady:false + clarificationChips, and the "Let's go!" button
+      // must not keep showing from the stale earlier state.
       if (data.storyReady && data.storyParams) {
         setStoryReady(true);
         setStoryParams(data.storyParams);
@@ -535,6 +540,10 @@ export default function LunaChatPanel({
         // counts the same as tapping the quick-reply chip -- skip straight
         // to the duration picker + Create button instead of showing it again.
         setReadyConfirmed(!!data.userConfirmedReady);
+      } else {
+        setStoryReady(false);
+        setStoryParams(null);
+        setReadyConfirmed(false);
       }
     } catch (err) {
       console.error("[Luna] Send failed (after retry):", err);
@@ -561,12 +570,15 @@ export default function LunaChatPanel({
     recogRef.current?.stop();
     setListening(false);
     setMessages([]);
+    setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setStoryReady(false);
     setStoryParams(null);
     setGreeted(false);
-    setDiscardConfirm(false);
     setReadyConfirmed(false);
     setTopResetConfirm(false);
+    setDurationMinutes(5);
+    setCreateError(null);
     firstMsgSent.current = false;
     onDiscard?.();
   }
@@ -630,6 +642,22 @@ export default function LunaChatPanel({
     pt: "Vamos lá!",
   };
   const letsGoLabel = LETS_GO_LABELS[language] ?? "Let's go !";
+
+  // The quick-reply CTA names the story piece Luna just gathered, reusing the
+  // exact same localized strings as the step-by-step wizard's confirm buttons
+  // ("This is my hero!" -> "This is the world!" -> "This is the companion!")
+  // so both creation modes read consistently. storyParams only ever grows
+  // (never loses a key once Luna has it), so this walks hero -> setting ->
+  // everything-after-that in order, falling back to a generic label once all
+  // three canonical pieces are already present.
+  const wizardUi = useMemo(() => getWizardUi(language), [language]);
+  const stepConfirmLabel = !storyParams?.hero
+    ? wizardUi.thisIsMyHero
+    : !storyParams?.setting
+    ? wizardUi.thisIsTheWorld
+    : !storyParams?.plot
+    ? wizardUi.thisIsTheCompanion
+    : letsGoLabel;
 
   const QUICK_REPLY_HINT_LABELS: Record<string, string> = {
     he: "תשובה מהירה",
@@ -709,15 +737,6 @@ export default function LunaChatPanel({
           <p className="text-fs-body font-bold text-white">Luna</p>
           <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.8)" }}>Your magical story guide ✨</p>
         </div>
-        {hasUserMessages && (
-          <button
-            onClick={handleDiscard}
-            className="text-fs-body transition-all active:scale-95 flex-shrink-0"
-            style={{ color: "rgba(255,255,255,0.22)" }}
-          >
-            Start over
-          </button>
-        )}
       </div>
 
       {/* Messages */}
@@ -765,7 +784,7 @@ export default function LunaChatPanel({
               }}
             >
               <span>✨</span>
-              <span>{letsGoLabel}</span>
+              <span>{stepConfirmLabel}</span>
             </button>
           </div>
         )}
@@ -885,7 +904,7 @@ export default function LunaChatPanel({
         </div>
 
         {!hasUserMessages && !listening && (
-          <p className="text-center mt-2 px-2 font-semibold" style={{ fontSize: "calc(var(--fs-caption) * 2)", lineHeight: 1.35, color: "rgba(167,139,250,0.95)" }}>
+          <p className="text-center mt-2 px-2 font-semibold" style={{ fontSize: "var(--fs-body)", lineHeight: 1.35, color: "rgba(167,139,250,0.95)" }}>
             {writeItAllHint}
           </p>
         )}
@@ -896,39 +915,6 @@ export default function LunaChatPanel({
           </p>
         )}
       </div>
-
-      {/* Discard */}
-      {hasUserMessages && (
-        <div className="flex justify-center pb-1">
-          {discardConfirm ? (
-            <div className="flex items-center gap-3">
-              <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
-              <button
-                onClick={handleDiscard}
-                className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
-                style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
-              >
-                Yes, start over
-              </button>
-              <button
-                onClick={() => setDiscardConfirm(false)}
-                className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
-              >
-                Keep going
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setDiscardConfirm(true)}
-              className="text-fs-body transition-all active:scale-95"
-              style={{ color: "rgba(255,255,255,0.18)" }}
-            >
-              <Icon name="submit" size={12} className="inline-block align-middle mr-1" /> Start over
-            </button>
-          )}
-        </div>
-      )}
 
     </div>
   );

@@ -1,5 +1,5 @@
 import { inferCompanionAbility } from "./inferCompanionAbility";
-import { MOOD_PROSE } from "@/constants/bluebellScripts";
+import { MOOD_PROSE } from "@/constants/lunaScripts";
 
 export type ResolutionMood = "brave" | "laughing" | "surprised" | "sleepy";
 

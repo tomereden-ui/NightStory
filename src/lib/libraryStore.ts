@@ -1,5 +1,5 @@
 import { supabase, ensureBuckets } from "./supabase";
-import type { ScriptBlock, StoryScene, VoiceGender, VoiceStyle, MoralLesson } from "@/types";
+import type { ScriptBlock, StoryScene, VoiceGender, VoiceStyle, AgeBucket, CharacterCategory, MoralLesson } from "@/types";
 
 export interface CharacterProfile {
   type: "child" | "adult" | "animal" | "narrator";
@@ -7,6 +7,19 @@ export interface CharacterProfile {
   /** Voice-casting nature — present on stories generated since nature-based voice matching shipped. */
   gender?: VoiceGender;
   voicePersona?: VoiceStyle;
+  /** Age granularity beyond type's coarse child/adult/animal split (e.g. "young_adult" vs
+   *  "elderly") — set by classifyCharacters, used to avoid e.g. an elderly-avatar match for a
+   *  young-adult character within the same type/gender. */
+  ageBucket?: AgeBucket;
+  /** Splits type's catch-all "animal" (any non-human) into real kinds — set by
+   *  classifyCharacters, hard-filtered in avatar matching so animals map to animals,
+   *  plants to plants, objects to objects. */
+  category?: CharacterCategory;
+  /** Avatar-bank portrait matched to this character's profile (type/gender/ageBucket/visualDescription)
+   *  via findBestAvatarForCharacter — present on stories produced since profile-based avatar
+   *  matching shipped, or after an admin "Reassign Cast Avatars" retrofit. When absent, the
+   *  read path falls back to deterministic hash-based bank/DiceBear selection. */
+  avatarUrl?: string;
 }
 
 export interface LibraryEntry {

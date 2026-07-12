@@ -1,5 +1,5 @@
-// Static UI chrome for the Step-by-step ("Bluebell") wizard — everything that
-// isn't the narrator's own lines (those live in bluebellScripts.ts).
+// Static UI chrome for the Step-by-step ("Luna") wizard — everything that
+// isn't the narrator's own lines (those live in lunaScripts.ts).
 
 export interface WizardUiCopy {
   back: string;
@@ -9,6 +9,19 @@ export interface WizardUiCopy {
   yourOwnName: string;
   aMagicalName: string;
   aBraveStranger: string;
+  /** Q1 hero-identity card: the hero can be a real family member or friend,
+   *  same free-text + suggestion-chip mechanism as Q3's "family" companion type. */
+  aFamilyMemberOrFriend: string;
+  /** Q1 hero-identity card: the hero can be a brave animal — reveals the
+   *  species-then-name two-row picker (see AnimalTypeChips), same mechanism
+   *  Q3's "pet" companion type uses. */
+  aBraveAnimal: string;
+  /** Title/aria-label of the "+" chip that lets the child type in an animal
+   *  not on the list — submitting it runs an AI check that it's really some
+   *  kind of animal before the name-suggestion row appears. */
+  addYourOwnAnimal: string;
+  /** Submit button label for that same custom-animal check. */
+  checkAnimal: string;
   surpriseMe: string;
   thisIsMyHero: string;
   yesImName: (name: string) => string;
@@ -17,6 +30,10 @@ export interface WizardUiCopy {
   thisIsTheWorld: string;
   companionNameHint: string;
   namePlaceholder: string;
+  /** Shown near Q4's free-text field — leaving it blank is a fully valid
+   *  path (Luna picks one of the category's own examples), same pattern as
+   *  companionNameHint. */
+  challengeHint: string;
   thisIsTheCompanion: string;
   thisIsTheChallenge: string;
   thisIsTheEnding: string;
@@ -32,7 +49,7 @@ export interface WizardUiCopy {
   medium: string;
   long: string;
   readyToHearStory: string;
-  bluebellLabel: string;
+  lunaLabel: string;
   areYouReady: string;
   producingDrama: string;
   dramaReady: string;
@@ -55,13 +72,18 @@ const EN: WizardUiCopy = {
   yourOwnName: "Your own name",
   aMagicalName: "A magical name",
   aBraveStranger: "A brave stranger",
+  aFamilyMemberOrFriend: "Family or a friend",
+  aBraveAnimal: "A brave animal",
+  addYourOwnAnimal: "Add your own animal",
+  checkAnimal: "Check!",
   surpriseMe: "Surprise me!",
   thisIsMyHero: "This is my hero!",
   yesImName: (name) => `Yes, I'm ${name}!`,
   tryAnother: "Try another 🎲",
   yourHeroIs: "Your hero is…",
   thisIsTheWorld: "This is the world!",
-  companionNameHint: "Give them a name — or leave it blank and Bluebell will choose!",
+  companionNameHint: "Give them a name — or leave it blank and Luna will choose!",
+  challengeHint: "Or leave it blank — Luna will surprise you!",
   namePlaceholder: "Name (optional)",
   thisIsTheCompanion: "This is the companion!",
   thisIsTheChallenge: "This is the challenge!",
@@ -78,7 +100,7 @@ const EN: WizardUiCopy = {
   medium: "Medium",
   long: "Long",
   readyToHearStory: "Ready to hear the story?",
-  bluebellLabel: "Bluebell",
+  lunaLabel: "Luna",
   areYouReady: "Are you ready?",
   producingDrama: "Producing Drama",
   dramaReady: "Drama Ready",
@@ -98,13 +120,18 @@ const HE: WizardUiCopy = {
   yourOwnName: "השם שלך",
   aMagicalName: "שם קסום",
   aBraveStranger: "זר אמיץ",
+  aFamilyMemberOrFriend: "בן משפחה או חבר",
+  aBraveAnimal: "חיה אמיצה",
+  addYourOwnAnimal: "הוסיפו חיה משלכם",
+  checkAnimal: "בדיקה!",
   surpriseMe: "הפתיעו אותי!",
   thisIsMyHero: "זה הגיבור שלי!",
   yesImName: (name) => `כן, אני ${name}!`,
   tryAnother: "נסה שוב 🎲",
   yourHeroIs: "הגיבור שלך הוא…",
   thisIsTheWorld: "זה העולם!",
-  companionNameHint: "תן להם שם — או השאר ריק ובלובל תבחר!",
+  companionNameHint: "תן להם שם — או השאר ריק ולונה תבחר!",
+  challengeHint: "או השאירו ריק — לונה תפתיע אתכם!",
   namePlaceholder: "שם (רשות)",
   thisIsTheCompanion: "זה בן הלוויה!",
   thisIsTheChallenge: "זה האתגר!",
@@ -121,7 +148,7 @@ const HE: WizardUiCopy = {
   medium: "בינוני",
   long: "ארוך",
   readyToHearStory: "מוכנים לשמוע את הסיפור?",
-  bluebellLabel: "בלובל",
+  lunaLabel: "לונה",
   areYouReady: "מוכנים?",
   producingDrama: "מפיקים דרמה",
   dramaReady: "הדרמה מוכנה",
@@ -141,13 +168,18 @@ const ES: WizardUiCopy = {
   yourOwnName: "Tu propio nombre",
   aMagicalName: "Un nombre mágico",
   aBraveStranger: "Un desconocido valiente",
+  aFamilyMemberOrFriend: "Familia o un amigo",
+  aBraveAnimal: "Un animal valiente",
+  addYourOwnAnimal: "Añade tu propio animal",
+  checkAnimal: "¡Comprobar!",
   surpriseMe: "¡Sorpréndeme!",
   thisIsMyHero: "¡Este es mi héroe!",
   yesImName: (name) => `¡Sí, soy ${name}!`,
   tryAnother: "Probar otro 🎲",
   yourHeroIs: "Tu héroe es…",
   thisIsTheWorld: "¡Este es el mundo!",
-  companionNameHint: "Dale un nombre — o déjalo en blanco y Bluebell elegirá!",
+  companionNameHint: "Dale un nombre — o déjalo en blanco y Luna elegirá!",
+  challengeHint: "O déjalo en blanco — ¡Luna te sorprenderá!",
   namePlaceholder: "Nombre (opcional)",
   thisIsTheCompanion: "¡Este es el compañero!",
   thisIsTheChallenge: "¡Este es el desafío!",
@@ -164,7 +196,7 @@ const ES: WizardUiCopy = {
   medium: "Media",
   long: "Larga",
   readyToHearStory: "¿Listos para escuchar la historia?",
-  bluebellLabel: "Bluebell",
+  lunaLabel: "Luna",
   areYouReady: "¿Listos?",
   producingDrama: "Produciendo la obra",
   dramaReady: "Obra lista",
@@ -184,13 +216,18 @@ const FR: WizardUiCopy = {
   yourOwnName: "Ton propre nom",
   aMagicalName: "Un nom magique",
   aBraveStranger: "Un inconnu courageux",
+  aFamilyMemberOrFriend: "Famille ou un ami",
+  aBraveAnimal: "Un animal courageux",
+  addYourOwnAnimal: "Ajoute ton propre animal",
+  checkAnimal: "Vérifier !",
   surpriseMe: "Surprends-moi !",
   thisIsMyHero: "C'est mon héros !",
   yesImName: (name) => `Oui, je suis ${name} !`,
   tryAnother: "Essayer un autre 🎲",
   yourHeroIs: "Ton héros est…",
   thisIsTheWorld: "C'est le monde !",
-  companionNameHint: "Donne-lui un nom — ou laisse vide et Bluebell choisira !",
+  companionNameHint: "Donne-lui un nom — ou laisse vide et Luna choisira !",
+  challengeHint: "Ou laisse vide — Luna te surprendra !",
   namePlaceholder: "Nom (facultatif)",
   thisIsTheCompanion: "C'est le compagnon !",
   thisIsTheChallenge: "C'est le défi !",
@@ -207,7 +244,7 @@ const FR: WizardUiCopy = {
   medium: "Moyenne",
   long: "Longue",
   readyToHearStory: "Prêt à écouter l'histoire ?",
-  bluebellLabel: "Bluebell",
+  lunaLabel: "Luna",
   areYouReady: "Prêts ?",
   producingDrama: "Production en cours",
   dramaReady: "Histoire prête",
@@ -227,13 +264,18 @@ const DE: WizardUiCopy = {
   yourOwnName: "Dein eigener Name",
   aMagicalName: "Ein magischer Name",
   aBraveStranger: "Ein mutiger Fremder",
+  aFamilyMemberOrFriend: "Familie oder ein Freund",
+  aBraveAnimal: "Ein mutiges Tier",
+  addYourOwnAnimal: "Füg dein eigenes Tier hinzu",
+  checkAnimal: "Prüfen!",
   surpriseMe: "Überrasch mich!",
   thisIsMyHero: "Das ist mein Held!",
   yesImName: (name) => `Ja, ich bin ${name}!`,
   tryAnother: "Anderen versuchen 🎲",
   yourHeroIs: "Dein Held ist…",
   thisIsTheWorld: "Das ist die Welt!",
-  companionNameHint: "Gib ihm einen Namen — oder lass es leer und Bluebell wählt!",
+  companionNameHint: "Gib ihm einen Namen — oder lass es leer und Luna wählt!",
+  challengeHint: "Oder lass es leer — Luna überrascht dich!",
   namePlaceholder: "Name (optional)",
   thisIsTheCompanion: "Das ist der Begleiter!",
   thisIsTheChallenge: "Das ist die Herausforderung!",
@@ -250,7 +292,7 @@ const DE: WizardUiCopy = {
   medium: "Mittel",
   long: "Lang",
   readyToHearStory: "Bereit, die Geschichte zu hören?",
-  bluebellLabel: "Bluebell",
+  lunaLabel: "Luna",
   areYouReady: "Bereit?",
   producingDrama: "Hörspiel wird produziert",
   dramaReady: "Hörspiel fertig",
@@ -270,13 +312,18 @@ const PT: WizardUiCopy = {
   yourOwnName: "Seu próprio nome",
   aMagicalName: "Um nome mágico",
   aBraveStranger: "Um estranho corajoso",
+  aFamilyMemberOrFriend: "Família ou um amigo",
+  aBraveAnimal: "Um animal corajoso",
+  addYourOwnAnimal: "Adicione seu próprio animal",
+  checkAnimal: "Verificar!",
   surpriseMe: "Me surpreenda!",
   thisIsMyHero: "Este é o meu herói!",
   yesImName: (name) => `Sim, eu sou ${name}!`,
   tryAnother: "Tentar outro 🎲",
   yourHeroIs: "Seu herói é…",
   thisIsTheWorld: "Este é o mundo!",
-  companionNameHint: "Dê um nome a ele — ou deixe em branco e o Bluebell escolherá!",
+  companionNameHint: "Dê um nome a ele — ou deixe em branco e o Luna escolherá!",
+  challengeHint: "Ou deixe em branco — a Luna vai te surpreender!",
   namePlaceholder: "Nome (opcional)",
   thisIsTheCompanion: "Este é o companheiro!",
   thisIsTheChallenge: "Este é o desafio!",
@@ -293,7 +340,7 @@ const PT: WizardUiCopy = {
   medium: "Média",
   long: "Longa",
   readyToHearStory: "Pronto para ouvir a história?",
-  bluebellLabel: "Bluebell",
+  lunaLabel: "Luna",
   areYouReady: "Prontos?",
   producingDrama: "Produzindo a peça",
   dramaReady: "Peça pronta",
@@ -313,13 +360,18 @@ const IT: WizardUiCopy = {
   yourOwnName: "Il tuo nome",
   aMagicalName: "Un nome magico",
   aBraveStranger: "Uno sconosciuto coraggioso",
+  aFamilyMemberOrFriend: "Famiglia o un amico",
+  aBraveAnimal: "Un animale coraggioso",
+  addYourOwnAnimal: "Aggiungi il tuo animale",
+  checkAnimal: "Verifica!",
   surpriseMe: "Sorprendimi!",
   thisIsMyHero: "Questo è il mio eroe!",
   yesImName: (name) => `Sì, sono ${name}!`,
   tryAnother: "Provane un altro 🎲",
   yourHeroIs: "Il tuo eroe è…",
   thisIsTheWorld: "Questo è il mondo!",
-  companionNameHint: "Dagli un nome — o lascia vuoto e Bluebell sceglierà!",
+  companionNameHint: "Dagli un nome — o lascia vuoto e Luna sceglierà!",
+  challengeHint: "O lascia vuoto — Luna ti sorprenderà!",
   namePlaceholder: "Nome (facoltativo)",
   thisIsTheCompanion: "Questo è il compagno!",
   thisIsTheChallenge: "Questa è la sfida!",
@@ -336,7 +388,7 @@ const IT: WizardUiCopy = {
   medium: "Media",
   long: "Lunga",
   readyToHearStory: "Pronti ad ascoltare la storia?",
-  bluebellLabel: "Bluebell",
+  lunaLabel: "Luna",
   areYouReady: "Pronti?",
   producingDrama: "Produzione in corso",
   dramaReady: "Storia pronta",
@@ -356,13 +408,18 @@ const AR: WizardUiCopy = {
   yourOwnName: "اسمك الخاص",
   aMagicalName: "اسم سحري",
   aBraveStranger: "غريب شجاع",
+  aFamilyMemberOrFriend: "أحد أفراد العائلة أو صديق",
+  aBraveAnimal: "حيوان شجاع",
+  addYourOwnAnimal: "أضف حيوانك الخاص",
+  checkAnimal: "تحقق!",
   surpriseMe: "فاجئني!",
   thisIsMyHero: "هذا هو بطلي!",
   yesImName: (name) => `نعم، أنا ${name}!`,
   tryAnother: "جرّب آخر 🎲",
   yourHeroIs: "بطلك هو…",
   thisIsTheWorld: "هذا هو العالم!",
-  companionNameHint: "أعطه اسماً — أو اتركه فارغاً وستختار بلوبيل!",
+  companionNameHint: "أعطه اسماً — أو اتركه فارغاً وستختار لونا!",
+  challengeHint: "أو اتركه فارغاً — ستفاجئك لونا!",
   namePlaceholder: "الاسم (اختياري)",
   thisIsTheCompanion: "هذا هو الرفيق!",
   thisIsTheChallenge: "هذا هو التحدي!",
@@ -379,7 +436,7 @@ const AR: WizardUiCopy = {
   medium: "متوسطة",
   long: "طويلة",
   readyToHearStory: "هل أنت مستعد لسماع القصة؟",
-  bluebellLabel: "بلوبيل",
+  lunaLabel: "لونا",
   areYouReady: "هل أنتم مستعدون؟",
   producingDrama: "جاري إنتاج الدراما",
   dramaReady: "الدراما جاهزة",
@@ -399,13 +456,18 @@ const JA: WizardUiCopy = {
   yourOwnName: "あなた自身の名前",
   aMagicalName: "魔法の名前",
   aBraveStranger: "勇敢な見知らぬ人",
+  aFamilyMemberOrFriend: "家族か友達",
+  aBraveAnimal: "勇敢な動物",
+  addYourOwnAnimal: "自分の動物を追加",
+  checkAnimal: "確認する!",
   surpriseMe: "サプライズして!",
   thisIsMyHero: "これが私のヒーローです!",
   yesImName: (name) => `はい、私は${name}です!`,
   tryAnother: "別のものを試す 🎲",
   yourHeroIs: "あなたのヒーローは…",
   thisIsTheWorld: "これが世界です!",
-  companionNameHint: "名前をつけてください——空欄ならブルーベルが選びます!",
+  companionNameHint: "名前をつけてください——空欄ならルナが選びます!",
+  challengeHint: "空欄のままでもOK——ルナが驚かせてくれます!",
   namePlaceholder: "名前(任意)",
   thisIsTheCompanion: "これが仲間です!",
   thisIsTheChallenge: "これが試練です!",
@@ -422,7 +484,7 @@ const JA: WizardUiCopy = {
   medium: "普通",
   long: "長い",
   readyToHearStory: "物語を聞く準備はいいですか?",
-  bluebellLabel: "ブルーベル",
+  lunaLabel: "ルナ",
   areYouReady: "準備はいいですか?",
   producingDrama: "ドラマを制作中",
   dramaReady: "ドラマ完成",
@@ -442,13 +504,18 @@ const HI: WizardUiCopy = {
   yourOwnName: "आपका अपना नाम",
   aMagicalName: "एक जादुई नाम",
   aBraveStranger: "एक बहादुर अजनबी",
+  aFamilyMemberOrFriend: "परिवार या दोस्त",
+  aBraveAnimal: "एक बहादुर जानवर",
+  addYourOwnAnimal: "अपना खुद का जानवर जोड़ें",
+  checkAnimal: "जाँच करें!",
   surpriseMe: "मुझे चौंका दो!",
   thisIsMyHero: "यह मेरा नायक है!",
   yesImName: (name) => `हाँ, मैं ${name} हूँ!`,
   tryAnother: "दूसरा आज़माएँ 🎲",
   yourHeroIs: "आपका नायक है…",
   thisIsTheWorld: "यह दुनिया है!",
-  companionNameHint: "उन्हें एक नाम दें — या खाली छोड़ें और ब्लूबेल चुन लेगी!",
+  companionNameHint: "उन्हें एक नाम दें — या खाली छोड़ें और लूना चुन लेगी!",
+  challengeHint: "या इसे खाली छोड़ दें — लूना आपको चौंका देगी!",
   namePlaceholder: "नाम (वैकल्पिक)",
   thisIsTheCompanion: "यह साथी है!",
   thisIsTheChallenge: "यह चुनौती है!",
@@ -465,7 +532,7 @@ const HI: WizardUiCopy = {
   medium: "मध्यम",
   long: "लंबी",
   readyToHearStory: "कहानी सुनने के लिए तैयार हैं?",
-  bluebellLabel: "ब्लूबेल",
+  lunaLabel: "लूना",
   areYouReady: "तैयार हैं?",
   producingDrama: "नाटक तैयार हो रहा है",
   dramaReady: "नाटक तैयार है",
@@ -538,6 +605,67 @@ const COMPANION_SURPRISE_NAMES: Record<Q3CompanionTypeId, string[]> = {
   family: ["Mom", "Dad", "Grandpa", "Grandma", "my brother", "my sister"],
 };
 
+// Localized relationship-word fallback chips for the "family member" companion
+// type — used instead of COMPANION_SURPRISE_NAMES.family whenever the story
+// language is known, and prepended with the child's real siblings (fetched
+// from child_profiles) by the caller when any exist, so this list only needs
+// to cover generic relations, not actual names.
+const FAMILY_RELATION_WORDS_BY_LANG: Record<string, string[]> = {
+  en: ["Mom", "Dad", "Grandpa", "Grandma", "my brother", "my sister"],
+  he: ["אמא", "אבא", "סבא", "סבתא", "אח שלי", "אחות שלי"],
+  es: ["Mamá", "Papá", "Abuelo", "Abuela", "mi hermano", "mi hermana"],
+  fr: ["Maman", "Papa", "Grand-père", "Grand-mère", "mon frère", "ma sœur"],
+  de: ["Mama", "Papa", "Opa", "Oma", "mein Bruder", "meine Schwester"],
+  pt: ["Mãe", "Pai", "Avô", "Avó", "meu irmão", "minha irmã"],
+  it: ["Mamma", "Papà", "Nonno", "Nonna", "mio fratello", "mia sorella"],
+  ar: ["أمي", "أبي", "جدي", "جدتي", "أخي", "أختي"],
+  ja: ["ママ", "パパ", "おじいちゃん", "おばあちゃん", "お兄ちゃん", "お姉ちゃん"],
+  hi: ["मम्मी", "पापा", "दादा", "दादी", "मेरा भाई", "मेरी बहन"],
+};
+
+export function getFamilyRelationWords(language?: string): string[] {
+  return (language && FAMILY_RELATION_WORDS_BY_LANG[language]) || FAMILY_RELATION_WORDS_BY_LANG.en;
+}
+
+// ── Animal types — shared between Q1's "Brave animal" hero option and Q3's
+// "pet" companion type. Picking a type narrows the name suggestions to that
+// species (Rex/Buddy for a dog, Whiskers/Luna for a cat, etc.) instead of one
+// generic pool. Names stay English/proper-noun across all languages, same
+// precedent as MAGICAL_NAME_CHIPS/SURPRISE_COMPANIONS elsewhere in this
+// wizard — only the type label (dog/cat/tiger/dolphin) needs translation.
+export type AnimalTypeId = "dog" | "cat" | "tiger" | "dolphin";
+
+export interface AnimalTypeMeta { id: AnimalTypeId; emoji: string; label: string; names: string[] }
+
+const ANIMAL_EMOJI: Record<AnimalTypeId, string> = { dog: "🐕", cat: "🐈", tiger: "🐅", dolphin: "🐬" };
+
+const ANIMAL_NAMES: Record<AnimalTypeId, string[]> = {
+  dog: ["Rex", "Buddy", "Max", "Bella"],
+  cat: ["Whiskers", "Luna", "Mittens", "Shadow"],
+  tiger: ["Rajah", "Stripes", "Blaze", "Tigress"],
+  dolphin: ["Splash", "Marina", "Echo", "Finn"],
+};
+
+const ANIMAL_LABELS_BY_LANG: Record<string, Record<AnimalTypeId, string>> = {
+  en: { dog: "Dog", cat: "Cat", tiger: "Tiger", dolphin: "Dolphin" },
+  he: { dog: "כלב", cat: "חתול", tiger: "טיגריס", dolphin: "דולפין" },
+  es: { dog: "Perro", cat: "Gato", tiger: "Tigre", dolphin: "Delfín" },
+  fr: { dog: "Chien", cat: "Chat", tiger: "Tigre", dolphin: "Dauphin" },
+  de: { dog: "Hund", cat: "Katze", tiger: "Tiger", dolphin: "Delfin" },
+  pt: { dog: "Cachorro", cat: "Gato", tiger: "Tigre", dolphin: "Golfinho" },
+  it: { dog: "Cane", cat: "Gatto", tiger: "Tigre", dolphin: "Delfino" },
+  ar: { dog: "كلب", cat: "قطة", tiger: "نمر", dolphin: "دولفين" },
+  ja: { dog: "犬", cat: "猫", tiger: "トラ", dolphin: "イルカ" },
+  hi: { dog: "कुत्ता", cat: "बिल्ली", tiger: "बाघ", dolphin: "डॉल्फ़िन" },
+};
+
+export function getAnimalTypes(language?: string): AnimalTypeMeta[] {
+  const labels = (language && ANIMAL_LABELS_BY_LANG[language]) || ANIMAL_LABELS_BY_LANG.en;
+  return (Object.keys(ANIMAL_EMOJI) as AnimalTypeId[]).map((id) => ({
+    id, emoji: ANIMAL_EMOJI[id], label: labels[id], names: ANIMAL_NAMES[id],
+  }));
+}
+
 const COMPANION_LABELS_BY_LANG: Record<string, Record<Q3CompanionTypeId, string>> = {
   en: { friend: "Best friend", pet: "A pet", creature: "A magical creature", family: "A family member" },
   he: { friend: "חבר הכי טוב", pet: "חיית מחמד", creature: "יצור קסום", family: "בן משפחה" },
@@ -554,7 +682,8 @@ const COMPANION_LABELS_BY_LANG: Record<string, Record<Q3CompanionTypeId, string>
 export function getCompanionTypes(language?: string): CompanionTypeMeta[] {
   const labels = (language && COMPANION_LABELS_BY_LANG[language]) || COMPANION_LABELS_BY_LANG.en;
   return (Object.keys(COMPANION_GEMINI_LABELS) as Q3CompanionTypeId[]).map((id) => ({
-    id, label: labels[id], geminiLabel: COMPANION_GEMINI_LABELS[id], emoji: COMPANION_EMOJI[id], surpriseNames: COMPANION_SURPRISE_NAMES[id],
+    id, label: labels[id], geminiLabel: COMPANION_GEMINI_LABELS[id], emoji: COMPANION_EMOJI[id],
+    surpriseNames: id === "family" ? getFamilyRelationWords(language) : COMPANION_SURPRISE_NAMES[id],
   }));
 }
 

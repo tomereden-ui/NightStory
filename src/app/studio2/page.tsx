@@ -1110,6 +1110,10 @@ export default function Studio2Page() {
   // clear it from the parent without duplicating its reset logic here).
   const [wizardResetKey, setWizardResetKey] = useState(0);
   const [wizardResetConfirm, setWizardResetConfirm] = useState(false);
+  // Mirrors chatLocked's role for the Chat tab: locks the language selector
+  // once the wizard has real progress, so switching languages mid-story
+  // (which would leave earlier answers in the old language) isn't possible.
+  const [wizardStarted, setWizardStarted]   = useState(false);
   const [scriptResetConfirm, setScriptResetConfirm] = useState(false);
 
   // ─── Lesson state ───────────────────────────────────────────────────────────
@@ -1543,8 +1547,14 @@ export default function Studio2Page() {
     for (const name of uniqueChars) {
       const t: CharacterType = (storyCharacters?.[name]?.type as CharacterType) ?? (name === "Narrator" ? "narrator" : "adult");
       defaultTypes[name] = t;
-      const willRegenerate = name !== "Narrator" && (!storyCharacters || !!storyCharacters[name]?.visualDescription);
-      if (!willRegenerate) defaultAvatars[name] = resolveCharacterAvatar(name, t, bank, voicePool);
+      // A persisted avatarUrl on the profile is the story's canonical cast
+      // art (matched at production time or via the admin retrofit) — reuse it
+      // instead of re-running generation, so Studio and the story card always
+      // show the same face for the same character.
+      const persisted = storyCharacters?.[name]?.avatarUrl;
+      const willRegenerate = name !== "Narrator" && t !== "narrator" && !persisted
+        && (!storyCharacters || !!storyCharacters[name]?.visualDescription);
+      if (!willRegenerate) defaultAvatars[name] = resolveCharacterAvatar(name, t, bank, voicePool, persisted);
     }
     setCharacterTypes(defaultTypes);
     setCharacterAvatars(defaultAvatars);
@@ -1557,10 +1567,13 @@ export default function Studio2Page() {
         if (info.visualDescription) descs[name] = info.visualDescription;
       }
       setCharacterDescriptions(descs);
-      // Rich descriptions from story generation — generate avatar via Imagen ad-hoc
+      // Rich descriptions from story generation — generate avatar via Imagen
+      // ad-hoc, but only for characters with no persisted avatarUrl yet (an
+      // existing story opened in Studio already has its canonical cast art).
       await Promise.allSettled(
         uniqueChars
-          .filter((name) => storyCharacters[name]?.visualDescription && name !== "Narrator")
+          .filter((name) => storyCharacters[name]?.visualDescription && !storyCharacters[name]?.avatarUrl
+            && name !== "Narrator" && storyCharacters[name]?.type !== "narrator")
           .map(async (name) => {
             const { type, visualDescription } = storyCharacters[name];
             try {
@@ -2395,6 +2408,7 @@ export default function Studio2Page() {
                       try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
                       setWizardResetKey((k) => k + 1);
                       setWizardResetConfirm(false);
+                      setWizardStarted(false);
                     }}
                     className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
                     style={{ background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171" }}
@@ -2419,7 +2433,10 @@ export default function Studio2Page() {
                   <span>Start over</span>
                 </button>
               )}
-              {!wizardResetConfirm && (
+              {/* Switching mid-story would leave earlier answers in the old
+                  language, so — same as Chat with Luna — the toggle is only
+                  offered before the wizard has any real progress. */}
+              {!wizardResetConfirm && !wizardStarted && (
                 <LanguageToggle
                   value={storyLang as Language}
                   onLanguageChange={(lang) => {
@@ -2427,6 +2444,7 @@ export default function Studio2Page() {
                     setStoryLang(lang);
                     setWizardResetKey((k) => k + 1);
                     setWizardResetConfirm(false);
+                    setWizardStarted(false);
                   }}
                 />
               )}
@@ -2436,6 +2454,9 @@ export default function Studio2Page() {
               contentLanguage={storyLang}
               childName={activeChild?.name}
               childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
+              childId={activeChild?.id}
+              showInternalReset={false}
+              onFirstAnswer={() => setWizardStarted(true)}
               onGenerating={() => {
                 setScriptBlocks([]);
                 setMoralLessons([]);

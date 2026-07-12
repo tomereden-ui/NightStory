@@ -24,14 +24,25 @@ function inferCharacterType(name: string): CharacterType {
   return "child";
 }
 
-export default function ReadOnlyCastPanel({ blocks }: { blocks: ScriptBlock[] }) {
+export default function ReadOnlyCastPanel({
+  blocks,
+  characterAvatars,
+}: {
+  blocks: ScriptBlock[];
+  /** Real avatar-bank portraits, keyed by characterName — same map already
+   * resolved for the script/dialogue cards (see characterAvatars.ts). When a
+   * character isn't in it (bank still loading, or empty), falls back to a
+   * deterministic DiceBear placeholder so the row never looks broken. */
+  characterAvatars?: Record<string, string>;
+}) {
   const cast = Array.from(
     blocks
       .filter((b) => b.characterName !== "SFX")
       .reduce<Map<string, string>>((map, b) => {
         if (!map.has(b.characterName)) {
+          const bankUrl = characterAvatars?.[b.characterName];
           const type = inferCharacterType(b.characterName);
-          map.set(b.characterName, buildAvatarUrl(b.characterName, type));
+          map.set(b.characterName, bankUrl || buildAvatarUrl(b.characterName, type));
         }
         return map;
       }, new Map())
@@ -70,7 +81,17 @@ function ReadOnlyCharacterCard({ characterName, avatarUrl }: { characterName: st
       >
         {!imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt={characterName} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+          <img
+            src={avatarUrl}
+            alt={characterName}
+            className="w-full h-full object-cover"
+            // Avatar-bank portraits are bust shots on a starry background —
+            // the raw frame often catches a plain/light patch right at the
+            // shoulders. Zooming in and biasing the crop toward the top
+            // keeps the face centered and pushes that area out of frame.
+            style={{ transform: "scale(1.45)", objectPosition: "50% 15%" }}
+            onError={() => setImgError(true)}
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center"
             style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))" }}>

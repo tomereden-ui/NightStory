@@ -4,7 +4,7 @@ import { trackGemini } from "@/lib/usageTracker";
 import fs from "fs";
 import path from "path";
 import { inferCompanionAbility } from "@/utils/inferCompanionAbility";
-import { MOOD_LABELS } from "@/constants/bluebellScripts";
+import { MOOD_LABELS } from "@/constants/lunaScripts";
 import type { StorySeeds } from "@/utils/buildStoryPrompt";
 import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { HEBREW_VOICE_POOL } from "@/config/hebrewVoices";
+import { TTS_ENGINES, DEFAULT_ENGINE_SETTINGS, type TtsEngine, type EngineSettings } from "@/config/ttsEngines";
 
 const HEBREW_VOICE_IDS = new Set(HEBREW_VOICE_POOL.map((v) => v.id));
 
@@ -11,12 +12,13 @@ const ADMIN_EMAIL = "tomereden@gmail.com";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Engine = "elevenlabs" | "gemini" | "chirp3hd";
+type Engine = "gemini" | "gemini31" | "elevenlabs" | "chirp3hd";
 type Lang = "en" | "he";
 
 const ENGINE_LABELS: Record<Engine, string> = {
-  elevenlabs: "ElevenLabs",
   gemini: "Gemini 2.5 Flash TTS",
+  gemini31: "Gemini 3.1 Flash TTS",
+  elevenlabs: "ElevenLabs",
   chirp3hd: "Google Chirp3-HD",
 };
 
@@ -79,6 +81,71 @@ export default function VoiceManagerPage() {
   const [generating, setGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const audioUrlsRef = useRef<string[]>([]);
+
+  // ── Engine Settings (production-affecting — separate from the audition
+  // engine toggle above) ──────────────────────────────────────────────────
+  const [engineSettings, setEngineSettings] = useState<EngineSettings>(DEFAULT_ENGINE_SETTINGS);
+  const [engineSettingsLoaded, setEngineSettingsLoaded] = useState(false);
+  const [savingEngine, setSavingEngine] = useState<TtsEngine | null>(null);
+  const [engineSettingsError, setEngineSettingsError] = useState<string | null>(null);
+  const [regenText, setRegenText] = useState("");
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenResult, setRegenResult] = useState<{ totalCombos: number; succeeded: number; failed: number } | null>(null);
+  const [regenError, setRegenError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/tts-engine-settings", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { settings: DEFAULT_ENGINE_SETTINGS }))
+      .then((data: { settings?: EngineSettings }) => setEngineSettings(data.settings ?? DEFAULT_ENGINE_SETTINGS))
+      .catch(() => setEngineSettings(DEFAULT_ENGINE_SETTINGS))
+      .finally(() => setEngineSettingsLoaded(true));
+  }, []);
+
+  const toggleEngine = async (id: TtsEngine, enabled: boolean) => {
+    const prev = engineSettings;
+    setEngineSettings((s) => ({ ...s, [id]: enabled }));
+    setSavingEngine(id);
+    setEngineSettingsError(null);
+    try {
+      const res = await fetch("/api/admin/tts-engine-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { [id]: enabled } }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Save failed: ${res.status}`);
+      }
+    } catch (err) {
+      setEngineSettings(prev); // revert on failure
+      setEngineSettingsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingEngine(null);
+    }
+  };
+
+  const enabledEngineIds = TTS_ENGINES.filter((e) => engineSettings[e.id]).map((e) => e.id);
+
+  const handleRegeneratePreviews = async () => {
+    if (!regenText.trim() || regenerating) return;
+    setRegenerating(true);
+    setRegenError(null);
+    setRegenResult(null);
+    try {
+      const res = await fetch("/api/admin/generate-voice-samples", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applyAll: true, text: regenText, engines: enabledEngineIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
+      setRegenResult({ totalCombos: data.totalCombos, succeeded: data.succeeded, failed: data.failed });
+    } catch (err) {
+      setRegenError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   const geminiVoices: ManagerVoice[] = useMemo(
     () => PRESET_VOICES.map((p) => ({ id: p.geminiVoiceName, name: p.name, description: p.desc, languages: ["en"] as Lang[] })),
@@ -219,11 +286,73 @@ export default function VoiceManagerPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#ddd", fontFamily: "monospace", padding: 24 }}>
       <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Voice Manager</h1>
-      <p style={{ color: "#666", fontSize: 13, marginBottom: 20 }}>Internal TTS audition tool — ElevenLabs, Gemini 2.5 Flash TTS &amp; Google Chirp3-HD. Not user-facing.</p>
+      <p style={{ color: "#666", fontSize: 13, marginBottom: 20 }}>Internal TTS audition tool — Gemini 2.5, Gemini 3.1, ElevenLabs &amp; Google Chirp3-HD. Not user-facing.</p>
+
+      {/* ── Engine Settings — production-affecting ─────────────────────── */}
+      <div style={{ border: "1px solid #2a2a3a", borderRadius: 8, padding: 16, marginBottom: 24, background: "#0d0d14" }}>
+        <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Engine Settings</p>
+        <p style={{ color: "#666", fontSize: 12, marginBottom: 12 }}>
+          Unchecking an engine removes its voices from new character assignments in Studio going forward
+          (existing assignments keep working). For Gemini, the checked model synthesizes real stories —
+          3.1 wins if both are checked. Chirp3-HD controls whether the automatic emergency fallback may run.
+        </p>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
+          {TTS_ENGINES.map((e) => (
+            <label key={e.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: engineSettingsLoaded ? "pointer" : "default", opacity: engineSettingsLoaded ? 1 : 0.5 }}>
+              <input
+                type="checkbox"
+                checked={engineSettings[e.id]}
+                disabled={!engineSettingsLoaded || savingEngine === e.id}
+                onChange={(ev) => toggleEngine(e.id, ev.target.checked)}
+              />
+              {e.label}
+              {savingEngine === e.id && <span style={{ color: "#666", fontSize: 11 }}>saving…</span>}
+            </label>
+          ))}
+        </div>
+        {engineSettingsError && <p style={{ color: "#f87171", fontSize: 12, marginBottom: 8 }}>{engineSettingsError}</p>}
+
+        <div style={{ borderTop: "1px solid #222", marginTop: 12, paddingTop: 12 }}>
+          <p style={{ fontSize: 12, color: "#999", marginBottom: 6 }}>
+            Regenerate Previews — generates a sample for every voice under the checked engines above, using
+            the sentence below, in every supported language. Replaces existing preview samples.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              value={regenText}
+              onChange={(e) => setRegenText(e.target.value)}
+              placeholder="Sentence to use for every preview…"
+              style={{ flex: 1, background: "#12121a", border: "1px solid #333", borderRadius: 6, padding: "8px 10px", color: "#ddd", fontFamily: "monospace", fontSize: 13 }}
+            />
+            <button
+              onClick={handleRegeneratePreviews}
+              disabled={!regenText.trim() || regenerating || enabledEngineIds.length === 0}
+              style={{
+                padding: "8px 16px", borderRadius: 6, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+                background: !regenText.trim() || regenerating || enabledEngineIds.length === 0 ? "#222" : "#7c3aed",
+                color: !regenText.trim() || regenerating || enabledEngineIds.length === 0 ? "#555" : "#fff",
+                border: "none", cursor: !regenText.trim() || regenerating ? "not-allowed" : "pointer",
+              }}
+            >
+              {regenerating ? "Regenerating…" : "Regenerate Previews"}
+            </button>
+          </div>
+          {enabledEngineIds.length === 0 && engineSettingsLoaded && (
+            <p style={{ color: "#fbbf24", fontSize: 12, marginTop: 6 }}>No engines checked — nothing to regenerate.</p>
+          )}
+          {regenError && <p style={{ color: "#f87171", fontSize: 12, marginTop: 6 }}>{regenError}</p>}
+          {regenResult && (
+            <p style={{ color: "#4ade80", fontSize: 12, marginTop: 6 }}>
+              Done — {regenResult.succeeded}/{regenResult.totalCombos} samples generated{regenResult.failed > 0 ? `, ${regenResult.failed} failed` : ""}.
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Engine toggle */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {(["elevenlabs", "gemini", "chirp3hd"] as Engine[]).map((e) => (
+        {(["gemini", "gemini31", "elevenlabs", "chirp3hd"] as Engine[]).map((e) => (
           <button
             key={e}
             onClick={() => setEngine(e)}
@@ -312,9 +441,9 @@ export default function VoiceManagerPage() {
             </div>
           )}
 
-          {engine === "gemini" && (
+          {(engine === "gemini" || engine === "gemini31") && (
             <p style={{ marginTop: 16, fontSize: 12, color: "#666" }}>
-              Gemini 2.5 Flash TTS exposes no synthesis parameters beyond voice selection — no pitch/speed/style controls exist in this API.
+              {ENGINE_LABELS[engine]} exposes no synthesis parameters beyond voice selection — no pitch/speed/style controls exist in this API.
             </p>
           )}
 

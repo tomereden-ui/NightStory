@@ -1,6 +1,6 @@
-// All Bluebell narrator copy lives here — nowhere else.
+// All Luna narrator copy lives here — nowhere else.
 
-export interface BluebellCopy {
+export interface LunaCopy {
   q1: string;
   q1Confirm: string;
   q2: string;
@@ -15,6 +15,11 @@ export interface BluebellCopy {
   hereWeGo: string;
   q1TextOwn: string;
   q1TextStranger: string;
+  q1TextFamilyFriend: string;
+  q1TextAnimal: string;
+  /** Placeholder for the free-text field shown after tapping the "+" chip
+   *  in Q1's animal picker, before the AI has confirmed it's really an animal. */
+  q1TextCustomAnimal: string;
   q3Nudge: string;
   q4Hint: string;
   emptyError: string;
@@ -23,7 +28,7 @@ export interface BluebellCopy {
   apiError: string;
 }
 
-const EN: BluebellCopy = {
+const EN: LunaCopy = {
   q1: "Every adventure needs a hero. Who's ours tonight?",
   q1Confirm: "Perfect! Our hero is ready.",
   q2: "Now — in what world does our story take place?",
@@ -39,20 +44,23 @@ const EN: BluebellCopy = {
   hereWeGo: "...Here... we... go.",
   q1TextOwn: "What's your name?",
   q1TextStranger: "Give the stranger a name...",
+  q1TextFamilyFriend: "Who's coming along? Give them a name...",
+  q1TextAnimal: "Give your animal hero a name...",
+  q1TextCustomAnimal: "What kind of animal? (e.g. penguin, elephant...)",
   q3Nudge: "Someone you know? They can be in the story too.",
-  q4Hint: "Keep it short — Bluebell works best with one idea.",
-  emptyError: "Give Bluebell something to work with!",
+  q4Hint: "Keep it short — Luna works best with one idea.",
+  emptyError: "Give Luna something to work with!",
   generating: (world) => [
-    "Bluebell is weaving the tale...",
+    "Luna is weaving the tale...",
     "Finding our hero's voice...",
     `${world} is taking shape...`,
     "Almost ready...",
   ],
-  generatingLong: "Almost there — Bluebell is working on something special...",
-  apiError: "Bluebell lost the thread — shall we try again?",
+  generatingLong: "Almost there — Luna is working on something special...",
+  apiError: "Luna lost the thread — shall we try again?",
 };
 
-const HE: BluebellCopy = {
+const HE: LunaCopy = {
   q1: "כל הרפתקה צריכה גיבור. מי יהיה הגיבור שלנו הערב?",
   q1Confirm: "מושלם! הגיבור שלנו מוכן.",
   q2: "עכשיו — באיזה עולם מתרחש הסיפור שלנו?",
@@ -68,20 +76,23 @@ const HE: BluebellCopy = {
   hereWeGo: "...ו... יוצאים... לדרך.",
   q1TextOwn: "מה השם שלך?",
   q1TextStranger: "תן שם לזר...",
+  q1TextFamilyFriend: "מי מצטרף להרפתקה? תן להם שם...",
+  q1TextAnimal: "תן לגיבור החיה שלך שם...",
+  q1TextCustomAnimal: "איזו חיה? (למשל פינגווין, פיל...)",
   q3Nudge: "מישהו שאתה מכיר? גם הם יכולים להיות בסיפור.",
-  q4Hint: "שמרו על זה קצר — בלובל עובדת הכי טוב עם רעיון אחד.",
-  emptyError: "תנו לבלובל משהו לעבוד איתו!",
+  q4Hint: "שמרו על זה קצר — לונה עובדת הכי טוב עם רעיון אחד.",
+  emptyError: "תנו ללונה משהו לעבוד איתו!",
   generating: (world) => [
-    "בלובל אורגת את הסיפור...",
+    "לונה אורגת את הסיפור...",
     "מוצאת את הקול של הגיבור שלנו...",
     `${world} מקבל צורה...`,
     "כמעט מוכן...",
   ],
-  generatingLong: "עוד רגע — בלובל עובדת על משהו מיוחד...",
-  apiError: "בלובל איבדה את החוט — ננסה שוב?",
+  generatingLong: "עוד רגע — לונה עובדת על משהו מיוחד...",
+  apiError: "לונה איבדה את החוט — ננסה שוב?",
 };
 
-const ES: BluebellCopy = {
+const ES: LunaCopy = {
   q1: "Toda aventura necesita un héroe. ¿Quién será el nuestro esta noche?",
   q1Confirm: "¡Perfecto! Nuestro héroe está listo.",
   q2: "Ahora — ¿en qué mundo transcurre nuestra historia?",
@@ -97,20 +108,23 @@ const ES: BluebellCopy = {
   hereWeGo: "...Aquí... vamos...",
   q1TextOwn: "¿Cómo te llamas?",
   q1TextStranger: "Dale un nombre al desconocido...",
+  q1TextFamilyFriend: "¿Quién los acompaña? Dales un nombre...",
+  q1TextAnimal: "Dale un nombre a tu héroe animal...",
+  q1TextCustomAnimal: "¿Qué animal? (p. ej. pingüino, elefante...)",
   q3Nudge: "¿Alguien que conoces? También puede estar en la historia.",
-  q4Hint: "Que sea breve — Bluebell funciona mejor con una sola idea.",
-  emptyError: "¡Dale a Bluebell algo con qué trabajar!",
+  q4Hint: "Que sea breve — Luna funciona mejor con una sola idea.",
+  emptyError: "¡Dale a Luna algo con qué trabajar!",
   generating: (world) => [
-    "Bluebell está tejiendo el cuento...",
+    "Luna está tejiendo el cuento...",
     "Encontrando la voz de nuestro héroe...",
     `${world} está tomando forma...`,
     "Casi listo...",
   ],
-  generatingLong: "Ya casi — Bluebell está trabajando en algo especial...",
-  apiError: "Bluebell perdió el hilo — ¿lo intentamos de nuevo?",
+  generatingLong: "Ya casi — Luna está trabajando en algo especial...",
+  apiError: "Luna perdió el hilo — ¿lo intentamos de nuevo?",
 };
 
-const FR: BluebellCopy = {
+const FR: LunaCopy = {
   q1: "Chaque aventure a besoin d'un héros. Qui sera le nôtre ce soir ?",
   q1Confirm: "Parfait ! Notre héros est prêt.",
   q2: "Maintenant — dans quel monde notre histoire se déroule-t-elle ?",
@@ -126,20 +140,23 @@ const FR: BluebellCopy = {
   hereWeGo: "...Et... on y... va.",
   q1TextOwn: "Quel est ton nom ?",
   q1TextStranger: "Donne un nom à l'inconnu...",
+  q1TextFamilyFriend: "Qui les accompagne ? Donne-leur un nom...",
+  q1TextAnimal: "Donne un nom à ton héros animal...",
+  q1TextCustomAnimal: "Quel animal ? (ex. pingouin, éléphant...)",
   q3Nudge: "Quelqu'un que tu connais ? Il peut aussi être dans l'histoire.",
-  q4Hint: "Reste bref — Bluebell fonctionne mieux avec une seule idée.",
-  emptyError: "Donne à Bluebell quelque chose à utiliser !",
+  q4Hint: "Reste bref — Luna fonctionne mieux avec une seule idée.",
+  emptyError: "Donne à Luna quelque chose à utiliser !",
   generating: (world) => [
-    "Bluebell tisse le récit...",
+    "Luna tisse le récit...",
     "À la recherche de la voix de notre héros...",
     `${world} prend forme...`,
     "Presque prêt...",
   ],
-  generatingLong: "Presque là — Bluebell travaille sur quelque chose de spécial...",
-  apiError: "Bluebell a perdu le fil — on réessaie ?",
+  generatingLong: "Presque là — Luna travaille sur quelque chose de spécial...",
+  apiError: "Luna a perdu le fil — on réessaie ?",
 };
 
-const DE: BluebellCopy = {
+const DE: LunaCopy = {
   q1: "Jedes Abenteuer braucht einen Helden. Wer wird unserer heute Abend sein?",
   q1Confirm: "Perfekt! Unser Held ist bereit.",
   q2: "Jetzt — in welcher Welt spielt unsere Geschichte?",
@@ -155,20 +172,23 @@ const DE: BluebellCopy = {
   hereWeGo: "...Und... los... geht's.",
   q1TextOwn: "Wie heißt du?",
   q1TextStranger: "Gib dem Fremden einen Namen...",
+  q1TextFamilyFriend: "Wer begleitet sie? Gib ihnen einen Namen...",
+  q1TextAnimal: "Gib deinem tierischen Helden einen Namen...",
+  q1TextCustomAnimal: "Welches Tier? (z. B. Pinguin, Elefant...)",
   q3Nudge: "Jemand, den du kennst? Er kann auch in der Geschichte vorkommen.",
-  q4Hint: "Halte es kurz — Bluebell funktioniert am besten mit einer Idee.",
-  emptyError: "Gib Bluebell etwas zum Arbeiten!",
+  q4Hint: "Halte es kurz — Luna funktioniert am besten mit einer Idee.",
+  emptyError: "Gib Luna etwas zum Arbeiten!",
   generating: (world) => [
-    "Bluebell webt die Geschichte...",
+    "Luna webt die Geschichte...",
     "Findet die Stimme unseres Helden...",
     `${world} nimmt Gestalt an...`,
     "Fast fertig...",
   ],
-  generatingLong: "Gleich geschafft — Bluebell arbeitet an etwas Besonderem...",
-  apiError: "Bluebell hat den Faden verloren — sollen wir es noch einmal versuchen?",
+  generatingLong: "Gleich geschafft — Luna arbeitet an etwas Besonderem...",
+  apiError: "Luna hat den Faden verloren — sollen wir es noch einmal versuchen?",
 };
 
-const PT: BluebellCopy = {
+const PT: LunaCopy = {
   q1: "Toda aventura precisa de um herói. Quem será o nosso esta noite?",
   q1Confirm: "Perfeito! Nosso herói está pronto.",
   q2: "Agora — em que mundo nossa história se passa?",
@@ -184,20 +204,23 @@ const PT: BluebellCopy = {
   hereWeGo: "...Lá... vamos... nós.",
   q1TextOwn: "Qual é o seu nome?",
   q1TextStranger: "Dê um nome ao estranho...",
+  q1TextFamilyFriend: "Quem vai junto? Dê um nome a eles...",
+  q1TextAnimal: "Dê um nome ao seu herói animal...",
+  q1TextCustomAnimal: "Que animal? (ex. pinguim, elefante...)",
   q3Nudge: "Alguém que você conhece? Também pode estar na história.",
-  q4Hint: "Seja breve — Bluebell funciona melhor com uma ideia.",
-  emptyError: "Dê ao Bluebell algo para trabalhar!",
+  q4Hint: "Seja breve — Luna funciona melhor com uma ideia.",
+  emptyError: "Dê à Luna algo para trabalhar!",
   generating: (world) => [
-    "Bluebell está tecendo a história...",
+    "Luna está tecendo a história...",
     "Encontrando a voz do nosso herói...",
     `${world} está tomando forma...`,
     "Quase pronto...",
   ],
-  generatingLong: "Quase lá — Bluebell está trabalhando em algo especial...",
-  apiError: "Bluebell perdeu o fio — vamos tentar de novo?",
+  generatingLong: "Quase lá — Luna está trabalhando em algo especial...",
+  apiError: "Luna perdeu o fio — vamos tentar de novo?",
 };
 
-const IT: BluebellCopy = {
+const IT: LunaCopy = {
   q1: "Ogni avventura ha bisogno di un eroe. Chi sarà il nostro stasera?",
   q1Confirm: "Perfetto! Il nostro eroe è pronto.",
   q2: "Ora — in quale mondo si svolge la nostra storia?",
@@ -213,20 +236,23 @@ const IT: BluebellCopy = {
   hereWeGo: "...E... si... parte.",
   q1TextOwn: "Come ti chiami?",
   q1TextStranger: "Dai un nome allo sconosciuto...",
+  q1TextFamilyFriend: "Chi li accompagna? Dagli un nome...",
+  q1TextAnimal: "Dai un nome al tuo eroe animale...",
+  q1TextCustomAnimal: "Che animale? (es. pinguino, elefante...)",
   q3Nudge: "Qualcuno che conosci? Può essere nella storia anche lui.",
-  q4Hint: "Sii breve — Bluebell funziona meglio con un'unica idea.",
-  emptyError: "Dai a Bluebell qualcosa su cui lavorare!",
+  q4Hint: "Sii breve — Luna funziona meglio con un'unica idea.",
+  emptyError: "Dai a Luna qualcosa su cui lavorare!",
   generating: (world) => [
-    "Bluebell sta tessendo il racconto...",
+    "Luna sta tessendo il racconto...",
     "Alla ricerca della voce del nostro eroe...",
     `${world} sta prendendo forma...`,
     "Quasi pronto...",
   ],
-  generatingLong: "Ci siamo quasi — Bluebell sta lavorando su qualcosa di speciale...",
-  apiError: "Bluebell ha perso il filo — riproviamo?",
+  generatingLong: "Ci siamo quasi — Luna sta lavorando su qualcosa di speciale...",
+  apiError: "Luna ha perso il filo — riproviamo?",
 };
 
-const AR: BluebellCopy = {
+const AR: LunaCopy = {
   q1: "كل مغامرة تحتاج إلى بطل. من سيكون بطلنا الليلة؟",
   q1Confirm: "ممتاز! بطلنا جاهز.",
   q2: "الآن — في أي عالم تدور أحداث قصتنا؟",
@@ -242,20 +268,23 @@ const AR: BluebellCopy = {
   hereWeGo: "...ها نحن... ننطلق.",
   q1TextOwn: "ما اسمك؟",
   q1TextStranger: "أعطِ الغريب اسماً...",
+  q1TextFamilyFriend: "من سينضم إليهم؟ أعطهم اسماً...",
+  q1TextAnimal: "أعطِ بطلك الحيواني اسماً...",
+  q1TextCustomAnimal: "أي حيوان؟ (مثل بطريق، فيل...)",
   q3Nudge: "شخص تعرفه؟ يمكن أن يكون في القصة أيضاً.",
-  q4Hint: "اجعلها قصيرة — بلوبيل تعمل بشكل أفضل مع فكرة واحدة.",
-  emptyError: "أعطِ بلوبيل شيئاً للعمل عليه!",
+  q4Hint: "اجعلها قصيرة — لونا تعمل بشكل أفضل مع فكرة واحدة.",
+  emptyError: "أعطِ لونا شيئاً للعمل عليه!",
   generating: (world) => [
-    "بلوبيل تنسج الحكاية...",
+    "لونا تنسج الحكاية...",
     "تبحث عن صوت بطلنا...",
     `${world} يتشكل...`,
     "على وشك الجاهزية...",
   ],
-  generatingLong: "على وشك الانتهاء — بلوبيل تعمل على شيء مميز...",
-  apiError: "بلوبيل فقدت الخيط — هل نحاول مرة أخرى؟",
+  generatingLong: "على وشك الانتهاء — لونا تعمل على شيء مميز...",
+  apiError: "لونا فقدت الخيط — هل نحاول مرة أخرى؟",
 };
 
-const JA: BluebellCopy = {
+const JA: LunaCopy = {
   q1: "どんな冒険にもヒーローが必要です。今夜のヒーローは誰にしましょうか?",
   q1Confirm: "完璧です!私たちのヒーローの準備ができました。",
   q2: "さあ——私たちの物語はどんな世界で展開しますか?",
@@ -271,20 +300,23 @@ const JA: BluebellCopy = {
   hereWeGo: "…さあ…行き…ましょう。",
   q1TextOwn: "お名前は?",
   q1TextStranger: "見知らぬ人に名前をつけてください…",
+  q1TextFamilyFriend: "誰が一緒に行きますか?名前をつけてください…",
+  q1TextAnimal: "動物のヒーローに名前をつけてください…",
+  q1TextCustomAnimal: "どんな動物?(例:ペンギン、ゾウ…)",
   q3Nudge: "知っている人ですか?その人も物語に登場できます。",
-  q4Hint: "短くしてください——ブルーベルは一つのアイデアで一番うまく働きます。",
-  emptyError: "ブルーベルに何か材料をあげてください!",
+  q4Hint: "短くしてください——ルナは一つのアイデアで一番うまく働きます。",
+  emptyError: "ルナに何か材料をあげてください!",
   generating: (world) => [
-    "ブルーベルが物語を紡いでいます…",
+    "ルナが物語を紡いでいます…",
     "私たちのヒーローの声を見つけています…",
     `${world}が形になっています…`,
     "もうすぐです…",
   ],
-  generatingLong: "もう少しです——ブルーベルが特別な何かに取り組んでいます…",
-  apiError: "ブルーベルが糸を見失いました——もう一度やってみますか?",
+  generatingLong: "もう少しです——ルナが特別な何かに取り組んでいます…",
+  apiError: "ルナが糸を見失いました——もう一度やってみますか?",
 };
 
-const HI: BluebellCopy = {
+const HI: LunaCopy = {
   q1: "हर रोमांच को एक नायक चाहिए। आज रात हमारा नायक कौन होगा?",
   q1Confirm: "एकदम सही! हमारा नायक तैयार है।",
   q2: "अब — हमारी कहानी किस दुनिया में घटित होती है?",
@@ -300,28 +332,31 @@ const HI: BluebellCopy = {
   hereWeGo: "...चलो... चलते... हैं।",
   q1TextOwn: "तुम्हारा नाम क्या है?",
   q1TextStranger: "अजनबी को एक नाम दो...",
+  q1TextFamilyFriend: "साथ में कौन आ रहा है? उन्हें एक नाम दो...",
+  q1TextAnimal: "अपने जानवर हीरो को एक नाम दो...",
+  q1TextCustomAnimal: "कौन सा जानवर? (जैसे पेंगुइन, हाथी...)",
   q3Nudge: "कोई जिसे तुम जानते हो? वे भी कहानी में हो सकते हैं।",
-  q4Hint: "इसे छोटा रखें — ब्लूबेल एक विचार के साथ सबसे अच्छा काम करती है।",
-  emptyError: "ब्लूबेल को काम करने के लिए कुछ दो!",
+  q4Hint: "इसे छोटा रखें — लूना एक विचार के साथ सबसे अच्छा काम करती है।",
+  emptyError: "लूना को काम करने के लिए कुछ दो!",
   generating: (world) => [
-    "ब्लूबेल कहानी बुन रही है...",
+    "लूना कहानी बुन रही है...",
     "हमारे नायक की आवाज़ ढूंढ रही है...",
     `${world} आकार ले रहा है...`,
     "लगभग तैयार...",
   ],
-  generatingLong: "लगभग हो गया — ब्लूबेल किसी खास चीज़ पर काम कर रही है...",
-  apiError: "ब्लूबेल ने धागा खो दिया — फिर से कोशिश करें?",
+  generatingLong: "लगभग हो गया — लूना किसी खास चीज़ पर काम कर रही है...",
+  apiError: "लूना ने धागा खो दिया — फिर से कोशिश करें?",
 };
 
-const BLUEBELL_BY_LANG: Record<string, BluebellCopy> = { en: EN, he: HE, es: ES, fr: FR, de: DE, pt: PT, it: IT, ar: AR, ja: JA, hi: HI };
+const LUNA_BY_LANG: Record<string, LunaCopy> = { en: EN, he: HE, es: ES, fr: FR, de: DE, pt: PT, it: IT, ar: AR, ja: JA, hi: HI };
 
-/** Localized Bluebell narrator copy for the given language, falling back to English. */
-export function getBluebell(language?: string): BluebellCopy {
-  return (language && BLUEBELL_BY_LANG[language]) || EN;
+/** Localized Luna narrator copy for the given language, falling back to English. */
+export function getLuna(language?: string): LunaCopy {
+  return (language && LUNA_BY_LANG[language]) || EN;
 }
 
 // Kept for any other importers expecting the flat English object.
-export const BLUEBELL = EN;
+export const LUNA = EN;
 
 // Internal prompt-building label (src/app/api/five-question-story/route.ts) —
 // deliberately NOT localized: it's fed into the Gemini prompt, not shown to

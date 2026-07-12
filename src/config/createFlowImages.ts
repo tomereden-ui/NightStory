@@ -77,6 +77,10 @@ export const HERO_IMAGE_PROMPTS: Record<string, string> = {
     "A brave young adventurer in a flowing cape standing on a dramatic hilltop, vast fantasy landscape of glowing mountains and valleys, golden sunrise rays. Pixar 3D animated movie style, heroic and cinematic.",
   surprise:
     "A magical treasure chest bursting open with an explosion of golden light, rainbow confetti, stars and glowing jewels erupting outward in every direction. Pixar 3D animated movie style, electric sense of wonder, cinematic.",
+  familyFriend:
+    "A joyful group hug between a child, a parent, and a friend, warm golden light rays and soft sparkles floating around them, glowing sunset background. Pixar 3D animated movie style, deeply heartwarming, cinematic.",
+  animal:
+    "A friendly dog, cat, and tiger cub sitting together in a glowing meadow, big adorable eyes, soft magical sparkles floating around them, warm golden light. Pixar 3D animated movie style, irresistibly cute, cinematic.",
 };
 
 export interface CreateOptionSpec {

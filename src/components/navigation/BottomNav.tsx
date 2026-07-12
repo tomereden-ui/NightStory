@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { useViewMode } from "@/context/ViewModeContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useUnsavedChanges } from "@/context/UnsavedChangesContext";
@@ -59,12 +60,27 @@ export default function BottomNav() {
   const { guardedNavigate } = useUnsavedChanges();
   const isMobile = effective === "mobile";
 
+  // router.push doesn't update usePathname() until the destination route has
+  // fully committed — which in dev includes compiling the target page. With
+  // the active pill keyed off pathname alone, a tap produced literally zero
+  // visual change for seconds. pendingHref moves the highlight to the tapped
+  // tab on the very same frame as the click, then hands off to pathname once
+  // the route lands.
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+  useEffect(() => { setPendingHref(null); }, [pathname]);
+
   // Route every nav click through the unsaved-changes guard — a no-op when no
   // page has registered a guard, so this is safe/free in the common case.
   const handleNavClick = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
-    guardedNavigate(href);
+    if (pathname === href || pathname.startsWith(href + "/")) return;
+    setPendingHref(href);
+    startTransition(() => { guardedNavigate(href); });
   };
+
+  const isItemActive = (href: string) =>
+    pendingHref ? pendingHref === href : pathname === href || pathname.startsWith(href + "/");
 
   if (!isMobile) {
     return (
@@ -80,7 +96,7 @@ export default function BottomNav() {
 
         <ul className="flex flex-col items-center gap-1.5 flex-1">
           {NAV.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive = isItemActive(item.href);
             return (
               <li key={item.href}>
                 <Link href={item.href} onClick={(e) => handleNavClick(e, item.href)} className="flex flex-col items-center gap-1 group" aria-label={t(language, item.labelKey)}>
@@ -136,7 +152,7 @@ export default function BottomNav() {
 
       <ul className="relative flex items-end justify-around px-1 pt-2 pb-3">
         {NAV.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = isItemActive(item.href);
           return (
             <li key={item.href}>
               <Link href={item.href} onClick={(e) => handleNavClick(e, item.href)} className="flex flex-col items-center gap-1 group" aria-label={t(language, item.labelKey)}>

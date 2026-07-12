@@ -1,6 +1,23 @@
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { HEBREW_VOICE_POOL, type HebrewVoice } from "@/config/hebrewVoices";
+import { DEFAULT_ENGINE_SETTINGS, type EngineSettings } from "@/config/ttsEngines";
 import type { Voice, VoiceGender, VoiceStyle } from "@/types";
+
+// Admin-configurable via the Voice Manager "Engine Settings" panel — an
+// engine unchecked there stops its voices from being offered for NEW
+// assignment here. Fetched once per fetchVoicePool() call, not cached across
+// calls, since this only runs on Studio page load / language change, not
+// per-line like ttsService.ts's synthesis path.
+async function fetchEngineSettings(): Promise<EngineSettings> {
+  try {
+    const res = await fetch("/api/admin/tts-engine-settings", { cache: "no-store" });
+    if (!res.ok) return DEFAULT_ENGINE_SETTINGS;
+    const data = (await res.json()) as { settings?: EngineSettings };
+    return data.settings ?? DEFAULT_ENGINE_SETTINGS;
+  } catch {
+    return DEFAULT_ENGINE_SETTINGS;
+  }
+}
 
 interface FamilyVoiceRow {
   id: string;
@@ -84,20 +101,29 @@ async function fetchHebrewLibraryVoices(): Promise<Voice[]> {
 // the same catalog shown on the Voices page. For Hebrew stories it also appends
 // the EL Hebrew-verified library so characters can be cast to real EL voices.
 export async function fetchVoicePool(language?: string): Promise<Voice[]> {
-  let base: Voice[] = PRESET_VOICE_POOL;
+  const engineSettings = await fetchEngineSettings();
+  const geminiEnabled = engineSettings.gemini25 || engineSettings.gemini31;
+
+  let base: Voice[] = geminiEnabled ? PRESET_VOICE_POOL : [];
   try {
     const res = await fetch("/api/voices", { cache: "no-store" });
     if (res.ok) {
       const rows = (await res.json()) as FamilyVoiceRow[];
-      // Filter out corrupted rows where the name field contains a URL
-      const valid = rows.filter((r) => r.name?.trim() && !isUrl(r.name));
-      base = [...PRESET_VOICE_POOL, ...valid.map(familyVoiceToVoice)];
+      // Filter out corrupted rows where the name field contains a URL, and
+      // respect the engine toggle each row's own backing engine belongs to.
+      const valid = rows.filter((r) => {
+        if (!r.name?.trim() || isUrl(r.name)) return false;
+        if (r.el_voice_id) return engineSettings.elevenlabs;
+        if (r.gemini_voice_name) return geminiEnabled;
+        return true;
+      });
+      base = [...base, ...valid.map(familyVoiceToVoice)];
     }
   } catch {
-    base = PRESET_VOICE_POOL;
+    // keep base as-is
   }
 
-  if (language === "he") {
+  if (language === "he" && engineSettings.elevenlabs) {
     const hebrew = await fetchHebrewLibraryVoices();
     return [...base, ...hebrew];
   }

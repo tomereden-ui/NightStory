@@ -6,6 +6,7 @@ import VoicePicker from "./VoicePicker";
 import { useLanguage } from "@/context/LanguageContext";
 import VoiceAvatar from "@/components/ui/VoiceAvatar";
 import Icon from "@/components/ui/Icon";
+import { stripPerformanceTag } from "@/utils/stripPerformanceTag";
 
 // ─── SFX payload helpers ──────────────────────────────────────────────────────
 
@@ -420,7 +421,7 @@ function SpeechCard({
         </div>
         {readOnly ? (
           <p className="w-full text-white/85 text-fs-body leading-relaxed rounded-lg px-2 py-1" style={{ minHeight: "22px" }}>
-            {block.textPayload}
+            {stripPerformanceTag(block.textPayload)}
           </p>
         ) : (
           <textarea

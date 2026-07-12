@@ -33,6 +33,10 @@ interface ScriptTabProps {
   /** Total block count including blocks still being validated (not yet in `blocks`) */
   totalExpectedBlocks?: number;
   scenes?: StoryScene[];
+  /** Real total story duration (from the produced audio file) — lets the
+   * scene map show per-scene durations that sum exactly to it instead of
+   * raw, unreconciled word-count estimates. */
+  totalDurationSeconds?: number;
   /** Story ID for per-block audio caching */
   storyId?: string;
   /** Called when user saves a specific block's text edit to the DB */
@@ -407,7 +411,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, totalDurationSeconds, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -914,6 +918,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           <SceneMap
             scenes={scenes}
             blocks={blocks}
+            totalDurationSeconds={totalDurationSeconds}
             onSceneClick={(blockIdx) => {
               setScriptExpanded(true);
               setTimeout(() => {

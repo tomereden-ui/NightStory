@@ -1326,6 +1326,48 @@ export default function AdminPage() {
     runReassignVoices({ applyAll: true });
   };
 
+  // ── Admin Services: Reassign cast avatars (profile-based matching) ───────
+  const [reassignAvatarStoryId, setReassignAvatarStoryId] = useState("");
+  const [reassignAvatarRunning, setReassignAvatarRunning] = useState(false);
+  const [reassignAvatarLog, setReassignAvatarLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const runReassignAvatars = async (body: { storyId?: string } | { applyAll: true }) => {
+    setReassignAvatarRunning(true);
+    setReassignAvatarLog([{ type: "info", text: "applyAll" in body ? "Scanning every story in the library…" : `Reassigning story ${(body as { storyId: string }).storyId}…` }]);
+    try {
+      const res = await fetch("/api/admin/reassign-avatars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReassignAvatarLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      const d = data as { totalStories: number; storiesChanged: number; storiesSkipped: number; totalAvatarsChanged: number; results: Array<{ storyId: string; title: string; avatarsChanged: number; skippedReason?: string }> };
+      setReassignAvatarLog((l) => [
+        ...l,
+        { type: "success", text: `✅ Done — ${d.storiesChanged}/${d.totalStories} stories updated, ${d.totalAvatarsChanged} avatar${d.totalAvatarsChanged === 1 ? "" : "s"} rematched (${d.storiesSkipped} skipped — no character profiles)` },
+        ...d.results.filter((r) => r.avatarsChanged > 0).map((r) => ({ type: "info" as const, text: `  · "${r.title}" — ${r.avatarsChanged} avatar(s) rematched` })),
+      ]);
+    } catch (e) {
+      setReassignAvatarLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setReassignAvatarRunning(false);
+    }
+  };
+
+  const handleReassignOneStoryAvatars = () => {
+    if (!reassignAvatarStoryId.trim()) return;
+    runReassignAvatars({ storyId: reassignAvatarStoryId.trim() });
+  };
+
+  const handleReassignAllStoriesAvatars = () => {
+    if (!confirm("Reassign cast avatars for EVERY story in the library (public + private)? This only updates each character profile's matched avatar — already-rendered pages just need a reload to pick it up.")) return;
+    runReassignAvatars({ applyAll: true });
+  };
+
   // ── Admin Services: Backfill character profiles (pre-existing stories) ──
   const [backfillStoryId, setBackfillStoryId] = useState("");
   const [backfillRunning, setBackfillRunning] = useState(false);
@@ -1996,6 +2038,68 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {reassignLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Reassign Cast Avatars Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🖼️ Reassign Cast Avatars</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Re-classifies every character from the script (type/gender/age/visual description —
+                    same analysis as Reassign Cast Voices) and rematches their avatar-bank portrait against
+                    it, with gender and age as hard/soft filters so a character doesn't end up with a
+                    mismatched avatar. Works even on stories with no saved profile data yet. Only updates
+                    character_profiles — no audio or script changes.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={reassignAvatarStoryId}
+                  onChange={(e) => setReassignAvatarStoryId(e.target.value)}
+                  placeholder="Story ID"
+                  disabled={reassignAvatarRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+                <button
+                  onClick={handleReassignOneStoryAvatars}
+                  disabled={reassignAvatarRunning || !reassignAvatarStoryId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Reassign This Story
+                </button>
+              </div>
+
+              <button
+                onClick={handleReassignAllStoriesAvatars}
+                disabled={reassignAvatarRunning}
+                className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {reassignAvatarRunning ? "Working…" : "Reassign ALL Stories"}
+              </button>
+
+              {/* Log output */}
+              {reassignAvatarLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {reassignAvatarLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEntry, getEntries, getPublicEntries, addEntry, type LibraryEntry } from "@/lib/libraryStore";
+import { getEntry, getEntries, getPublicEntries, addEntry, type LibraryEntry, type CharacterProfile } from "@/lib/libraryStore";
 import { classifyCharacters } from "@/lib/services/characterClassifier";
 
 export const dynamic = "force-dynamic";
@@ -13,12 +13,13 @@ interface BackfillOutcome {
 }
 
 /**
- * Backfills characterProfiles (type + visualDescription only — classify-characters
- * doesn't infer gender/voicePersona) for stories generated before the nature-based
- * voice-matching system existed. Skips anything that already has profile data, and
- * skips any story with no audio yet (audioUrl null) — an unproduced script isn't
- * worth spending a Gemini call on since it may still be actively edited or
- * abandoned, and produce-drama/reassign-voices already handle the produced path.
+ * Backfills characterProfiles (type, gender, ageBucket, visualDescription) for
+ * stories generated before the nature-based voice-matching / profile-based
+ * avatar-matching systems existed. Skips anything that already has profile
+ * data, and skips any story with no audio yet (audioUrl null) — an unproduced
+ * script isn't worth spending a Gemini call on since it may still be actively
+ * edited or abandoned, and produce-drama/reassign-voices already handle the
+ * produced path.
  */
 async function backfillOne(entry: LibraryEntry, apiKey: string): Promise<BackfillOutcome> {
   if (!entry.audioUrl) {
@@ -49,7 +50,13 @@ async function backfillOne(entry: LibraryEntry, apiKey: string): Promise<Backfil
   const characterProfiles = Object.fromEntries(
     Object.entries(classified).map(([name, c]) => [
       name,
-      { type: c.type as "child" | "adult" | "animal" | "narrator", visualDescription: c.visualDescription },
+      {
+        type: c.type as "child" | "adult" | "animal" | "narrator",
+        visualDescription: c.visualDescription,
+        gender: c.gender as CharacterProfile["gender"],
+        ageBucket: c.ageBucket,
+        category: c.category,
+      },
     ]),
   );
 

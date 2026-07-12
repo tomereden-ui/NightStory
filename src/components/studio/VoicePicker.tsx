@@ -141,23 +141,6 @@ export default function VoicePicker({
 
   const listContent = (
     <>
-      {isHebrew && (
-        <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(167,139,250,0.15)" }}>
-          <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.8)" }}>
-            🇮🇱 עב = קול ElevenLabs בפועל
-          </p>
-          <a
-            href="/admin/hebrew-voices"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-fs-body"
-            style={{ color: "rgba(79,195,247,0.7)", textDecoration: "underline" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            שנה מיפוי
-          </a>
-        </div>
-      )}
       <ul className="py-1 overflow-y-auto" style={{ maxHeight: inline ? 280 : "60vh" }}>
         {isHebrew && hebrewVoices.length > 0 && (
           <>

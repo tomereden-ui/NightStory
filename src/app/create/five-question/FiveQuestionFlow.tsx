@@ -4,12 +4,13 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
-import { getBluebell, getMoodLabels, type BluebellCopy } from "@/constants/bluebellScripts";
+import { getLuna, getMoodLabels, type LunaCopy } from "@/constants/lunaScripts";
 import {
   getWizardUi, type WizardUiCopy,
   getWorldOptions, type WorldOptionMeta,
   getCompanionTypes, type CompanionTypeMeta, type Q3CompanionTypeId,
   getQ4Categories, type Q4CategoryMeta, type Q4CategoryId,
+  getAnimalTypes, type AnimalTypeMeta, type AnimalTypeId,
 } from "@/constants/wizardUi";
 import {
   SURPRISE_HERO_NAMES,
@@ -80,7 +81,7 @@ function localizeCompanionForDisplay(companion: string, companionTypes: Companio
   return companion;
 }
 
-// ─── FairyFigure: animated Bluebell fairy portrait ────────────────────────────────────
+// ─── FairyFigure: animated Luna fairy portrait ────────────────────────────────────
 
 function FairyFigure({ size = 80 }: { size?: number }) {
   return (
@@ -112,7 +113,7 @@ function FairyFigure({ size = 80 }: { size?: number }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/owl-avatar.png"
-        alt="Bluebell"
+        alt="Luna"
         style={{
           width: size,
           height: size,
@@ -130,9 +131,9 @@ function FairyFigure({ size = 80 }: { size?: number }) {
   );
 }
 
-// ─── BluebellLine: progressive word-by-word reveal ─────────────────────────────────
+// ─── LunaLine: progressive word-by-word reveal ─────────────────────────────────
 
-function BluebellLine({
+function LunaLine({
   text,
   speed = 70,
   onComplete,
@@ -370,6 +371,29 @@ function ExampleChips({ examples, onTap }: { examples: string[]; onTap: (v: stri
   );
 }
 
+// ─── AnimalTypeChips: row of species chips (dog/cat/tiger/dolphin), each with
+// its emoji as a small stand-in image — shared between Q1's "Brave animal"
+// hero option and Q3's "pet" companion type so both get the same two-row
+// (species, then species-specific name) picking mechanism. ────────────────
+// Returns a fragment (not its own wrapping row) so callers can append extra
+// chips — e.g. Q1's "+" custom-animal chip — into the exact same flex row.
+function AnimalTypeChips({ animalTypes, selected, onSelect }: { animalTypes: AnimalTypeMeta[]; selected: AnimalTypeId | null; onSelect: (id: AnimalTypeId) => void }) {
+  return (
+    <>
+      {animalTypes.map((a) => (
+        <button key={a.id} onClick={() => onSelect(a.id)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+          style={selected === a.id
+            ? { background: "rgba(79,195,247,0.18)", border: "1.5px solid #4fc3f7", color: "#4fc3f7" }
+            : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }}>
+          <span className="text-fs-heading">{a.emoji}</span>
+          <span>{a.label}</span>
+        </button>
+      ))}
+    </>
+  );
+}
+
 // ─── SkipLink: standalone skip (shown when no confirm is visible yet) ─────────────────
 
 function SkipLink({ onSkip, label }: { onSkip: () => void; label: string }) {
@@ -409,9 +433,9 @@ function ConfirmRow({ confirmLabel, onConfirm, disabled, onSkip, skipLabel }: {
 
 // ─── QuestionShell ─────────────────────────────────────────────────────────────────────────
 
-function QuestionShell({ onBack, onReset, children, bluebellText, bluebellSpeed, onBluebellComplete, audioUrl, ui }: {
+function QuestionShell({ onBack, onReset, children, lunaText, lunaSpeed, onLunaComplete, audioUrl, ui }: {
   onBack?: () => void; onReset?: () => void; children: React.ReactNode;
-  bluebellText: string; bluebellSpeed?: number; onBluebellComplete?: () => void;
+  lunaText: string; lunaSpeed?: number; onLunaComplete?: () => void;
   audioUrl?: string; ui: WizardUiCopy;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -449,7 +473,7 @@ function QuestionShell({ onBack, onReset, children, bluebellText, bluebellSpeed,
         ) : <div className="w-16" />}
       </div>
       <div className="mb-7">
-        <BluebellLine text={bluebellText} speed={bluebellSpeed} onComplete={onBluebellComplete} />
+        <LunaLine text={lunaText} speed={lunaSpeed} onComplete={onLunaComplete} />
       </div>
       {children}
     </div>
@@ -465,12 +489,21 @@ function AutoAdvance({ delay, onAdvance }: { delay: number; onAdvance: () => voi
 
 // ─── Q1 — Hero identity ───────────────────────────────────────────────────────────────────────
 
-type Q1Card = "own" | "magical" | "stranger" | "surprise";
+type Q1Card = "own" | "magical" | "stranger" | "familyFriend" | "animal" | "surprise";
 
-function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, audioUrl, childName, childAvatarUrl, bb, ui, language }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; language: string }) {
+function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, audioUrl, childName, childAvatarUrl, luna, ui, language, companionTypes, siblingNames, animalTypes }: { initialHero: string; onNext: (hero: string) => void; onBack?: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; childName?: string; childAvatarUrl?: string; luna: LunaCopy; ui: WizardUiCopy; language: string; companionTypes: CompanionTypeMeta[]; siblingNames: string[]; animalTypes: AnimalTypeMeta[] }) {
   const [selectedCard, setSelectedCard] = useState<Q1Card | null>(null);
   const [textVal, setTextVal]           = useState(initialHero);
   const [magicChip, setMagicChip]       = useState<string | null>(MAGICAL_NAME_CHIPS.includes(initialHero) ? initialHero : null);
+  const [animalType, setAnimalType]     = useState<AnimalTypeId | null>(null);
+  // A user-typed animal not in the built-in list, confirmed by the AI check
+  // in checkCustomAnimal() — englishId feeds the story-generation prompt
+  // (matching the AnimalTypeId convention), label/emoji/names drive the UI.
+  const [customAnimal, setCustomAnimal] = useState<{ label: string; englishId: string; emoji: string; names: string[] } | null>(null);
+  const [showCustomAnimalInput, setShowCustomAnimalInput] = useState(false);
+  const [customAnimalText, setCustomAnimalText] = useState("");
+  const [customAnimalChecking, setCustomAnimalChecking] = useState(false);
+  const [customAnimalError, setCustomAnimalError] = useState("");
   const [surpriseHero, setSurpriseHero] = useState<{ figure: string; name: string } | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [transitionMsg, setTransitionMsg] = useState("");
@@ -486,14 +519,14 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
   // needsCheck: only freely-typed text (own name / stranger name) goes through
   // Gemini — curated picks (magical chip, surprise) are already vetted content.
   const doConfirm = async (displayName: string, heroStr: string, needsCheck: boolean) => {
-    if (!displayName.trim()) { setValidationError(bb.emptyError); return; }
+    if (!displayName.trim()) { setValidationError(luna.emptyError); return; }
     if (needsCheck) {
       setValidating(true);
       const result = await validateWizardText(displayName, "heroName", language);
       setValidating(false);
       if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
     }
-    setTransitionMsg(bb.q1Confirm);
+    setTransitionMsg(luna.q1Confirm);
     setTransitioning(true);
     setTimeout(() => { setTransitioning(false); onNext(heroStr.trim()); }, 1500);
   };
@@ -504,10 +537,45 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
     setSelectedCard("surprise");
   };
 
+  // Runs the AI "is this really an animal?" check for the "+" chip's free
+  // text — on success it becomes a selectable chip alongside the built-in
+  // animal types, with its own AI-suggested names.
+  const checkCustomAnimal = async () => {
+    const val = customAnimalText.trim();
+    if (!val || customAnimalChecking) return;
+    setCustomAnimalChecking(true);
+    setCustomAnimalError("");
+    try {
+      const res = await fetch("/api/validate-animal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: val, language }),
+      });
+      const data = await res.json() as { approved: boolean; reason?: string; animalEnglish?: string; emoji?: string; names?: string[] };
+      if (!data.approved) { setCustomAnimalError(data.reason || ui.pleaseRephrase); return; }
+      setCustomAnimal({
+        label: val,
+        englishId: data.animalEnglish || val.toLowerCase(),
+        emoji: data.emoji || "🐾",
+        names: data.names?.length ? data.names : ["Rex", "Buddy", "Max", "Bella"],
+      });
+      setAnimalType(null);
+      setShowCustomAnimalInput(false);
+      setTextVal("");
+      setValidationError("");
+    } catch {
+      setCustomAnimalError(ui.pleaseRephrase);
+    } finally {
+      setCustomAnimalChecking(false);
+    }
+  };
+
   const canConfirm = (() => {
     if (selectedCard === "own")     return childName ? true : !!textVal.trim();
     if (selectedCard === "magical") return !!magicChip;
     if (selectedCard === "stranger") return !!textVal.trim();
+    if (selectedCard === "familyFriend") return !!textVal.trim();
+    if (selectedCard === "animal") return (!!animalType || !!customAnimal) && !!textVal.trim();
     if (selectedCard === "surprise") return !!surpriseHero;
     return false;
   })();
@@ -517,10 +585,25 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
     if (selectedCard === "own")     return doConfirm(childName || textVal, childName || textVal, !childName);
     if (selectedCard === "magical") return magicChip && doConfirm(magicChip, magicChip, false);
     if (selectedCard === "stranger") return doConfirm(textVal, textVal, true);
+    if (selectedCard === "familyFriend") return doConfirm(textVal, textVal, true);
+    if (selectedCard === "animal" && (animalType || customAnimal)) {
+      const animalWord = customAnimal ? customAnimal.englishId : animalType;
+      return doConfirm(textVal, `a brave ${animalWord} named ${textVal.trim()}`, true);
+    }
     if (selectedCard === "surprise" && surpriseHero) {
       return doConfirm(surpriseHero.name, `${surpriseHero.figure} named ${surpriseHero.name}`, false);
     }
   };
+
+  // Real siblings first (most personal), then a couple of localized family
+  // relation words, then a couple of friend-style names — same source data
+  // Q3's "family" companion type already uses, just recombined for a hero
+  // who can be a known person rather than a fresh companion.
+  const familyFriendChips = (() => {
+    const familyWords = companionTypes.find((t) => t.id === "family")?.surpriseNames ?? [];
+    const friendNames = companionTypes.find((t) => t.id === "friend")?.surpriseNames ?? [];
+    return [...siblingNames, ...familyWords.slice(0, 2), ...friendNames.slice(0, 2)].slice(0, 4);
+  })();
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
@@ -530,7 +613,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
   );
 
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q1} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} lunaText={luna.q1} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
 
         <div className="grid grid-cols-2 gap-2">
@@ -543,14 +626,96 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
           />
           <IllustratedCard label={ui.aMagicalName}   emoji="✨"  imageUrl={optionImages["hero-magical"]}  selected={selectedCard === "magical"}  onClick={() => setSelectedCard("magical")} />
           <IllustratedCard label={ui.aBraveStranger} emoji="🗺️" imageUrl={optionImages["hero-stranger"]} selected={selectedCard === "stranger"} onClick={() => setSelectedCard("stranger")} />
-          <IllustratedCard label={ui.surpriseMe}     emoji="🎲"  imageUrl={optionImages["hero-surprise"]} selected={selectedCard === "surprise"} onClick={handleSurprise} />
+          <IllustratedCard label={ui.aFamilyMemberOrFriend} emoji="👪" imageUrl={optionImages["hero-familyFriend"]} selected={selectedCard === "familyFriend"} onClick={() => { setSelectedCard("familyFriend"); setTextVal(""); setValidationError(""); }} />
+          <IllustratedCard label={ui.aBraveAnimal} emoji="🐾" imageUrl={optionImages["hero-animal"]} selected={selectedCard === "animal"} onClick={() => { setSelectedCard("animal"); setAnimalType(null); setCustomAnimal(null); setShowCustomAnimalInput(false); setCustomAnimalText(""); setCustomAnimalError(""); setTextVal(""); setValidationError(""); }} />
         </div>
+
+        <OptionPill label={ui.surpriseMe} emoji="🎲" selected={selectedCard === "surprise"} onClick={handleSurprise} />
 
         {selectedCard === "own" && !childName && (
           <>
-            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={bb.q1TextOwn} autoFocus onSubmit={handleConfirm} />
+            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={luna.q1TextOwn} autoFocus onSubmit={handleConfirm} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
             <ExampleChips examples={["Finn", "Zara", "Milo", "Wren"]} onTap={(v) => { setTextVal(v); setValidationError(""); }} />
+          </>
+        )}
+
+        {selectedCard === "familyFriend" && (
+          <>
+            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={luna.q1TextFamilyFriend} autoFocus onSubmit={handleConfirm} />
+            {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
+            {familyFriendChips.length > 0 && (
+              <ExampleChips examples={familyFriendChips} onTap={(v) => { setTextVal(v); setValidationError(""); }} />
+            )}
+          </>
+        )}
+
+        {selectedCard === "animal" && (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <AnimalTypeChips
+                animalTypes={animalTypes}
+                selected={animalType}
+                onSelect={(id) => { setAnimalType(id); setCustomAnimal(null); setShowCustomAnimalInput(false); setTextVal(""); setValidationError(""); }}
+              />
+              {customAnimal && (
+                <button
+                  onClick={() => { setShowCustomAnimalInput(true); setCustomAnimalText(customAnimal.label); setCustomAnimalError(""); }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                  style={{ background: "rgba(79,195,247,0.18)", border: "1.5px solid #4fc3f7", color: "#4fc3f7" }}
+                >
+                  <span className="text-fs-heading">{customAnimal.emoji}</span>
+                  <span>{customAnimal.label}</span>
+                </button>
+              )}
+              {!customAnimal && (
+                <button
+                  onClick={() => { setShowCustomAnimalInput(true); setAnimalType(null); setCustomAnimalText(""); setCustomAnimalError(""); }}
+                  title={ui.addYourOwnAnimal}
+                  aria-label={ui.addYourOwnAnimal}
+                  className="flex items-center justify-center w-9 h-9 rounded-full text-fs-body font-bold transition-all active:scale-95"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.5)" }}
+                >
+                  +
+                </button>
+              )}
+            </div>
+
+            {showCustomAnimalInput && (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={customAnimalText}
+                    onChange={(e) => { setCustomAnimalText(e.target.value); setCustomAnimalError(""); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); checkCustomAnimal(); } }}
+                    placeholder={luna.q1TextCustomAnimal}
+                    autoFocus
+                    className="flex-1 px-4 py-2.5 rounded-xl outline-none text-fs-body"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff" }}
+                  />
+                  <button
+                    onClick={checkCustomAnimal}
+                    disabled={!customAnimalText.trim() || customAnimalChecking}
+                    className="px-4 py-2.5 rounded-xl text-fs-body font-semibold whitespace-nowrap transition-all active:scale-95 disabled:opacity-40"
+                    style={{ background: "rgba(79,195,247,0.18)", border: "1.5px solid #4fc3f7", color: "#4fc3f7" }}
+                  >
+                    {customAnimalChecking ? ui.checkingAnswer : ui.checkAnimal}
+                  </button>
+                </div>
+                {customAnimalError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{customAnimalError}</p>}
+              </div>
+            )}
+
+            {(animalType || customAnimal) && (
+              <>
+                <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={luna.q1TextAnimal} autoFocus onSubmit={handleConfirm} />
+                {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
+                <ExampleChips
+                  examples={customAnimal ? customAnimal.names : (animalTypes.find((a) => a.id === animalType)?.names ?? [])}
+                  onTap={(v) => { setTextVal(v); setValidationError(""); }}
+                />
+              </>
+            )}
           </>
         )}
 
@@ -570,7 +735,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
 
         {selectedCard === "stranger" && (
           <>
-            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={bb.q1TextStranger} autoFocus onSubmit={handleConfirm} />
+            <StoryInput value={textVal} onChange={(v) => { setTextVal(v); setValidationError(""); }} placeholder={luna.q1TextStranger} autoFocus onSubmit={handleConfirm} />
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
             <ExampleChips examples={["Ember the fox", "Sir Bravely", "Captain Nimbus"]} onTap={(v) => { setTextVal(v); setValidationError(""); }} />
           </>
@@ -589,7 +754,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
         <ConfirmRow
           confirmLabel={validating ? ui.checkingAnswer : (selectedCard === "own" && childName ? ui.yesImName(childName) : ui.thisIsMyHero)}
           onConfirm={handleConfirm}
-          disabled={!canConfirm || !selectedCard || validating}
+          disabled={!canConfirm || !selectedCard || validating || !!validationError}
           onSkip={onSkip}
           skipLabel={ui.skip}
         />
@@ -601,7 +766,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
 
 // ─── Q2 — Story world ─────────────────────────────────────────────────────────────────────────
 
-function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, worldOptions, language }: { initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; worldOptions: WorldOptionMeta[]; language: string }) {
+function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, audioUrl, luna, ui, worldOptions, language }: { initialWorld: string; onNext: (world: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; luna: LunaCopy; ui: WizardUiCopy; worldOptions: WorldOptionMeta[]; language: string }) {
   const isCardValue = worldOptions.some((w) => w.label === initialWorld);
   const [selected, setSelected]     = useState(isCardValue ? initialWorld : "");
   const [customText, setCustomText] = useState(isCardValue ? "" : initialWorld);
@@ -620,7 +785,7 @@ function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, a
       setValidating(false);
       if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
     }
-    setTransitionMsg(bb.q2Confirm(world)); setTransitioning(true);
+    setTransitionMsg(luna.q2Confirm(world)); setTransitioning(true);
     setTimeout(() => { setTransitioning(false); onNext(world); }, 1500);
   };
 
@@ -635,7 +800,7 @@ function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, a
   );
 
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q2} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} lunaText={luna.q2} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
           {worldOptions.map((w) => {
@@ -652,7 +817,6 @@ function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, a
             );
           })}
         </div>
-        <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={() => { setSelected(pickRandom(worldOptions).label); setCustomText(""); setValidationError(""); }} />
         <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{ui.orDescribeWorld}</p>
         <StoryInput
           value={customText}
@@ -664,7 +828,7 @@ function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, a
         <ConfirmRow
           confirmLabel={validating ? ui.checkingAnswer : ui.thisIsTheWorld}
           onConfirm={handleConfirm}
-          disabled={!current || validating}
+          disabled={!current || validating || !!validationError}
           onSkip={onSkip}
           skipLabel={ui.skip}
         />
@@ -675,15 +839,28 @@ function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, a
 
 // ─── Q3 — Companion ──────────────────────────────────────────────────────────────────────────────
 
-function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, companionTypes, language }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; companionTypes: CompanionTypeMeta[]; language: string }) {
+function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, onReset, optionImages, audioUrl, luna, ui, companionTypes, language, siblingNames, animalTypes }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; luna: LunaCopy; ui: WizardUiCopy; companionTypes: CompanionTypeMeta[]; language: string; siblingNames: string[]; animalTypes: AnimalTypeMeta[] }) {
   const [selectedType, setSelectedType] = useState<Q3CompanionTypeId | null>(null);
   const [nameVal, setNameVal]           = useState("");
+  const [animalType, setAnimalType]     = useState<AnimalTypeId | null>(null);
   const [validationError, setValidationError] = useState("");
   const [validating, setValidating]     = useState(false);
 
   // Restore prior selection when editing from summary
   useEffect(() => {
     if (!initialCompanion) return;
+    // "a dog named Rex" (pet + species) — check before the generic geminiLabel
+    // match below, since "pet"'s own geminiLabel ("pet") never appears in this
+    // format once a species has been picked.
+    for (const a of animalTypes) {
+      const withName = `a brave ${a.id} named `;
+      if (initialCompanion.startsWith(withName)) {
+        setSelectedType("pet");
+        setAnimalType(a.id);
+        setNameVal(initialCompanion.slice(withName.length));
+        return;
+      }
+    }
     for (const ct of companionTypes) {
       const withName = `a ${ct.geminiLabel} named `;
       if (initialCompanion.startsWith(withName)) {
@@ -696,12 +873,17 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
         return;
       }
     }
-  }, [initialCompanion, companionTypes]);
+  }, [initialCompanion, companionTypes, animalTypes]);
   const [suggestedNames, setSuggestedNames] = useState<string[]>([]);
   const [transitioning, setTransitioning]   = useState(false);
   const [transitionMsg, setTransitionMsg]   = useState("");
 
   const buildCompanionString = (type: Q3CompanionTypeId, name: string): string => {
+    // A pet with a chosen species reads as "a dog named Rex", not the generic
+    // "a pet named Rex" — same species-aware phrasing Q1's animal hero uses.
+    if (type === "pet" && animalType) {
+      return name.trim() ? `a brave ${animalType} named ${name.trim()}` : `a brave ${animalType}`;
+    }
     const ct = companionTypes.find((t) => t.id === type)!;
     return name.trim() ? `a ${ct.geminiLabel} named ${name.trim()}` : `a ${ct.geminiLabel}`;
   };
@@ -714,15 +896,37 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
       if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
     }
     const companion = buildCompanionString(type, name);
-    setTransitionMsg(bb.q3Confirm(name.trim() || companionTypes.find((t) => t.id === type)!.label));
+    const displayLabel = type === "pet" && animalType
+      ? animalTypes.find((a) => a.id === animalType)!.label
+      : companionTypes.find((t) => t.id === type)!.label;
+    setTransitionMsg(luna.q3Confirm(name.trim() || displayLabel));
     setTransitioning(true);
     setTimeout(() => { setTransitioning(false); onNext(companion); }, 1500);
   };
 
-  // Load contextual name suggestions when companion type changes
+  // Load contextual name suggestions when companion type (or, for pet, the
+  // chosen species) changes.
   useEffect(() => {
     if (!selectedType) { setSuggestedNames([]); return; }
     const ct = companionTypes.find((t) => t.id === selectedType)!;
+
+    // "Family member" chips should be real relationships (and real siblings,
+    // when this family has other children) — the generic AI name-suggestion
+    // call below is tuned for invented character names and was surfacing
+    // whimsical/pet-sounding names for this category, not relations.
+    if (selectedType === "family") {
+      setSuggestedNames([...siblingNames, ...ct.surpriseNames].slice(0, 4));
+      return;
+    }
+
+    // "Pet" shows a species picker first (AnimalTypeChips, rendered below) —
+    // name suggestions only make sense once a species is chosen, and then
+    // they're that species' own names, not a generic AI guess.
+    if (selectedType === "pet") {
+      setSuggestedNames(animalType ? (animalTypes.find((a) => a.id === animalType)?.names ?? []) : []);
+      return;
+    }
+
     // Show hardcoded names immediately
     setSuggestedNames(ct.surpriseNames.slice(0, 4));
     // Try to get AI-generated contextual names
@@ -738,7 +942,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [selectedType, heroName, worldName, companionTypes]);
+  }, [selectedType, heroName, worldName, companionTypes, siblingNames, animalType, animalTypes]);
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
@@ -748,7 +952,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
   );
 
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q3(worldName)} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} lunaText={luna.q3(worldName)} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
           {companionTypes.map((ct) => (
@@ -758,7 +962,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
               emoji={ct.emoji}
               imageUrl={optionImages[`companion-${ct.id}`]}
               selected={selectedType === ct.id}
-              onClick={() => { setSelectedType(ct.id); setNameVal(""); setValidationError(""); }}
+              onClick={() => { setSelectedType(ct.id); setNameVal(""); setAnimalType(null); setValidationError(""); }}
             />
           ))}
         </div>
@@ -766,11 +970,28 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
         <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={() => {
           const randomType = pickRandom(companionTypes);
           setSelectedType(randomType.id);
-          setNameVal(pickRandom(randomType.surpriseNames));
           setValidationError("");
+          if (randomType.id === "pet") {
+            const randomAnimal = pickRandom(animalTypes);
+            setAnimalType(randomAnimal.id);
+            setNameVal(pickRandom(randomAnimal.names));
+          } else {
+            setAnimalType(null);
+            setNameVal(pickRandom(randomType.surpriseNames));
+          }
         }} />
 
-        {selectedType && (
+        {selectedType === "pet" && (
+          <div className="flex flex-wrap gap-2">
+            <AnimalTypeChips
+              animalTypes={animalTypes}
+              selected={animalType}
+              onSelect={(id) => { setAnimalType(id); setNameVal(""); setValidationError(""); }}
+            />
+          </div>
+        )}
+
+        {selectedType && (selectedType !== "pet" || animalType) && (
           <>
             <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
               {ui.companionNameHint}
@@ -791,22 +1012,20 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
             {suggestedNames.length > 0 && (
               <ExampleChips examples={suggestedNames} onTap={(v) => { setNameVal(v); setValidationError(""); }} />
             )}
-            <ConfirmRow
-              confirmLabel={validating ? ui.checkingAnswer : ui.thisIsTheCompanion}
-              onConfirm={() => confirm(selectedType, nameVal)}
-              disabled={validating}
-              onSkip={onSkip}
-              skipLabel={ui.skip}
-            />
           </>
         )}
 
         {!selectedType && (
-          <>
-            <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{bb.q3Nudge}</p>
-            {onSkip && <SkipLink onSkip={onSkip} label={ui.skipThisStep} />}
-          </>
+          <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{luna.q3Nudge}</p>
         )}
+
+        <ConfirmRow
+          confirmLabel={validating ? ui.checkingAnswer : ui.thisIsTheCompanion}
+          onConfirm={() => selectedType && confirm(selectedType, nameVal)}
+          disabled={!selectedType || (selectedType === "pet" && !animalType) || validating || !!validationError}
+          onSkip={onSkip}
+          skipLabel={ui.skip}
+        />
       </div>
     </QuestionShell>
   );
@@ -816,7 +1035,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
 
 type Q4Phase = "input" | "reaction1" | "reaction2";
 
-function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, q4Categories, language }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; q4Categories: Q4CategoryMeta[]; language: string }) {
+function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip, onReset, optionImages, audioUrl, luna, ui, q4Categories, language }: { heroName: string; companionName: string; initialEngine: string; onNext: (e: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; luna: LunaCopy; ui: WizardUiCopy; q4Categories: Q4CategoryMeta[]; language: string }) {
   const [selectedCat, setSelectedCat] = useState<Q4CategoryId | null>(null);
   const [textVal, setTextVal]         = useState(initialEngine);
   const [phase, setPhase]             = useState<Q4Phase>("input");
@@ -828,35 +1047,42 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
     if (initialEngine) { setSelectedCat("funny"); setTextVal(initialEngine); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const activeCat = q4Categories.find((c) => c.id === selectedCat);
+
+  // Leaving the field blank is a valid path, same as Q3's companion name —
+  // Luna picks one of the current category's own example prompts instead of
+  // erroring. Only the user's own typed text needs the Gemini check; a
+  // pre-vetted example never does.
   const confirm = async (engine: string) => {
-    if (!engine.trim()) { setValidationError(bb.emptyError); return; }
-    setValidating(true);
-    const result = await validateWizardText(engine.trim(), "challenge", language);
-    setValidating(false);
-    if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
-    setConfirmedEngine(engine.trim());
+    const finalEngine = engine.trim() || (activeCat ? pickRandom(activeCat.examples) : "");
+    if (!finalEngine) { setValidationError(luna.emptyError); return; }
+    if (engine.trim()) {
+      setValidating(true);
+      const result = await validateWizardText(finalEngine, "challenge", language);
+      setValidating(false);
+      if (!result.approved) { setValidationError(result.reason || ui.pleaseRephrase); return; }
+    }
+    setConfirmedEngine(finalEngine);
     setTimeout(() => setPhase("reaction1"), 1500);
   };
 
   if (phase === "reaction1") return (
     <div className="flex flex-col min-h-full items-center justify-center px-5 gap-5">
       <FairyFigure size={72} />
-      <BluebellLine text={bb.q4Reaction1} speed={90} onComplete={() => setTimeout(() => setPhase("reaction2"), 600)} />
+      <LunaLine text={luna.q4Reaction1} speed={90} onComplete={() => setTimeout(() => setPhase("reaction2"), 600)} />
     </div>
   );
 
   if (phase === "reaction2") return (
     <div className="flex flex-col min-h-full items-center justify-center px-5 gap-5">
       <FairyFigure size={72} />
-      <p className="text-fs-subtitle font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{bb.q4Confirm(confirmedEngine)}</p>
+      <p className="text-fs-subtitle font-light text-center leading-relaxed" style={{ color: "#4fc3f7" }}>{luna.q4Confirm(confirmedEngine)}</p>
       <AutoAdvance delay={1200} onAdvance={() => onNext(confirmedEngine)} />
     </div>
   );
 
-  const activeCat = q4Categories.find((c) => c.id === selectedCat);
-
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q4(companionName)} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} lunaText={luna.q4(companionName)} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
 
         <div className="grid grid-cols-2 gap-2">
@@ -880,7 +1106,10 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
               maxSoftLimit={80}
               autoFocus
               onSubmit={() => confirm(textVal)}
-              overLimitText={bb.q4Hint} />
+              overLimitText={luna.q4Hint} />
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
+              {ui.challengeHint}
+            </p>
             {validationError && <p className="text-fs-body" style={{ color: "#EC4899" }}>{validationError}</p>}
             <ExampleChips
               examples={activeCat.examples}
@@ -889,7 +1118,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
             <ConfirmRow
               confirmLabel={validating ? ui.checkingAnswer : ui.thisIsTheChallenge}
               onConfirm={() => confirm(textVal)}
-              disabled={!textVal.trim() || validating}
+              disabled={validating || !!validationError}
               onSkip={onSkip}
               skipLabel={ui.skip}
             />
@@ -913,7 +1142,7 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
 
 // ─── Q5 — Resolution mood ───────────────────────────────────────────────────────────────────────
 
-function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, optionImages, audioUrl, bb, ui, moodLabels }: { engineText: string; initialMood?: ResolutionMood | null; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; bb: BluebellCopy; ui: WizardUiCopy; moodLabels: Record<string, string> }) {
+function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, optionImages, audioUrl, luna, ui, moodLabels }: { engineText: string; initialMood?: ResolutionMood | null; onNext: (mood: ResolutionMood) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; luna: LunaCopy; ui: WizardUiCopy; moodLabels: Record<string, string> }) {
   const MOODS: { id: ResolutionMood; emoji: string; isBedtime?: boolean }[] = [
     { id: "brave",     emoji: "🦱" },
     { id: "laughing",  emoji: "😂" },
@@ -924,7 +1153,7 @@ function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, opti
   const [selectedMood, setSelectedMood] = useState<ResolutionMood | null>(initialMood ?? null);
 
   return (
-    <QuestionShell onBack={onBack} onReset={onReset} bluebellText={bb.q5(engineText)} audioUrl={audioUrl} ui={ui}>
+    <QuestionShell onBack={onBack} onReset={onReset} lunaText={luna.q5(engineText)} audioUrl={audioUrl} ui={ui}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2.5">
           {MOODS.map((m) => (
@@ -962,14 +1191,14 @@ function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, opti
 
 type SummaryPhase = "table" | "script" | "countdown" | "herewego";
 
-function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, bb, ui, moodLabels, companionTypes }: {
+function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, luna, ui, moodLabels, companionTypes }: {
   answers: Answers;
   durationMinutes: number;
   onDurationChange: (v: number) => void;
   onEditStep: (step: Step) => void;
   onLaunch: () => void;
   onReset?: () => void;
-  bb: BluebellCopy;
+  luna: LunaCopy;
   ui: WizardUiCopy;
   moodLabels: Record<string, string>;
   companionTypes: CompanionTypeMeta[];
@@ -981,7 +1210,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   // answers.q3_companion is built from the English geminiLabel (for the
   // story-generation prompt) — re-localize it for anything the user sees.
   const displayCompanion = localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui);
-  const launchScript = bb.launch(moodLabel, displayCompanion, answers.q2_world, answers.q4_engine);
+  const launchScript = luna.launch(moodLabel, displayCompanion, answers.q2_world, answers.q4_engine);
 
   const ROWS: { label: string; value: string; step: Step }[] = [
     { label: ui.hero,      value: answers.q1_hero,   step: "q1" },
@@ -1027,32 +1256,31 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 
       {phase === "table" && (
         <div className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <label className="text-white/40 text-fs-body font-bold uppercase tracking-widest">{ui.storyLength}</label>
-            <span className="text-fs-body font-bold px-2.5 py-0.5 rounded-full"
-              style={{ background: "rgba(79,195,247,0.12)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.25)" }}>
-              {durationMinutes} min
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mb-3">
+          <label className="text-white/40 text-fs-body font-bold uppercase tracking-widest mb-3 block">{ui.storyLength}</label>
+          <div className="grid grid-cols-3 gap-1.5 mb-3">
             {[
-              { value: 3, icon: "⚡", label: ui.short,  desc: "~3 min" },
-              { value: 5, icon: "🌙", label: ui.medium, desc: "~5 min" },
-              { value: 8, icon: "✨", label: ui.long,   desc: "~8 min" },
+              { value: 3, icon: "⚡", label: ui.short },
+              { value: 5, icon: "🌙", label: ui.medium },
+              { value: 8, icon: "✨", label: ui.long },
             ].map((p) => {
               const sel = durationMinutes === p.value;
               return (
                 <button key={p.value} onClick={() => onDurationChange(p.value)}
-                  className="flex flex-col items-center gap-0.5 py-2.5 rounded-2xl transition-all active:scale-[0.97]"
+                  className="flex items-center justify-center gap-1 py-2 rounded-xl transition-all active:scale-[0.97]"
                   style={sel
-                    ? { background: "rgba(79,195,247,0.14)", border: "1.5px solid rgba(79,195,247,0.5)", color: "#4fc3f7" }
-                    : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)" }}>
-                  <span className="text-fs-heading">{p.icon}</span>
+                    ? { background: "rgba(79,195,247,0.14)", border: "1px solid rgba(79,195,247,0.5)", color: "#4fc3f7" }
+                    : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}>
+                  <span className="text-fs-body">{p.icon}</span>
                   <span className="text-fs-body font-semibold">{p.label}</span>
-                  <span className="text-fs-body" style={{ color: sel ? "rgba(79,195,247,0.7)" : "rgba(255,255,255,0.3)" }}>{p.desc}</span>
                 </button>
               );
             })}
+          </div>
+          <div className="flex justify-center mb-1.5">
+            <span className="text-fs-body font-bold px-2.5 py-0.5 rounded-full"
+              style={{ background: "rgba(79,195,247,0.12)", color: "#4fc3f7", border: "1px solid rgba(79,195,247,0.25)" }}>
+              {durationMinutes} min
+            </span>
           </div>
           <input type="range" min={1} max={10} step={1} value={durationMinutes}
             onChange={(e) => onDurationChange(+e.target.value)}
@@ -1077,8 +1305,8 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
       {(phase === "script" || phase === "countdown" || phase === "herewego") && (
         <div className="flex flex-col gap-5">
           <div>
-            <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>{ui.bluebellLabel}</p>
-            <BluebellLine text={launchScript} speed={65}
+            <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(79,195,247,0.6)" }}>{ui.lunaLabel}</p>
+            <LunaLine text={launchScript} speed={65}
               onComplete={() => { setShowReady(true); setTimeout(() => setPhase("countdown"), 600); }} />
           </div>
           {showReady && phase !== "herewego" && (
@@ -1086,7 +1314,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
           )}
           {phase === "countdown" && <LaunchCountdown onComplete={handleCountdownDone} />}
           {phase === "herewego" && (
-            <p className="text-center text-fs-heading font-semibold" style={{ color: "#4fc3f7" }}>{bb.hereWeGo}</p>
+            <p className="text-center text-fs-heading font-semibold" style={{ color: "#4fc3f7" }}>{luna.hereWeGo}</p>
           )}
         </div>
       )}
@@ -1096,15 +1324,15 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 
 // ─── Generating screen ────────────────────────────────────────────────────────────────────────
 
-function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, onDone, onError, bb }: {
+function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, onDone, onError, luna }: {
   worldName: string;
   seeds: StorySeeds; durationMinutes: number;
   contentLanguage?: string;
   onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => void;
   onError: (msg: string) => void;
-  bb: BluebellCopy;
+  luna: LunaCopy;
 }) {
-  const messages = bb.generating(worldName);
+  const messages = luna.generating(worldName);
   const [msgIdx, setMsgIdx] = useState(0);
   const [showLong, setShowLong] = useState(false);
   const onDoneRef  = useRef(onDone);
@@ -1145,7 +1373,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, on
       </div>
       <div className="flex flex-col gap-2">
         <p className="text-white text-fs-heading font-medium">{messages[msgIdx]}</p>
-        {showLong && <p className="text-white/40 text-fs-body">{bb.generatingLong}</p>}
+        {showLong && <p className="text-white/40 text-fs-body">{luna.generatingLong}</p>}
       </div>
       <div className="flex gap-2">
         {[0, 1, 2, 3].map((i) => (
@@ -1164,19 +1392,38 @@ const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", 
 export interface StoryCharacterInfo { type: "child" | "adult" | "animal" | "narrator"; visualDescription: string; }
 export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo>; scenes?: import("@/types").StoryScene[] };
 
-export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl, contentLanguage }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string; /** Story content language — independent of the app's global UI language. Falls back to it when not provided. */ contentLanguage?: string } = {}) {
+export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl, childId, contentLanguage, showInternalReset = true, onFirstAnswer }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string; /** Active child's profile id — used to look up real siblings (other children in the same family) for Q3's "family member" chips. */ childId?: string; /** Story content language — independent of the app's global UI language. Falls back to it when not provided. */ contentLanguage?: string; /** Set false when an outer page already renders its own reset+language bar (e.g. studio2), to avoid duplicating the "Start over" button on every question and the summary screen. */ showInternalReset?: boolean; /** Fires once, the first time the user makes real progress (leaves q1 with no answers) — lets an outer page lock its own language selector for the rest of the journey. */ onFirstAnswer?: () => void } = {}) {
   const router = useRouter();
   const { language, t } = useLanguage();
   // Governs the entire wizard's visible/spoken text — narration, card
   // labels, buttons, and the final story — independent of the app's own
   // global UI language.
   const effectiveLanguage = contentLanguage ?? language;
-  const bb = useMemo(() => getBluebell(effectiveLanguage), [effectiveLanguage]);
+  const luna = useMemo(() => getLuna(effectiveLanguage), [effectiveLanguage]);
   const ui = useMemo(() => getWizardUi(effectiveLanguage), [effectiveLanguage]);
   const moodLabels = useMemo(() => getMoodLabels(effectiveLanguage), [effectiveLanguage]);
   const worldOptions = useMemo(() => getWorldOptions(effectiveLanguage), [effectiveLanguage]);
   const companionTypes = useMemo(() => getCompanionTypes(effectiveLanguage), [effectiveLanguage]);
   const q4Categories = useMemo(() => getQ4Categories(effectiveLanguage), [effectiveLanguage]);
+  const animalTypes = useMemo(() => getAnimalTypes(effectiveLanguage), [effectiveLanguage]);
+
+  // Real siblings (other children in this family) for Q3's "family member"
+  // chips — fetched once, best-effort. Empty when there's no other child
+  // profile (or none at all), which is the common case and handled fine by
+  // Q3View's relation-word fallback chips (Mom/Dad/Grandpa/Grandma/...).
+  const [siblingNames, setSiblingNames] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/child-profiles", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((profiles: { id: string; name: string }[]) => {
+        if (cancelled) return;
+        const siblings = (profiles ?? []).filter((p) => p.id !== childId && p.name?.trim()).map((p) => p.name.trim());
+        setSiblingNames(siblings);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [childId]);
 
   const [step, setStep]                   = useState<Step>("q1");
   const [resetToken, setResetToken]       = useState(0);
@@ -1234,7 +1481,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   useEffect(() => {
     let cancelled = false;
     async function seedAudio() {
-      // Bluebell speaks in the user's own chosen default narrator voice —
+      // Luna speaks in the user's own chosen default narrator voice —
       // cached per (language, voiceId) so anyone else who picked the same
       // voice shares the cache instead of regenerating it.
       const voiceId = getNarratorVoiceId();
@@ -1441,7 +1688,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const ErrorBanner = error ? (
     <div className="mx-5 mb-4 px-4 py-3 rounded-2xl text-fs-body"
       style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
-      <p>⚠ {bb.apiError}</p>
+      <p>⚠ {luna.apiError}</p>
       <p className="text-fs-body mt-1 opacity-70">{error}</p>
     </div>
   ) : null;
@@ -1460,7 +1707,16 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const nextOrSummary = (next: Step) => editingFromSummary ? backToSummary() : setStep(next);
   const skipOrSummary = (next: Step, setDefault: () => void) => { setDefault(); nextOrSummary(next); };
 
-  const resetProp = hasProgress ? handleReset : undefined;
+  const resetProp = hasProgress && showInternalReset ? handleReset : undefined;
+
+  const firstAnswerFiredRef = useRef(false);
+  useEffect(() => {
+    if (hasProgress && !firstAnswerFiredRef.current) {
+      firstAnswerFiredRef.current = true;
+      onFirstAnswer?.();
+    }
+    if (!hasProgress) firstAnswerFiredRef.current = false;
+  }, [hasProgress, onFirstAnswer]);
 
   // Wait for the option-card artwork cache lookup to resolve before showing
   // any question step — otherwise every step starts with placeholder card
@@ -1475,21 +1731,21 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
     );
   }
 
-  if (step === "q1") return <>{GeneratingBadge}<Q1View key={resetToken} initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} bb={bb} ui={ui} language={effectiveLanguage} /></>;
-  if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} bb={bb} ui={ui} worldOptions={worldOptions} language={effectiveLanguage} /></>;
-  if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} bb={bb} ui={ui} companionTypes={companionTypes} language={effectiveLanguage} /></>;
-  if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui)} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} bb={bb} ui={ui} q4Categories={q4Categories} language={effectiveLanguage} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} bb={bb} ui={ui} moodLabels={moodLabels} /></>;
+  if (step === "q1") return <>{GeneratingBadge}<Q1View key={resetToken} initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} luna={luna} ui={ui} language={effectiveLanguage} companionTypes={companionTypes} siblingNames={siblingNames} animalTypes={animalTypes} /></>;
+  if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} luna={luna} ui={ui} worldOptions={worldOptions} language={effectiveLanguage} /></>;
+  if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} luna={luna} ui={ui} companionTypes={companionTypes} language={effectiveLanguage} siblingNames={siblingNames} animalTypes={animalTypes} /></>;
+  if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui)} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} luna={luna} ui={ui} q4Categories={q4Categories} language={effectiveLanguage} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} luna={luna} ui={ui} moodLabels={moodLabels} /></>;
 
   if (step === "summary") return (
     <>
       {ErrorBanner}
-      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={handleReset} bb={bb} ui={ui} moodLabels={moodLabels} companionTypes={companionTypes} />
+      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={showInternalReset ? handleReset : undefined} luna={luna} ui={ui} moodLabels={moodLabels} companionTypes={companionTypes} />
     </>
   );
 
   if (step === "generating" && seeds) return (
-    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} onDone={handleDone} onError={handleGenError} bb={bb} />
+    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} onDone={handleDone} onError={handleGenError} luna={luna} />
   );
 
   if (step === "done") {
