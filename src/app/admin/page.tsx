@@ -1305,6 +1305,27 @@ export default function AdminPage() {
       }
       setCharacterTypes((prev) => ({ ...prev, ...types }));
       setCastProfiles(profiles);
+
+      // parseScriptText's assignedVoiceId is a blind round-robin placeholder
+      // (see its own comment above) with zero regard for gender or nature —
+      // whichever voice the character's position in the script happened to
+      // land on. Now that real classification is in, replace it with a
+      // proper nature-based pick for every character, so a hard gender
+      // mismatch (e.g. a fairy landing on a voice explicitly labeled
+      // masculine) doesn't silently survive all the way to production
+      // unless the admin also happens to click Auto Assign per character.
+      const usedVoiceIds = new Set<string>();
+      const voiceByChar: Record<string, string> = {};
+      for (const name of uniqueChars) {
+        const picked = pickBestVoiceForCharacter(profiles[name], undefined, usedVoiceIds);
+        if (picked) {
+          voiceByChar[name] = picked;
+          usedVoiceIds.add(picked);
+        }
+      }
+      finalBlocks = finalBlocks.map((b) =>
+        voiceByChar[b.characterName] ? { ...b, assignedVoiceId: voiceByChar[b.characterName] } : b
+      );
     } else {
       console.warn("[Admin][Validation] Character classification failed — Auto Assign will retry it at Produce Story:", classifyResult.reason);
     }
