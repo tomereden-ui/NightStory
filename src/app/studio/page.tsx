@@ -1353,6 +1353,15 @@ export default function Studio2Page() {
   // ever touched".
   const producedBaselineRef = useRef(scriptSnapshot([]));
   const savedBaselineRef = useRef({ title: "", coverUrl: "", script: scriptSnapshot([]) });
+  // True once this session's script came from an EXISTING saved draft/story
+  // (the mount-time load below), as opposed to being generated fresh in this
+  // browser tab just now. A never-produced story still needs its first
+  // Produce Audio click to be reachable without a pointless throwaway edit —
+  // but only for that one just-generated case. Reopening a draft that was
+  // never produced is a distinct case: nothing has happened in THIS session,
+  // so Produce must start disabled exactly like an already-produced story
+  // does, per scriptChangedFromProduced below.
+  const loadedFromExistingDraftRef = useRef(false);
 
   useEffect(() => {
     if (!hasScriptChanges) producedBaselineRef.current = scriptSnapshot(scriptBlocks);
@@ -1412,6 +1421,7 @@ export default function Studio2Page() {
   useEffect(() => {
     const draft = readDraft(DRAFT_KEY);
     if (draft?.scriptBlocks?.length) {
+      loadedFromExistingDraftRef.current = true;
       setScriptBlocks(draft.scriptBlocks);
       setPromptText(draft.promptText ?? "");
       setSummary(draft.summary ?? "");
@@ -2066,6 +2076,10 @@ export default function Studio2Page() {
   // applied to an already-generated script instead of an in-progress draft.
   const resetScript = useCallback(() => {
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+    // Whatever comes next is generated fresh in this session, not reopened
+    // from a saved draft -- Produce Audio should be reachable immediately
+    // once it's ready, same as any other first-time generation.
+    loadedFromExistingDraftRef.current = false;
     setScriptBlocks([]);
     setPromptText("");
     setSummary("");
@@ -2203,10 +2217,14 @@ export default function Studio2Page() {
   }, []);
 
   // ─── Derived dirty state — drives the Produce/Update Version buttons ──────
-  // A never-produced script can always be produced (no baseline to compare
-  // against yet); an already-produced one needs a real diff from what's
-  // currently live audio, not just "something was edited at some point".
-  const needsProduce = scriptBlocks.length > 0 && (!storyHasAudio || scriptChangedFromProduced);
+  // A script generated fresh in THIS session can always be produced (nothing
+  // to diff against yet, and forcing a throwaway edit before the very first
+  // production would be a pointless hoop). Everything else -- an
+  // already-produced story, or a never-produced draft just reopened via
+  // Edit with no changes made in this session -- needs a real diff from
+  // what's currently live/saved, not just "the story has content".
+  const needsProduce = scriptBlocks.length > 0 &&
+    ((!storyHasAudio && !loadedFromExistingDraftRef.current) || scriptChangedFromProduced);
   const needsSave = scriptBlocks.length > 0 && scriptOrMetaChangedFromSaved;
 
   // ─── Early returns ──────────────────────────────────────────────────────────
