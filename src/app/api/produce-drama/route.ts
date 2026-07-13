@@ -332,6 +332,33 @@ async function runProduction(
     const sfxTracks = drama.tracks.filter((t) => t.type === "sfx");
     const totalDurationMs = drama.duration_estimate_seconds * 1000;
 
+    // planDrama re-transcribes every line through its own (temperature 0.4)
+    // Gemini call rather than passing it through verbatim — the prompt asks
+    // for an exact character-for-character copy, but that's a best-effort
+    // instruction to a non-deterministic model, not a guarantee. Hashing
+    // track.line/track.character directly means a harmless copy variance
+    // (stray whitespace, a punctuation tweak, "Narrator" vs "narrator") on a
+    // RE-production of an otherwise-untouched line can silently produce a
+    // different hash and force a pointless re-synthesis — exactly what the
+    // element cache exists to prevent, and the actual answer to "what needs
+    // another production cycle" should hinge on. Dialogue tracks come out in
+    // the same reading order as the non-SFX blocks sent in, so line them up
+    // by position and hash off each ORIGINAL block's own text/name instead,
+    // whenever the counts agree; fall back to the model's own copy only if
+    // planDrama split/merged/dropped a line and the counts no longer match.
+    const originalDialogueBlocks = blocks.filter((b) => b.characterName !== "SFX");
+    const stableHashSourceFor = new Map<string, { charName: string; line: string }>();
+    if (originalDialogueBlocks.length === dialogueTracks.length) {
+      dialogueTracks.forEach((t, i) => {
+        stableHashSourceFor.set(t.id, {
+          charName: originalDialogueBlocks[i].characterName,
+          line: originalDialogueBlocks[i].textPayload.trim(),
+        });
+      });
+    } else {
+      console.warn(`[${ts()}][produce-drama] Dialogue track count (${dialogueTracks.length}) doesn't match source block count (${originalDialogueBlocks.length}) — falling back to planDrama's own line/name for cache hashing this production.`);
+    }
+
     // The cover was already generated once right after the script (shown in the
     // create-story UI) — reuse that image instead of generating a brand new one here.
     //
@@ -440,6 +467,9 @@ async function runProduction(
         batch.map(async (track) => {
           const line = track.line?.trim() ?? "";
           const charName = track.character ?? "Narrator";
+          const hashSource = stableHashSourceFor.get(track.id);
+          const hashCharName = hashSource?.charName ?? charName;
+          const hashLine = hashSource?.line ?? line;
           const profile = voiceProfiles[charName];
           const override = voiceOverrides[charName];
 
@@ -457,8 +487,12 @@ async function runProduction(
             writeSilence(500, path.join(jobTmp, `${track.id}.wav`));
           } else {
             // ── Cache lookup ─────────────────────────────────────────────────────
+            // Hashed on the stable original block's text/name (see
+            // stableHashSourceFor above), not planDrama's own re-transcribed
+            // track.line/track.character — the actual synthesized/logged
+            // line below is untouched.
             const voiceKey = `${useELForChar ? "el" : "gm"}:${voice}`;
-            const contentHash = hashDialogue(charName, line, voiceKey);
+            const contentHash = hashDialogue(hashCharName, hashLine, voiceKey);
             const cached = elementCache.get(contentHash);
 
             if (cached) {
