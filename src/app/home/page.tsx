@@ -750,8 +750,11 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Journey snapshot — streak + 7-day mini heatmap */}
-        <JourneySnippet childName={activeChild?.name} />
+        {/* Journey snapshot — streak + 7-day mini heatmap. Hidden until the
+            child has actually listened to something: this is mock data
+            (MOCK_JOURNEY), and showing a fabricated streak to a brand-new
+            user who hasn't played a single story yet is actively misleading. */}
+        {stories.length > 0 && <JourneySnippet childName={activeChild?.name} />}
       </div>
 
       {/* ── Content ── */}
@@ -886,12 +889,18 @@ export default function HomePage() {
           )}
 
           {/* ── Shared with Me ── */}
-          <Rail
-            title={t("sharedWithMe")}
-            empty={<SharedEmptyState />}
-          >
-            {null}
-          </Rail>
+          {/* Always empty today (sharing isn't wired up yet) — showing that
+              empty state to a brand-new user with nothing else on the page
+              either just adds clutter with no signal. Existing users with a
+              library still see it, same as before. */}
+          {stories.length > 0 && (
+            <Rail
+              title={t("sharedWithMe")}
+              empty={<SharedEmptyState />}
+            >
+              {null}
+            </Rail>
+          )}
 
           {/* ── Classics ── */}
           {classics.length > 0 && (
