@@ -15,6 +15,9 @@ import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType } from "@/lib/services/characterAvatars";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { useListeningProgress } from "@/hooks/useListeningProgress";
+import { useAuth } from "@/context/AuthContext";
+
+const ADMIN_EMAIL = "tomereden@gmail.com";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -40,6 +43,8 @@ function timeAgo(ts: number): string {
 export default function StoryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const { effective } = useViewMode();
   const stickyMaxWidth = effective === "desktop" ? 896 : effective === "tablet" ? 672 : 448;
 
@@ -562,14 +567,16 @@ export default function StoryDetailPage() {
           </div>
         ) : (
           <div className="px-5 mt-8 mb-4 flex gap-3">
-            <button
-              onClick={handleEdit}
-              className="flex-1 py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.3)", color: "rgba(79,195,247,0.9)" }}
-            >
-              <span>🎬</span>
-              <span>Open in Studio</span>
-            </button>
+            {(isOwned || isAdmin) && (
+              <button
+                onClick={handleEdit}
+                className="flex-1 py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.3)", color: "rgba(79,195,247,0.9)" }}
+              >
+                <span>🎬</span>
+                <span>Open in Studio</span>
+              </button>
+            )}
             {isOwned && (
               <button
                 onClick={() => setConfirmingDelete(true)}

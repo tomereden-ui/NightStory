@@ -17,6 +17,9 @@ import ShareSheet from "@/components/ShareSheet";
 import type { LibraryEntry, CharacterProfile } from "@/lib/libraryStore";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { useListeningProgress } from "@/hooks/useListeningProgress";
+import { useAuth } from "@/context/AuthContext";
+
+const ADMIN_EMAIL = "tomereden@gmail.com";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -79,6 +82,8 @@ function cardPalette(title: string): [string, string] {
 export default function ClassicDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const { effective } = useViewMode();
   const stickyMaxWidth = effective === "desktop" ? 896 : effective === "tablet" ? 672 : 448;
 
@@ -686,26 +691,28 @@ export default function ClassicDetailPage() {
           </div>
         )}
 
-        {/* Open in Studio button */}
-        <div className="px-5 mt-8 mb-4">
-          <button
-            onClick={handleOpenInStudio}
-            disabled={!isReady || openingInStudio}
-            className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-            style={isReady && !openingInStudio ? {
-              background: `linear-gradient(135deg, ${c1}18, ${c2}18)`,
-              border: `1px solid ${c1}44`,
-              color: c1,
-            } : {
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              color: "rgba(255,255,255,0.2)",
-            }}
-          >
-            <span>🎬</span>
-            <span>{openingInStudio ? "Opening…" : "Open in Studio"}</span>
-          </button>
-        </div>
+        {/* Open in Studio button — admin only, since classics aren't the user's own story */}
+        {isAdmin && (
+          <div className="px-5 mt-8 mb-4">
+            <button
+              onClick={handleOpenInStudio}
+              disabled={!isReady || openingInStudio}
+              className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              style={isReady && !openingInStudio ? {
+                background: `linear-gradient(135deg, ${c1}18, ${c2}18)`,
+                border: `1px solid ${c1}44`,
+                color: c1,
+              } : {
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.2)",
+              }}
+            >
+              <span>🎬</span>
+              <span>{openingInStudio ? "Opening…" : "Open in Studio"}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sticky audio player — constrained to app width */}
