@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ScriptBlock, MoralLesson } from "@/types";
 import type { CharacterProfile } from "@/lib/libraryStore";
 import type { TtsProvider } from "@/lib/services/ttsService";
+import type { DramaTrack } from "@/lib/services/dramaPlanner";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 min — POST returns immediately; production runs in background
@@ -209,6 +210,113 @@ function fixDialogueTiming(
   return adjusted;
 }
 
+// ─── Planned-vs-final production timing log ────────────────────────────────
+
+function formatLogTimestamp(ms: number): string {
+  const total = Math.max(0, Math.round(ms));
+  const m = Math.floor(total / 60000);
+  const s = (total % 60000) / 1000;
+  return `${String(m).padStart(2, "0")}:${s.toFixed(1).padStart(4, "0")}`;
+}
+
+function formatLogSeconds(ms: number): string {
+  return `${(Math.max(0, ms) / 1000).toFixed(1)}s`;
+}
+
+function sanitizeLogFilename(name: string): string {
+  // Strip characters invalid on Windows/most filesystems; Unicode (Hebrew,
+  // etc.) is left intact since that's supported everywhere this runs.
+  const cleaned = name.trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, " ").trim();
+  return (cleaned || "untitled-story").slice(0, 120);
+}
+
+function describeTrack(t: DramaTrack): string {
+  if (t.type === "dialogue") {
+    const line = (t.line ?? "").replace(/\s+/g, " ").trim();
+    return `${t.character ?? "Narrator"}: "${line.length > 90 ? line.slice(0, 90) + "…" : line}"`;
+  }
+  const desc = (t.description ?? "").replace(/\s+/g, " ").trim();
+  return `${t.loop ? "ambient loop" : "event"}: "${desc}"`;
+}
+
+interface FinalTrackInfo {
+  id: string;
+  startMs: number;
+  durationMs: number;
+}
+
+/**
+ * Appends a human-readable planned-vs-final timing report for this
+ * production run to production-logs/<story title>.log.txt (creating the
+ * file and directory on first use). Answers, from a plain read of the file,
+ * exactly what got planned, what actually happened once real audio existed,
+ * and by how much (and why) any block's position moved.
+ */
+function writeProductionTimingLog(
+  storyTitle: string,
+  storyId: string,
+  jobId: string,
+  plannedTracks: DramaTrack[],
+  plannedDurationEstimateSeconds: number,
+  finalTrackInfoById: Map<string, FinalTrackInfo>,
+  finalTotalMs: number,
+): void {
+  try {
+    const dir = path.join(process.cwd(), "production-logs");
+    fs.mkdirSync(dir, { recursive: true });
+    const filePath = path.join(dir, `${sanitizeLogFilename(storyTitle)}.log.txt`);
+
+    const sortedPlanned = [...plannedTracks].sort((a, b) => a.start_ms - b.start_ms);
+    const W = 90; // divider width
+
+    const lines: string[] = [];
+    lines.push("═".repeat(W));
+    lines.push(`PRODUCTION RUN — ${new Date().toISOString()}`);
+    lines.push(`Story: "${storyTitle}"  (story id: ${storyId}, job id: ${jobId})`);
+    lines.push("═".repeat(W));
+    lines.push("");
+    lines.push("── PLANNED (drama planner output, before any audio existed) ──");
+    lines.push(`Assessed duration: ${formatLogTimestamp(plannedDurationEstimateSeconds * 1000)} (${plannedDurationEstimateSeconds}s)`);
+    lines.push("");
+    for (const t of sortedPlanned) {
+      const tag = t.type === "dialogue" ? "SPEECH" : t.loop ? "SFX(loop)" : "SFX";
+      lines.push(`  ${formatLogTimestamp(t.start_ms)}  ${tag.padEnd(9)} ${describeTrack(t)}`);
+    }
+    lines.push("");
+    lines.push("── FINAL (actual measured audio, positions as sent to the mixer) ──");
+    lines.push(`Actual duration: ${formatLogTimestamp(finalTotalMs)} (${Math.round(finalTotalMs / 1000)}s)`);
+    lines.push("");
+    for (const t of sortedPlanned) {
+      const final = finalTrackInfoById.get(t.id);
+      const tag = t.type === "dialogue" ? "SPEECH" : t.loop ? "SFX(loop)" : "SFX";
+      if (!final) {
+        lines.push(`  ${"—".padEnd(9)}  ${tag.padEnd(9)} ${describeTrack(t)}   ⚠ SKIPPED (no audio produced)`);
+        continue;
+      }
+      const delta = final.startMs - t.start_ms;
+      const deltaStr = delta === 0 ? "±0.0s" : `${delta > 0 ? "+" : "-"}${formatLogSeconds(Math.abs(delta))}`;
+      const driftNote = t.type === "sfx" && delta !== 0 ? " (drift-adjusted)" : "";
+      const rowPrefix = `  ${formatLogTimestamp(final.startMs)}  ${tag.padEnd(9)} ${describeTrack(t)}${driftNote}`;
+      // padEnd only pads a string shorter than the target -- a long line's
+      // own text would otherwise run straight into "dur ..." with no space
+      // at all, so fall back to a fixed small gap once the row overflows
+      // the alignment column instead of relying on padEnd for a separator.
+      const gap = rowPrefix.length < W - 20 ? " ".repeat(W - 20 - rowPrefix.length) : "  ";
+      lines.push(`${rowPrefix}${gap}dur ${formatLogSeconds(final.durationMs).padStart(6)}   Δ ${deltaStr}`);
+    }
+    lines.push("");
+    lines.push("═".repeat(W));
+    lines.push("");
+    lines.push("");
+
+    fs.appendFileSync(filePath, lines.join("\n"), "utf-8");
+    console.log(`[${ts()}][produce-drama] Wrote production timing log to ${filePath}`);
+  } catch (err) {
+    // Diagnostic-only — never let logging failure interrupt a real production.
+    console.warn(`[${ts()}][produce-drama] writeProductionTimingLog failed:`, err);
+  }
+}
+
 function ensureDirs() {
   fs.mkdirSync(TMP_DIR, { recursive: true });
 }
@@ -327,6 +435,11 @@ async function runProduction(
     ]);
     console.log(`[${ts()}][TTS] Detected language: ${scriptLanguage}`);
     updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 18 });
+
+    // Snapshot the plan exactly as planDrama returned it, before anything
+    // below mutates start_ms/end_ms in place once real audio exists — this
+    // is the "planned" half of the production log written just before mixing.
+    const plannedTracksSnapshot = drama.tracks.map((t) => ({ ...t }));
 
     const dialogueTracks = drama.tracks.filter((t) => t.type === "dialogue");
     const sfxTracks = drama.tracks.filter((t) => t.type === "sfx");
@@ -747,6 +860,33 @@ async function runProduction(
     // Re-save scriptJson with corrected timings before audio is uploaded
     updateJob(jobId, { scriptJson: drama as unknown as object });
 
+    // SFX tracks aren't touched by fixDialogueTiming above, so without this
+    // they'd stay pinned to the plan's guessed position even as dialogue
+    // keeps drifting later -- audible as an "event" SFX landing before/after
+    // the line it was timed to accompany. Shift each SFX by however much the
+    // timeline had already drifted (actual vs. planned) at that SFX's own
+    // planned position, using the drift of the most recently completed
+    // dialogue line up to that point (0 before any dialogue has played yet).
+    const plannedDialogueStartById = new Map(
+      plannedTracksSnapshot.filter((t) => t.type === "dialogue").map((t) => [t.id, t.start_ms])
+    );
+    const driftPoints = dialogueTracks
+      .map((t) => {
+        const planned = plannedDialogueStartById.get(t.id) ?? t.start_ms;
+        const actual = adjustedStartMs.get(t.id) ?? planned;
+        return { planned, drift: actual - planned };
+      })
+      .sort((a, b) => a.planned - b.planned);
+    const driftAt = (plannedMs: number): number => {
+      let drift = 0;
+      for (const p of driftPoints) {
+        if (p.planned > plannedMs) break;
+        drift = p.drift;
+      }
+      return drift;
+    };
+
+    const finalTrackInfoById = new Map<string, FinalTrackInfo>();
     const mixTrackList = drama.tracks
       .filter((t) => {
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);
@@ -756,16 +896,28 @@ async function runProduction(
       .map((t) => {
         const mp3 = path.join(jobTmp, `${t.id}.mp3`);
         const wav = path.join(jobTmp, `${t.id}.wav`);
+        const filePath = fs.existsSync(mp3) ? mp3 : wav;
         const startMs = t.type === "dialogue"
           ? (adjustedStartMs.get(t.id) ?? t.start_ms)
-          : t.start_ms;
+          : t.start_ms + driftAt(t.start_ms);
+        finalTrackInfoById.set(t.id, { id: t.id, startMs, durationMs: audioDurationMs(filePath) });
         return {
-          filePath: fs.existsSync(mp3) ? mp3 : wav,
+          filePath,
           startMs,
           isSfx: t.type === "sfx",
           isLooping: !!(t.type === "sfx" && t.loop),
         };
       });
+
+    writeProductionTimingLog(
+      drama.title || "untitled-story",
+      storyId,
+      jobId,
+      plannedTracksSnapshot,
+      drama.duration_estimate_seconds,
+      finalTrackInfoById,
+      adjustedTotal,
+    );
 
     try {
       await mixTracks(mixTrackList, tmpMp3Path, adjustedTotal);
