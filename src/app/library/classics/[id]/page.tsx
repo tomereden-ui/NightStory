@@ -288,6 +288,10 @@ export default function ClassicDetailPage() {
     setOpeningInStudio(true);
     const summary = getClassicSummary(meta.tagline, blocks);
     // Admin-added classics (UUID IDs) are editable in-place; hardcoded classics fork.
+    // Either way, a classic can have real produced audio -- whether editing it
+    // touches the original row or forks a copy is a separate question from
+    // whether there's something worth hearing, so always carry the audio over
+    // (see the equivalent note in library/[id]/page.tsx's handleEdit).
     writeDraft({
       promptText: `${meta.title} — ${meta.tagline}`,
       scriptBlocks: blocks,
@@ -299,9 +303,11 @@ export default function ClassicDetailPage() {
       storyTitle: meta.title,
       language: storyLanguage,
       characterProfiles,
+      audioUrl: storyAudioUrl ?? undefined,
+      durationSeconds: meta.durationSeconds,
     }, "nightstory_studio2_draft_v1");
     router.push("/studio");
-  }, [meta, blocks, router, storyLanguage, characterProfiles, isHardcoded, id]);
+  }, [meta, blocks, router, storyLanguage, characterProfiles, isHardcoded, id, storyAudioUrl]);
 
   const toggleSummaryPlay = useCallback(async () => {
     if (summaryPlaying) {

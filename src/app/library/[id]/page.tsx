@@ -260,8 +260,16 @@ export default function StoryDetailPage() {
       forkedFromTitle: isOwned ? undefined : entry.title,
       storyTitle: entry.title,
       language: entry.language,
-      audioUrl: isOwned ? entry.audioUrl : undefined,
-      durationSeconds: isOwned ? entry.durationSeconds : undefined,
+      // Whether editing forks a private copy (isOwned above) is about who
+      // owns the STORY ROW -- separate from whether there's audio worth
+      // hearing. A classic or another family's story still has real,
+      // listenable audio; forking it into your own editable copy shouldn't
+      // also throw that away and leave Studio's player silently empty until
+      // you produce a duplicate of what already exists. Always carry it
+      // over -- the fork banner already makes clear this is your own copy,
+      // and editing/producing on it can never touch the original either way.
+      audioUrl: entry.audioUrl,
+      durationSeconds: entry.durationSeconds,
       moralLessons: entry.moralLessons,
       // Without profiles the Studio falls back to re-classifying the whole
       // cast from scratch (fresh Gemini pass + Imagen avatar generation),
