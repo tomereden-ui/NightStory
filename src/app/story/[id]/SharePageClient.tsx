@@ -66,61 +66,38 @@ function ChildBubble({ child, large }: { child: { name: string; avatarEmoji: str
 }
 
 function PromoBanner() {
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError]   = useState(false);
-  const showImage = imgLoaded && !imgError;
-
   return (
-    <div className="w-full overflow-hidden" style={{ maxWidth: 420, borderRadius: 24, position: "relative", boxShadow: "0 8px 40px rgba(0,0,0,0.55)" }}>
-      {/* Real promo image — hidden until loaded, stays hidden if missing */}
+    <div
+      className="relative w-full overflow-hidden"
+      style={{ maxWidth: 420, borderRadius: 24, boxShadow: "0 8px 40px rgba(0,0,0,0.55)" }}
+    >
+      {/* Same splash artwork used on the login/onboarding screens, so a
+          friend clicking a shared story sees a consistent first impression
+          of the app before they've ever opened it. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/promo-banner.jpg"
-        alt="NightStory — Create a bedtime story for your child"
-        onLoad={() => setImgLoaded(true)}
-        onError={() => setImgError(true)}
-        style={{
-          display: showImage ? "block" : "none",
-          width: "100%",
-          borderRadius: 24,
-        }}
+        src="/splash-family.png"
+        alt=""
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg, rgba(4,6,18,0.35) 0%, rgba(4,6,18,0.55) 40%, rgba(4,6,18,0.92) 80%, rgba(4,6,18,0.98) 100%)" }}
       />
 
-      {/* CSS fallback — shown while image loads or if it's missing */}
-      {!showImage && (
-        <div
-          style={{
-            borderRadius: 24,
-            background: "linear-gradient(135deg, #0d1a3a 0%, #0a0d1f 50%, #110828 100%)",
-            border: "1px solid rgba(79,195,247,0.18)",
-            overflow: "hidden",
-            position: "relative",
-          }}
-        >
-          <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, background: "radial-gradient(circle, rgba(167,139,250,0.2) 0%, transparent 70%)", pointerEvents: "none" }} />
-          <div style={{ position: "absolute", bottom: -20, left: 20, width: 100, height: 100, background: "radial-gradient(circle, rgba(79,195,247,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
-          <div className="relative px-6 pt-6 pb-1">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="flex-shrink-0 flex items-center justify-center rounded-2xl" style={{ width: 56, height: 56, background: "linear-gradient(135deg,rgba(79,195,247,0.15),rgba(167,139,250,0.15))", border: "1px solid rgba(79,195,247,0.25)", fontSize: 28 }}>🌙</div>
-              <div>
-                <p className="font-bold" style={{ color: "#fff", fontSize: "var(--fs-subtitle)", lineHeight: 1.2, marginBottom: 4 }}>NightStory</p>
-                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "var(--fs-body)", lineHeight: 1.5 }}>Magical AI bedtime stories,<br />personalised for your child.</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {["✨ AI-generated", "🎙 Voice narrated", "👧 Personalised", "🌍 Multi-language"].map((f) => (
-                <span key={f} style={{ fontSize: "var(--fs-label)", color: "rgba(255,255,255,0.55)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, padding: "4px 10px" }}>{f}</span>
-              ))}
-            </div>
-          </div>
+      <div className="relative px-6 pt-8 pb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <span style={{ fontSize: 22 }}>🌙</span>
+          <p className="font-bold" style={{ color: "#fff", fontSize: "var(--fs-subtitle)" }}>NightStory</p>
         </div>
-      )}
-
-      {/* CTA always overlaid at the bottom */}
-      <div style={{ padding: showImage ? "0 16px 20px" : "0 24px 20px", marginTop: showImage ? -8 : 0 }}>
-        {showImage && (
-          <div style={{ height: 1, background: "rgba(255,255,255,0.1)", marginBottom: 16 }} />
-        )}
+        <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "var(--fs-body)", lineHeight: 1.5, marginBottom: 16 }}>
+          Magical AI bedtime stories, personalised for your child.
+        </p>
+        <div className="flex flex-wrap gap-2 mb-5">
+          {["✨ AI-generated", "🎙 Voice narrated", "👧 Personalised", "🌍 Multi-language"].map((f) => (
+            <span key={f} style={{ fontSize: "var(--fs-label)", color: "rgba(255,255,255,0.65)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 100, padding: "4px 10px" }}>{f}</span>
+          ))}
+        </div>
         <a
           href="/"
           style={{
@@ -136,7 +113,7 @@ function PromoBanner() {
           <span>Create a story for your child</span>
           <span style={{ opacity: 0.8 }}>→</span>
         </a>
-        <p className="text-center mt-3" style={{ color: showImage ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.2)", fontSize: "var(--fs-label)" }}>
+        <p className="text-center mt-3" style={{ color: "rgba(255,255,255,0.4)", fontSize: "var(--fs-label)" }}>
           Free to try · No account needed
         </p>
       </div>
