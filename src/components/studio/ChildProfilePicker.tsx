@@ -10,7 +10,7 @@ export type { DBChildProfile };
 
 // ─── Add profile modal ────────────────────────────────────────────────────────
 
-const THEME_OPTIONS = [
+export const THEME_OPTIONS = [
   { id: "adventure", label: "Adventure", emoji: "⚔️" },
   { id: "fantasy",   label: "Fantasy",   emoji: "🧚" },
   { id: "animals",   label: "Animals",   emoji: "🐾" },

@@ -1,25 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
-import { AVATAR_OPTIONS } from "@/components/studio/ChildProfilePicker";
+import { AVATAR_OPTIONS, THEME_OPTIONS } from "@/components/studio/ChildProfilePicker";
+import { fetchBankAvatars, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
 
 const ONBOARDING_DONE_KEY = "ns-onboarding-done";
 
-type Step = "intro" | "name" | "age" | "gender" | "avatar" | "figures" | "review";
-const STEP_ORDER: Step[] = ["name", "age", "gender", "avatar", "figures"];
+type Step = "intro" | "name" | "age" | "gender" | "avatar" | "themes" | "figures" | "review";
+const STEP_ORDER: Step[] = ["name", "age", "gender", "avatar", "themes", "figures"];
 
 interface ChildDraft {
   name: string;
   age: number | null;
   gender: "boy" | "girl" | "other" | null;
   avatar: string;
+  themes: string[];
   figures: string[];
 }
 
-const EMPTY_DRAFT: ChildDraft = { name: "", age: null, gender: null, avatar: "⭐", figures: [] };
+const EMPTY_DRAFT: ChildDraft = { name: "", age: null, gender: null, avatar: "⭐", themes: [], figures: [] };
 
 // Matches the ids in FIGURE_IMAGE_PROMPTS (src/config/createFlowImages.ts) —
 // emoji here are only the instant-paint placeholder shown before that
@@ -55,6 +58,11 @@ export default function OnboardingPage() {
 
   const [figureImages, setFigureImages] = useState<Record<string, string>>({});
   const [imagesGenerating, setImagesGenerating] = useState(false);
+
+  const [bankAvatars, setBankAvatars] = useState<BankAvatar[]>([]);
+  useEffect(() => {
+    fetchBankAvatars().then((all) => setBankAvatars(all.filter((a) => a.type === "child"))).catch(() => {});
+  }, []);
 
   // Seed the 10 figure card images (shared seeder/bucket with the 5-question
   // wizard's option cards) — reuse whatever's already cached, generate only
@@ -104,6 +112,17 @@ export default function OnboardingPage() {
 
   const stepIndex = STEP_ORDER.indexOf(step);
 
+  // Gender-matching avatars first (still shows every child avatar — just
+  // reordered — so "other"/skipped gender never narrows the choices).
+  const sortedBankAvatars = useMemo(() => {
+    if (!draft.gender || draft.gender === "other") return bankAvatars;
+    return [...bankAvatars].sort((a, b) => {
+      const aMatch = a.gender === draft.gender ? 0 : 1;
+      const bMatch = b.gender === draft.gender ? 0 : 1;
+      return aMatch - bMatch;
+    });
+  }, [bankAvatars, draft.gender]);
+
   const goBack = useCallback(() => {
     if (stepIndex <= 0) return;
     setStep(STEP_ORDER[stepIndex - 1]);
@@ -121,6 +140,7 @@ export default function OnboardingPage() {
           age: draft.age ?? 5,
           gender: draft.gender ?? "other",
           avatar_emoji: draft.avatar || "⭐",
+          favorite_themes: draft.themes,
           preferred_figures: draft.figures,
         }),
       });
@@ -149,6 +169,13 @@ export default function OnboardingPage() {
     setStep("name");
   };
 
+  const toggleTheme = (id: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      themes: prev.themes.includes(id) ? prev.themes.filter((t) => t !== id) : [...prev.themes, id],
+    }));
+  };
+
   const toggleFigure = (id: string) => {
     setDraft((prev) => ({
       ...prev,
@@ -158,11 +185,28 @@ export default function OnboardingPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center px-6 py-8"
+      className="relative min-h-screen flex flex-col items-center px-6 py-8 overflow-hidden"
       style={{ background: "linear-gradient(160deg, #040612 0%, #0d0f22 60%, #080b18 100%)" }}
     >
+      {/* Splash artwork background — intro screen only; the form steps below
+          stay on the plain dark gradient so grids/inputs read clearly. */}
+      {step === "intro" && (
+        <div className="fixed inset-0" style={{ background: "#050210", zIndex: 0 }}>
+          <Image
+            src="/splash-family.png"
+            alt=""
+            fill
+            priority
+            style={{ objectFit: "cover", objectPosition: "center 20%", opacity: 0.85 }}
+          />
+          <div className="absolute inset-0" style={{
+            background: "linear-gradient(180deg, rgba(4,6,18,0.35) 0%, rgba(4,6,18,0.55) 35%, rgba(8,11,24,0.88) 68%, rgba(5,2,16,0.97) 100%)",
+          }} />
+        </div>
+      )}
+
       {/* Top bar — back + progress + skip-all */}
-      <div className="w-full flex items-center justify-between mb-8" style={{ maxWidth: 420 }}>
+      <div className="relative w-full flex items-center justify-between mb-8" style={{ maxWidth: 420, zIndex: 1 }}>
         <button
           onClick={goBack}
           className="w-9 h-9 rounded-full flex items-center justify-center transition-opacity"
@@ -202,7 +246,7 @@ export default function OnboardingPage() {
         ) : <div style={{ width: 36 }} />}
       </div>
 
-      <div className="w-full flex-1 flex flex-col" style={{ maxWidth: 420 }}>
+      <div className="relative w-full flex-1 flex flex-col" style={{ maxWidth: 420, zIndex: 1 }}>
         {step === "intro" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
             <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 20px rgba(167,139,250,0.4))" }}>🌙✨</span>
@@ -282,22 +326,77 @@ export default function OnboardingPage() {
 
         {step === "avatar" && (
           <StepShell title="Pick an avatar" subtitle="Shown next to their name throughout the app.">
-            <div className="grid grid-cols-4 gap-2.5 justify-items-center">
-              {AVATAR_OPTIONS.map((em) => (
-                <button
-                  key={em}
-                  onClick={() => setDraft((p) => ({ ...p, avatar: em }))}
-                  className="rounded-2xl flex items-center justify-center transition-all"
-                  style={{
-                    width: 56, height: 56,
-                    fontSize: 26,
-                    background: draft.avatar === em ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
-                    border: draft.avatar === em ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                  }}
-                >
-                  {em}
-                </button>
-              ))}
+            {sortedBankAvatars.length > 0 ? (
+              <div className="grid grid-cols-4 gap-2.5 max-h-[340px] overflow-y-auto pr-0.5">
+                {sortedBankAvatars.map((a) => {
+                  const active = draft.avatar === a.image_url;
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => setDraft((p) => ({ ...p, avatar: a.image_url }))}
+                      className="relative rounded-2xl overflow-hidden transition-all"
+                      style={{
+                        aspectRatio: "1/1",
+                        background: "rgba(255,255,255,0.04)",
+                        border: active ? "2px solid #4fc3f7" : "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.image_url} alt={a.description} className="absolute inset-0 w-full h-full object-cover" />
+                      {active && (
+                        <div className="absolute top-1 right-1 rounded-full flex items-center justify-center" style={{ width: 18, height: 18, background: "#4fc3f7" }}>
+                          <Icon name="success" size={10} style={{ color: "#fff" }} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              // Bank still loading (or genuinely empty) — emoji grid keeps
+              // the step usable rather than showing a blank screen.
+              <div className="grid grid-cols-4 gap-2.5 justify-items-center">
+                {AVATAR_OPTIONS.map((em) => (
+                  <button
+                    key={em}
+                    onClick={() => setDraft((p) => ({ ...p, avatar: em }))}
+                    className="rounded-2xl flex items-center justify-center transition-all"
+                    style={{
+                      width: 56, height: 56,
+                      fontSize: 26,
+                      background: draft.avatar === em ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
+                      border: draft.avatar === em ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+            )}
+          </StepShell>
+        )}
+
+        {step === "themes" && (
+          <StepShell title="What kind of stories do they love?" subtitle="Pick as many as you like — we'll lean into these.">
+            <div className="flex flex-wrap justify-center gap-2">
+              {THEME_OPTIONS.map((t) => {
+                const active = draft.themes.includes(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => toggleTheme(t.id)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full font-medium transition-all"
+                    style={{
+                      background: active ? "rgba(139,92,246,0.18)" : "rgba(255,255,255,0.04)",
+                      border: active ? "1.5px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                      color: active ? "#a78bfa" : "rgba(255,255,255,0.55)",
+                      fontSize: 15,
+                    }}
+                  >
+                    <span>{t.emoji}</span> {t.label}
+                  </button>
+                );
+              })}
             </div>
           </StepShell>
         )}
@@ -346,9 +445,19 @@ export default function OnboardingPage() {
 
         {step === "review" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
-            <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>
-              {savedChildren[savedChildren.length - 1]?.avatar_emoji ?? "⭐"}
-            </span>
+            {savedChildren[savedChildren.length - 1]?.avatar_emoji?.startsWith("http") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={savedChildren[savedChildren.length - 1].avatar_emoji}
+                alt=""
+                className="rounded-full object-cover"
+                style={{ width: 72, height: 72, boxShadow: "0 0 24px rgba(79,195,247,0.4)" }}
+              />
+            ) : (
+              <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>
+                {savedChildren[savedChildren.length - 1]?.avatar_emoji ?? "⭐"}
+              </span>
+            )}
             <h1 className="font-bold" style={{ fontSize: 24, color: "#e2e8f0" }}>
               {savedChildren[savedChildren.length - 1]?.name ?? "Your child"} is ready for bedtime stories!
             </h1>
