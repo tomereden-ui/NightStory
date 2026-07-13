@@ -98,7 +98,7 @@ function PromoBanner() {
           <p className="font-bold" style={{ color: "#fff", fontSize: "var(--fs-subtitle)" }}>NightStory</p>
         </div>
         <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "var(--fs-body)", lineHeight: 1.5, marginBottom: 16 }}>
-          Magical AI bedtime stories, personalised for your child.
+          Immersive screen-free audio adventures, from reimagined classic tales to stories where your child is the hero.
         </p>
         <div className="flex flex-wrap gap-2 mb-5">
           {["📵 Screen free", "👧 Personalised", "🎬 Cinematic experience"].map((f) => (
