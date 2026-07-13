@@ -17,6 +17,8 @@ import type { ChildProfile } from "@/types";
 import Icon from "@/components/ui/Icon";
 import { type IconName } from "@/lib/icons";
 import { supabaseAuth } from "@/lib/supabaseAuth";
+import { THEME_OPTIONS } from "@/components/studio/ChildProfilePicker";
+import type { DBChildProfile } from "@/app/api/child-profiles/route";
 
 // Shown until /api/app-version resolves (or if it fails) — kept in sync with
 // the DB seed in supabase/app-settings-migration.sql.
@@ -55,10 +57,12 @@ function childHash(name: string) {
 function ChildCard({
   child,
   onChangeAvatar,
+  onEdit,
   onDelete,
 }: {
   child: ChildProfile;
   onChangeAvatar: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const { t } = useLanguage();
@@ -109,6 +113,16 @@ function ChildCard({
       }}>
         {child.name}
       </p>
+
+      {/* Edit / delete */}
+      <div className="flex items-center gap-3">
+        <button onClick={onEdit} title="Edit profile" className="transition-opacity hover:opacity-70" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <Icon name="edit" size={12} />
+        </button>
+        <button onClick={onDelete} title="Delete profile" className="transition-opacity hover:opacity-70" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <Icon name="delete" size={12} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -324,6 +338,254 @@ function AddChildModal({
           }}
         >
           {t("save")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit child modal (full profile: name/age/gender/avatar/themes/interests/avoid) ──
+
+function EditChildModal({
+  childId,
+  onSaved,
+  onClose,
+  t,
+}: {
+  childId: string;
+  onSaved: (updated: { id: string; name: string; age: number; avatar_emoji: string }) => void;
+  onClose: () => void;
+  t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState<"boy" | "girl" | "other">("other");
+  const [avatar, setAvatar] = useState("");
+  const [themes, setThemes] = useState<string[]>([]);
+  const [interests, setInterests] = useState("");
+  const [avoid, setAvoid] = useState("");
+  const [pickingAvatar, setPickingAvatar] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/child-profiles")
+      .then((r) => r.json())
+      .then((list: DBChildProfile[]) => {
+        const found = Array.isArray(list) ? list.find((c) => c.id === childId) : undefined;
+        if (found) {
+          setName(found.name);
+          setAge(String(found.age));
+          setGender(found.gender ?? "other");
+          setAvatar(found.avatar_emoji ?? "");
+          setThemes(found.favorite_themes ?? []);
+          setInterests(found.interests ?? "");
+          setAvoid(found.avoid ?? "");
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [childId]);
+
+  function toggleTheme(id: string) {
+    setThemes((prev) => prev.includes(id) ? prev.filter((tId) => tId !== id) : [...prev, id]);
+  }
+
+  async function handleSave() {
+    const trimmed = name.trim();
+    const parsedAge = parseInt(age, 10);
+    if (!trimmed || isNaN(parsedAge) || parsedAge < 1 || parsedAge > 16) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/child-profiles/${childId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmed,
+          age: parsedAge,
+          gender,
+          avatar_emoji: avatar,
+          favorite_themes: themes,
+          interests,
+          avoid,
+        }),
+      });
+      if (res.ok) {
+        const saved = await res.json() as { id: string; name: string; age: number; avatar_emoji: string };
+        onSaved(saved);
+        onClose();
+      }
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
+  }
+
+  if (pickingAvatar) {
+    return (
+      <AvatarPicker
+        current={avatar}
+        onSelect={setAvatar}
+        onClose={() => setPickingAvatar(false)}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }}>
+        <div className="w-8 h-8 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" style={{ borderTopColor: "transparent" }} />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-t-3xl p-5 pb-8 overflow-y-auto"
+        style={{ background: "#111526", border: "1px solid rgba(255,255,255,0.08)", maxHeight: "85vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-white/70 text-fs-body uppercase tracking-widest font-bold">Edit profile</p>
+          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors"><Icon name="close" size={18} /></button>
+        </div>
+
+        {/* Avatar picker trigger */}
+        <div className="flex justify-center mb-5">
+          <button
+            onClick={() => setPickingAvatar(true)}
+            className="relative group w-16 h-16 rounded-full flex items-center justify-center text-fs-display transition-all hover:scale-105"
+            style={{
+              background: "linear-gradient(135deg, rgba(79,195,247,0.15), rgba(139,92,246,0.2))",
+              border: "1.5px solid rgba(79,195,247,0.3)",
+            }}
+          >
+            {avatar?.startsWith("http") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
+            ) : avatar || <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-display)" }}>＋</span>}
+            <span
+              className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-fs-body"
+              style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+            >
+              ✏️
+            </span>
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">{t("name")}</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("childsName")}
+              maxLength={30}
+              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+              onFocus={(e) => { e.target.style.borderColor = "rgba(79,195,247,0.4)"; }}
+              onBlur={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">{t("age")}</label>
+              <input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="1–16"
+                min={1}
+                max={16}
+                className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                onFocus={(e) => { e.target.style.borderColor = "rgba(79,195,247,0.4)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">Gender</label>
+              <div className="flex gap-1.5">
+                {(["boy", "girl", "other"] as const).map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGender(g)}
+                    className="flex-1 py-3 rounded-2xl text-fs-body font-semibold capitalize transition-all"
+                    style={{
+                      background: gender === g ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)",
+                      border: gender === g ? "1.5px solid rgba(79,195,247,0.45)" : "1px solid rgba(255,255,255,0.08)",
+                      color: gender === g ? "#4fc3f7" : "rgba(255,255,255,0.4)",
+                    }}
+                  >{g}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-2 block">Favourite story themes</label>
+            <div className="flex flex-wrap gap-1.5">
+              {THEME_OPTIONS.map((th) => {
+                const active = themes.includes(th.id);
+                return (
+                  <button
+                    key={th.id}
+                    onClick={() => toggleTheme(th.id)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-fs-body font-medium transition-all"
+                    style={{
+                      background: active ? "rgba(139,92,246,0.18)" : "rgba(255,255,255,0.04)",
+                      border: active ? "1.5px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                      color: active ? "#a78bfa" : "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    <span>{th.emoji}</span> {th.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">Interests <span className="normal-case opacity-60">(optional)</span></label>
+            <input
+              type="text"
+              value={interests}
+              onChange={(e) => setInterests(e.target.value)}
+              placeholder="e.g. dinosaurs, robots, soccer, unicorns"
+              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+              onFocus={(e) => { e.target.style.borderColor = "rgba(79,195,247,0.4)"; }}
+              onBlur={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
+            />
+          </div>
+
+          <div>
+            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">
+              Things to avoid <span className="normal-case opacity-60">(fears, sensitivities)</span>
+            </label>
+            <input
+              type="text"
+              value={avoid}
+              onChange={(e) => setAvoid(e.target.value)}
+              placeholder="e.g. spiders, loud monsters, darkness, being lost"
+              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(236,72,153,0.2)" }}
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={!name.trim() || !age || saving}
+          className="w-full mt-5 py-3.5 rounded-2xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-30"
+          style={{ background: "linear-gradient(135deg, #4fc3f7, #7c3aed)", color: "#fff" }}
+        >
+          {saving ? "Saving…" : t("save")}
         </button>
       </div>
     </div>
@@ -650,6 +912,7 @@ export default function ProfilePage() {
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
   const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
+  const [editChildFor, setEditChildFor] = useState<string | null>(null);
   const [narratorOpen, setNarratorOpen] = useState(false);
   const [familyMembersOpen, setFamilyMembersOpen] = useState(false);
   const [familyId, setFamilyId] = useState<string | null>(null);
@@ -835,7 +1098,12 @@ export default function ProfilePage() {
                       key={child.id}
                       child={child}
                       onChangeAvatar={() => setEditAvatarFor(child.id)}
-                      onDelete={() => handleDeleteChild(child.id)}
+                      onEdit={() => setEditChildFor(child.id)}
+                      onDelete={() => {
+                        if (confirm(`Delete ${child.name}'s profile? Their stories stay in your library but will no longer be assigned to them. This can't be undone.`)) {
+                          handleDeleteChild(child.id);
+                        }
+                      }}
                     />
                   ))
               }
@@ -1098,6 +1366,20 @@ export default function ProfilePage() {
           current={editingChild.avatarEmoji}
           onSelect={(emoji) => handleChangeAvatar(editAvatarFor, emoji)}
           onClose={() => setEditAvatarFor(null)}
+        />
+      )}
+
+      {/* Full profile edit — name/age/gender/avatar/themes/interests/avoid */}
+      {editChildFor && (
+        <EditChildModal
+          childId={editChildFor}
+          onSaved={(saved) => setChildren((prev) => prev.map((c) =>
+            c.id === saved.id
+              ? { ...c, name: saved.name, age: saved.age, avatarEmoji: saved.avatar_emoji, ageGroup: ageToGroup(saved.age) }
+              : c
+          ))}
+          onClose={() => setEditChildFor(null)}
+          t={t}
         />
       )}
     </>

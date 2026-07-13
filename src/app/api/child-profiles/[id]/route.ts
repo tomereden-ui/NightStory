@@ -36,6 +36,26 @@ export async function DELETE(
   const ctx = await getFamilyContext(req);
   if (!ctx) return NextResponse.json({ error: "No family" }, { status: 403 });
   try {
+    // Best-effort: strip this child from any story's child_ids first, so
+    // deleting a profile doesn't leave dangling ids behind — those stories
+    // stay in the library, they just drop back to "unassigned" instead of
+    // silently referencing a child that no longer exists. Non-fatal: a
+    // failure here shouldn't block the actual profile delete.
+    try {
+      const { data: affected } = await supabase
+        .from("stories")
+        .select("id, child_ids")
+        .filter("child_ids", "cs", JSON.stringify([params.id]));
+      if (affected?.length) {
+        await Promise.all(affected.map((row) => {
+          const remaining = ((row.child_ids as string[]) ?? []).filter((id) => id !== params.id);
+          return supabase.from("stories").update({ child_ids: remaining.length ? remaining : null }).eq("id", row.id);
+        }));
+      }
+    } catch (cleanupErr) {
+      console.warn("[child-profiles DELETE] child_ids cleanup failed (non-fatal):", cleanupErr);
+    }
+
     const { error } = await supabase
       .from("child_profiles")
       .delete()
