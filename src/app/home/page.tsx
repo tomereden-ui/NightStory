@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useViewMode } from "@/context/ViewModeContext";
 import { useLanguage } from "@/context/LanguageContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
@@ -561,16 +561,26 @@ function JourneySnippet({ childName }: { childName?: string }) {
 
 export default function HomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { effective } = useViewMode();
   const { t } = useLanguage();
   const isMobile = effective === "mobile";
 
-  const [stories, setStories] = useState<LibraryEntry[]>([]);
+  // Non-destructive way to eyeball the brand-new-user empty state without
+  // actually deleting your library — visit /home?preview=empty. Doesn't
+  // touch the DB or affect any other user; purely hides real data client-side
+  // for this one render. Real children/classics/promoted story stay intact
+  // so it reflects "just finished onboarding," not "logged out."
+  const previewEmpty = searchParams.get("preview") === "empty";
+
+  const [storiesRaw, setStories] = useState<LibraryEntry[]>([]);
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [children, setChildren] = useState<DBChildProfile[]>([]);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
-  const [familyStories, setFamilyStories] = useState<LibraryEntry[]>([]);
+  const [familyStoriesRaw, setFamilyStories] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const stories = previewEmpty ? [] : storiesRaw;
+  const familyStories = previewEmpty ? [] : familyStoriesRaw;
   // Tracks the SEPARATE per-child stories fetch below — without this, once
   // the first fetch (classics/children/familyStories) resolves and flips
   // `loading` false, there's a window where `stories` is still its initial
