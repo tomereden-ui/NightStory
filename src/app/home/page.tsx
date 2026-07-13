@@ -589,6 +589,41 @@ export default function HomePage() {
   const [storiesLoading, setStoriesLoading] = useState(true);
   const [hour, setHour] = useState(20);
   const [promotedStory, setPromotedStory] = useState<LibraryEntry | null>(null);
+  const [firstStoryCtaImage, setFirstStoryCtaImage] = useState<string | null>(null);
+
+  // Fetch (and generate once, if never cached) the illustrated background for
+  // the "Create your first story" CTA — shares the same seeder/bucket as the
+  // 5-question wizard's option cards and onboarding's figure cards.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCtaArt() {
+      try {
+        const res = await fetch("/api/admin/seed-create-images");
+        if (!res.ok) return;
+        const { missing, existingImageUrls } = await res.json() as {
+          missing: { key: string; prompt: string }[];
+          existingImageUrls: Record<string, string>;
+        };
+        if (existingImageUrls?.["cta-first-story"]) {
+          setFirstStoryCtaImage(existingImageUrls["cta-first-story"]);
+          return;
+        }
+        const missingCta = (missing ?? []).find((m) => m.key.includes("-cta-"));
+        if (!missingCta) return;
+        const genRes = await fetch(`/api/admin/seed-create-images?key=${encodeURIComponent(missingCta.key)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: missingCta.prompt }),
+        });
+        if (!cancelled && genRes.ok) {
+          const { url } = await genRes.json() as { url: string };
+          if (url) setFirstStoryCtaImage(url);
+        }
+      } catch { /* CTA card just falls back to its plain gradient */ }
+    }
+    loadCtaArt();
+    return () => { cancelled = true; };
+  }, []);
 
   // Load children + classics + all-family stories once on mount
   useEffect(() => {
@@ -799,17 +834,34 @@ export default function HomePage() {
             <div className="px-5 mb-8">
               <Link
                 href="/studio?start=prompt"
-                className="block rounded-3xl overflow-hidden transition-all active:scale-[0.98]"
+                className="relative block rounded-3xl overflow-hidden transition-all active:scale-[0.98]"
                 style={{
-                  background: "linear-gradient(135deg, rgba(192,132,252,0.15) 0%, rgba(79,195,247,0.1) 100%)",
+                  height: 220,
+                  background: firstStoryCtaImage ? "#0d0f22" : "linear-gradient(135deg, rgba(192,132,252,0.15) 0%, rgba(79,195,247,0.1) 100%)",
                   border: "1px solid rgba(192,132,252,0.3)",
-                  padding: "40px 32px",
-                  textAlign: "center",
                 }}
               >
-                <p className="text-5xl mb-4" style={{ filter: "drop-shadow(0 0 20px rgba(192,132,252,0.6))" }}>✨</p>
-                <p className="text-white font-bold text-fs-heading">Create your first story</p>
-                <p className="text-white/40 text-fs-body mt-2">{t("magicalAdventure")}</p>
+                {firstStoryCtaImage && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={firstStoryCtaImage}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: firstStoryCtaImage
+                      ? "linear-gradient(to top, rgba(8,11,24,0.95) 0%, rgba(8,11,24,0.55) 45%, rgba(8,11,24,0.15) 100%)"
+                      : undefined,
+                  }}
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-end text-center px-8 pb-7">
+                  <p className="text-4xl mb-2" style={{ filter: "drop-shadow(0 0 20px rgba(192,132,252,0.6))" }}>✨</p>
+                  <p className="text-white font-bold text-fs-heading">Create your first story</p>
+                  <p className="text-white/50 text-fs-body mt-1.5">{t("magicalAdventure")}</p>
+                </div>
               </Link>
             </div>
           )}

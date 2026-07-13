@@ -66,7 +66,7 @@ export const MOOD_IMAGE_PROMPTS: Record<string, string> = {
     "A small child peacefully asleep in a cozy glowing bed, moonlight through a star-filled window, dream clouds forming above with tiny wonderful adventures, a stuffed animal on the pillow. Pixar 3D animated movie style, soft blues and warm gold, deeply peaceful.",
 };
 
-export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile" | "figure";
+export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile" | "figure" | "cta";
 
 // Onboarding's "which storybook figures does your child love?" picker
 export const FIGURE_IMAGE_PROMPTS: Record<string, string> = {
@@ -90,6 +90,13 @@ export const FIGURE_IMAGE_PROMPTS: Record<string, string> = {
     "A kindly young wizard in deep purple robes and a starry pointed hat, holding a glowing wand with swirling sparkles. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
   superhero:
     "A confident kid superhero in a bold red and gold cape, fists on hips, triumphant pose, city lights glowing behind. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+};
+
+// Background art for the "Create your first story" CTA card on the home
+// screen — a single cohesive ensemble scene, not a picker grid.
+export const CTA_IMAGE_PROMPTS: Record<string, string> = {
+  "first-story":
+    "A joyful gathering of magical storybook friends under a starry night sky — a friendly unicorn with a glowing rainbow mane, a small round-eyed dragon, a nimble kid ninja, a cheerful robot, and a golden puppy — all playing together in a swirl of golden sparkles and warm light. Pixar 3D animated movie style, wide cinematic composition, rich cosmic purples and warm gold, magical and inviting, no text.",
 };
 
 export const HERO_IMAGE_PROMPTS: Record<string, string> = {
@@ -148,6 +155,8 @@ export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
     specs.push({ type: "profile", id, prompt });
   for (const [id, prompt] of Object.entries(FIGURE_IMAGE_PROMPTS))
     specs.push({ type: "figure", id, prompt });
+  for (const [id, prompt] of Object.entries(CTA_IMAGE_PROMPTS))
+    specs.push({ type: "cta", id, prompt });
   return specs;
 }
 
