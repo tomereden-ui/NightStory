@@ -35,6 +35,9 @@ export interface LibraryEntry {
   emoji?: string;      // classic stories only
   isPublic?: boolean;
   isClassic?: boolean;
+  /** Admin-curated "featured on the home hero banner" flag — takes priority
+   *  over the default most-recent-story placement. See home/page.tsx. */
+  promoted?: boolean;
   /** True when the requesting family actually owns this row (family_id matches,
    *  or the row predates the family migration). Undefined when fetched without
    *  a familyId (no session). isPublic alone does NOT imply non-ownership — a
@@ -75,6 +78,7 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
     emoji: row.emoji ?? undefined,
     isPublic: row.is_public ?? false,
     isClassic: row.is_classic ?? false,
+    promoted: row.promoted ?? false,
     childIds: Array.isArray(row.child_ids) ? row.child_ids as string[]
              : row.child_id ? [row.child_id as string]   // migrate legacy single value
              : undefined,
@@ -118,6 +122,7 @@ export async function addEntry(entry: LibraryEntry, familyId?: string): Promise<
     emoji: entry.emoji ?? null,
     is_public: entry.isPublic ?? false,
     is_classic: entry.isClassic ?? false,
+    promoted: entry.promoted ?? false,
     child_ids: entry.childIds ?? null,
     favorited_by: entry.favoritedBy ?? null,
     scenes: entry.scenes ?? null,
@@ -146,6 +151,9 @@ const LIST_COLUMNS =
 // Trigger-maintained counters added by the scale migration — requested
 // separately so the list still works before the migration has run.
 const COUNTER_COLUMNS = ", view_count, share_count";
+// Same deal for the promoted-story migration — kept out of LIST_COLUMNS so
+// list views don't 500 before that migration has run.
+const PROMOTED_COLUMN = ", promoted";
 
 // Lightweight, family-scoped list view — one DB round trip, no script
 // payloads. View/share counts come from the trigger-maintained counter
@@ -169,9 +177,9 @@ export async function getEntrySummaries(
     return q.order("created_at", { ascending: false }).limit(opts?.limit ?? 100);
   };
 
-  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS);
-  // Counter columns don't exist until the scale migration runs — retry without.
-  if (error && /view_count|share_count/.test(error.message)) {
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN);
+  // Counter/promoted columns don't exist until their migrations run — retry without.
+  if (error && /view_count|share_count|promoted/.test(error.message)) {
     ({ data, error } = await run(LIST_COLUMNS));
   }
   if (error) throw new Error(`getEntrySummaries: ${error.message}`);
@@ -196,8 +204,8 @@ export async function getAllVisibleEntries(
       .limit(opts?.limit ?? 150);
   };
 
-  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS);
-  if (error && /view_count|share_count/.test(error.message)) {
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN);
+  if (error && /view_count|share_count|promoted/.test(error.message)) {
     ({ data, error } = await run(LIST_COLUMNS));
   }
   if (error) throw new Error(`getAllVisibleEntries: ${error.message}`);
@@ -288,6 +296,17 @@ export async function getEntry(id: string, familyId?: string): Promise<LibraryEn
   const shareCounts = { [id]: (sharesResult.data ?? []).length };
 
   return { ...toEntry(data, viewCounts, shareCounts), isOwn };
+}
+
+// The admin-curated story to feature on every family's home hero banner
+// (see /api/admin/promote-story), or null if none is currently promoted —
+// including before the promoted-story migration has run, since the column
+// won't exist yet.
+export async function getPromotedEntry(): Promise<LibraryEntry | undefined> {
+  const { data, error } = await supabase.from("stories").select("*").eq("promoted", true).limit(1).maybeSingle();
+  if (error) return undefined; // column doesn't exist pre-migration, or any other lookup failure
+  if (!data) return undefined;
+  return toEntry(data);
 }
 
 // ─── Trash ────────────────────────────────────────────────────────────────────

@@ -1807,6 +1807,37 @@ export default function AdminPage() {
     runRefreshStory({ applyAll: true });
   };
 
+  // ── Admin Services: Feature a story on the home hero banner ───────────────
+  const [promoteStoryId, setPromoteStoryId] = useState("");
+  const [promoteRunning, setPromoteRunning] = useState(false);
+  const [promoteLog, setPromoteLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const handlePromoteStory = async (promoted: boolean) => {
+    const id = promoteStoryId.trim();
+    if (!id) return;
+    setPromoteRunning(true);
+    setPromoteLog([{ type: "info", text: promoted ? `Promoting ${id}…` : `Un-promoting ${id}…` }]);
+    try {
+      const res = await fetch("/api/admin/promote-story", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, promoted }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPromoteLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      setPromoteLog((l) => [...l, { type: "success", text: promoted
+        ? `✅ "${data.title}" is now featured on every family's home hero banner.`
+        : `✅ "${data.title}" is no longer featured.` }]);
+    } catch (e) {
+      setPromoteLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setPromoteRunning(false);
+    }
+  };
+
   // ── Admin Services: Delete a story by ID ──────────────────────────────────
   const [deleteStoryId, setDeleteStoryId] = useState("");
   const [deleteRunning, setDeleteRunning] = useState(false);
@@ -2651,6 +2682,65 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {previewLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Promote Story Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.18)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">🌟 Promote Story</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Features a story on the home hero banner for every family, instead of it defaulting
+                    to the most recently created story. Only one story can be promoted at a time —
+                    promoting a new one automatically un-promotes the last.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={promoteStoryId}
+                  onChange={(e) => setPromoteStoryId(e.target.value)}
+                  placeholder="Story ID"
+                  disabled={promoteRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+                <button
+                  onClick={() => handlePromoteStory(true)}
+                  disabled={promoteRunning || !promoteStoryId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Promote
+                </button>
+                <button
+                  onClick={() => handlePromoteStory(false)}
+                  disabled={promoteRunning || !promoteStoryId.trim()}
+                  className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+                  Un-promote
+                </button>
+              </div>
+
+              {/* Log output */}
+              {promoteLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {promoteLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"

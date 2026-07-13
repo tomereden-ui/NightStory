@@ -110,9 +110,9 @@ function StoryCard({
 
 // ── Hero banner (Netflix-style featured story) ────────────────────────────────
 
-function HeroBanner({ story, progressPercent = 42, tFn }: { story: LibraryEntry; progressPercent?: number; tFn: (key: string) => string }) {
+function HeroBanner({ story, progressPercent = 42, isPromoted = false, tFn }: { story: LibraryEntry; progressPercent?: number; isPromoted?: boolean; tFn: (key: string) => string }) {
   const [c1, c2] = cardPalette(story.title);
-  const remaining = story.durationSeconds > 0
+  const remaining = !isPromoted && story.durationSeconds > 0
     ? durationLabel(Math.round(story.durationSeconds * (1 - progressPercent / 100)))
     : null;
 
@@ -157,7 +157,7 @@ function HeroBanner({ story, progressPercent = 42, tFn }: { story: LibraryEntry;
           className="inline-block text-fs-body font-bold tracking-widest uppercase mb-2 px-2 py-0.5 rounded-full"
           style={{ background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
         >
-          {tFn("continueListening")}
+          {isPromoted ? "✨ Featured" : tFn("continueListening")}
         </span>
 
         {/* Title */}
@@ -168,17 +168,19 @@ function HeroBanner({ story, progressPercent = 42, tFn }: { story: LibraryEntry;
           {story.title}
         </h2>
 
-        {/* Progress bar */}
-        <div className="rounded-full overflow-hidden mb-3" style={{ height: 3, background: "rgba(255,255,255,0.18)" }}>
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${progressPercent}%`,
-              background: `linear-gradient(90deg, ${c1}, ${c2})`,
-              boxShadow: `0 0 8px ${c1}88`,
-            }}
-          />
-        </div>
+        {/* Progress bar — only meaningful for an actual in-progress story */}
+        {!isPromoted && (
+          <div className="rounded-full overflow-hidden mb-3" style={{ height: 3, background: "rgba(255,255,255,0.18)" }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${progressPercent}%`,
+                background: `linear-gradient(90deg, ${c1}, ${c2})`,
+                boxShadow: `0 0 8px ${c1}88`,
+              }}
+            />
+          </div>
+        )}
 
         {/* CTA row */}
         <div className="flex items-center gap-3">
@@ -192,7 +194,7 @@ function HeroBanner({ story, progressPercent = 42, tFn }: { story: LibraryEntry;
               boxShadow: `0 4px 16px ${c1}55`,
             }}
           >
-            {tFn("continueButton")}
+            {isPromoted ? "▶ Listen now" : tFn("continueButton")}
           </Link>
           {remaining && (
             <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
@@ -576,6 +578,7 @@ export default function HomePage() {
   // the "Create your first story" empty state before real stories arrive.
   const [storiesLoading, setStoriesLoading] = useState(true);
   const [hour, setHour] = useState(20);
+  const [promotedStory, setPromotedStory] = useState<LibraryEntry | null>(null);
 
   // Load children + classics + all-family stories once on mount
   useEffect(() => {
@@ -584,12 +587,14 @@ export default function HomePage() {
       fetch("/api/classics", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/child-profiles", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/library", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/library/promoted", { cache: "no-store" }).then((r) => r.json()).catch(() => null),
     ])
-      .then(([cls, kids, allLib]) => {
+      .then(([cls, kids, allLib, promoted]) => {
         setClassics(Array.isArray(cls) ? cls : []);
         const kidList: DBChildProfile[] = Array.isArray(kids) ? kids : [];
         setChildren(kidList);
         setFamilyStories(Array.isArray(allLib) ? allLib : []);
+        setPromotedStory(promoted ?? null);
 
         // First-time family — send them through the "add your child" wizard
         // instead of dropping them on an empty home screen. Once they've
@@ -658,6 +663,11 @@ export default function HomePage() {
 
   // "Continue" — last 3 stories (simulate resume; no real progress tracking yet)
   const continueStories = stories.slice(0, 3);
+
+  // Hero banner story — an admin-promoted pick takes priority over the
+  // default "most recent" placement; falls back when nothing is promoted
+  // (or the promoted story isn't one of this child's own stories).
+  const heroStory = promotedStory ?? continueStories[0];
 
   // "My List" — stories + classics the active child has favorited. Checked
   // against familyStories (not just `stories`) so a favorite sticks even if
@@ -791,9 +801,9 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* ── Hero banner — featured Continue Listening story ── */}
-          {continueStories.length > 0 && (
-            <HeroBanner story={continueStories[0]} progressPercent={42} tFn={t} />
+          {/* ── Hero banner — admin-promoted pick, or Continue Listening fallback ── */}
+          {heroStory && (
+            <HeroBanner story={heroStory} progressPercent={42} isPromoted={!!promotedStory} tFn={t} />
           )}
 
           {/* ── Tonight's Picks ── */}
