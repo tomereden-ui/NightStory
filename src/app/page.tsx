@@ -131,7 +131,7 @@ export default function SplashPage() {
             (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
           }}
         >
-          ✨ Begin the Magic ✨
+          Begin the Magic
         </button>
         </div>
       </div>
