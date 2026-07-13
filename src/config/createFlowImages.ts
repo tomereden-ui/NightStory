@@ -66,7 +66,31 @@ export const MOOD_IMAGE_PROMPTS: Record<string, string> = {
     "A small child peacefully asleep in a cozy glowing bed, moonlight through a star-filled window, dream clouds forming above with tiny wonderful adventures, a stuffed animal on the pillow. Pixar 3D animated movie style, soft blues and warm gold, deeply peaceful.",
 };
 
-export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile";
+export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile" | "figure";
+
+// Onboarding's "which storybook figures does your child love?" picker
+export const FIGURE_IMAGE_PROMPTS: Record<string, string> = {
+  prince:
+    "A charming young prince in a royal blue and gold tunic, warm confident smile, standing in a glowing castle courtyard. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  princess:
+    "A joyful young princess in a flowing lavender gown and sparkling tiara, twirling with golden sparkles trailing her. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  dragon:
+    "A friendly baby dragon with glittering emerald scales, big round eyes, small puffs of colorful smoke, perched on a rock. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  unicorn:
+    "A magical unicorn with a flowing rainbow mane and a glowing spiral horn, standing in a field of glittering stars. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  ninja:
+    "A nimble kid ninja in a sleek indigo outfit with a flowing scarf, mid-leap, tiny stars trailing behind. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  robot:
+    "A friendly round robot companion with glowing blue eyes and cheerful antenna lights, waving one metal hand. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  knight:
+    "A brave young knight in shining silver armor with a colorful crest, holding a small sword high, cape fluttering. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  mermaid:
+    "A cheerful mermaid with a shimmering teal tail and flowing hair, sitting on a sunlit rock with sparkling water. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  wizard:
+    "A kindly young wizard in deep purple robes and a starry pointed hat, holding a glowing wand with swirling sparkles. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+  superhero:
+    "A confident kid superhero in a bold red and gold cape, fists on hips, triumphant pose, city lights glowing behind. Pixar 3D animated movie style, portrait framing, vibrant colors, cinematic lighting.",
+};
 
 export const HERO_IMAGE_PROMPTS: Record<string, string> = {
   own:
@@ -122,6 +146,8 @@ export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
     specs.push({ type: "mood", id, prompt });
   for (const [id, prompt] of Object.entries(PROFILE_IMAGE_PROMPTS))
     specs.push({ type: "profile", id, prompt });
+  for (const [id, prompt] of Object.entries(FIGURE_IMAGE_PROMPTS))
+    specs.push({ type: "figure", id, prompt });
   return specs;
 }
 

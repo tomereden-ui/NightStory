@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useViewMode } from "@/context/ViewModeContext";
 import { useLanguage } from "@/context/LanguageContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
@@ -557,6 +558,7 @@ function JourneySnippet({ childName }: { childName?: string }) {
 // ── Main Home page ────────────────────────────────────────────────────────────
 
 export default function HomePage() {
+  const router = useRouter();
   const { effective } = useViewMode();
   const { t } = useLanguage();
   const isMobile = effective === "mobile";
@@ -588,6 +590,14 @@ export default function HomePage() {
         const kidList: DBChildProfile[] = Array.isArray(kids) ? kids : [];
         setChildren(kidList);
         setFamilyStories(Array.isArray(allLib) ? allLib : []);
+
+        // First-time family — send them through the "add your child" wizard
+        // instead of dropping them on an empty home screen. Once they've
+        // been through it (or explicitly skipped it), never nag again.
+        if (kidList.length === 0 && !localStorage.getItem("ns-onboarding-done")) {
+          router.replace("/onboarding");
+          return;
+        }
         const savedId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
         const firstId = savedId && kidList.find((k) => k.id === savedId) ? savedId : kidList[0]?.id ?? null;
         setActiveChildId(firstId);

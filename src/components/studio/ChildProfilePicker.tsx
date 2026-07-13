@@ -21,7 +21,7 @@ const THEME_OPTIONS = [
   { id: "friendship",label: "Friendship",emoji: "🤝" },
 ];
 
-const AVATAR_OPTIONS = ["⭐","🌸","🚀","🦁","🌙","🦋","🐉","🦊","🐼","🦄","🧚","🌟","🐬","🌺","🧸","🐧"];
+export const AVATAR_OPTIONS = ["⭐","🌸","🚀","🦁","🌙","🦋","🐉","🦊","🐼","🦄","🧚","🌟","🐬","🌺","🧸","🐧"];
 
 function AddProfileModal({
   onAdd,

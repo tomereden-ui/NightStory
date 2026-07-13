@@ -39,8 +39,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  // Auth/invite pages and public story share pages render full-screen with no chrome
-  if (["/login", "/set-password", "/auth/confirm", "/join"].includes(pathname) || pathname.startsWith("/story/")) {
+  // Auth/invite/onboarding pages and public story share pages render full-screen with no chrome
+  if (["/login", "/set-password", "/auth/confirm", "/join", "/onboarding"].includes(pathname) || pathname.startsWith("/story/")) {
     return <>{children}</>;
   }
 

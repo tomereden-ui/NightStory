@@ -12,6 +12,7 @@ export interface DBChildProfile {
   avatar_emoji: string;
   favorite_animals: string[];
   favorite_themes: string[];
+  preferred_figures?: string[];
   interests?: string;
   avoid?: string;
   notes?: string;
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       avatar_emoji: body.avatar_emoji ?? "⭐",
       favorite_animals: Array.isArray(body.favorite_animals) ? body.favorite_animals : [],
       favorite_themes: Array.isArray(body.favorite_themes) ? body.favorite_themes : [],
+      preferred_figures: Array.isArray(body.preferred_figures) ? body.preferred_figures : [],
       interests: body.interests ?? "",
       notes: body.notes ?? "",
       created_at: now,
