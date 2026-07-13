@@ -84,10 +84,10 @@ function LoginPageInner() {
           alt=""
           fill
           priority
-          style={{ objectFit: "cover", objectPosition: "center 20%", opacity: 0.35 }}
+          style={{ objectFit: "cover", objectPosition: "center 20%", opacity: 0.85 }}
         />
         <div className="absolute inset-0" style={{
-          background: "linear-gradient(160deg, rgba(4,6,18,0.85) 0%, rgba(13,15,34,0.92) 60%, rgba(8,11,24,0.96) 100%)",
+          background: "linear-gradient(180deg, rgba(4,6,18,0.35) 0%, rgba(4,6,18,0.55) 35%, rgba(8,11,24,0.88) 68%, rgba(5,2,16,0.97) 100%)",
         }} />
       </div>
 
