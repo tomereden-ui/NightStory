@@ -89,6 +89,7 @@ export interface ClassicMeta {
   tagline: string;
   coverUrl?: string;
   durationSeconds?: number;
+  language?: string;
   status: ClassicStatus;
   favoritedBy?: string[];
 }

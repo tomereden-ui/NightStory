@@ -35,7 +35,7 @@ export async function GET() {
   // Load DB rows for classics that have been generated (is_classic=true)
   const { data: dbRows } = await supabase
     .from("stories")
-    .select("id, title, emoji, summary, cover_url, duration_seconds, favorited_by")
+    .select("id, title, emoji, summary, cover_url, duration_seconds, favorited_by, language")
     .eq("is_public", true)
     .eq("is_classic", true);
 
@@ -65,6 +65,7 @@ export async function GET() {
           tagline: row.summary ?? def.tagline,
           coverUrl: row.cover_url ?? undefined,
           durationSeconds: row.duration_seconds ?? undefined,
+          language: row.language ?? "en",
           status: "ready",
           favoritedBy: Array.isArray(row.favorited_by) ? row.favorited_by : undefined,
         } satisfies ClassicMeta;
@@ -96,6 +97,7 @@ export async function GET() {
         tagline: def.tagline,
         coverUrl: hasCover ? publicUrl(`${def.id}/cover.${coverExt}`) : undefined,
         durationSeconds,
+        language: "en",
         status: hasScript ? "ready" : "pending",
       } satisfies ClassicMeta;
     })
@@ -112,6 +114,7 @@ export async function GET() {
       tagline: r.summary ?? "",
       coverUrl: r.cover_url ?? undefined,
       durationSeconds: r.duration_seconds ?? undefined,
+      language: r.language ?? undefined,
       status: "ready" as const,
       favoritedBy: Array.isArray(r.favorited_by) ? r.favorited_by : undefined,
     }));

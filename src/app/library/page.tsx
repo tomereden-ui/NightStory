@@ -36,6 +36,13 @@ function cardPalette(title: string): [string, string] {
   return CARD_PALETTES[h % CARD_PALETTES.length];
 }
 
+function formatDuration(seconds?: number): string | null {
+  if (!seconds || seconds <= 0) return null;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 // ── Classics tab ─────────────────────────────────────────────────────────────
 
 function ClassicsTab({ classics, loading, onClassicUpdated }: {
@@ -147,6 +154,8 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
       {filtered.map((meta) => {
         const isGenerating = generatingId === meta.id;
         const [c1, c2] = cardPalette(meta.title);
+        const duration = formatDuration(meta.durationSeconds);
+        const langCode = meta.language?.slice(0, 2).toUpperCase();
 
         return (
           <Link
@@ -180,7 +189,26 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
             {/* Info */}
             <div className="px-2 pt-2 pb-2.5">
               <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{meta.title}</p>
-              <p className="text-white/40 text-fs-body mt-0.5 leading-snug line-clamp-1">{meta.tagline}</p>
+              {(duration || langCode) && (
+                <div className="flex items-center gap-1 mt-1">
+                  {duration && (
+                    <span
+                      className="text-fs-caption tracking-wide"
+                      style={{ padding: "1px 6px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.4)" }}
+                    >
+                      {duration}
+                    </span>
+                  )}
+                  {langCode && (
+                    <span
+                      className="text-fs-caption font-semibold tracking-wide"
+                      style={{ padding: "1px 6px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.4)" }}
+                    >
+                      {langCode}
+                    </span>
+                  )}
+                </div>
+              )}
               {meta.status === "pending" && (
                 <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.2)" }}>{t("pending")}</p>
               )}
