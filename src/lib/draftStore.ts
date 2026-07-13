@@ -24,6 +24,8 @@ export interface DraftState {
   characterProfiles?: Record<string, CharacterProfile>;
   /** Whether this story already has produced audio (entry.audioUrl) — read once at load time. */
   audioUrl?: string;
+  /** Paired with audioUrl — lets Studio show a real duration in the sticky player without re-fetching. */
+  durationSeconds?: number;
 }
 
 export function readDraft(key = KEY): DraftState | null {

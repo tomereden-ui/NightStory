@@ -1458,6 +1458,24 @@ export default function Studio2Page() {
           });
       }
       setStoryHasAudio(!!draft.audioUrl);
+      // The sticky player is gated on completedJob, which otherwise only
+      // ever gets set by handleProductionDone right after a fresh in-session
+      // production -- reopening an already-produced story never touched it,
+      // so the player silently never appeared no matter how much audio the
+      // story actually had. Synthesize the same shape here so the player
+      // shows immediately for a story that's already produced.
+      if (draft.audioUrl) {
+        setCompletedJob({
+          id: draft.editingStoryId ?? "existing",
+          status: "done",
+          step: "",
+          progress: 100,
+          createdAt: Date.now(),
+          audioUrl: draft.audioUrl,
+          title: draft.storyTitle,
+          durationSeconds: draft.durationSeconds ?? 0,
+        });
+      }
       const savedAvatars = draft.characterAvatars ?? {};
       const hasStale = Object.values(savedAvatars).some((u) => (u as string).includes("dicebear.com"));
       setCharacterAvatars(hasStale ? {} : savedAvatars);

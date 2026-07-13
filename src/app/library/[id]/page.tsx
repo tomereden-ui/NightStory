@@ -261,6 +261,7 @@ export default function StoryDetailPage() {
       storyTitle: entry.title,
       language: entry.language,
       audioUrl: isOwned ? entry.audioUrl : undefined,
+      durationSeconds: isOwned ? entry.durationSeconds : undefined,
       moralLessons: entry.moralLessons,
       // Without profiles the Studio falls back to re-classifying the whole
       // cast from scratch (fresh Gemini pass + Imagen avatar generation),
