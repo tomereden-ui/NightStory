@@ -300,7 +300,7 @@ export default function ClassicDetailPage() {
       language: storyLanguage,
       characterProfiles,
     }, "nightstory_studio2_draft_v1");
-    router.push("/studio2");
+    router.push("/studio");
   }, [meta, blocks, router, storyLanguage, characterProfiles, isHardcoded, id]);
 
   const toggleSummaryPlay = useCallback(async () => {

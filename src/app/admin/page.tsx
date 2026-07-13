@@ -1230,7 +1230,7 @@ export default function AdminPage() {
 
     const rawBlocks = blocks.map((b) => ({ characterName: b.characterName, textPayload: b.textPayload }));
 
-    // Same two-pass verification the normal generation flow (studio2's
+    // Same two-pass verification the normal generation flow (Studio's
     // handleGenerate) runs on every freshly-written script before showing it
     // to the user — Round 2 is a policy/guidance check, Round 2.5 is a
     // per-block age-appropriateness + typo/grammar pass. An admin-pasted

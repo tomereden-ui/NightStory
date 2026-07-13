@@ -38,7 +38,7 @@ const NAV: Array<{
   {
     labelKey: "studioTitle",
     iconName: "navCreate",
-    href: "/studio2",
+    href: "/studio",
     color: "#c084fc",
     glow: "rgba(192,132,252,0.4)",
     bg: "rgba(192,132,252,0.12)",

@@ -474,7 +474,7 @@ function CreateCTA({ childName }: { childName?: string }) {
   return (
     <div className="px-5 mb-10">
       <Link
-        href="/studio2?start=prompt"
+        href="/studio?start=prompt"
         className="flex items-center justify-between rounded-3xl px-5 py-4 transition-all active:scale-[0.98]"
         style={{
           background: "linear-gradient(135deg, rgba(192,132,252,0.18) 0%, rgba(79,195,247,0.12) 100%)",
@@ -765,7 +765,7 @@ export default function HomePage() {
           {stories.length === 0 && (
             <div className="px-5 mb-8">
               <Link
-                href="/studio2?start=prompt"
+                href="/studio?start=prompt"
                 className="block rounded-3xl overflow-hidden transition-all active:scale-[0.98]"
                 style={{
                   background: "linear-gradient(135deg, rgba(192,132,252,0.15) 0%, rgba(79,195,247,0.1) 100%)",

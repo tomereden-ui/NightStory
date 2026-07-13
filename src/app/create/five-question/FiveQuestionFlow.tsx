@@ -1392,7 +1392,7 @@ const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", 
 export interface StoryCharacterInfo { type: "child" | "adult" | "animal" | "narrator"; visualDescription: string; }
 export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo>; scenes?: import("@/types").StoryScene[] };
 
-export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl, childId, contentLanguage, showInternalReset = true, onFirstAnswer }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string; /** Active child's profile id — used to look up real siblings (other children in the same family) for Q3's "family member" chips. */ childId?: string; /** Story content language — independent of the app's global UI language. Falls back to it when not provided. */ contentLanguage?: string; /** Set false when an outer page already renders its own reset+language bar (e.g. studio2), to avoid duplicating the "Start over" button on every question and the summary screen. */ showInternalReset?: boolean; /** Fires once, the first time the user makes real progress (leaves q1 with no answers) — lets an outer page lock its own language selector for the rest of the journey. */ onFirstAnswer?: () => void } = {}) {
+export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl, childId, contentLanguage, showInternalReset = true, onFirstAnswer }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string; /** Active child's profile id — used to look up real siblings (other children in the same family) for Q3's "family member" chips. */ childId?: string; /** Story content language — independent of the app's global UI language. Falls back to it when not provided. */ contentLanguage?: string; /** Set false when an outer page already renders its own reset+language bar (e.g. Studio), to avoid duplicating the "Start over" button on every question and the summary screen. */ showInternalReset?: boolean; /** Fires once, the first time the user makes real progress (leaves q1 with no answers) — lets an outer page lock its own language selector for the rest of the journey. */ onFirstAnswer?: () => void } = {}) {
   const router = useRouter();
   const { language, t } = useLanguage();
   // Governs the entire wizard's visible/spoken text — narration, card
@@ -1634,14 +1634,14 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       // Standalone (no onComplete) means this flow was reached directly at
       // /create/five-question rather than embedded inside Studio — hand off
       // to Studio via its own draft key (nightstory_draft_v1 is unrelated and
-      // never read by /studio2), including characterProfiles so nature-based
+      // never read by /studio), including characterProfiles so nature-based
       // voice casting works immediately instead of only after a later save.
       writeDraft(
         { promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes, characterProfiles: characters },
         "nightstory_studio2_draft_v1",
       );
       if (incomingCoverPrompt) fetchCover(incomingCoverPrompt, incomingSummary);
-      router.push("/studio2");
+      router.push("/studio");
     }
   }, [fetchCover, router, onComplete]);
 

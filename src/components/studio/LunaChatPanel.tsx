@@ -404,7 +404,7 @@ export default function LunaChatPanel({
   // greetedLanguageRef tracks which language the currently-shown greeting
   // was actually fetched in (a ref, not a one-shot "greeted" boolean) --
   // because `language` (storyLang) can resolve asynchronously shortly
-  // after mount (studio2 loads a persisted story-language override from
+  // after mount (Studio loads a persisted story-language override from
   // localStorage in its own effect, after this component has already
   // mounted), a one-shot guard would let the greeting fire once in
   // whatever the default language happened to be at that instant and then
