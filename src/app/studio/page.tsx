@@ -1054,6 +1054,20 @@ function PromptTabContent({
 
 type StudioTab = "chat" | "step-by-step" | "lesson" | "script" | "producing";
 
+// Reduces a script down to just the fields that matter for "did the script or
+// its cast's voices actually change" — text, who speaks it, which voice reads
+// it, and the order. Anything else on a ScriptBlock (id, lessonHighlight,
+// validated) is bookkeeping that can legitimately differ across two
+// otherwise-identical scripts and must not trip a false "changed" reading.
+function scriptSnapshot(blocks: ScriptBlock[]): string {
+  return JSON.stringify(blocks.map((b) => ({
+    n: b.characterName,
+    t: b.textPayload,
+    v: b.assignedVoiceId,
+    o: b.blockOrder,
+  })));
+}
+
 export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
@@ -1198,7 +1212,7 @@ export default function Studio2Page() {
   const [validatingPhase, setValidatingPhase] = useState("");
   const [totalExpectedBlocks, setTotalExpectedBlocks] = useState<number | undefined>(undefined);
   // Issues found by re-running the policy check (validate-script) after a
-  // manual save — cleared at the start of every Save Version click so a
+  // manual save — cleared at the start of every Update Version click so a
   // stale list never lingers from a previous check.
   const [saveValidationIssues, setSaveValidationIssues] = useState<string[]>([]);
 
@@ -1286,15 +1300,19 @@ export default function Studio2Page() {
   const [savesRefreshKey, setSavesRefreshKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveLabel, setSaveLabel] = useState<"idle" | "saving" | "saved">("idle");
-  // hasScriptChanges: blocks/voices differ from the last PRODUCED audio —
-  // cleared only by a successful production (Produce Audio button gate).
+  // hasScriptChanges / hasUnsavedChanges / metaDirty are NOT the direct
+  // button gates -- they mark "a real edit happened" so the baseline-diffing
+  // below (producedBaselineRef/savedBaselineRef, scriptChangedFromProduced/
+  // scriptOrMetaChangedFromSaved) knows when to stop treating incoming
+  // scriptBlocks/title/coverUrl changes as harmless (generation streaming in,
+  // initial load) and start comparing against a frozen snapshot instead.
+  // hasScriptChanges: a script/voice edit happened since the last production.
   const [hasScriptChanges, setHasScriptChanges] = useState(false);
-  // hasUnsavedChanges: blocks/voices differ from what's persisted in the DB —
-  // cleared by a successful save OR a successful production, since producing
-  // also persists blocks (Save version button gate).
+  // hasUnsavedChanges: a script/voice edit happened since the last save.
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  // Title/summary edits (admin-only) — tracked separately so editing just the
-  // title/summary enables Save without needing an unrelated script edit resolved first.
+  // Title/cover edits (admin-only for title) — tracked separately so editing
+  // just the title/cover doesn't require an unrelated script edit to enable
+  // Update Version, and doesn't affect Produce Audio at all.
   const [metaDirty, setMetaDirty] = useState(false);
   // Whether this (existing) story already has produced audio — read once at load
   // time from the draft. Drives whether Produce starts enabled or disabled.
@@ -1306,7 +1324,6 @@ export default function Studio2Page() {
     setHasUnsavedChanges(true);
   }, []);
   const cleanLessonsRef = useRef<string[]>([]);
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Guards the draft-creation POST below from firing twice for the same
   // script (e.g. React re-renders before the fetch resolves).
   const creatingDraftRef = useRef(false);
@@ -1318,6 +1335,40 @@ export default function Studio2Page() {
   const [storyTitle, setStoryTitle] = useState("");
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [savesCount, setSavesCount] = useState(0);
+
+  // ─── Change-from-original tracking for Produce/Update Version gating ──────
+  // A boolean "something was touched" flag (hasScriptChanges etc. above) isn't
+  // enough on its own -- editing text and then typing it back to exactly what
+  // it was must NOT leave the button enabled. These refs snapshot the script
+  // (and, for saving, title/cover too) at the last point that was considered
+  // "clean" -- last load, last successful save, or last successful
+  // production -- and the two booleans below compare the live state against
+  // that snapshot on every render. The refs are kept sliding to match the
+  // live state for as long as nothing has been marked dirty (covers initial
+  // load, generation streaming in, and Start Over/loading a save that
+  // explicitly re-dirties): the moment a real edit flips hasScriptChanges or
+  // hasUnsavedChanges/metaDirty to true, the corresponding ref stops sliding
+  // and freezes at the pre-edit snapshot, so the comparison below reflects
+  // "different from the version currently produced/saved", not just "was
+  // ever touched".
+  const producedBaselineRef = useRef(scriptSnapshot([]));
+  const savedBaselineRef = useRef({ title: "", coverUrl: "", script: scriptSnapshot([]) });
+
+  useEffect(() => {
+    if (!hasScriptChanges) producedBaselineRef.current = scriptSnapshot(scriptBlocks);
+  }, [scriptBlocks, hasScriptChanges]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges && !metaDirty) {
+      savedBaselineRef.current = { title: storyTitle, coverUrl, script: scriptSnapshot(scriptBlocks) };
+    }
+  }, [scriptBlocks, storyTitle, coverUrl, hasUnsavedChanges, metaDirty]);
+
+  const scriptChangedFromProduced = scriptSnapshot(scriptBlocks) !== producedBaselineRef.current;
+  const scriptOrMetaChangedFromSaved =
+    storyTitle !== savedBaselineRef.current.title ||
+    coverUrl !== savedBaselineRef.current.coverUrl ||
+    scriptSnapshot(scriptBlocks) !== savedBaselineRef.current.script;
 
   useEffect(() => {
     if (!editingStoryId) { setSavesCount(0); return; }
@@ -1463,64 +1514,12 @@ export default function Studio2Page() {
       .finally(() => { creatingDraftRef.current = false; });
   }, [loaded, scriptBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons]);
 
-  // The autosave effect below intentionally does NOT list storyTitle/summary/
-  // coverUrl/coverPrompt/scenes/characterProfiles as deps — only a real
-  // scriptBlocks change should reschedule its debounce timer. But it still
-  // needs their CURRENT values when the timer fires, not whatever they were
-  // when the timer was scheduled — reading them via the effect's own closure
-  // would silently revert a title (or summary/scenes/etc.) edited *after*
-  // scheduling back to its stale value once the pending autosave fires. This
-  // ref is updated on every render, so the timeout callback below always
-  // reads the latest values regardless of when it was scheduled.
-  const latestMetaRef = useRef({ storyTitle, summary, coverUrl, coverPrompt, scenes, characterProfiles });
-  latestMetaRef.current = { storyTitle, summary, coverUrl, coverPrompt, scenes, characterProfiles };
-
-  // Auto-save to Supabase — debounced 3s after any script change. Also
-  // updates the live story row (when one exists) at the same moment, not
-  // just the recoverable version-history snapshot — otherwise a crash or
-  // navigating away mid-edit left the actual story stuck at whatever the
-  // last explicit Save left it at, with the newer work only reachable by
-  // knowing to go dig it out of Saved Versions.
-  useEffect(() => {
-    // script-saves is now scoped per-story, so there's nothing to autosave
-    // into until the draft-creation effect below has assigned a real id.
-    if (!loaded || scriptBlocks.length === 0 || !editingStoryId) return;
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => {
-      const { storyTitle: latestTitle, summary: latestSummary, coverUrl: latestCoverUrl, coverPrompt: latestCoverPrompt, scenes: latestScenes, characterProfiles: latestCharacterProfiles } = latestMetaRef.current;
-      fetch("/api/script-saves", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storyId: editingStoryId, blocks: scriptBlocks, summary: latestSummary, coverUrl: latestCoverUrl, coverPrompt: latestCoverPrompt, isAutosave: true }),
-      })
-        .then(() => setSavesRefreshKey((k) => k + 1))
-        .catch(() => {});
-
-      fetch(`/api/library/${editingStoryId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          blocks: scriptBlocks,
-          title: latestTitle || undefined,
-          summary: latestSummary || undefined,
-          scenes: latestScenes.length ? latestScenes : undefined,
-          characterProfiles: Object.keys(latestCharacterProfiles).length ? latestCharacterProfiles : undefined,
-          moralLessons: moralLessons.length ? moralLessons : undefined,
-        }),
-      }).catch(() => {});
-    // 8s debounce — long enough that continuous typing doesn't fire a pair of
-    // full-script writes (~1s each round trip) every few seconds, short enough
-    // that a crash still loses at most a few seconds of work.
-    }, 8000);
-    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  // moralLessons is included here (unlike other fields read via closure below)
-  // because it often finishes analyzing *after* this effect last ran for a
-  // scriptBlocks change -- without it, a freshly-completed analysis could sit
-  // in client state and never reach stories.moral_lessons until some
-  // unrelated edit happened to retrigger this debounce, so reopening the
-  // story would silently re-run the analysis instead of reading the DB.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scriptBlocks, loaded, editingStoryId, moralLessons]);
+  // No silent autosave here by design: the live story row (and the version
+  // history) must only ever change when the user explicitly clicks Update
+  // Version -- see handleManualSave. A background debounce that PATCHed the
+  // canonical story on every keystroke used to run here; it was removed
+  // because it "reproduced" a new version of the script the user hadn't
+  // actually chosen to save yet.
 
   // ─── Auto-switch to script tab whenever generation/validation is active ───────
 
@@ -1884,10 +1883,10 @@ export default function Studio2Page() {
     setSaveLabel("saving");
     // Capture before it's cleared below — the re-check after saving is a full
     // Gemini pass over the whole script, only worth paying for when the
-    // script content itself actually changed. A title/summary-only edit
-    // (metaDirty, tracked separately) shouldn't spend a minute re-verifying
+    // script text/voices themselves actually differ from what was last
+    // saved. A title/cover-only edit shouldn't spend a minute re-verifying
     // text that was already checked and hasn't moved.
-    const scriptContentChanged = hasUnsavedChanges;
+    const scriptContentChanged = scriptSnapshot(scriptBlocks) !== savedBaselineRef.current.script;
     // Clear any issues surfaced by a previous save's check — the list below
     // the script panel should only ever reflect the check that just ran.
     setSaveValidationIssues([]);
@@ -2086,6 +2085,7 @@ export default function Studio2Page() {
     setStoryHasAudio(false);
     setHasScriptChanges(false);
     setHasUnsavedChanges(false);
+    setMetaDirty(false);
     setCompletedJob(null);
     cleanLessonsRef.current = [];
     setScriptResetConfirm(false);
@@ -2094,6 +2094,11 @@ export default function Studio2Page() {
 
   // ─── Fetch cover ─────────────────────────────────────────────────────────────
 
+  // Fetches a cover into local state only -- never persists it. Used both for
+  // a freshly-generated story's first cover (which must NOT count as a user
+  // "change") and for an explicit regenerate (whose caller marks the change
+  // itself, see onRegenerateCover below). Either way, persistence only ever
+  // happens through Update Version.
   const fetchCover = useCallback(async (prompt: string, storySummary?: string) => {
     if (!prompt) return;
     setIsFetchingCover(true);
@@ -2102,31 +2107,16 @@ export default function Studio2Page() {
       const data = await res.json();
       if (res.ok && data.coverUrl) {
         setCoverUrl(data.coverUrl);
-        // Cache base64 so production can reuse it even after coverUrl is swapped to a CDN URL
+        // Cache base64 so production/save can reuse it even after coverUrl is swapped to a CDN URL
         const match = (data.coverUrl as string).match(/^data:([^;]+);base64,(.+)$/);
         if (match) coverBase64Ref.current = { mimeType: match[1], data: match[2] };
-        // Auto-persist to Supabase when story already exists in library
-        if (editingStoryId && match) {
-          fetch(`/api/library/${editingStoryId}/cover`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mimeType: match[1], data: match[2] }),
-          }).then(async (r) => {
-            if (r.ok) {
-              const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
-              // Append cache-buster so the browser doesn't serve the CDN's stale cached copy
-              setCoverUrl(`${persistedUrl}?t=${Date.now()}`);
-            }
-            // If PATCH fails, the base64 in state is fine — production will re-upload
-          }).catch(() => {});
-        }
       } else {
         console.error("[fetchCover] API error:", data);
       }
     } finally {
       setIsFetchingCover(false);
     }
-  }, [editingStoryId]);
+  }, []);
 
   // Auto-fetch cover when a draft is loaded that has a coverPrompt but no coverUrl
   useEffect(() => {
@@ -2207,9 +2197,12 @@ export default function Studio2Page() {
     setActiveTab("script");
   }, []);
 
-  // ─── Derived dirty state — drives the Produce/Save buttons ─────────────────
-  const needsProduce = scriptBlocks.length > 0 && (!storyHasAudio || hasScriptChanges);
-  const needsSave = scriptBlocks.length > 0 && (metaDirty || hasUnsavedChanges);
+  // ─── Derived dirty state — drives the Produce/Update Version buttons ──────
+  // A never-produced script can always be produced (no baseline to compare
+  // against yet); an already-produced one needs a real diff from what's
+  // currently live audio, not just "something was edited at some point".
+  const needsProduce = scriptBlocks.length > 0 && (!storyHasAudio || scriptChangedFromProduced);
+  const needsSave = scriptBlocks.length > 0 && scriptOrMetaChangedFromSaved;
 
   // ─── Early returns ──────────────────────────────────────────────────────────
 
@@ -2646,7 +2639,12 @@ export default function Studio2Page() {
               onTitleChange={handleTitleChange}
               coverUrl={coverUrl}
               isFetchingCover={isFetchingCover}
-              onRegenerateCover={scriptBlocks.length > 0 ? () => { setCoverUrl(""); coverBase64Ref.current = null; fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary); } : undefined}
+              onRegenerateCover={scriptBlocks.length > 0 ? () => {
+                setCoverUrl("");
+                coverBase64Ref.current = null;
+                setMetaDirty(true);
+                fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary);
+              } : undefined}
               onUploadCover={scriptBlocks.length > 0 ? (file: File) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -2654,29 +2652,10 @@ export default function Studio2Page() {
                   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
                   if (!match) return;
                   coverBase64Ref.current = { mimeType: match[1], data: match[2] };
-                  // Shown immediately as a preview — but this alone is only
-                  // local state, not yet persisted. If the PATCH below fails,
-                  // the preview would otherwise keep showing the new image
-                  // with no indication it never actually saved, reverting
-                  // silently on next reload.
+                  // Shown as a local preview only — persisted like any other
+                  // change, the next time the user clicks Update Version.
                   setCoverUrl(dataUrl);
-                  if (editingStoryId) {
-                    fetch(`/api/library/${editingStoryId}/cover`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ mimeType: match[1], data: match[2] }),
-                    }).then(async (r) => {
-                      if (r.ok) {
-                        const { coverUrl: persistedUrl } = await r.json() as { coverUrl: string };
-                        setCoverUrl(persistedUrl);
-                      } else {
-                        const body = await r.text().catch(() => "");
-                        setSaveValidationIssues([`Cover upload failed (${r.status})${body ? `: ${body.slice(0, 200)}` : ""} — the preview shown is not saved.`]);
-                      }
-                    }).catch(() => {
-                      setSaveValidationIssues(["Cover upload failed: network error — the preview shown is not saved."]);
-                    });
-                  }
+                  setMetaDirty(true);
                 };
                 reader.readAsDataURL(file);
               } : undefined}
@@ -2894,8 +2873,10 @@ export default function Studio2Page() {
               );
             })()}
 
-            {/* Produce Audio — enabled when there's no audio yet, or once something
-                that affects the audio (cast/voice or a speech/SFX block) changed. */}
+            {/* Produce Audio — enabled when there's no audio yet, or once the
+                script/voices genuinely differ from what's currently produced
+                (editing text back to exactly its produced form disables it
+                again — see scriptChangedFromProduced above). */}
             {(() => {
               const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover;
               return (
@@ -2941,8 +2922,12 @@ export default function Studio2Page() {
               );
             })()}
 
-            {/* Save script version — enabled whenever anything about the story changed
-                (title, summary, cast/voice, or a speech/SFX block). */}
+            {/* Update version — enabled whenever anything about the story differs
+                from what's currently saved (title, cover, cast/voice, or a
+                speech/SFX block), and disabled again if it's edited back to
+                exactly that saved state. This is the ONLY place the live
+                story row or version history gets written to — see the note
+                above the (removed) autosave effect. */}
             {(() => {
               const canSave = needsSave && !isProducing;
               return (
@@ -2975,7 +2960,7 @@ export default function Studio2Page() {
                   ) : saveLabel === "saved" ? (
                     <><span className="text-fs-heading leading-none">✓</span> {i18nT(language, "savedVersion")}</>
                   ) : (
-                    <><Icon name="save" size={14} /> Save version</>
+                    <><Icon name="save" size={14} /> Update version</>
                   )}
                 </button>
               );
