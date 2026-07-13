@@ -495,7 +495,7 @@ export default function StoryDetailPage() {
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-fs-body font-semibold transition-all active:scale-90"
             style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}
           >
-            <span style={{ fontSize: "var(--fs-heading)", lineHeight: 1 }}>📤</span>
+            <Icon name="share" size={16} />
             <span>Share</span>
           </button>
         </div>

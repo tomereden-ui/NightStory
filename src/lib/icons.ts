@@ -83,6 +83,10 @@ export const ICONS = {
   ),
   folder: paths("m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"),
   submit: paths("M20 4v7a4 4 0 0 1-4 4H4", "m9 10-5 5 5 5"),
+  // Universal three-node "share" glyph — reads clearly as "share" across
+  // platforms, unlike the outbox-tray emoji (📤) it replaces, which many
+  // people associate with mail/archiving rather than sharing.
+  share: mixed(c(18, 5, 3), c(6, 12, 3), c(18, 19, 3), line(8.59, 13.51, 15.42, 17.49), line(15.41, 6.51, 8.59, 10.49)),
 
   // ── Playback ─────────────────────────────────────────────────────────────────
   play: paths("M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"),
