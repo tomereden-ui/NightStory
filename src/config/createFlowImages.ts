@@ -97,6 +97,11 @@ export const FIGURE_IMAGE_PROMPTS: Record<string, string> = {
 export const CTA_IMAGE_PROMPTS: Record<string, string> = {
   "first-story":
     "A joyful gathering of magical storybook friends under a starry night sky — a friendly unicorn with a glowing rainbow mane, a small round-eyed dragon, a nimble kid ninja, a cheerful robot, and a golden puppy — all playing together in a swirl of golden sparkles and warm light. Pixar 3D animated movie style, wide cinematic composition, rich cosmic purples and warm gold, magical and inviting, no text.",
+  // Short wide banner for the returning-user "Create a Story" strip — a
+  // distinct scene from first-story so it doesn't feel repeated once a
+  // family has already been through the empty state once.
+  "returning-strip":
+    "A cozy magical reading nook at night — a tiny fairy, a baby dragon curled up, a wizard cat with a pointed hat, and a friendly little ghost all gathered around a glowing open storybook, warm golden sparkles drifting upward. Pixar 3D animated movie style, wide short banner composition, rich cosmic purples and warm gold, cozy and inviting, no text.",
 };
 
 export const HERO_IMAGE_PROMPTS: Record<string, string> = {
