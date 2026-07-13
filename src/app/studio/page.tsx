@@ -3065,7 +3065,6 @@ export default function Studio2Page() {
           audioUrl={completedJob.audioUrl}
           title={completedJob.title ?? storyTitle ?? "Your Story"}
           durationSeconds={completedJob.durationSeconds ?? 0}
-          onClose={() => setCompletedJob(null)}
         />
       )}
     </div>

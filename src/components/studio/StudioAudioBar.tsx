@@ -18,12 +18,10 @@ export default function StudioAudioBar({
   audioUrl,
   title,
   durationSeconds,
-  onClose,
 }: {
   audioUrl: string;
   title: string;
   durationSeconds: number;
-  onClose: () => void;
 }) {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -85,13 +83,6 @@ export default function StudioAudioBar({
               <p className="text-white text-fs-body font-medium truncate leading-snug">{title}</p>
               <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.6)" }}>Drama ready</p>
             </div>
-            <button
-              onClick={onClose}
-              className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-white/25"
-              aria-label="Close player"
-            >
-              <Icon name="close" size={14} />
-            </button>
           </div>
 
           <div className="flex items-center gap-2">
