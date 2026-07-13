@@ -711,6 +711,28 @@ export default function LunaChatPanel({
   };
   const writeItAllHint = WRITE_IT_ALL_LABELS[language] ?? "💡 Tip: you can also just write your whole idea at once!";
 
+  const LUNA_NAME_LABELS: Record<string, string> = {
+    he: "לונה",
+    ar: "لونا",
+    fr: "Luna",
+    es: "Luna",
+    de: "Luna",
+    it: "Luna",
+    pt: "Luna",
+  };
+  const lunaNameLabel = LUNA_NAME_LABELS[language] ?? "Luna";
+
+  const LUNA_SUBTITLE_LABELS: Record<string, string> = {
+    he: "מדריכת הסיפורים הקסומה שלך ✨",
+    ar: "مرشدتك السحرية للقصص ✨",
+    fr: "Ta guide magique des histoires ✨",
+    es: "Tu guía mágica de historias ✨",
+    de: "Deine magische Geschichtenführerin ✨",
+    it: "La tua guida magica alle storie ✨",
+    pt: "Sua guia mágica de histórias ✨",
+  };
+  const lunaSubtitleLabel = LUNA_SUBTITLE_LABELS[language] ?? "Your magical story guide ✨";
+
   // Shown only when a generation attempt was blocked by the safety filter
   // and the server sent back a reworded suggestion (see suggestSaferRewrite
   // in /api/generate-story) -- a caption above the suggested text, and the
@@ -787,8 +809,8 @@ export default function LunaChatPanel({
             style={{ background: "#10D9A0", zIndex:10 }} />
         </div>
         <div className="flex-1">
-          <p className="text-fs-body font-bold text-white">Luna</p>
-          <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.8)" }}>Your magical story guide ✨</p>
+          <p className="text-fs-body font-bold text-white">{lunaNameLabel}</p>
+          <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.8)" }}>{lunaSubtitleLabel}</p>
         </div>
       </div>
 
