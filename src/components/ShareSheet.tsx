@@ -173,7 +173,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder={`Sweet dreams, ${childNames[0] ?? "little one"}! Made this just for you. Love you! 🌙`}
+              placeholder={`${childNames[0] ?? "My little one"} designed a magical adventure today! It's fully personalised just for them, completely screen free, and feels like a real cinematic experience in their bedroom tonight 🌙`}
               rows={3}
               className="w-full rounded-2xl px-4 py-3 text-white resize-none outline-none"
               style={{

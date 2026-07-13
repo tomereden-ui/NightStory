@@ -101,7 +101,7 @@ function PromoBanner() {
           Magical AI bedtime stories, personalised for your child.
         </p>
         <div className="flex flex-wrap gap-2 mb-5">
-          {["📵 Screen free", "🎬 Cinematic experience", "🌈 Full imagination", "🎙 Voice narrated", "👧 Personalised", "🌍 Multi-language", "✨ AI-generated"].map((f) => (
+          {["📵 Screen free", "👧 Personalised", "🎬 Cinematic experience"].map((f) => (
             <span key={f} style={{ fontSize: "var(--fs-label)", color: "rgba(255,255,255,0.65)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 100, padding: "4px 10px" }}>{f}</span>
           ))}
         </div>
