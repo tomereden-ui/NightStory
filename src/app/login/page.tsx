@@ -65,16 +65,34 @@ function LoginPageInner() {
     });
   }
 
+  async function handleApple() {
+    await supabaseAuth.auth.signInWithOAuth({
+      provider: "apple",
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+    });
+  }
+
   const title = mode === "signin" ? "Welcome back" : mode === "signup" ? "Create account" : "Reset password";
   const btnLabel = mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset email";
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-6"
-      style={{ background: "linear-gradient(160deg, #040612 0%, #0d0f22 60%, #080b18 100%)" }}
-    >
+    <div className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
+      {/* Splash artwork background — same image as the app's landing splash */}
+      <div className="fixed inset-0" style={{ background: "#050210", zIndex: 0 }}>
+        <Image
+          src="/splash-family.png"
+          alt=""
+          fill
+          priority
+          style={{ objectFit: "cover", objectPosition: "center 20%", opacity: 0.35 }}
+        />
+        <div className="absolute inset-0" style={{
+          background: "linear-gradient(160deg, rgba(4,6,18,0.85) 0%, rgba(13,15,34,0.92) 60%, rgba(8,11,24,0.96) 100%)",
+        }} />
+      </div>
+
       {/* Logo */}
-      <div className="flex flex-col items-center mb-10 gap-3">
+      <div className="relative flex flex-col items-center mb-10 gap-3" style={{ zIndex: 1 }}>
         <div
           className="rounded-2xl flex items-center justify-center"
           style={{
@@ -97,9 +115,10 @@ function LoginPageInner() {
 
       {/* Card */}
       <div
-        className="w-full rounded-2xl p-6"
+        className="relative w-full rounded-2xl p-6"
         style={{
           maxWidth: 400,
+          zIndex: 1,
           background: "rgba(13,15,34,0.9)",
           border: "1px solid rgba(167,139,250,0.18)",
           boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
@@ -130,6 +149,25 @@ function LoginPageInner() {
                 <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"/>
               </svg>
               Continue with Google
+            </button>
+
+            <button
+              type="button"
+              onClick={handleApple}
+              className="w-full flex items-center justify-center gap-3 rounded-xl py-3 font-medium transition-opacity hover:opacity-90"
+              style={{
+                background: "#000",
+                color: "#fff",
+                fontSize: 15,
+                border: "1px solid rgba(255,255,255,0.15)",
+              }}
+            >
+              {/* Apple logo */}
+              <svg width="16" height="18" viewBox="0 0 16 18" fill="currentColor">
+                <path d="M13.03 9.56c-.02-2.1 1.72-3.11 1.8-3.16-.98-1.44-2.51-1.63-3.05-1.66-1.3-.13-2.53.77-3.19.77-.66 0-1.68-.75-2.76-.73-1.42.02-2.73.83-3.46 2.1-1.47 2.56-.38 6.35 1.06 8.43.7 1.02 1.53 2.16 2.63 2.12 1.06-.04 1.46-.68 2.74-.68 1.27 0 1.64.68 2.76.66 1.14-.02 1.86-1.03 2.55-2.06.81-1.18 1.14-2.32 1.15-2.38-.03-.01-2.2-.85-2.23-3.41Z"/>
+                <path d="M11.1 3.34c.58-.7.97-1.68.86-2.65-.83.03-1.84.55-2.44 1.25-.54.62-1.01 1.62-.88 2.57.93.07 1.88-.47 2.46-1.17Z"/>
+              </svg>
+              Continue with Apple
             </button>
 
             <div className="flex items-center gap-3">
