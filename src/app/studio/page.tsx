@@ -2188,6 +2188,11 @@ export default function Studio2Page() {
     setHasUnsavedChanges(false);
     setMetaDirty(false);
     setVersionsOpen(false);
+    // produce-drama recomputes scenes with its own dedicated, more reliable
+    // pass (see sceneGenerator.ts) and persists them regardless of whatever
+    // this session had beforehand -- re-sync local state from the job so the
+    // Scenes panel reflects that immediately instead of only after a reload.
+    if (job.scenes?.length) setScenes(job.scenes);
   }, []);
 
   const handleProductionError = useCallback((msg: string) => {

@@ -11,6 +11,7 @@ import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
 import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup } from "@/lib/services/scriptGenerationHelpers";
+import { generateScenes } from "@/lib/services/sceneGenerator";
 
 export const maxDuration = 120;
 
@@ -252,7 +253,14 @@ export async function POST(req: NextRequest) {
       ? await fixHebrewLatinMixup(splitBlocks, apiKey)
       : splitBlocks;
 
-    return NextResponse.json({ blocks: finalBlocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: remappedScenes, language: detectedLanguage });
+    // See generate-story/route.ts for why this fallback exists: the scenes
+    // array rides along with the same big generation call as the script
+    // itself and sometimes comes back empty even though the story is fine.
+    const finalScenes = remappedScenes.length > 0
+      ? remappedScenes
+      : await generateScenes(finalBlocks, apiKey);
+
+    return NextResponse.json({ blocks: finalBlocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: finalScenes, language: detectedLanguage });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -865,6 +865,7 @@ async function runProduction(
         Object.entries(voiceProfiles).map(([k, v]) => [k, voiceOverrides[k]?.elevenLabsId ?? v.voiceName])
       ),
       skippedLines,
+      scenes: scenes.length ? scenes : undefined,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown production error";

@@ -1,4 +1,5 @@
 import type { LibraryEntry } from "./libraryStore";
+import type { StoryScene } from "@/types";
 
 export type JobStatus =
   | "pending"
@@ -22,6 +23,10 @@ export interface Job {
   durationSeconds?: number;
   voiceAssignments?: Record<string, string>;
   skippedLines?: string[];
+  /** Scenes computed fresh during this production (see sceneGenerator.ts) —
+   *  more reliable than whatever the client had at generation time, so the
+   *  Studio Script tab re-syncs its Scenes panel from this on completion. */
+  scenes?: StoryScene[];
   error?: string;
   libraryError?: string;
   createdAt: number;

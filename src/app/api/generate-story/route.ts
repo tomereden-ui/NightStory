@@ -7,6 +7,7 @@ import { trackGemini } from "@/lib/usageTracker";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
 import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup } from "@/lib/services/scriptGenerationHelpers";
+import { generateScenes } from "@/lib/services/sceneGenerator";
 import type { ScriptBlock } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -444,7 +445,19 @@ export async function POST(req: NextRequest) {
       ? await fixHebrewLatinMixup(splitBlocks, apiKey)
       : splitBlocks;
 
-    return NextResponse.json({ blocks: finalBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes: remappedScenes, language: detectedLanguage });
+    // The scenes array above rides along with the same big Gemini call that
+    // wrote the whole script -- one requirement among many competing for the
+    // model's attention, so it sometimes comes back empty even though
+    // nothing else about the story failed. generateScenes() runs scene
+    // segmentation as its own focused call (already relied on at production
+    // time in produce-drama) and is markedly more reliable, so fall back to
+    // it here rather than leaving the Studio Scenes panel empty for a
+    // perfectly good story.
+    const finalScenes = remappedScenes.length > 0
+      ? remappedScenes
+      : await generateScenes(finalBlocks, apiKey);
+
+    return NextResponse.json({ blocks: finalBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes: finalScenes, language: detectedLanguage });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
