@@ -478,7 +478,7 @@ function CreateCTA({ childName }: { childName?: string }) {
     <div className="px-5 mb-10">
       <Link
         href="/studio?start=prompt"
-        className="relative flex items-center justify-between overflow-hidden rounded-3xl px-5 py-4 transition-all active:scale-[0.98]"
+        className="relative flex items-center overflow-hidden rounded-3xl px-5 py-4 transition-all active:scale-[0.98]"
         style={{
           background: "#0d0f22",
           border: "1px solid rgba(192,132,252,0.3)",
@@ -494,22 +494,12 @@ function CreateCTA({ childName }: { childName?: string }) {
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(90deg, rgba(8,11,24,0.9) 0%, rgba(8,11,24,0.55) 60%, rgba(8,11,24,0.35) 100%)" }}
+          style={{ background: "linear-gradient(90deg, rgba(8,11,24,0.9) 0%, rgba(8,11,24,0.55) 60%, rgba(8,11,24,0.15) 100%)" }}
         />
         <div className="relative">
           <p className="text-white font-bold text-fs-heading tracking-wide">Create a Story ✦</p>
           <p className="text-white/50 text-fs-body mt-0.5">{subtitle}</p>
         </div>
-        <span
-          className="relative w-11 h-11 rounded-2xl flex items-center justify-center text-fs-heading flex-shrink-0"
-          style={{
-            background: "rgba(192,132,252,0.2)",
-            border: "1px solid rgba(192,132,252,0.4)",
-            color: "#c084fc",
-          }}
-        >
-          ✦
-        </span>
       </Link>
     </div>
   );
