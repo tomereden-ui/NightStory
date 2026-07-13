@@ -117,8 +117,9 @@ function HeroBanner({ story, progressPercent = 42, isPromoted = false, tFn }: { 
     : null;
 
   return (
-    <div
-      className="relative overflow-hidden mx-5 mb-6 rounded-3xl select-none"
+    <Link
+      href={`/library/${story.id}`}
+      className="relative block overflow-hidden mx-5 mb-6 rounded-3xl select-none transition-all active:scale-[0.98]"
       style={{
         height: 260,
         boxShadow: `0 16px 48px rgba(0,0,0,0.7), 0 0 64px ${c1}18`,
@@ -182,11 +183,11 @@ function HeroBanner({ story, progressPercent = 42, isPromoted = false, tFn }: { 
           </div>
         )}
 
-        {/* CTA row */}
+        {/* CTA row — the whole banner is a single Link now, so this is just
+            a visual affordance, not a separate click target. */}
         <div className="flex items-center gap-3">
-          <Link
-            href={`/library/${story.id}`}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold transition-all active:scale-95"
+          <span
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold"
             style={{
               background: `linear-gradient(135deg, ${c1}, ${c2})`,
               color: "#fff",
@@ -195,7 +196,7 @@ function HeroBanner({ story, progressPercent = 42, isPromoted = false, tFn }: { 
             }}
           >
             {isPromoted ? "▶ Listen now" : tFn("continueButton")}
-          </Link>
+          </span>
           {remaining && (
             <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
               {remaining} {tFn("timeLeft")}
@@ -203,7 +204,7 @@ function HeroBanner({ story, progressPercent = 42, isPromoted = false, tFn }: { 
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
