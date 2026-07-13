@@ -11,6 +11,7 @@ export interface PublicStoryData {
   coverUrl: string | null;
   durationSeconds: number;
   shareMessage: string | null;
+  language: string;
   children: { id: string; name: string; avatarEmoji: string }[];
 }
 
@@ -20,7 +21,7 @@ export async function GET(
 ) {
   const { data: story, error } = await supabase
     .from("stories")
-    .select("id, title, summary, audio_url, cover_url, duration_seconds, share_message, child_ids")
+    .select("id, title, summary, audio_url, cover_url, duration_seconds, share_message, child_ids, language")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -50,6 +51,7 @@ export async function GET(
     coverUrl: (story.cover_url as string) ?? null,
     durationSeconds: (story.duration_seconds as number) ?? 0,
     shareMessage: (story.share_message as string) ?? null,
+    language: (story.language as string) ?? "en",
     children,
   };
 

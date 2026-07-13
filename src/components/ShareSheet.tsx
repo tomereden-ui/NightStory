@@ -12,6 +12,112 @@ interface ShareSheetProps {
   onMessageSaved?: (msg: string) => void;
 }
 
+// Follows the story's own language, not the sender's current app-UI
+// language — the whole point of the share flow is to read naturally to
+// whoever ends up on the other end of the link, and the story's language
+// is the strongest signal for that (see SharePageClient.tsx for the same
+// convention on the landing page itself).
+type SheetLangKey =
+  | "personalMessage" | "fallbackName" | "placeholderTemplate" | "hint" | "copyLink" | "linkCopied"
+  | "shareWhatsApp" | "moreOptions" | "cancel" | "madeForTemplate" | "checkOutStory" | "listenHere";
+
+const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
+  en: {
+    personalMessage: "Personal message",
+    fallbackName: "My little one",
+    placeholderTemplate: "{name} designed a magical adventure today! It's fully personalised just for them, completely screen free, and feels like a real cinematic experience in their bedroom tonight 🌙",
+    hint: "Shown on the story page for everyone who opens the link",
+    copyLink: "Copy Link", linkCopied: "Link Copied!", shareWhatsApp: "Share via WhatsApp",
+    moreOptions: "More options…", cancel: "Cancel",
+    madeForTemplate: "I made a bedtime story for {name}!", checkOutStory: "Check out this bedtime story!", listenHere: "Listen here:",
+  },
+  he: {
+    personalMessage: "הודעה אישית",
+    fallbackName: "הקטנטן/ת שלי",
+    placeholderTemplate: "{name} עיצב/ה הרפתקה קסומה היום! זה סיפור מותאם אישית לגמרי, ללא מסך לחלוטין, ומרגיש כמו חוויה קולנועית ממש בחדר שלהם הלילה 🌙",
+    hint: "מוצג בדף הסיפור לכל מי שפותח את הקישור",
+    copyLink: "העתקת קישור", linkCopied: "הקישור הועתק!", shareWhatsApp: "שיתוף ב-WhatsApp",
+    moreOptions: "עוד אפשרויות…", cancel: "ביטול",
+    madeForTemplate: "יצרתי סיפור לילה טוב עבור {name}!", checkOutStory: "תראו את סיפור הלילה הזה!", listenHere: "האזינו כאן:",
+  },
+  es: {
+    personalMessage: "Mensaje personal",
+    fallbackName: "Mi pequeño/a",
+    placeholderTemplate: "¡{name} diseñó una aventura mágica hoy! Es una historia totalmente personalizada, sin pantallas, y se siente como una experiencia cinematográfica real en su habitación esta noche 🌙",
+    hint: "Se muestra en la página de la historia para todos los que abran el enlace",
+    copyLink: "Copiar enlace", linkCopied: "¡Enlace copiado!", shareWhatsApp: "Compartir por WhatsApp",
+    moreOptions: "Más opciones…", cancel: "Cancelar",
+    madeForTemplate: "¡Hice un cuento para dormir para {name}!", checkOutStory: "¡Mira este cuento para dormir!", listenHere: "Escúchalo aquí:",
+  },
+  fr: {
+    personalMessage: "Message personnel",
+    fallbackName: "Mon petit trésor",
+    placeholderTemplate: "{name} a imaginé une aventure magique aujourd'hui ! C'est une histoire entièrement personnalisée, sans écran, qui ressemble à une véritable expérience cinématographique dans sa chambre ce soir 🌙",
+    hint: "Affiché sur la page de l'histoire pour toute personne qui ouvre le lien",
+    copyLink: "Copier le lien", linkCopied: "Lien copié !", shareWhatsApp: "Partager sur WhatsApp",
+    moreOptions: "Plus d'options…", cancel: "Annuler",
+    madeForTemplate: "J'ai créé une histoire du soir pour {name} !", checkOutStory: "Découvrez cette histoire du soir !", listenHere: "Écoutez ici :",
+  },
+  de: {
+    personalMessage: "Persönliche Nachricht",
+    fallbackName: "Mein Schatz",
+    placeholderTemplate: "{name} hat heute ein magisches Abenteuer entworfen! Es ist eine voll personalisierte Geschichte, völlig bildschirmfrei, und fühlt sich heute Nacht wie ein echtes Kinoerlebnis im Kinderzimmer an 🌙",
+    hint: "Wird auf der Geschichtenseite für jeden angezeigt, der den Link öffnet",
+    copyLink: "Link kopieren", linkCopied: "Link kopiert!", shareWhatsApp: "Über WhatsApp teilen",
+    moreOptions: "Weitere Optionen…", cancel: "Abbrechen",
+    madeForTemplate: "Ich habe eine Gute-Nacht-Geschichte für {name} gemacht!", checkOutStory: "Schau dir diese Gute-Nacht-Geschichte an!", listenHere: "Hier anhören:",
+  },
+  pt: {
+    personalMessage: "Mensagem pessoal",
+    fallbackName: "Meu pequeno(a)",
+    placeholderTemplate: "{name} criou uma aventura mágica hoje! É uma história totalmente personalizada, sem telas, e parece uma verdadeira experiência cinematográfica no quarto dele(a) esta noite 🌙",
+    hint: "Exibido na página da história para todos que abrirem o link",
+    copyLink: "Copiar link", linkCopied: "Link copiado!", shareWhatsApp: "Compartilhar no WhatsApp",
+    moreOptions: "Mais opções…", cancel: "Cancelar",
+    madeForTemplate: "Eu fiz uma história para dormir para {name}!", checkOutStory: "Veja esta história para dormir!", listenHere: "Ouça aqui:",
+  },
+  ar: {
+    personalMessage: "رسالة شخصية",
+    fallbackName: "صغيري",
+    placeholderTemplate: "صمّم {name} مغامرة سحرية اليوم! إنها قصة مخصصة بالكامل، بلا شاشات تمامًا، وتبدو كتجربة سينمائية حقيقية في غرفته الليلة 🌙",
+    hint: "تظهر في صفحة القصة لكل من يفتح الرابط",
+    copyLink: "نسخ الرابط", linkCopied: "تم نسخ الرابط!", shareWhatsApp: "مشاركة عبر واتساب",
+    moreOptions: "المزيد من الخيارات…", cancel: "إلغاء",
+    madeForTemplate: "صنعت قصة ما قبل النوم من أجل {name}!", checkOutStory: "شاهدوا قصة ما قبل النوم هذه!", listenHere: "استمعوا هنا:",
+  },
+  ja: {
+    personalMessage: "個人メッセージ",
+    fallbackName: "うちの子",
+    placeholderTemplate: "{name}が今日、魔法の冒険をデザインしました！完全にパーソナライズされた、画面を使わない物語で、今夜は寝室が本物の映画のような体験になります 🌙",
+    hint: "リンクを開いたすべての人に物語ページで表示されます",
+    copyLink: "リンクをコピー", linkCopied: "リンクをコピーしました！", shareWhatsApp: "WhatsAppで共有",
+    moreOptions: "その他のオプション…", cancel: "キャンセル",
+    madeForTemplate: "{name}のためにおやすみ物語を作りました！", checkOutStory: "このおやすみ物語をチェックしてください！", listenHere: "こちらで再生:",
+  },
+  it: {
+    personalMessage: "Messaggio personale",
+    fallbackName: "Il mio piccolo",
+    placeholderTemplate: "{name} ha ideato un'avventura magica oggi! È una storia completamente personalizzata, senza schermo, e stasera sembrerà una vera esperienza cinematografica nella sua cameretta 🌙",
+    hint: "Mostrato nella pagina della storia per chiunque apra il link",
+    copyLink: "Copia link", linkCopied: "Link copiato!", shareWhatsApp: "Condividi su WhatsApp",
+    moreOptions: "Altre opzioni…", cancel: "Annulla",
+    madeForTemplate: "Ho creato una storia della buonanotte per {name}!", checkOutStory: "Guarda questa storia della buonanotte!", listenHere: "Ascolta qui:",
+  },
+  hi: {
+    personalMessage: "व्यक्तिगत संदेश",
+    fallbackName: "मेरा नन्हा",
+    placeholderTemplate: "{name} ने आज एक जादुई रोमांच रचा! यह पूरी तरह व्यक्तिगत, स्क्रीन-मुक्त कहानी है, और आज रात उनके कमरे में एक असली सिनेमाई अनुभव जैसा महसूस होगा 🌙",
+    hint: "लिंक खोलने वाले हर व्यक्ति को कहानी पेज पर दिखाया जाता है",
+    copyLink: "लिंक कॉपी करें", linkCopied: "लिंक कॉपी हो गया!", shareWhatsApp: "WhatsApp पर शेयर करें",
+    moreOptions: "और विकल्प…", cancel: "रद्द करें",
+    madeForTemplate: "मैंने {name} के लिए एक सोने की कहानी बनाई!", checkOutStory: "यह सोने की कहानी देखें!", listenHere: "यहाँ सुनें:",
+  },
+};
+
+function sheetLabels(language?: string): Record<SheetLangKey, string> {
+  return SHARE_SHEET_LABELS[language ?? "en"] ?? SHARE_SHEET_LABELS.en;
+}
+
 function ChildAvatar({ child }: { child: DBChildProfile }) {
   const isUrl = child.avatar_emoji?.startsWith("http");
   return (
@@ -45,6 +151,8 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
     requestAnimationFrame(() => setMounted(true));
   }, []);
 
+  const sl = sheetLabels(story.language);
+
   const assignedChildren = children.filter((c) => story.childIds?.includes(c.id));
   const childNames = assignedChildren.map((c) => c.name);
   const forLabel = childNames.length === 0 ? ""
@@ -55,9 +163,9 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
   const storyUrl = `${siteOrigin}/story/${story.id}`;
 
   const shareText = [
-    forLabel ? `🌙 I made a bedtime story for ${forLabel}!` : "🌙 Check out this bedtime story!",
+    `🌙 ${forLabel ? sl.madeForTemplate.replace("{name}", forLabel) : sl.checkOutStory}`,
     message.trim() ? message.trim() : null,
-    `Listen here: ${storyUrl}`,
+    `${sl.listenHere} ${storyUrl}`,
   ].filter(Boolean).join(" ");
 
   const saveMessage = async () => {
@@ -168,12 +276,12 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
           {/* Message field */}
           <div>
             <p className="mb-2" style={{ color: "rgba(255,255,255,0.4)", fontSize: "var(--fs-body)" }}>
-              💌 Personal message
+              💌 {sl.personalMessage}
             </p>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder={`${childNames[0] ?? "My little one"} designed a magical adventure today! It's fully personalised just for them, completely screen free, and feels like a real cinematic experience in their bedroom tonight 🌙`}
+              placeholder={sl.placeholderTemplate.replace("{name}", childNames[0] ?? sl.fallbackName)}
               rows={3}
               className="w-full rounded-2xl px-4 py-3 text-white resize-none outline-none"
               style={{
@@ -187,7 +295,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
               onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
             />
             <p style={{ color: "rgba(255,255,255,0.18)", fontSize: "var(--fs-label)", marginTop: 6 }}>
-              Shown on the story page for everyone who opens the link
+              {sl.hint}
             </p>
           </div>
 
@@ -219,7 +327,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
               transition: "all 0.2s",
             }}
           >
-            {copied ? "✓ Link Copied!" : "🔗 Copy Link"}
+            {copied ? `✓ ${sl.linkCopied}` : `🔗 ${sl.copyLink}`}
           </button>
 
           {/* WhatsApp */}
@@ -234,7 +342,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
               fontSize: "var(--fs-body)",
             }}
           >
-            <span>💬</span> Share via WhatsApp
+            <span>💬</span> {sl.shareWhatsApp}
           </button>
 
           {/* Native share */}
@@ -249,7 +357,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
                 fontSize: "var(--fs-body)",
               }}
             >
-              More options…
+              {sl.moreOptions}
             </button>
           )}
 
@@ -259,7 +367,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
             className="text-center py-1"
             style={{ color: "rgba(255,255,255,0.2)", fontSize: "var(--fs-body)" }}
           >
-            Cancel
+            {sl.cancel}
           </button>
         </div>
       </div>
