@@ -112,7 +112,7 @@ export default function VoicePicker({
             <p className={`text-fs-body font-semibold ${isSelected ? "text-teal" : "text-white/80"}`}>
               {voice.name}
             </p>
-            <p className="text-fs-body text-white/25 capitalize">{voice.style}</p>
+            <p className="text-fs-body text-white/25 capitalize">{voice.description ?? voice.style}</p>
             {heElName && (
               <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.7)" }}>
                 עב: {heElName}

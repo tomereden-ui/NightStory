@@ -34,6 +34,8 @@ export interface Voice {
   nameHe?: string;
   gender: VoiceGender;
   style: VoiceStyle;
+  /** Short editorial blurb (e.g. "Easy-going & flowing feminine") shown in voice pickers — richer than the single-word style tag. Only preset voices have one. */
+  description?: string;
   language: Language;
   previewUrl?: string;
   avatarEmoji: string;

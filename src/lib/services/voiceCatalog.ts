@@ -32,6 +32,7 @@ export const PRESET_VOICE_POOL: Voice[] = PRESET_VOICES.map((p) => ({
   name: p.name,
   gender: p.gender as VoiceGender,
   style: p.style as VoiceStyle,
+  description: p.desc,
   language: "en",
   avatarEmoji: p.emoji,
   avatarUrl: p.avatarUrl,
