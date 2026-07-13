@@ -519,9 +519,15 @@ export default function LibraryPage() {
   }, [activeChildId]);
 
   const q = search.toLowerCase().trim();
-  const filtered = entries.filter((e) => {
-    return !q || e.title.toLowerCase().includes(q) || (e.summary ?? "").toLowerCase().includes(q);
-  });
+  const matchesQuery = (title: string, summary?: string) =>
+    !q || title.toLowerCase().includes(q) || (summary ?? "").toLowerCase().includes(q);
+  const filtered = entries.filter((e) => matchesQuery(e.title, e.summary));
+  // Same search box now applies to every tab except Classics, which already
+  // has its own self-contained search — one filtered list per tab's own
+  // dataset, all driven by the same `search` state.
+  const filteredAll = allEntries.filter((e) => matchesQuery(e.title, e.summary));
+  const filteredFamily = familyEntries.filter((e) => matchesQuery(e.title, e.summary));
+  const filteredCommunity = communityStories.filter((s) => matchesQuery(s.title, s.summary));
 
   const handleDeleteConfirm = async (id: string) => {
     setDeletingId(id);
@@ -673,38 +679,46 @@ export default function LibraryPage() {
           })}
         </div>
 
-        {/* My Stories filters */}
-        {activeTab === "my-stories" && (
-          <>
-            <div className="relative mb-3" style={{ display: entries.length > 0 || search ? "block" : "none" }}>
-              <span
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
-                style={{ color: "rgba(255,255,255,0.25)" }}
+        {/* Search — shared across every tab except Classics, which has its
+            own self-contained search bar inside ClassicsTab. */}
+        {activeTab !== "classics" && (
+          <div
+            className="relative mb-3"
+            style={{
+              display: (
+                activeTab === "my-stories" ? entries.length > 0 :
+                activeTab === "all" ? allEntries.length > 0 :
+                activeTab === "family" ? familyEntries.length > 0 :
+                communityStories.length > 0
+              ) || search ? "block" : "none",
+            }}
+          >
+            <span
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
+              style={{ color: "rgba(255,255,255,0.25)" }}
+            >
+              <Icon name="search" size={14} />
+            </span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("search")}
+              className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-fs-body text-white placeholder-white/20 outline-none"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.09)",
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
               >
-                <Icon name="search" size={14} />
-              </span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("search")}
-                className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-fs-body text-white placeholder-white/20 outline-none"
-                style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.09)",
-                }}
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-                >
-                  <Icon name="close" size={14} />
-                </button>
-              )}
-            </div>
-
-          </>
+                <Icon name="close" size={14} />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -734,12 +748,24 @@ export default function LibraryPage() {
               <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🌙</span>
               <p className="text-white/40 text-fs-body font-light tracking-wide">{t("noStories")}</p>
             </div>
+          ) : filteredAll.length === 0 ? (
+            <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
+              <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
+              <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
+              <button
+                onClick={() => setSearch("")}
+                className="text-fs-body px-4 py-2 rounded-full transition-all"
+                style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
+              >
+                {t("clearFilters")}
+              </button>
+            </div>
           ) : (
             <div
               className="grid gap-3"
               style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}
             >
-              {allEntries.map((entry) => {
+              {filteredAll.map((entry) => {
                 const [c1, c2] = cardPalette(entry.title);
                 return (
                   <div key={entry.id} className="flex flex-col rounded-xl overflow-hidden transition-all select-none"
@@ -792,9 +818,21 @@ export default function LibraryPage() {
               <p className="text-white/40 text-fs-body font-light tracking-wide">No family stories yet</p>
               <p className="text-white/20 text-fs-body">Stories created for any child will appear here</p>
             </div>
+          ) : filteredFamily.length === 0 ? (
+            <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
+              <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
+              <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
+              <button
+                onClick={() => setSearch("")}
+                className="text-fs-body px-4 py-2 rounded-full transition-all"
+                style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
+              >
+                {t("clearFilters")}
+              </button>
+            </div>
           ) : (
             <FamilyStoriesGrid
-              entries={familyEntries}
+              entries={filteredFamily}
               children={children}
               effective={effective}
               onAssigned={(storyId, childIds) =>
@@ -814,13 +852,25 @@ export default function LibraryPage() {
               <p className="text-white/50 text-fs-body font-medium tracking-wide">{t("communityStories")}</p>
               <p className="text-white/25 text-fs-body max-w-[220px] leading-relaxed">{t("communityStoriesSoon")}</p>
             </div>
+          ) : filteredCommunity.length === 0 ? (
+            <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
+              <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
+              <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
+              <button
+                onClick={() => setSearch("")}
+                className="text-fs-body px-4 py-2 rounded-full transition-all"
+                style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
+              >
+                {t("clearFilters")}
+              </button>
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
               <p className="text-fs-body px-1" style={{ color: "rgba(255,255,255,0.28)" }}>
                 🌍 Stories made with NightStory
               </p>
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-                {communityStories.map((s) => (
+                {filteredCommunity.map((s) => (
                   <a key={s.id} href={`/library/${s.id}`}
                     className="flex flex-col rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
