@@ -71,21 +71,28 @@ function PromoBanner() {
       className="relative w-full overflow-hidden"
       style={{ maxWidth: 420, borderRadius: 24, boxShadow: "0 8px 40px rgba(0,0,0,0.55)" }}
     >
-      {/* Same splash artwork used on the login/onboarding screens, so a
-          friend clicking a shared story sees a consistent first impression
-          of the app before they've ever opened it. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/splash-family.png"
-        alt=""
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
-      />
-      <div
-        className="absolute inset-0"
-        style={{ background: "linear-gradient(180deg, rgba(4,6,18,0.35) 0%, rgba(4,6,18,0.55) 40%, rgba(4,6,18,0.92) 80%, rgba(4,6,18,0.98) 100%)" }}
-      />
+      {/* Image section — fixed height, top-anchored so the artwork's own
+          baked-in headline ("Stories come to life...") stays fully in
+          frame instead of being cropped by object-cover. Badges live in
+          the solid section below instead of overlaid on the art, so
+          they never compete with or hide the headline text. */}
+      <div className="relative" style={{ height: 210 }}>
+        {/* Same splash artwork used on the login/onboarding screens, so a
+            friend clicking a shared story sees a consistent first impression
+            of the app before they've ever opened it. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/splash-family.png"
+          alt=""
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 0%" }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(180deg, transparent 55%, #0a0d1f 100%)" }}
+        />
+      </div>
 
-      <div className="relative px-6 pt-8 pb-6">
+      <div className="relative px-6 pt-5 pb-6" style={{ background: "#0a0d1f" }}>
         <div className="flex items-center gap-2 mb-2">
           <span style={{ fontSize: 22 }}>🌙</span>
           <p className="font-bold" style={{ color: "#fff", fontSize: "var(--fs-subtitle)" }}>NightStory</p>
@@ -94,7 +101,7 @@ function PromoBanner() {
           Magical AI bedtime stories, personalised for your child.
         </p>
         <div className="flex flex-wrap gap-2 mb-5">
-          {["✨ AI-generated", "🎙 Voice narrated", "👧 Personalised", "🌍 Multi-language"].map((f) => (
+          {["📵 Screen free", "🎬 Cinematic experience", "🌈 Full imagination", "🎙 Voice narrated", "👧 Personalised", "🌍 Multi-language", "✨ AI-generated"].map((f) => (
             <span key={f} style={{ fontSize: "var(--fs-label)", color: "rgba(255,255,255,0.65)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 100, padding: "4px 10px" }}>{f}</span>
           ))}
         </div>
