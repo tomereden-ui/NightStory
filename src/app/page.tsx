@@ -82,16 +82,16 @@ export default function SplashPage() {
           transition: "opacity 0.5s ease",
         }}
       >
-        {/* OWL — full screen background */}
+        {/* Splash artwork — full screen background */}
         <div className="absolute inset-0">
           <Image
-            src="/owl-splash.png"
-            alt="NightStory owl wizard"
+            src="/splash-family.png"
+            alt="A parent and child asleep on the couch as storybook characters swirl to life around them"
             fill
             priority
-            style={{ objectFit: "contain", objectPosition: "center 55%" }}
+            style={{ objectFit: "contain", objectPosition: "center" }}
           />
-          {/* Top gradient so logo is readable */}
+          {/* Bottom gradient so the CTA button is readable over the busy artwork */}
           <div className="absolute inset-0" style={{
             background: "linear-gradient(to bottom, rgba(5,2,16,0.0) 0%, rgba(5,2,16,0.0) 55%, rgba(5,2,16,0.75) 78%, rgba(5,2,16,0.97) 100%)",
           }} />
