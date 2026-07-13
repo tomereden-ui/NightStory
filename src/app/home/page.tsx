@@ -815,9 +815,19 @@ export default function HomePage() {
                   style={{ background: "linear-gradient(to top, rgba(8,11,24,0.95) 0%, rgba(8,11,24,0.55) 45%, rgba(8,11,24,0.15) 100%)" }}
                 />
                 <div className="absolute inset-0 flex flex-col items-center justify-end text-center px-8 pb-7">
-                  <p className="text-4xl mb-2" style={{ filter: "drop-shadow(0 0 20px rgba(192,132,252,0.6))" }}>✨</p>
-                  <p className="text-white font-bold text-fs-heading">Create your first story</p>
-                  <p className="text-white/50 text-fs-body mt-1.5">{t("magicalAdventure")}</p>
+                  <p
+                    className="font-extrabold text-fs-title tracking-tight"
+                    style={{
+                      background: "linear-gradient(135deg, #fff 0%, #e9d5ff 55%, #c084fc 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      filter: "drop-shadow(0 2px 16px rgba(192,132,252,0.45))",
+                    }}
+                  >
+                    Create your first story
+                  </p>
+                  <p className="text-white/60 text-fs-body font-medium mt-2">{t("magicalAdventure")} →</p>
                 </div>
               </Link>
             </div>
