@@ -387,7 +387,7 @@ async function runProduction(
     const { profileCharacters } = await import("@/lib/services/characterProfiler");
     const { supabase, ensureBuckets } = await import("@/lib/supabase");
     const { getElementsForStory, uploadElementAudio, saveStoryElements,
-            hashDialogue, hashSfx, downloadToFile } = await import("@/lib/elementStore");
+            hashDialogue, hashSfx, downloadToFile, bumpElementHitCount } = await import("@/lib/elementStore");
     const { findSimilarSfx, saveSfxLibraryEntry, fitAudioDuration } = await import("@/lib/sfxLibrary");
     await ensureBuckets();
 
@@ -613,6 +613,7 @@ async function runProduction(
               const ok = await downloadToFile(cached.audioUrl, cachedLocalPath);
               if (ok) {
                 cacheDialogueHits++;
+                bumpElementHitCount(cached.id).catch(() => {});
                 batchFromCache = true;
                 console.log(`[${ts()}][Cache HIT] ${charName}: "${line.slice(0, 50)}"`);
                 dialogueDone++;
@@ -699,6 +700,7 @@ async function runProduction(
             const ok = await downloadToFile(cachedSfx.audioUrl, outPath);
             if (ok) {
               cacheSfxHits++;
+              bumpElementHitCount(cachedSfx.id).catch(() => {});
               sfxDone++;
               updateJob(jobId, {
                 step: `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`,
@@ -738,6 +740,7 @@ async function runProduction(
                 durationMs: libraryHit.durationMs,
                 textPayload: desc,
                 createdAt: Date.now(),
+                source: "sfx_library",
               });
               sfxDone++;
               updateJob(jobId, {

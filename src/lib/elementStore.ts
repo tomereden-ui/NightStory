@@ -13,6 +13,9 @@ export interface StoryElement {
   characterName?: string;
   textPayload: string;
   createdAt: number;
+  /** Which path created this row — 'generated' (fresh) or 'sfx_library'
+   *  (reused from a different story's clip). Defaults to 'generated'. */
+  source?: "generated" | "sfx_library";
 }
 
 // ─── Hash helpers ─────────────────────────────────────────────────────────────
@@ -77,6 +80,7 @@ export async function getElementsForStory(
         characterName: row.character_name ?? undefined,
         textPayload: row.text_payload,
         createdAt: row.created_at,
+        source: row.source ?? "generated",
       });
     }
   } catch (err) {
@@ -127,11 +131,31 @@ export async function saveStoryElements(elements: StoryElement[]): Promise<void>
     character_name: e.characterName ?? null,
     text_payload: e.textPayload,
     created_at: e.createdAt,
+    source: e.source ?? "generated",
   }));
   const { error } = await supabase
     .from("story_elements")
     .upsert(rows, { onConflict: "id" });
   if (error) console.warn("[ElementStore] saveStoryElements:", error.message);
+}
+
+// ─── Hit tracking ─────────────────────────────────────────────────────────────
+
+/**
+ * Best-effort, fire-and-forget: record that an already-cached element (found
+ * via getElementsForStory, not a fresh generation) was reused. Not atomic —
+ * a read-then-write, so concurrent hits on the exact same element within one
+ * production could undercount by one or two. Fine for approximate stats,
+ * not meant as a precise ledger.
+ */
+export async function bumpElementHitCount(id: string): Promise<void> {
+  try {
+    const { data } = await supabase.from("story_elements").select("hit_count").eq("id", id).maybeSingle();
+    const current = typeof data?.hit_count === "number" ? data.hit_count : 0;
+    await supabase.from("story_elements").update({ hit_count: current + 1 }).eq("id", id);
+  } catch (err) {
+    console.warn("[ElementStore] bumpElementHitCount:", err);
+  }
 }
 
 // ─── Single-element lookup + save (used by interactive preview) ───────────────
