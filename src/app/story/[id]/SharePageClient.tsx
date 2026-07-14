@@ -449,8 +449,11 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
           {playing ? "⏸" : "▶"}
         </button>
 
-        {/* Progress bar */}
-        <div className="flex items-center gap-3 w-full mb-10" style={{ maxWidth: 360 }}>
+        {/* Progress bar — always left-to-right regardless of page direction:
+            playback position/duration is a numeric/chronological concept,
+            not text, and flipping it under dir="rtl" made current-time and
+            duration swap sides (and looked like the seek bar ran backwards). */}
+        <div className="flex items-center gap-3 w-full mb-10" dir="ltr" style={{ maxWidth: 360 }}>
           <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-body)", width: 36, textAlign: "right", flexShrink: 0 }}>
             {formatTime(currentTime)}
           </span>
