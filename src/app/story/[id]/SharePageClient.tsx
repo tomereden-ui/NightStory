@@ -193,7 +193,7 @@ function PromoBanner({ language }: { language: string }) {
         />
       </div>
 
-      <div className="relative px-6 pt-5 pb-6" style={{ background: "#0a0d1f" }}>
+      <div className="relative px-6 pt-5 pb-6" style={{ background: "#0d1a3a" }}>
         <div className="flex items-center gap-2 mb-2">
           <span style={{ fontSize: 22 }}>🌙</span>
           <p className="font-bold" style={{ color: "#fff", fontSize: "var(--fs-subtitle)" }}>NightStory</p>
