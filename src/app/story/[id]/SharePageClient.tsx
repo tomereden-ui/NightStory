@@ -321,7 +321,10 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden" dir={dir} style={{ background: "#040612" }}>
-      {/* Atmospheric blurred background */}
+      {/* Atmospheric blurred background — desaturated so a cover with warm/
+          green tones (jungle, desert, etc.) doesn't tint the whole page a
+          muddy off-color; the blue overlay below is what actually gives it
+          the cosmic-blue atmosphere regardless of the story's own colors. */}
       {story.coverUrl && (
         <div
           className="fixed inset-0 pointer-events-none"
@@ -329,14 +332,14 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
             backgroundImage: `url(${story.coverUrl})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
-            filter: "blur(60px) brightness(0.15) saturate(1.6)",
+            filter: "blur(60px) brightness(0.14) saturate(0.35)",
             transform: "scale(1.1)",
             zIndex: 0,
           }}
         />
       )}
       <div className="fixed inset-0 pointer-events-none" style={{
-        background: "radial-gradient(ellipse 90% 50% at 50% 0%, rgba(79,195,247,0.07) 0%, transparent 70%)",
+        background: "radial-gradient(ellipse 90% 60% at 50% 0%, rgba(30,60,140,0.55) 0%, rgba(13,26,58,0.65) 45%, rgba(4,6,18,0.9) 100%)",
         zIndex: 1,
       }} />
       <StarField />
