@@ -18,7 +18,8 @@ function formatTime(s: number): string {
 type ShareLangKey =
   | "madeWithLoveFor" | "messageLabel" | "loading" | "notFoundTitle" | "goToApp"
   | "tagline" | "badgeScreenFree" | "badgePersonalised" | "badgeCinematic"
-  | "ctaCreate" | "freeNoAccount";
+  | "ctaCreate" | "freeNoAccount"
+  | "introTemplate" | "introFallback" | "updateButton" | "cancelEdit" | "editIntro";
 
 const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
   en: {
@@ -27,6 +28,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "Immersive screen-free audio adventures, from classic tales to stories where your child is the hero.",
     badgeScreenFree: "Screen free", badgePersonalised: "Personalised", badgeCinematic: "Cinematic experience",
     ctaCreate: "Create a story for your child", freeNoAccount: "Free to try · No account needed",
+    introTemplate: "{name}'s family created this amazing audio drama and wanted to share it with you",
+    introFallback: "Our family created this amazing audio drama and wanted to share it with you",
+    updateButton: "Update", cancelEdit: "Cancel", editIntro: "Edit",
   },
   he: {
     madeWithLoveFor: "נוצר באהבה עבור", messageLabel: "הודעה",
@@ -34,6 +38,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "הרפתקאות שמע סוחפות ללא מסך, מסיפורי קלאסיקה ועד סיפורים שבהם הילד שלכם הוא הגיבור.",
     badgeScreenFree: "ללא מסך", badgePersonalised: "מותאם אישית", badgeCinematic: "חוויה קולנועית",
     ctaCreate: "צרו סיפור לילד שלכם", freeNoAccount: "חינם לנסות · לא נדרש חשבון",
+    introTemplate: "המשפחה של {name} יצרה את ההצגה הקולית המדהימה הזו ורצתה לשתף אותה איתך",
+    introFallback: "המשפחה שלנו יצרה את ההצגה הקולית המדהימה הזו ורצתה לשתף אותה איתך",
+    updateButton: "עדכון", cancelEdit: "ביטול", editIntro: "עריכה",
   },
   es: {
     madeWithLoveFor: "Hecho con amor para", messageLabel: "Mensaje",
@@ -41,6 +48,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "Aventuras de audio inmersivas y sin pantallas, desde cuentos clásicos hasta historias donde tu hijo es el héroe.",
     badgeScreenFree: "Sin pantallas", badgePersonalised: "Personalizado", badgeCinematic: "Experiencia cinematográfica",
     ctaCreate: "Crea una historia para tu hijo", freeNoAccount: "Gratis para probar · Sin necesidad de cuenta",
+    introTemplate: "La familia de {name} creó esta increíble obra de audio y quiso compartirla contigo",
+    introFallback: "Nuestra familia creó esta increíble obra de audio y quiso compartirla contigo",
+    updateButton: "Actualizar", cancelEdit: "Cancelar", editIntro: "Editar",
   },
   fr: {
     madeWithLoveFor: "Fait avec amour pour", messageLabel: "Message",
@@ -48,6 +58,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "Des aventures audio immersives et sans écran, des contes classiques aux histoires où votre enfant est le héros.",
     badgeScreenFree: "Sans écran", badgePersonalised: "Personnalisé", badgeCinematic: "Expérience cinématographique",
     ctaCreate: "Créez une histoire pour votre enfant", freeNoAccount: "Gratuit à essayer · Aucun compte requis",
+    introTemplate: "La famille de {name} a créé cette incroyable histoire audio et a voulu la partager avec vous",
+    introFallback: "Notre famille a créé cette incroyable histoire audio et a voulu la partager avec vous",
+    updateButton: "Mettre à jour", cancelEdit: "Annuler", editIntro: "Modifier",
   },
   de: {
     madeWithLoveFor: "Mit Liebe gemacht für", messageLabel: "Nachricht",
@@ -55,6 +68,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "Immersive bildschirmfreie Hörabenteuer – von Klassikern bis zu Geschichten, in denen Ihr Kind der Held ist.",
     badgeScreenFree: "Bildschirmfrei", badgePersonalised: "Personalisiert", badgeCinematic: "Kinoreifes Erlebnis",
     ctaCreate: "Erstelle eine Geschichte für dein Kind", freeNoAccount: "Kostenlos testen · Kein Konto nötig",
+    introTemplate: "{name}s Familie hat dieses großartige Hörspiel erstellt und wollte es mit dir teilen",
+    introFallback: "Unsere Familie hat dieses großartige Hörspiel erstellt und wollte es mit dir teilen",
+    updateButton: "Aktualisieren", cancelEdit: "Abbrechen", editIntro: "Bearbeiten",
   },
   pt: {
     madeWithLoveFor: "Feito com carinho para", messageLabel: "Mensagem",
@@ -62,6 +78,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "Aventuras sonoras imersivas e sem telas, de contos clássicos a histórias em que seu filho é o herói.",
     badgeScreenFree: "Sem telas", badgePersonalised: "Personalizado", badgeCinematic: "Experiência cinematográfica",
     ctaCreate: "Crie uma história para seu filho", freeNoAccount: "Grátis para experimentar · Sem necessidade de conta",
+    introTemplate: "A família de {name} criou esta incrível peça sonora e quis compartilhá-la com você",
+    introFallback: "Nossa família criou esta incrível peça sonora e quis compartilhá-la com você",
+    updateButton: "Atualizar", cancelEdit: "Cancelar", editIntro: "Editar",
   },
   ar: {
     madeWithLoveFor: "صُنعت بحب من أجل", messageLabel: "رسالة",
@@ -69,6 +88,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "مغامرات صوتية غامرة بلا شاشات، من الحكايات الكلاسيكية إلى قصص يكون فيها طفلك البطل.",
     badgeScreenFree: "بلا شاشات", badgePersonalised: "مخصصة", badgeCinematic: "تجربة سينمائية",
     ctaCreate: "أنشئ قصة لطفلك", freeNoAccount: "مجاني للتجربة · لا حاجة لحساب",
+    introTemplate: "صنعت عائلة {name} هذا العمل الصوتي الرائع وأرادت مشاركته معك",
+    introFallback: "صنعت عائلتنا هذا العمل الصوتي الرائع وأرادت مشاركته معك",
+    updateButton: "تحديث", cancelEdit: "إلغاء", editIntro: "تعديل",
   },
   ja: {
     madeWithLoveFor: "心を込めて贈ります", messageLabel: "メッセージ",
@@ -76,6 +98,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "画面を使わない没入型オーディオ体験。名作の物語から、お子様が主人公になる物語まで。",
     badgeScreenFree: "画面なし", badgePersonalised: "パーソナライズ", badgeCinematic: "映画のような体験",
     ctaCreate: "お子様のための物語を作る", freeNoAccount: "無料でお試し · アカウント不要",
+    introTemplate: "{name}のご家族がこの素敵なオーディオドラマを作り、あなたと共有したいと思っています",
+    introFallback: "私たちの家族がこの素敵なオーディオドラマを作り、あなたと共有したいと思っています",
+    updateButton: "更新", cancelEdit: "キャンセル", editIntro: "編集",
   },
   it: {
     madeWithLoveFor: "Fatto con amore per", messageLabel: "Messaggio",
@@ -83,6 +108,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "Avventure audio coinvolgenti e senza schermo, dalle fiabe classiche alle storie in cui tuo figlio è l'eroe.",
     badgeScreenFree: "Senza schermo", badgePersonalised: "Personalizzata", badgeCinematic: "Esperienza cinematografica",
     ctaCreate: "Crea una storia per tuo figlio", freeNoAccount: "Gratis da provare · Nessun account necessario",
+    introTemplate: "La famiglia di {name} ha creato questo fantastico dramma audio e ha voluto condividerlo con te",
+    introFallback: "La nostra famiglia ha creato questo fantastico dramma audio e ha voluto condividerlo con te",
+    updateButton: "Aggiorna", cancelEdit: "Annulla", editIntro: "Modifica",
   },
   hi: {
     madeWithLoveFor: "प्यार से बनाई गई", messageLabel: "संदेश",
@@ -90,6 +118,9 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     tagline: "स्क्रीन-मुक्त इमर्सिव ऑडियो रोमांच — क्लासिक किस्सों से लेकर ऐसी कहानियों तक जिनमें आपका बच्चा ही हीरो है।",
     badgeScreenFree: "स्क्रीन-मुक्त", badgePersonalised: "व्यक्तिगत", badgeCinematic: "सिनेमाई अनुभव",
     ctaCreate: "अपने बच्चे के लिए एक कहानी बनाएं", freeNoAccount: "मुफ़्त आज़माएं · खाते की ज़रूरत नहीं",
+    introTemplate: "{name} के परिवार ने यह अद्भुत ऑडियो कहानी बनाई और इसे आपके साथ साझा करना चाहा",
+    introFallback: "हमारे परिवार ने यह अद्भुत ऑडियो कहानी बनाई और इसे आपके साथ साझा करना चाहा",
+    updateButton: "अपडेट करें", cancelEdit: "रद्द करें", editIntro: "संपादित करें",
   },
 };
 
@@ -228,13 +259,41 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration]       = useState(0);
 
+  // Intro line above the cover art ("Zoe's family created this amazing
+  // audio drama..."), editable only by the owning family (story.isOwner).
+  const [introDraft, setIntroDraft]     = useState("");
+  const [editingIntro, setEditingIntro] = useState(false);
+  const [savingIntro, setSavingIntro]   = useState(false);
+
   useEffect(() => {
     fetch(`/api/story/${storyId}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .then((d) => setStory(d as PublicStoryData))
+      .then((d) => {
+        const data = d as PublicStoryData;
+        setStory(data);
+        setIntroDraft(data.introMessage ?? "");
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [storyId]);
+
+  const handleSaveIntro = useCallback(async () => {
+    if (!story) return;
+    setSavingIntro(true);
+    try {
+      const res = await fetch(`/api/library/${story.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ introMessage: introDraft.trim() || null }),
+      });
+      if (res.ok) {
+        setStory((prev) => prev ? { ...prev, introMessage: introDraft.trim() || null } : prev);
+        setEditingIntro(false);
+      }
+    } finally {
+      setSavingIntro(false);
+    }
+  }, [story, introDraft]);
 
   const handlePlayPause = useCallback(() => {
     const a = audioRef.current;
@@ -346,6 +405,58 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         >
           <span style={{ fontSize: 12 }}>🌙</span>
           <span style={{ color: "rgba(79,195,247,0.7)", fontSize: "var(--fs-label)", fontWeight: 700, letterSpacing: 1.5 }}>NightStory</span>
+        </div>
+
+        {/* Intro line — editable only by the family that owns this story
+            (story.isOwner, resolved server-side from the visitor's own
+            session if they happen to be logged in as that family). Everyone
+            else just reads it — a suggested default fills in until the
+            family customizes it. */}
+        <div className="w-full mb-8" style={{ maxWidth: 360 }}>
+          {editingIntro ? (
+            <div className="flex flex-col gap-2.5">
+              <textarea
+                value={introDraft}
+                onChange={(e) => setIntroDraft(e.target.value)}
+                rows={2}
+                autoFocus
+                className="w-full rounded-2xl px-4 py-3 text-white resize-none outline-none text-center"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(79,195,247,0.3)", fontSize: "var(--fs-body)", lineHeight: 1.6 }}
+              />
+              <div className="flex gap-2.5 justify-center">
+                <button
+                  onClick={() => { setIntroDraft(story.introMessage ?? ""); setEditingIntro(false); }}
+                  className="px-4 py-2 rounded-full text-fs-body font-medium"
+                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}
+                >
+                  {sl.cancelEdit}
+                </button>
+                <button
+                  onClick={handleSaveIntro}
+                  disabled={savingIntro}
+                  className="px-5 py-2 rounded-full text-fs-body font-bold transition-all active:scale-95 disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg,#4fc3f7,#a78bfa)", color: "#fff" }}
+                >
+                  {savingIntro ? "…" : sl.updateButton}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-center" style={{ color: "rgba(255,255,255,0.7)", fontSize: "var(--fs-body)", lineHeight: 1.6 }}>
+                {story.introMessage || (forLabel ? sl.introTemplate.replace("{name}", forLabel) : sl.introFallback)}
+              </p>
+              {story.isOwner && (
+                <button
+                  onClick={() => setEditingIntro(true)}
+                  className="text-fs-label font-medium"
+                  style={{ color: "rgba(79,195,247,0.6)" }}
+                >
+                  ✏️ {sl.editIntro}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Cover art — big and impressive */}
