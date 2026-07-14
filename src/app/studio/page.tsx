@@ -2274,7 +2274,11 @@ export default function Studio2Page() {
 
   return (
     <div className="min-h-full" dir={isRTL ? "rtl" : "ltr"}>
-      <div className="px-5 pt-12 pb-8">
+      {/* Extra bottom padding when the sticky StudioAudioBar is showing
+          (reopening an already-produced story) -- otherwise its ~210px-tall
+          fixed bar covers the last section of content (e.g. Director's
+          Note) with no way to scroll past it. */}
+      <div className="px-5 pt-12" style={{ paddingBottom: completedJob?.audioUrl ? 220 : 32 }}>
         {/* Header */}
         <div className="flex items-center mb-7">
           {activeTab === "lesson" ? (
