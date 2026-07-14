@@ -24,8 +24,8 @@ export const SHARE_MESSAGE_TEMPLATES: Record<string, ShareMessageTemplate> = {
     fallback: "We made a magical audio adventure today and wanted to share it with you — it feels like a real cinematic experience, made just for bedtime 🌙",
   },
   he: {
-    template: "יצרנו הרפתקת אודיו קסומה בשביל [] והיום רצינו לשתף אותה איתך — היא מרגישה כמו חוויה קולנועית אמיתית, שנוצרה בדיוק לזמן השינה 🌙",
-    fallback: "יצרנו הרפתקת אודיו קסומה והיום רצינו לשתף אותה איתך — היא מרגישה כמו חוויה קולנועית אמיתית, שנוצרה בדיוק לזמן השינה 🌙",
+    template: "יצרנו הרפתקת אודיו קסומה בשביל [] והיום רצינו לשתף אותה איתך, היא מרגישה כמו חוויה קולנועית אמיתית, שנוצרה בדיוק לזמן השינה 🌙",
+    fallback: "יצרנו הרפתקת אודיו קסומה והיום רצינו לשתף אותה איתך, היא מרגישה כמו חוויה קולנועית אמיתית, שנוצרה בדיוק לזמן השינה 🌙",
   },
   es: {
     template: "Hoy creamos una aventura de audio mágica para [] y quisimos compartirla contigo — se siente como una verdadera experiencia cinematográfica, creada justo para la hora de dormir 🌙",

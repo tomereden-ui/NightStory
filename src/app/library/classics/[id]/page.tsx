@@ -105,7 +105,6 @@ export default function ClassicDetailPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [allChildren, setAllChildren] = useState<DBChildProfile[]>([]);
   const [openingInStudio, setOpeningInStudio] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
 
@@ -139,7 +138,6 @@ export default function ClassicDetailPage() {
   const [summaryPlaying, setSummaryPlaying] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const summaryAudioRef = useRef<HTMLAudioElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Story audio player ────────────────────────────────────────────────────
   const storyAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -358,29 +356,6 @@ export default function ClassicDetailPage() {
     }
   }, [summaryPlaying, blocks, meta, id]);
 
-  const handleUploadCover = () => fileInputRef.current?.click();
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    setUploadingCover(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`/api/classics/${id}/cover`, { method: "POST", body: fd });
-      if (res.ok) {
-        const { coverUrl } = await res.json() as { coverUrl: string };
-        setMeta((m) => m ? { ...m, coverUrl } : m);
-        setImgFailed(false);
-      }
-    } catch {
-      // silently ignore
-    } finally {
-      setUploadingCover(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="cosmic-page min-h-full flex items-center justify-center">
@@ -407,8 +382,6 @@ export default function ClassicDetailPage() {
 
   return (
     <div className="cosmic-page min-h-full">
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-
       {storyAudioUrl && (
         <audio
           ref={storyAudioRef}
@@ -456,45 +429,17 @@ export default function ClassicDetailPage() {
           {/* Back button */}
           <button
             onClick={() => router.back()}
-            className="absolute top-12 left-4 w-8 h-8 flex items-center justify-center rounded-full"
+            aria-label="Back"
+            className="absolute top-12 left-4 w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90"
             style={{
-              background: "rgba(5,8,20,0.6)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(5,8,20,0.72)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.16)",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
             }}
           >
-            <Icon name="back" size={18} className="text-white/60" />
+            <Icon name="back" size={20} className="text-white" />
           </button>
-
-          {/* Cover action buttons */}
-          <div className="absolute top-12 right-4 flex items-center gap-1.5">
-            {/* Manual upload */}
-            {!uploadingCover ? (
-              <button
-                onClick={handleUploadCover}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-fs-body font-medium transition-all active:scale-95"
-                style={{
-                  background: "rgba(5,8,20,0.6)",
-                  backdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.45)",
-                }}
-              >
-                📷
-              </button>
-            ) : (
-              <div
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-fs-body"
-                style={{ background: "rgba(5,8,20,0.6)", color: "rgba(255,255,255,0.3)" }}
-              >
-              <div
-                className="w-3 h-3 rounded-full border border-t-transparent animate-spin"
-                style={{ borderColor: `${c1} transparent transparent transparent` }}
-              />
-              Uploading…
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Title block — intentionally distinctive vs My Stories */}
