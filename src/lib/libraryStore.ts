@@ -28,6 +28,11 @@ export interface LibraryEntry {
   summary: string;
   audioUrl?: string;   // nullable — classics may have script only, no merged audio yet
   coverUrl?: string;
+  /** Percentages (0-100) — which point of coverUrl should stay in frame when
+   *  cropped into a non-square container. Undefined = no custom focus set,
+   *  falls back to each render site's own default object-position. */
+  coverFocusX?: number;
+  coverFocusY?: number;
   durationSeconds: number;
   createdAt: number;
   blocks: ScriptBlock[];
@@ -71,6 +76,8 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
     summary: row.summary ?? "",
     audioUrl: row.audio_url ?? undefined,
     coverUrl: row.cover_url ?? undefined,
+    coverFocusX: typeof row.cover_focus_x === "number" ? row.cover_focus_x : undefined,
+    coverFocusY: typeof row.cover_focus_y === "number" ? row.cover_focus_y : undefined,
     durationSeconds: row.duration_seconds ?? 0,
     createdAt: row.created_at,
     blocks: row.blocks ?? [],
@@ -115,6 +122,8 @@ export async function addEntry(entry: LibraryEntry, familyId?: string): Promise<
     summary: entry.summary,
     audio_url: entry.audioUrl ?? null,
     cover_url: entry.coverUrl ?? null,
+    cover_focus_x: entry.coverFocusX ?? null,
+    cover_focus_y: entry.coverFocusY ?? null,
     duration_seconds: entry.durationSeconds,
     created_at: entry.createdAt,
     blocks: entry.blocks,
@@ -154,6 +163,8 @@ const COUNTER_COLUMNS = ", view_count, share_count";
 // Same deal for the promoted-story migration — kept out of LIST_COLUMNS so
 // list views don't 500 before that migration has run.
 const PROMOTED_COLUMN = ", promoted";
+// Same deal for the cover-focus migration.
+const COVER_FOCUS_COLUMNS = ", cover_focus_x, cover_focus_y";
 
 // Lightweight, family-scoped list view — one DB round trip, no script
 // payloads. View/share counts come from the trigger-maintained counter
@@ -177,9 +188,9 @@ export async function getEntrySummaries(
     return q.order("created_at", { ascending: false }).limit(opts?.limit ?? 100);
   };
 
-  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN);
-  // Counter/promoted columns don't exist until their migrations run — retry without.
-  if (error && /view_count|share_count|promoted/.test(error.message)) {
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS);
+  // Counter/promoted/cover-focus columns don't exist until their migrations run — retry without.
+  if (error && /view_count|share_count|promoted|cover_focus/.test(error.message)) {
     ({ data, error } = await run(LIST_COLUMNS));
   }
   if (error) throw new Error(`getEntrySummaries: ${error.message}`);
@@ -204,8 +215,8 @@ export async function getAllVisibleEntries(
       .limit(opts?.limit ?? 150);
   };
 
-  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN);
-  if (error && /view_count|share_count|promoted/.test(error.message)) {
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS);
+  if (error && /view_count|share_count|promoted|cover_focus/.test(error.message)) {
     ({ data, error } = await run(LIST_COLUMNS));
   }
   if (error) throw new Error(`getAllVisibleEntries: ${error.message}`);

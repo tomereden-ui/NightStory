@@ -430,6 +430,7 @@ export default function ClassicDetailPage() {
               src={meta.coverUrl}
               alt=""
               className="w-full h-full object-cover ken-burns"
+              style={{ objectPosition: "50% 30%" }}
               onError={() => setImgFailed(true)}
             />
           ) : (

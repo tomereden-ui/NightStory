@@ -261,6 +261,8 @@ export default function StoryDetailPage() {
       summary: entry.summary,
       coverPrompt: "",
       coverUrl: entry.coverUrl ?? "",
+      coverFocusX: entry.coverFocusX,
+      coverFocusY: entry.coverFocusY,
       editingStoryId: isOwned ? entry.id : undefined,
       forkedFromTitle: isOwned ? undefined : entry.title,
       storyTitle: entry.title,
@@ -348,7 +350,7 @@ export default function StoryDetailPage() {
             // consistently in the top ~15-45%, not centered — a plain
             // center crop into this short wide banner cuts the head off.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover ken-burns" style={{ objectPosition: "50% 30%" }} />
+            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover ken-burns" style={{ objectPosition: `${entry.coverFocusX ?? 50}% ${entry.coverFocusY ?? 30}%` }} />
           ) : (
             <div
               className="w-full h-full"

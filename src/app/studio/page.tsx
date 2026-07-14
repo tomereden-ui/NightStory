@@ -1091,6 +1091,8 @@ export default function Studio2Page() {
   const [summary, setSummary]               = useState("");
   const [coverUrl, setCoverUrl]             = useState("");
   const [coverPrompt, setCoverPrompt]       = useState("");
+  const [coverFocusX, setCoverFocusX]       = useState<number | undefined>(undefined);
+  const [coverFocusY, setCoverFocusY]       = useState<number | undefined>(undefined);
   const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
   const [forkedFromTitle, setForkedFromTitle] = useState<string | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(3);
@@ -1427,6 +1429,8 @@ export default function Studio2Page() {
       setSummary(draft.summary ?? "");
       setCoverUrl(draft.coverUrl ?? "");
       setCoverPrompt(draft.coverPrompt ?? "");
+      setCoverFocusX(draft.coverFocusX);
+      setCoverFocusY(draft.coverFocusY);
       setEditingStoryId(draft.editingStoryId ?? null);
       setForkedFromTitle(draft.forkedFromTitle ?? null);
       const needsLessonAnalysis = !draft.moralLessons?.length && draft.scriptBlocks.length > 0;
@@ -1960,7 +1964,7 @@ export default function Studio2Page() {
           fetch(`/api/library/${editingStoryId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ blocks: cleanedBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined }),
+            body: JSON.stringify({ blocks: cleanedBlocks, title: storyTitle || undefined, summary: summary || undefined, scenes: scenes.length ? scenes : undefined, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined, coverFocusX: coverFocusX ?? null, coverFocusY: coverFocusY ?? null }),
           }).then((r) => saveOrThrow("Story update", r))
         );
 
@@ -2683,9 +2687,18 @@ export default function Studio2Page() {
               isAdmin={isAdmin}
               onTitleChange={handleTitleChange}
               coverUrl={coverUrl}
+              coverFocusX={coverFocusX}
+              coverFocusY={coverFocusY}
+              onSetCoverFocus={scriptBlocks.length > 0 ? (x: number, y: number) => {
+                setCoverFocusX(x);
+                setCoverFocusY(y);
+                setMetaDirty(true);
+              } : undefined}
               isFetchingCover={isFetchingCover}
               onRegenerateCover={scriptBlocks.length > 0 ? () => {
                 setCoverUrl("");
+                setCoverFocusX(undefined);
+                setCoverFocusY(undefined);
                 coverBase64Ref.current = null;
                 setMetaDirty(true);
                 fetchCover(coverPrompt || storyTitle || summary.slice(0, 200), summary);
@@ -2700,6 +2713,8 @@ export default function Studio2Page() {
                   // Shown as a local preview only — persisted like any other
                   // change, the next time the user clicks Update Version.
                   setCoverUrl(dataUrl);
+                  setCoverFocusX(undefined);
+                  setCoverFocusY(undefined);
                   setMetaDirty(true);
                 };
                 reader.readAsDataURL(file);

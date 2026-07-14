@@ -32,7 +32,7 @@ export async function PATCH(
   }
   console.log(`[library PATCH] story=${id} — caller user=${ctx.userId} family=${ctx.familyId}`);
 
-  let body: { blocks?: ScriptBlock[]; title?: string; summary?: string; childIds?: string[] | null; shareMessage?: string | null; scenes?: StoryScene[] | null; characterProfiles?: Record<string, CharacterProfile> | null; moralLessons?: MoralLesson[] | null };
+  let body: { blocks?: ScriptBlock[]; title?: string; summary?: string; childIds?: string[] | null; shareMessage?: string | null; coverFocusX?: number | null; coverFocusY?: number | null; scenes?: StoryScene[] | null; characterProfiles?: Record<string, CharacterProfile> | null; moralLessons?: MoralLesson[] | null };
   try {
     body = await req.json();
   } catch {
@@ -46,6 +46,8 @@ export async function PATCH(
   if (body.summary       !== undefined) updates.summary        = body.summary;
   if (body.childIds      !== undefined) updates.child_ids      = body.childIds?.length ? body.childIds : null;
   if (body.shareMessage  !== undefined) updates.share_message  = body.shareMessage ?? null;
+  if (body.coverFocusX   !== undefined) updates.cover_focus_x  = body.coverFocusX ?? null;
+  if (body.coverFocusY   !== undefined) updates.cover_focus_y  = body.coverFocusY ?? null;
   if (body.scenes            !== undefined) updates.scenes             = body.scenes ?? null;
   if (body.characterProfiles !== undefined) updates.character_profiles = body.characterProfiles ?? null;
   if (body.moralLessons      !== undefined) updates.moral_lessons      = body.moralLessons ?? null;

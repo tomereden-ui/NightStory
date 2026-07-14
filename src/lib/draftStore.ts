@@ -9,6 +9,8 @@ export interface DraftState {
   summary: string;
   coverPrompt: string;
   coverUrl: string;
+  coverFocusX?: number;
+  coverFocusY?: number;
   editingStoryId?: string;
   forkedFromTitle?: string;
   /** The story's actual content language (ISO 639-1) — distinct from the app's UI display language. */

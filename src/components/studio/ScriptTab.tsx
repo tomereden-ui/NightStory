@@ -22,6 +22,11 @@ interface ScriptTabProps {
   isFetchingCover?: boolean;
   onRegenerateCover?: () => void;
   onUploadCover?: (file: File) => void;
+  /** Percentages (0-100) — which point of coverUrl stays in frame when it's
+   *  cropped into a non-square container elsewhere in the app. */
+  coverFocusX?: number;
+  coverFocusY?: number;
+  onSetCoverFocus?: (x: number, y: number) => void;
   durationMinutes?: number;
   onDurationChange?: (v: number) => void;
   hideDirectorsNote?: boolean;
@@ -411,7 +416,8 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, totalDurationSeconds, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, coverFocusX, coverFocusY, onSetCoverFocus, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, totalDurationSeconds, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
+  const [settingFocus, setSettingFocus] = useState(false);
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading]         = useState(false);
@@ -751,10 +757,26 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               boxShadow: "0 4px 20px rgba(79,195,247,0.06)",
             }}>
             {/* Cover image */}
-            <div className="relative w-full overflow-hidden" style={{ aspectRatio: "16/9", background: "rgba(10,12,20,1)" }}>
+            <div
+              className="relative w-full overflow-hidden"
+              style={{ aspectRatio: "16/9", background: "rgba(10,12,20,1)", cursor: settingFocus ? "crosshair" : undefined }}
+              onClick={(e) => {
+                if (!settingFocus || !onSetCoverFocus) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+                const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+                onSetCoverFocus(Math.min(100, Math.max(0, x)), Math.min(100, Math.max(0, y)));
+                setSettingFocus(false);
+              }}
+            >
               {coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={coverUrl} alt="Story cover" className="w-full h-full object-cover ken-burns" />
+                <img
+                  src={coverUrl}
+                  alt="Story cover"
+                  className={`w-full h-full object-cover ${settingFocus ? "" : "ken-burns"}`}
+                  style={{ objectPosition: `${coverFocusX ?? 50}% ${coverFocusY ?? 30}%` }}
+                />
               ) : (
                 <div
                   className="w-full h-full flex items-center justify-center"
@@ -769,11 +791,48 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               {/* Dark gradient at bottom for text overlap */}
               <div
                 className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none"
-                style={{ background: "linear-gradient(to top, rgba(10,12,20,1) 0%, rgba(10,12,20,0.6) 40%, transparent 100%)" }}
+                style={{ background: settingFocus ? "none" : "linear-gradient(to top, rgba(10,12,20,1) 0%, rgba(10,12,20,0.6) 40%, transparent 100%)" }}
               />
-              {/* Cover action buttons — regenerate + upload */}
-              {!isFetchingCover && (onRegenerateCover || onUploadCover) && (
+              {/* Focus-point crosshair + instructions — only while picking */}
+              {settingFocus && (
+                <>
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: `${coverFocusX ?? 50}%`, top: `${coverFocusY ?? 30}%`,
+                      transform: "translate(-50%, -50%)",
+                      width: 28, height: 28, borderRadius: "50%",
+                      border: "2px solid #4fc3f7",
+                      boxShadow: "0 0 0 2000px rgba(0,0,0,0.25), 0 0 12px rgba(79,195,247,0.8)",
+                    }}
+                  />
+                  <div
+                    className="absolute top-2 left-2 px-3 py-1.5 rounded-xl text-fs-body font-semibold pointer-events-none"
+                    style={{ background: "rgba(5,8,20,0.8)", color: "rgba(255,255,255,0.85)", backdropFilter: "blur(10px)" }}
+                  >
+                    Tap the face (or anything else) to keep it in frame
+                  </div>
+                </>
+              )}
+              {/* Cover action buttons — regenerate + upload + focus */}
+              {!isFetchingCover && (onRegenerateCover || onUploadCover || onSetCoverFocus) && (
                 <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                  {onSetCoverFocus && coverUrl && (
+                    <button
+                      onClick={() => setSettingFocus((v) => !v)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-fs-body font-semibold transition-all active:scale-95 hover:brightness-110"
+                      style={{
+                        background: settingFocus ? "rgba(79,195,247,0.25)" : "rgba(5,8,20,0.75)",
+                        border: `1px solid ${settingFocus ? "rgba(79,195,247,0.7)" : "rgba(79,195,247,0.35)"}`,
+                        color: "rgba(79,195,247,0.9)",
+                        backdropFilter: "blur(10px)",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+                      }}
+                    >
+                      <span style={{ fontSize: 13 }}>🎯</span>
+                      <span>{settingFocus ? "Cancel" : "Focus"}</span>
+                    </button>
+                  )}
                   {onUploadCover && (
                     <>
                       <input

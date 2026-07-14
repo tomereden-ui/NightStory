@@ -14,18 +14,27 @@ export interface PublicStoryData {
   shareMessage: string | null;
   language: string;
   isOwner: boolean;
+  coverFocusX: number | null;
+  coverFocusY: number | null;
   children: { id: string; name: string; avatarEmoji: string }[];
 }
+
+const BASE_COLUMNS = "id, title, summary, audio_url, cover_url, duration_seconds, share_message, child_ids, language, family_id";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const { data: story, error } = await supabase
+  let { data: story, error } = await supabase
     .from("stories")
-    .select("id, title, summary, audio_url, cover_url, duration_seconds, share_message, child_ids, language, family_id")
+    .select(`${BASE_COLUMNS}, cover_focus_x, cover_focus_y`)
     .eq("id", params.id)
     .maybeSingle();
+  // cover_focus_x/y don't exist until that migration runs — retry without
+  // them rather than 500ing this public page for every visitor.
+  if (error && /cover_focus/.test(error.message)) {
+    ({ data: story, error } = await supabase.from("stories").select(BASE_COLUMNS).eq("id", params.id).maybeSingle());
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!story || !story.audio_url) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -63,6 +72,8 @@ export async function GET(
     shareMessage: (story.share_message as string) ?? null,
     language: (story.language as string) ?? "en",
     isOwner,
+    coverFocusX: typeof story.cover_focus_x === "number" ? story.cover_focus_x : null,
+    coverFocusY: typeof story.cover_focus_y === "number" ? story.cover_focus_y : null,
     children,
   };
 

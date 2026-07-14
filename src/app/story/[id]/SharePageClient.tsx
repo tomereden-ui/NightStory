@@ -423,6 +423,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
                   position: "absolute", inset: 0,
                   width: "100%", height: "100%",
                   objectFit: "cover",
+                  objectPosition: `${story.coverFocusX ?? 50}% ${story.coverFocusY ?? 50}%`,
                   borderRadius: 32,
                 }}
               />
