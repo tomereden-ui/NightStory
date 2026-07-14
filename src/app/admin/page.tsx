@@ -1333,6 +1333,41 @@ export default function AdminPage() {
       finalBlocks = finalBlocks.map((b) =>
         voiceByChar[b.characterName] ? { ...b, assignedVoiceId: voiceByChar[b.characterName] } : b
       );
+
+      // Avatars had the exact same problem voices just had, and for the
+      // same reason: the automatic pass right after Process Script (above,
+      // before classification existed yet) only knows character NAMES, so
+      // it hardcodes type "adult" for everyone non-narrator and hash-picks
+      // blindly — a child or animal character gets a mismatched adult bank
+      // avatar until the admin manually clicks Auto Assign per character.
+      // Now that real classification (type/gender/look) is in, re-pick
+      // every character's avatar the same way that manual button does
+      // (POST /api/match-avatar with the real profile) instead of leaving
+      // the earlier blind pick in place. Sequential, not parallel, so each
+      // pick can exclude every avatar already claimed by an earlier
+      // character in this same loop — otherwise two characters could
+      // independently land on the same face.
+      const usedAvatarUrls = new Set<string>();
+      const avatarByChar: Record<string, string> = {};
+      for (const name of uniqueChars) {
+        try {
+          const res = await fetch("/api/match-avatar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profile: profiles[name], excludeUrls: Array.from(usedAvatarUrls) }),
+          });
+          const data = await res.json() as { avatarUrl?: string | null };
+          if (data.avatarUrl) {
+            avatarByChar[name] = data.avatarUrl;
+            usedAvatarUrls.add(data.avatarUrl);
+          }
+        } catch {
+          // keep the earlier pickBankAvatar guess for this character
+        }
+      }
+      if (Object.keys(avatarByChar).length > 0) {
+        setCharacterAvatars((prev) => ({ ...prev, ...avatarByChar }));
+      }
     } else {
       console.warn("[Admin][Validation] Character classification failed — Auto Assign will retry it at Produce Story:", classifyResult.reason);
     }
