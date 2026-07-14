@@ -19,7 +19,7 @@ function formatTime(s: number): string {
 type ShareLangKey =
   | "madeWithLoveFor" | "messageLabel" | "loading" | "notFoundTitle" | "goToApp"
   | "tagline" | "badgeScreenFree" | "badgePersonalised" | "badgeCinematic"
-  | "ctaCreate" | "freeNoAccount"
+  | "ctaCreate"
   | "updateButton" | "cancelEdit" | "editIntro";
 
 const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
@@ -28,7 +28,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "Loading story…", notFoundTitle: "Story not found.", goToApp: "Go to NightStory",
     tagline: "Immersive screen-free audio adventures, from classic tales to stories where your child is the hero.",
     badgeScreenFree: "Screen free", badgePersonalised: "Personalised", badgeCinematic: "Cinematic experience",
-    ctaCreate: "Create a story for your child", freeNoAccount: "Free to try · No account needed",
+    ctaCreate: "Create a story for your child",
     updateButton: "Update", cancelEdit: "Cancel", editIntro: "Edit",
   },
   he: {
@@ -36,7 +36,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "טוען סיפור…", notFoundTitle: "הסיפור לא נמצא.", goToApp: "מעבר ל-NightStory",
     tagline: "הרפתקאות שמע סוחפות ללא מסך, מסיפורי קלאסיקה ועד סיפורים שבהם הילד שלכם הוא הגיבור.",
     badgeScreenFree: "ללא מסך", badgePersonalised: "מותאם אישית", badgeCinematic: "חוויה קולנועית",
-    ctaCreate: "צרו סיפור לילד שלכם", freeNoAccount: "חינם לנסות · לא נדרש חשבון",
+    ctaCreate: "צרו סיפור לילד שלכם",
     updateButton: "עדכון", cancelEdit: "ביטול", editIntro: "עריכה",
   },
   es: {
@@ -44,7 +44,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "Cargando historia…", notFoundTitle: "Historia no encontrada.", goToApp: "Ir a NightStory",
     tagline: "Aventuras de audio inmersivas y sin pantallas, desde cuentos clásicos hasta historias donde tu hijo es el héroe.",
     badgeScreenFree: "Sin pantallas", badgePersonalised: "Personalizado", badgeCinematic: "Experiencia cinematográfica",
-    ctaCreate: "Crea una historia para tu hijo", freeNoAccount: "Gratis para probar · Sin necesidad de cuenta",
+    ctaCreate: "Crea una historia para tu hijo",
     updateButton: "Actualizar", cancelEdit: "Cancelar", editIntro: "Editar",
   },
   fr: {
@@ -52,7 +52,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "Chargement de l'histoire…", notFoundTitle: "Histoire introuvable.", goToApp: "Aller sur NightStory",
     tagline: "Des aventures audio immersives et sans écran, des contes classiques aux histoires où votre enfant est le héros.",
     badgeScreenFree: "Sans écran", badgePersonalised: "Personnalisé", badgeCinematic: "Expérience cinématographique",
-    ctaCreate: "Créez une histoire pour votre enfant", freeNoAccount: "Gratuit à essayer · Aucun compte requis",
+    ctaCreate: "Créez une histoire pour votre enfant",
     updateButton: "Mettre à jour", cancelEdit: "Annuler", editIntro: "Modifier",
   },
   de: {
@@ -60,7 +60,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "Geschichte wird geladen…", notFoundTitle: "Geschichte nicht gefunden.", goToApp: "Zu NightStory",
     tagline: "Immersive bildschirmfreie Hörabenteuer – von Klassikern bis zu Geschichten, in denen Ihr Kind der Held ist.",
     badgeScreenFree: "Bildschirmfrei", badgePersonalised: "Personalisiert", badgeCinematic: "Kinoreifes Erlebnis",
-    ctaCreate: "Erstelle eine Geschichte für dein Kind", freeNoAccount: "Kostenlos testen · Kein Konto nötig",
+    ctaCreate: "Erstelle eine Geschichte für dein Kind",
     updateButton: "Aktualisieren", cancelEdit: "Abbrechen", editIntro: "Bearbeiten",
   },
   pt: {
@@ -68,7 +68,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "Carregando história…", notFoundTitle: "História não encontrada.", goToApp: "Ir para o NightStory",
     tagline: "Aventuras sonoras imersivas e sem telas, de contos clássicos a histórias em que seu filho é o herói.",
     badgeScreenFree: "Sem telas", badgePersonalised: "Personalizado", badgeCinematic: "Experiência cinematográfica",
-    ctaCreate: "Crie uma história para seu filho", freeNoAccount: "Grátis para experimentar · Sem necessidade de conta",
+    ctaCreate: "Crie uma história para seu filho",
     updateButton: "Atualizar", cancelEdit: "Cancelar", editIntro: "Editar",
   },
   ar: {
@@ -76,7 +76,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "جارٍ تحميل القصة…", notFoundTitle: "القصة غير موجودة.", goToApp: "الذهاب إلى NightStory",
     tagline: "مغامرات صوتية غامرة بلا شاشات، من الحكايات الكلاسيكية إلى قصص يكون فيها طفلك البطل.",
     badgeScreenFree: "بلا شاشات", badgePersonalised: "مخصصة", badgeCinematic: "تجربة سينمائية",
-    ctaCreate: "أنشئ قصة لطفلك", freeNoAccount: "مجاني للتجربة · لا حاجة لحساب",
+    ctaCreate: "أنشئ قصة لطفلك",
     updateButton: "تحديث", cancelEdit: "إلغاء", editIntro: "تعديل",
   },
   ja: {
@@ -84,7 +84,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "物語を読み込み中…", notFoundTitle: "物語が見つかりません。", goToApp: "NightStoryへ",
     tagline: "画面を使わない没入型オーディオ体験。名作の物語から、お子様が主人公になる物語まで。",
     badgeScreenFree: "画面なし", badgePersonalised: "パーソナライズ", badgeCinematic: "映画のような体験",
-    ctaCreate: "お子様のための物語を作る", freeNoAccount: "無料でお試し · アカウント不要",
+    ctaCreate: "お子様のための物語を作る",
     updateButton: "更新", cancelEdit: "キャンセル", editIntro: "編集",
   },
   it: {
@@ -92,7 +92,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "Caricamento della storia…", notFoundTitle: "Storia non trovata.", goToApp: "Vai a NightStory",
     tagline: "Avventure audio coinvolgenti e senza schermo, dalle fiabe classiche alle storie in cui tuo figlio è l'eroe.",
     badgeScreenFree: "Senza schermo", badgePersonalised: "Personalizzata", badgeCinematic: "Esperienza cinematografica",
-    ctaCreate: "Crea una storia per tuo figlio", freeNoAccount: "Gratis da provare · Nessun account necessario",
+    ctaCreate: "Crea una storia per tuo figlio",
     updateButton: "Aggiorna", cancelEdit: "Annulla", editIntro: "Modifica",
   },
   hi: {
@@ -100,7 +100,7 @@ const SHARE_LABELS: Record<string, Record<ShareLangKey, string>> = {
     loading: "कहानी लोड हो रही है…", notFoundTitle: "कहानी नहीं मिली।", goToApp: "NightStory पर जाएं",
     tagline: "स्क्रीन-मुक्त इमर्सिव ऑडियो रोमांच — क्लासिक किस्सों से लेकर ऐसी कहानियों तक जिनमें आपका बच्चा ही हीरो है।",
     badgeScreenFree: "स्क्रीन-मुक्त", badgePersonalised: "व्यक्तिगत", badgeCinematic: "सिनेमाई अनुभव",
-    ctaCreate: "अपने बच्चे के लिए एक कहानी बनाएं", freeNoAccount: "मुफ़्त आज़माएं · खाते की ज़रूरत नहीं",
+    ctaCreate: "अपने बच्चे के लिए एक कहानी बनाएं",
     updateButton: "अपडेट करें", cancelEdit: "रद्द करें", editIntro: "संपादित करें",
   },
 };
@@ -221,9 +221,6 @@ function PromoBanner({ language }: { language: string }) {
           <span>{sl.ctaCreate}</span>
           <span style={{ opacity: 0.8 }}>→</span>
         </a>
-        <p className="text-center mt-3" style={{ color: "rgba(255,255,255,0.4)", fontSize: "var(--fs-label)" }}>
-          {sl.freeNoAccount}
-        </p>
       </div>
     </div>
   );
