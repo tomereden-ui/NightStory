@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
+import { formatShareMessage } from "@/config/shareMessageTemplate";
 
 interface ShareSheetProps {
   story: LibraryEntry;
@@ -18,14 +19,12 @@ interface ShareSheetProps {
 // is the strongest signal for that (see SharePageClient.tsx for the same
 // convention on the landing page itself).
 type SheetLangKey =
-  | "personalMessage" | "fallbackName" | "placeholderTemplate" | "hint" | "copyLink" | "linkCopied"
+  | "personalMessage" | "hint" | "copyLink" | "linkCopied"
   | "shareWhatsApp" | "moreOptions" | "cancel" | "madeForTemplate" | "checkOutStory" | "listenHere";
 
 const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   en: {
     personalMessage: "Personal message",
-    fallbackName: "My little one",
-    placeholderTemplate: "We made a magical audio adventure for {name} today and wanted to share it with you — it feels like a real cinematic experience, made just for bedtime 🌙",
     hint: "Shown on the story page for everyone who opens the link",
     copyLink: "Copy Link", linkCopied: "Link Copied!", shareWhatsApp: "Share via WhatsApp",
     moreOptions: "More options…", cancel: "Cancel",
@@ -33,8 +32,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   he: {
     personalMessage: "הודעה אישית",
-    fallbackName: "הקטנטן/ת שלי",
-    placeholderTemplate: "יצרנו הרפתקת אודיו קסומה בשביל {name} והיום רצינו לשתף אותה איתך — היא מרגישה כמו חוויה קולנועית אמיתית, שנוצרה בדיוק לזמן השינה 🌙",
     hint: "מוצג בדף הסיפור לכל מי שפותח את הקישור",
     copyLink: "העתקת קישור", linkCopied: "הקישור הועתק!", shareWhatsApp: "שיתוף ב-WhatsApp",
     moreOptions: "עוד אפשרויות…", cancel: "ביטול",
@@ -42,8 +39,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   es: {
     personalMessage: "Mensaje personal",
-    fallbackName: "Mi pequeño/a",
-    placeholderTemplate: "Hoy creamos una aventura de audio mágica para {name} y quisimos compartirla contigo — se siente como una verdadera experiencia cinematográfica, creada justo para la hora de dormir 🌙",
     hint: "Se muestra en la página de la historia para todos los que abran el enlace",
     copyLink: "Copiar enlace", linkCopied: "¡Enlace copiado!", shareWhatsApp: "Compartir por WhatsApp",
     moreOptions: "Más opciones…", cancel: "Cancelar",
@@ -51,8 +46,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   fr: {
     personalMessage: "Message personnel",
-    fallbackName: "Mon petit trésor",
-    placeholderTemplate: "Nous avons créé une aventure audio magique pour {name} aujourd'hui et avons voulu la partager avec vous — elle ressemble à une véritable expérience cinématographique, faite pour l'heure du coucher 🌙",
     hint: "Affiché sur la page de l'histoire pour toute personne qui ouvre le lien",
     copyLink: "Copier le lien", linkCopied: "Lien copié !", shareWhatsApp: "Partager sur WhatsApp",
     moreOptions: "Plus d'options…", cancel: "Annuler",
@@ -60,8 +53,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   de: {
     personalMessage: "Persönliche Nachricht",
-    fallbackName: "Mein Schatz",
-    placeholderTemplate: "Wir haben heute ein magisches Hörabenteuer für {name} gemacht und wollten es mit dir teilen — es fühlt sich wie ein echtes Kinoerlebnis an, gemacht genau für die Schlafenszeit 🌙",
     hint: "Wird auf der Geschichtenseite für jeden angezeigt, der den Link öffnet",
     copyLink: "Link kopieren", linkCopied: "Link kopiert!", shareWhatsApp: "Über WhatsApp teilen",
     moreOptions: "Weitere Optionen…", cancel: "Abbrechen",
@@ -69,8 +60,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   pt: {
     personalMessage: "Mensagem pessoal",
-    fallbackName: "Meu pequeno(a)",
-    placeholderTemplate: "Hoje criamos uma aventura sonora mágica para {name} e quisemos compartilhá-la com você — parece uma verdadeira experiência cinematográfica, feita para a hora de dormir 🌙",
     hint: "Exibido na página da história para todos que abrirem o link",
     copyLink: "Copiar link", linkCopied: "Link copiado!", shareWhatsApp: "Compartilhar no WhatsApp",
     moreOptions: "Mais opções…", cancel: "Cancelar",
@@ -78,8 +67,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   ar: {
     personalMessage: "رسالة شخصية",
-    fallbackName: "صغيري",
-    placeholderTemplate: "صنعنا اليوم مغامرة صوتية سحرية من أجل {name} وأردنا مشاركتها معك — تبدو كتجربة سينمائية حقيقية، صُنعت خصيصًا لوقت النوم 🌙",
     hint: "تظهر في صفحة القصة لكل من يفتح الرابط",
     copyLink: "نسخ الرابط", linkCopied: "تم نسخ الرابط!", shareWhatsApp: "مشاركة عبر واتساب",
     moreOptions: "المزيد من الخيارات…", cancel: "إلغاء",
@@ -87,8 +74,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   ja: {
     personalMessage: "個人メッセージ",
-    fallbackName: "うちの子",
-    placeholderTemplate: "今日、{name}のために魔法のオーディオ冒険を作り、あなたと共有したいと思いました — まるで本物の映画のような体験で、寝る前のひとときのために作られています 🌙",
     hint: "リンクを開いたすべての人に物語ページで表示されます",
     copyLink: "リンクをコピー", linkCopied: "リンクをコピーしました！", shareWhatsApp: "WhatsAppで共有",
     moreOptions: "その他のオプション…", cancel: "キャンセル",
@@ -96,8 +81,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   it: {
     personalMessage: "Messaggio personale",
-    fallbackName: "Il mio piccolo",
-    placeholderTemplate: "Oggi abbiamo creato un'avventura audio magica per {name} e abbiamo voluto condividerla con te — sembra una vera esperienza cinematografica, pensata apposta per l'ora della nanna 🌙",
     hint: "Mostrato nella pagina della storia per chiunque apra il link",
     copyLink: "Copia link", linkCopied: "Link copiato!", shareWhatsApp: "Condividi su WhatsApp",
     moreOptions: "Altre opzioni…", cancel: "Annulla",
@@ -105,8 +88,6 @@ const SHARE_SHEET_LABELS: Record<string, Record<SheetLangKey, string>> = {
   },
   hi: {
     personalMessage: "व्यक्तिगत संदेश",
-    fallbackName: "मेरा नन्हा",
-    placeholderTemplate: "आज हमने {name} के लिए एक जादुई ऑडियो रोमांच बनाया और इसे आपके साथ साझा करना चाहा — यह बिल्कुल एक असली सिनेमाई अनुभव जैसा लगता है, जो खासतौर पर सोने के समय के लिए बनाया गया है 🌙",
     hint: "लिंक खोलने वाले हर व्यक्ति को कहानी पेज पर दिखाया जाता है",
     copyLink: "लिंक कॉपी करें", linkCopied: "लिंक कॉपी हो गया!", shareWhatsApp: "WhatsApp पर शेयर करें",
     moreOptions: "और विकल्प…", cancel: "रद्द करें",
@@ -149,8 +130,11 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
   // a placeholder — a browser placeholder can't be selected or copied,
   // which is exactly what made the suggested message uncopyable before.
   // Still fully editable/clearable like any normal textarea content.
+  // Uses every child under the family (the full `children` prop), not just
+  // this story's assigned ones — reads naturally even for stories that
+  // were never tagged to a specific child.
   const [message, setMessage] = useState(
-    story.shareMessage ?? sl.placeholderTemplate.replace("{name}", childNames[0] ?? sl.fallbackName)
+    story.shareMessage ?? formatShareMessage(story.language ?? "en", children.map((c) => c.name))
   );
   const [saving, setSaving]   = useState(false);
   const [copied, setCopied]   = useState(false);
@@ -286,7 +270,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder={sl.placeholderTemplate.replace("{name}", childNames[0] ?? sl.fallbackName)}
+              placeholder={formatShareMessage(story.language ?? "en", children.map((c) => c.name))}
               rows={3}
               className="w-full rounded-2xl px-4 py-3 text-white resize-none outline-none"
               style={{

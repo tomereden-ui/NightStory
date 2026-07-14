@@ -17,6 +17,10 @@ export interface PublicStoryData {
   coverFocusX: number | null;
   coverFocusY: number | null;
   children: { id: string; name: string; avatarEmoji: string }[];
+  /** Every child profile under the story's family, not just the ones this
+   *  particular story is tagged for — used to build the suggested share
+   *  message so it still reads naturally for untagged/library stories. */
+  familyChildNames: string[];
 }
 
 const BASE_COLUMNS = "id, title, summary, audio_url, cover_url, duration_seconds, share_message, child_ids, language, family_id";
@@ -49,6 +53,7 @@ export async function GET(
 
   const childIds: string[] = Array.isArray(story.child_ids) ? story.child_ids : [];
   let children: PublicStoryData["children"] = [];
+  let familyChildNames: string[] = [];
 
   if (childIds.length > 0) {
     const { data: profiles } = await supabase
@@ -60,6 +65,14 @@ export async function GET(
       name: p.name as string,
       avatarEmoji: (p.avatar_emoji as string) || "🧒",
     }));
+  }
+
+  if (story.family_id) {
+    const { data: familyProfiles } = await supabase
+      .from("child_profiles")
+      .select("name")
+      .eq("family_id", story.family_id);
+    familyChildNames = (familyProfiles ?? []).map((p) => p.name as string);
   }
 
   const result: PublicStoryData = {
@@ -75,6 +88,7 @@ export async function GET(
     coverFocusX: typeof story.cover_focus_x === "number" ? story.cover_focus_x : null,
     coverFocusY: typeof story.cover_focus_y === "number" ? story.cover_focus_y : null,
     children,
+    familyChildNames,
   };
 
   // Log view (fire-and-forget, don't delay the response)
