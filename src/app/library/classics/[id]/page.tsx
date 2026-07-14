@@ -634,6 +634,7 @@ export default function ClassicDetailPage() {
               createdAt: 0,
               blocks: blocks ?? [],
               isClassic: true,
+              language: storyLanguage ?? meta.language,
             } as LibraryEntry}
             children={allChildren}
             onClose={() => setShareOpen(false)}
