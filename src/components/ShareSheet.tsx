@@ -141,7 +141,17 @@ function ChildAvatar({ child }: { child: DBChildProfile }) {
 }
 
 function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareSheetProps) {
-  const [message, setMessage] = useState(story.shareMessage ?? "");
+  const sl = sheetLabels(story.language);
+  const assignedChildren = children.filter((c) => story.childIds?.includes(c.id));
+  const childNames = assignedChildren.map((c) => c.name);
+
+  // Pre-filled as real, selectable/copyable text rather than shown only as
+  // a placeholder — a browser placeholder can't be selected or copied,
+  // which is exactly what made the suggested message uncopyable before.
+  // Still fully editable/clearable like any normal textarea content.
+  const [message, setMessage] = useState(
+    story.shareMessage ?? sl.placeholderTemplate.replace("{name}", childNames[0] ?? sl.fallbackName)
+  );
   const [saving, setSaving]   = useState(false);
   const [copied, setCopied]   = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -150,11 +160,6 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
     // Trigger slide-in animation
     requestAnimationFrame(() => setMounted(true));
   }, []);
-
-  const sl = sheetLabels(story.language);
-
-  const assignedChildren = children.filter((c) => story.childIds?.includes(c.id));
-  const childNames = assignedChildren.map((c) => c.name);
   const forLabel = childNames.length === 0 ? ""
     : childNames.length === 1 ? childNames[0]
     : childNames.slice(0, -1).join(", ") + " & " + childNames[childNames.length - 1];
