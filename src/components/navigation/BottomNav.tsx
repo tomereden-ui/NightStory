@@ -72,9 +72,16 @@ export default function BottomNav() {
 
   // Route every nav click through the unsaved-changes guard — a no-op when no
   // page has registered a guard, so this is safe/free in the common case.
+  //
+  // Only skips navigation on an EXACT pathname match — a sub-route (e.g.
+  // /library/[id], a story detail page) must still navigate when "Stories"
+  // is tapped, even though that tab is already shown as active while
+  // there (see isItemActive below, which intentionally treats sub-routes
+  // as active). Without this distinction, tapping "Stories" from inside a
+  // story card did nothing at all.
   const handleNavClick = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
-    if (pathname === href || pathname.startsWith(href + "/")) return;
+    if (pathname === href) return;
     setPendingHref(href);
     startTransition(() => { guardedNavigate(href); });
   };
