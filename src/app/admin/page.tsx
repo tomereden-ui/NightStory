@@ -1216,14 +1216,21 @@ export default function AdminPage() {
     }
     setParsedBlocks(blocks);
 
-    // Auto-assign avatars from bank for all cast members
+    // Auto-assign avatars from bank for all cast members. Fetch the bank
+    // fresh here rather than trusting the `bankAvatars` state var — that's
+    // only populated by a mount-time effect, and pasting a script + hitting
+    // Process before that fetch resolves silently left it as `[]`, which
+    // made pickBankAvatar fall through to a generic DiceBear icon for
+    // every character with no error or retry.
     const uniqueChars = Array.from(new Set(blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
+    const freshBankAvatars = bankAvatars.length > 0 ? bankAvatars : await fetchBankAvatars();
+    if (freshBankAvatars !== bankAvatars) setBankAvatars(freshBankAvatars);
     const autoAvatars: Record<string, string> = {};
     const autoTypes: Record<string, CharacterType> = {};
     for (const char of uniqueChars) {
       const type: CharacterType = char.toLowerCase() === "narrator" ? "narrator" : "adult";
       autoTypes[char] = type;
-      autoAvatars[char] = pickBankAvatar(char, type, bankAvatars);
+      autoAvatars[char] = pickBankAvatar(char, type, freshBankAvatars);
     }
     setCharacterAvatars(autoAvatars);
     setCharacterTypes(autoTypes);
