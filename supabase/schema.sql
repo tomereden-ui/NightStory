@@ -15,7 +15,6 @@ create table if not exists public.stories (
   is_classic boolean not null default false,
   promoted boolean not null default false,
   share_message text,
-  intro_message text,
   child_ids jsonb,
   scenes jsonb,
   character_profiles jsonb,
@@ -41,7 +40,6 @@ create table if not exists public.trash (
   child_ids jsonb,
   favorited_by jsonb,
   share_message text,
-  intro_message text,
   scenes jsonb,
   character_profiles jsonb,
   moral_lessons jsonb
