@@ -242,11 +242,14 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
+-- display_name is seeded from OAuth metadata when available (Google's
+-- 'full_name', or 'name' as a fallback) — email/password sign-ups have no
+-- name to pull from, so display_name just stays null for those.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-  INSERT INTO public.user_profiles (id)
-  VALUES (NEW.id)
+  INSERT INTO public.user_profiles (id, display_name)
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'))
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
