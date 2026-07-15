@@ -10,6 +10,11 @@ export interface DramaTrack {
   character?: string;
   voice_style?: string;
   line?: string;
+  // Zero-based index into the script's non-SFX blocks. The planner outputs
+  // this instead of re-transcribing the line text — planDrama joins `line`
+  // and `character` back from the original block, so downstream code keeps
+  // reading track.line as before but the text is exact by construction.
+  block?: number;
   // sfx
   description?: string;
   duration_hint_ms?: number;
@@ -74,12 +79,15 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown, no explanation:
       "id": "t2",
       "type": "dialogue",
       "start_ms": 1500,
-      "character": "Narrator",
-      "voice_style": "warm, gentle, storyteller",
-      "line": "[softly] Once upon a time..."
+      "block": 0,
+      "voice_style": "warm, gentle, storyteller"
     }
   ]
-}`;
+}
+
+DIALOGUE TRACK RULES:
+- Each dialogue line in the script below is numbered [N]. For every dialogue track, set "block" to that number — do NOT copy the line's text or the character's name into the track; the app joins them back from the script by index.
+- Every numbered line must appear as exactly ONE dialogue track, in the same order as the script. Never skip, split, merge, or duplicate a line.`;
 
 export async function planDrama(
   blocks: ScriptBlock[],
@@ -87,8 +95,17 @@ export async function planDrama(
   durationMinutes = 3,
   existingTitle?: string,
 ): Promise<DramaScript> {
+  // Number the non-SFX lines so the model can reference them by index in
+  // its output instead of re-transcribing the text — for a 50-line story
+  // that cuts the JSON response from ~15K output tokens to ~1-2K, which is
+  // most of this call's latency, and eliminates both the mid-JSON
+  // truncation risk and the copy-drift problem (a dropped niqqud in the
+  // model's "exact copy" used to flow straight into TTS).
+  let dialogueIdx = 0;
   const scriptText = blocks
-    .map((b) => `${b.characterName}: ${b.textPayload}`)
+    .map((b) => (b.characterName === "SFX"
+      ? `SFX: ${b.textPayload}`
+      : `[${dialogueIdx++}] ${b.characterName}: ${b.textPayload}`))
     .join("\n");
 
   const prompt =
@@ -98,7 +115,7 @@ export async function planDrama(
     `This script was already written to roughly match that length, so pace the dialogue naturally rather than stretching or ` +
     `compressing it to force a match. Set duration_estimate_seconds to your own honest estimate of this timeline's real total ` +
     `length in seconds (sum of dialogue timing, gaps, and SFX) — never just copy the target number.\n\n` +
-    `STORY SCRIPT (may be in any language — copy each dialogue line's "line" text EXACTLY as written below, character-for-character, including any Hebrew niqqud/vowel points — do not transliterate, translate, or strip diacritics):\n${scriptText}\n\n` +
+    `STORY SCRIPT (may be in any language; each dialogue line is numbered [N] for the "block" field):\n${scriptText}\n\n` +
     FORMAT_RULES;
 
   const { data, ok, status } = await geminiPost(apiKey, "gemini-3.5-flash", {
@@ -155,6 +172,31 @@ export async function planDrama(
     console.error(`[dramaPlanner] Invalid JSON — finishReason=${finishReason}, length=${raw.length} chars. Full response:\n${raw}`);
     throw new Error(`Drama planner returned invalid JSON (finishReason=${finishReason}): ${raw.slice(0, 300)}`);
   }
+
+  // Join each dialogue track's line/character back from its referenced
+  // block — the source of truth the text was numbered from above. A track
+  // that references a block already claimed by an earlier track (the model
+  // duplicated a line despite the rules) is dropped rather than letting the
+  // same audio play twice; a track with no usable block reference is kept
+  // as-is if the model happened to emit old-style line text, else dropped.
+  const dialogueBlocks = blocks.filter((b) => b.characterName !== "SFX");
+  const claimedBlocks = new Set<number>();
+  parsed.tracks = parsed.tracks.filter((t) => {
+    if (t.type !== "dialogue") return true;
+    if (typeof t.block === "number" && t.block >= 0 && t.block < dialogueBlocks.length) {
+      if (claimedBlocks.has(t.block)) {
+        console.warn(`[dramaPlanner] Dropping duplicate dialogue track for block ${t.block}`);
+        return false;
+      }
+      claimedBlocks.add(t.block);
+      t.line = dialogueBlocks[t.block].textPayload;
+      t.character = dialogueBlocks[t.block].characterName;
+      return true;
+    }
+    if (t.line?.trim()) return true; // old-style output — usable as-is
+    console.warn(`[dramaPlanner] Dropping dialogue track with no block reference and no line text`);
+    return false;
+  });
 
   parsed.tracks = parsed.tracks
     .sort((a, b) => a.start_ms - b.start_ms)

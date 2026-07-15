@@ -381,7 +381,6 @@ async function runProduction(
     const { synthesizeLine }    = await import("@/lib/services/ttsService");
     const { generateSfx, writeSilence } = await import("@/lib/services/sfxService");
     const { mixTracks, concatenateTracks, concatenateWavFilesPureJS } = await import("@/lib/services/audioMixer");
-    const { VoiceMap }          = await import("@/lib/services/voiceMap");
     const { addEntry }          = await import("@/lib/libraryStore");
     const { generateCoverImage } = await import("@/lib/services/imageService");
     const { profileCharacters } = await import("@/lib/services/characterProfiler");
@@ -417,24 +416,215 @@ async function runProduction(
     // Store storyId in job so callers can retrieve it (e.g. admin save-story)
     updateJob(jobId, { storyId });
 
-    // ── Step 1: Drama planning + voice profiling (parallel) ─────────────────────
+    // ── Step 1: kick off planning; synthesize dialogue in parallel with it ──
     updateJob(jobId, {
       status: "planning",
       step: "🗺️ Planning audio timeline…",
       progress: 5,
     });
 
-    // Run drama planning, voice profiling, language detection, scene generation,
-    // and cast-avatar matching all in parallel
-    const [drama, voiceProfiles, scriptLanguage, scenes, characterProfilesWithAvatars] = await Promise.all([
-      planDrama(blocks, geminiKey, durationMinutes, existingTitle),
+    // planDrama is the slowest single LLM call in the pipeline, but dialogue
+    // TTS doesn't actually need its output: the lines come from the original
+    // blocks and the voices from the (fast) profiling calls below. Only SFX
+    // descriptions and mix timing need the plan. So start it WITHOUT awaiting
+    // and begin synthesizing dialogue immediately — planning latency
+    // disappears from the critical path instead of gating everything.
+    // (.then wrappers so a rejection settling before its await is reached
+    // can't fire Node's unhandled-rejection handler.)
+    const planPromise = planDrama(blocks, geminiKey, durationMinutes, existingTitle)
+      .then((d) => ({ ok: true as const, d }), (e) => ({ ok: false as const, e }));
+    // Consumed only at library-save time — failures degrade to "no scenes" /
+    // unmatched avatars rather than failing the production.
+    const scenesPromise = generateScenes(blocks, geminiKey).catch((err) => {
+      console.warn(`[${ts()}][produce-drama] generateScenes failed:`, err);
+      return [] as Awaited<ReturnType<typeof generateScenes>>;
+    });
+    const avatarsPromise = matchAvatarsForProfiles(characterProfiles, geminiKey).catch((err) => {
+      console.warn(`[${ts()}][produce-drama] avatar matching failed:`, err);
+      return characterProfiles;
+    });
+
+    const [voiceProfiles, scriptLanguage, voiceOverrides, elementCache] = await Promise.all([
       profileCharacters(blocks, geminiKey, characterDescriptions, characterTypes),
       detectScriptLanguage(blocks, geminiKey),
-      generateScenes(blocks, geminiKey),
-      matchAvatarsForProfiles(characterProfiles, geminiKey),
+      buildVoiceOverrides(blocks, supabase),
+      getElementsForStory(storyId),
     ]);
     console.log(`[${ts()}][TTS] Detected language: ${scriptLanguage}`);
-    updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title, progress: 18 });
+
+    // The user's default narrator voice always wins for the Narrator
+    // character. Nature-based casting at generation time already assigns
+    // *something* to every character including "Narrator", so a
+    // "only if unset" guard here would (and did) almost never fire --
+    // this must be unconditional to actually be the default. Story guidance
+    // has Gemini translate "Narrator" into the story's own language (e.g.
+    // "קריין"/"המספר" in Hebrew), so the literal key "Narrator" alone won't
+    // match for non-English scripts (admin-pasted Hebrew scripts hit this
+    // every time) — also look up the real key via characterTypes' type field,
+    // which survives translation, same fix generate-story already applies.
+    if (narratorVoiceId) {
+      const overridesByName = voiceOverrides as Record<string, { geminiVoiceName?: string }>;
+      overridesByName["Narrator"] = { geminiVoiceName: narratorVoiceId };
+      const narratorKey = Object.entries(characterTypes ?? {}).find(([, type]) => type === "narrator")?.[0];
+      if (narratorKey) overridesByName[narratorKey] = { geminiVoiceName: narratorVoiceId };
+    }
+
+    // ── Step 2: TTS for each dialogue line, straight from the blocks ────────
+    // Audio files are named dlg-<blockIndex>.*; once the plan arrives they're
+    // linked to their planned track ids for the timing/mixing code below.
+    const originalDialogueBlocks = blocks.filter((b) => b.characterName !== "SFX");
+    updateJob(jobId, {
+      status: "recording",
+      step: `🎙️ Recording dialogue (0/${originalDialogueBlocks.length})…`,
+      progress: 8,
+    });
+
+    type PendingUpload = { hash: string; localPath: string; type: "dialogue" | "sfx"; char?: string; text: string };
+    const pendingUploads: PendingUpload[] = [];
+    const newElements: Parameters<typeof saveStoryElements>[0] = [];
+    let cacheDialogueHits = 0;
+    let cacheSfxHits = 0;
+    let sfxLibraryHits = 0;
+    console.log(`[${ts()}][ElementStore] Loaded ${elementCache.size} cached elements for story ${storyId}`);
+
+    // Progress can now arrive from two concurrent streams (dialogue + SFX) —
+    // clamp to monotonic so the bar never visibly moves backwards.
+    let lastProgress = 8;
+    const setProgress = (progress: number, step: string) => {
+      lastProgress = Math.max(lastProgress, Math.min(99, Math.round(progress)));
+      updateJob(jobId, { step, progress: lastProgress });
+    };
+
+    // Once a character's line has needed the TTS fallback provider (Hebrew
+    // EL remap / Chirp3-HD) instead of Gemini, every LATER line for that
+    // same character in this production is forced onto the same fallback
+    // rather than re-attempting Gemini. Without this, each line is an
+    // independent coin flip: a transient Gemini hiccup on just one of a
+    // character's lines silently swaps to a different-sounding provider for
+    // only that line — audible as the same character's voice changing
+    // mid-story. Concurrent lines for the same character can still race past
+    // this check; the flag caps how far that drifts rather than eliminating
+    // every case.
+    const characterEngineState = new Map<string, TtsProvider>();
+
+    // Batch-production TTS gets a tighter retry budget than the default
+    // (5 attempts × 25s): the fallback chain (2.5 same-voice → Hebrew EL /
+    // Chirp3-HD) already guarantees a usable result, so grinding through
+    // long retry waits on one bad (voice, text) pair only stalls the pool.
+    const FAST_TTS_OPTS = { maxAttempts: 3, perAttemptTimeoutMs: 15_000 };
+
+    const skippedBlockIdxs = new Set<number>();
+    let dialogueDone = 0;
+
+    // Worker pool: keeps N lines in flight continuously. The old fixed
+    // batch-of-N + Promise.all + 500ms sleep meant every batch waited for
+    // its slowest line while the other slots sat idle — one flaky line
+    // stalled five idle workers for its whole retry budget.
+    const DIALOGUE_CONCURRENCY =
+      Number(process.env.TTS_DIALOGUE_CONCURRENCY) || Number(process.env.TTS_DIALOGUE_BATCH) || 8;
+
+    const synthesizeBlock = async (block: ScriptBlock, i: number): Promise<void> => {
+      const line = block.textPayload.trim();
+      const charName = block.characterName;
+      const profile = voiceProfiles[charName];
+      const override = voiceOverrides[charName];
+
+      // Use EL only when character has a cloned voice (EL IDs contain digits)
+      const useELForChar = !!(override?.elevenLabsId && elevenKey);
+      const ttsKey = useELForChar ? elevenKey! : geminiKey;
+      const voice = useELForChar
+        ? override.elevenLabsId!
+        : (override?.geminiVoiceName ?? profile?.geminiVoiceName ?? pickGeminiVoiceForChar(charName, undefined));
+      // EL synthesizeEL rewrites .wav → .mp3; pass correct extension upfront
+      const ext = useELForChar ? "mp3" : "wav";
+      const outPath = path.join(jobTmp, `dlg-${i}.${ext}`);
+
+      if (!line) {
+        writeSilence(500, path.join(jobTmp, `dlg-${i}.wav`));
+      } else {
+        // ── Cache lookup — hashed on the block's own text/name, which is
+        // exact by construction now that synthesis reads from blocks.
+        const voiceKey = `${useELForChar ? "el" : "gm"}:${voice}`;
+        const contentHash = hashDialogue(charName, line, voiceKey);
+        const cached = elementCache.get(contentHash);
+
+        if (cached) {
+          const cachedLocalPath = path.join(jobTmp, `dlg-${i}.mp3`);
+          const ok = await downloadToFile(cached.audioUrl, cachedLocalPath);
+          if (ok) {
+            cacheDialogueHits++;
+            bumpElementHitCount(cached.id).catch(() => {});
+            console.log(`[${ts()}][Cache HIT] ${charName}: "${line.slice(0, 50)}"`);
+            dialogueDone++;
+            setProgress(8 + (dialogueDone / originalDialogueBlocks.length) * 47,
+              `🎙️ Recording dialogue (${dialogueDone}/${originalDialogueBlocks.length})…`);
+            return; // skip TTS — audio already in temp dir
+          }
+        }
+
+        // ── Cache miss: synthesise and queue for upload ────────────────────
+        const persona = profile?.persona;
+        try {
+          const vs = useELForChar ? override?.voiceSettings : undefined;
+          const forceFallback = !useELForChar && characterEngineState.has(charName);
+          const { provider } = await synthesizeLine(
+            line, voice, ttsKey, outPath, persona, useELForChar,
+            vs?.stability ?? profile?.stability,
+            vs?.style ?? profile?.style,
+            scriptLanguage,
+            FAST_TTS_OPTS,
+            vs?.similarity_boost,
+            vs?.use_speaker_boost,
+            vs?.speed,
+            forceFallback,
+          );
+          if (!useELForChar && provider !== "gemini" && characterEngineState.get(charName) !== provider) {
+            characterEngineState.set(charName, provider);
+            console.warn(`[${ts()}][TTS] "${charName}" switched to ${provider} fallback for the rest of this production (Gemini TTS failed on a line)`);
+          }
+          const resolvedPath = [`dlg-${i}.mp3`, `dlg-${i}.wav`]
+            .map((n) => path.join(jobTmp, n))
+            .find((p) => fs.existsSync(p));
+          if (resolvedPath) {
+            pendingUploads.push({ hash: contentHash, localPath: resolvedPath, type: "dialogue", char: charName, text: line });
+          }
+        } catch (err) {
+          console.warn(`[${ts()}][TTS] Skipping block ${i} (${charName}): "${line.slice(0, 80)}${line.length > 80 ? "…" : ""}"`, err instanceof Error ? err.message : err);
+          skippedBlockIdxs.add(i);
+          writeSilence(2000, path.join(jobTmp, `dlg-${i}.wav`));
+        }
+      }
+      dialogueDone++;
+      setProgress(8 + (dialogueDone / originalDialogueBlocks.length) * 47,
+        `🎙️ Recording dialogue (${dialogueDone}/${originalDialogueBlocks.length})…`);
+    };
+
+    // Never rejects — every line failure is caught above (worst case: the
+    // line is recorded as skipped silence), so awaiting this later can't
+    // blow up the whole production.
+    const dialoguePromise = (async () => {
+      let next = 0;
+      await Promise.all(
+        Array.from({ length: Math.min(DIALOGUE_CONCURRENCY, originalDialogueBlocks.length) }, async () => {
+          for (;;) {
+            const i = next++;
+            if (i >= originalDialogueBlocks.length) return;
+            try {
+              await synthesizeBlock(originalDialogueBlocks[i], i);
+            } catch (err) {
+              console.warn(`[${ts()}][TTS] Unexpected worker error on block ${i}:`, err);
+              skippedBlockIdxs.add(i);
+            }
+          }
+        }),
+      );
+    })();
+
+    // ── Await the plan (dialogue keeps synthesizing meanwhile) ──────────────
+    const planResult = await planPromise;
+    if (!planResult.ok) throw planResult.e;
+    const drama = planResult.d;
+    updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title });
 
     // Snapshot the plan exactly as planDrama returned it, before anything
     // below mutates start_ms/end_ms in place once real audio exists — this
@@ -444,33 +634,6 @@ async function runProduction(
     const dialogueTracks = drama.tracks.filter((t) => t.type === "dialogue");
     const sfxTracks = drama.tracks.filter((t) => t.type === "sfx");
     const totalDurationMs = drama.duration_estimate_seconds * 1000;
-
-    // planDrama re-transcribes every line through its own (temperature 0.4)
-    // Gemini call rather than passing it through verbatim — the prompt asks
-    // for an exact character-for-character copy, but that's a best-effort
-    // instruction to a non-deterministic model, not a guarantee. Hashing
-    // track.line/track.character directly means a harmless copy variance
-    // (stray whitespace, a punctuation tweak, "Narrator" vs "narrator") on a
-    // RE-production of an otherwise-untouched line can silently produce a
-    // different hash and force a pointless re-synthesis — exactly what the
-    // element cache exists to prevent, and the actual answer to "what needs
-    // another production cycle" should hinge on. Dialogue tracks come out in
-    // the same reading order as the non-SFX blocks sent in, so line them up
-    // by position and hash off each ORIGINAL block's own text/name instead,
-    // whenever the counts agree; fall back to the model's own copy only if
-    // planDrama split/merged/dropped a line and the counts no longer match.
-    const originalDialogueBlocks = blocks.filter((b) => b.characterName !== "SFX");
-    const stableHashSourceFor = new Map<string, { charName: string; line: string }>();
-    if (originalDialogueBlocks.length === dialogueTracks.length) {
-      dialogueTracks.forEach((t, i) => {
-        stableHashSourceFor.set(t.id, {
-          charName: originalDialogueBlocks[i].characterName,
-          line: originalDialogueBlocks[i].textPayload.trim(),
-        });
-      });
-    } else {
-      console.warn(`[${ts()}][produce-drama] Dialogue track count (${dialogueTracks.length}) doesn't match source block count (${originalDialogueBlocks.length}) — falling back to planDrama's own line/name for cache hashing this production.`);
-    }
 
     // The cover was already generated once right after the script (shown in the
     // create-story UI) — reuse that image instead of generating a brand new one here.
@@ -503,185 +666,13 @@ async function runProduction(
           }).catch(() => generateCoverImage(drama.title, blocks, geminiKey, coverPrompt))
         : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
 
-    // ── Step 2: TTS for each dialogue line (batched parallel) ────────────────────
-    updateJob(jobId, {
-      status: "recording",
-      step: `🎙️ Recording dialogue (0/${dialogueTracks.length})…`,
-      progress: 20,
-    });
-
-    const voiceMap = new VoiceMap();
-    const voiceOverrides = await buildVoiceOverrides(blocks, supabase);
-
-    // The user's default narrator voice always wins for the Narrator
-    // character. Nature-based casting at generation time already assigns
-    // *something* to every character including "Narrator", so a
-    // "only if unset" guard here would (and did) almost never fire --
-    // this must be unconditional to actually be the default. Story guidance
-    // has Gemini translate "Narrator" into the story's own language (e.g.
-    // "קריין"/"המספר" in Hebrew), so the literal key "Narrator" alone won't
-    // match for non-English scripts (admin-pasted Hebrew scripts hit this
-    // every time) — also look up the real key via characterTypes' type field,
-    // which survives translation, same fix generate-story already applies.
-    if (narratorVoiceId) {
-      const overridesByName = voiceOverrides as Record<string, { geminiVoiceName?: string }>;
-      overridesByName["Narrator"] = { geminiVoiceName: narratorVoiceId };
-      const narratorKey = Object.entries(characterTypes ?? {}).find(([, type]) => type === "narrator")?.[0];
-      if (narratorKey) overridesByName[narratorKey] = { geminiVoiceName: narratorVoiceId };
-    }
-
-    const skippedLines: string[] = [];
-    let dialogueDone = 0;
-
-    // ── Element audio cache ──────────────────────────────────────────────────────
-    // Load cached per-element audio for this story. On the first produce this
-    // will be empty; on re-produces only changed lines are regenerated.
-    const elementCache = await getElementsForStory(storyId);
-    type PendingUpload = { hash: string; localPath: string; type: "dialogue" | "sfx"; char?: string; text: string };
-    const pendingUploads: PendingUpload[] = [];
-    const newElements: Parameters<typeof saveStoryElements>[0] = [];
-    let cacheDialogueHits = 0;
-    let cacheSfxHits = 0;
-    let sfxLibraryHits = 0;
-    console.log(`[${ts()}][ElementStore] Loaded ${elementCache.size} cached elements for story ${storyId}`);
-
-    // Once a character's line has needed the TTS fallback provider (Hebrew
-    // EL remap / Chirp3-HD) instead of Gemini, every LATER line for that
-    // same character in this production is forced onto the same fallback
-    // rather than re-attempting Gemini. Without this, each line is an
-    // independent coin flip: a transient Gemini hiccup on just one of a
-    // character's lines (a burst rate limit, a 500, or 3.1's documented
-    // intermittent zero-audio bug) silently swaps to a different-sounding
-    // provider for only that line, while the character's other lines stay
-    // on Gemini — audible as the same character's voice changing mid-story.
-    // Forcing consistency from the first fallback onward turns that into at
-    // most one clean switch point instead of an unpredictable back-and-forth.
-    // Scoped to this single production run (a fresh Map per runProduction
-    // call) — a later regeneration gets a clean shot at Gemini again.
-    // Concurrent lines for the same character within one batch can still
-    // race past this check before the flag is set; the fix caps how far
-    // that can drift rather than eliminating every possible case.
-    const characterEngineState = new Map<string, TtsProvider>();
-
-    // Process dialogue in parallel batches. 3 was originally chosen to stay
-    // comfortably under Gemini TTS's per-minute rate limit on a lower tier;
-    // on the account's current paid tier that ceiling is far higher, so 3
-    // concurrent requests was leaving most of the available throughput (and
-    // most of a story's production wall-clock time) unused. synthesizeGemini
-    // already retries 429s using Google's own Retry-After hint, so a batch
-    // that does overshoot the real limit degrades gracefully instead of
-    // failing — this is safe to raise further if quota headroom allows.
-    const DIALOGUE_BATCH = Number(process.env.TTS_DIALOGUE_BATCH) || 6;
-    for (let batchStart = 0; batchStart < dialogueTracks.length; batchStart += DIALOGUE_BATCH) {
-      const batch = dialogueTracks.slice(batchStart, batchStart + DIALOGUE_BATCH);
-      let batchFromCache = false;
-
-      await Promise.all(
-        batch.map(async (track) => {
-          const line = track.line?.trim() ?? "";
-          const charName = track.character ?? "Narrator";
-          const hashSource = stableHashSourceFor.get(track.id);
-          const hashCharName = hashSource?.charName ?? charName;
-          const hashLine = hashSource?.line ?? line;
-          const profile = voiceProfiles[charName];
-          const override = voiceOverrides[charName];
-
-          // Use EL only when character has a cloned voice (EL IDs contain digits)
-          const useELForChar = !!(override?.elevenLabsId && elevenKey);
-          const ttsKey = useELForChar ? elevenKey! : geminiKey;
-          const voice = useELForChar
-            ? override.elevenLabsId!
-            : (override?.geminiVoiceName ?? profile?.geminiVoiceName ?? pickGeminiVoiceForChar(charName, track.voice_style));
-          // EL synthesizeEL rewrites .wav → .mp3; pass correct extension upfront
-          const ext = useELForChar ? "mp3" : "wav";
-          const outPath = path.join(jobTmp, `${track.id}.${ext}`);
-
-          if (!line) {
-            writeSilence(500, path.join(jobTmp, `${track.id}.wav`));
-          } else {
-            // ── Cache lookup ─────────────────────────────────────────────────────
-            // Hashed on the stable original block's text/name (see
-            // stableHashSourceFor above), not planDrama's own re-transcribed
-            // track.line/track.character — the actual synthesized/logged
-            // line below is untouched.
-            const voiceKey = `${useELForChar ? "el" : "gm"}:${voice}`;
-            const contentHash = hashDialogue(hashCharName, hashLine, voiceKey);
-            const cached = elementCache.get(contentHash);
-
-            if (cached) {
-              const cachedLocalPath = path.join(jobTmp, `${track.id}.mp3`);
-              const ok = await downloadToFile(cached.audioUrl, cachedLocalPath);
-              if (ok) {
-                cacheDialogueHits++;
-                bumpElementHitCount(cached.id).catch(() => {});
-                batchFromCache = true;
-                console.log(`[${ts()}][Cache HIT] ${charName}: "${line.slice(0, 50)}"`);
-                dialogueDone++;
-                updateJob(jobId, {
-                  step: `🎙️ Recording dialogue (${dialogueDone}/${dialogueTracks.length})…`,
-                  progress: 20 + Math.round((dialogueDone / dialogueTracks.length) * 35),
-                });
-                return; // skip TTS — audio already in temp dir
-              }
-            }
-
-            // ── Cache miss: synthesise and queue for upload ────────────────────────
-            const persona = profile?.persona;
-            try {
-              const vs = useELForChar ? override?.voiceSettings : undefined;
-              // Explicit EL-cloned voices are never in question (useELForChar
-              // pins the provider by design) — the consistency guard only
-              // matters for the Gemini-primary path. The map only ever holds
-              // fallback providers (see the .set() below), so presence alone
-              // means "this character already needed a fallback."
-              const forceFallback = !useELForChar && characterEngineState.has(charName);
-              const { provider } = await synthesizeLine(
-                line, voice, ttsKey, outPath, persona, useELForChar,
-                vs?.stability ?? profile?.stability,
-                vs?.style ?? profile?.style,
-                scriptLanguage,
-                undefined,
-                vs?.similarity_boost,
-                vs?.use_speaker_boost,
-                vs?.speed,
-                forceFallback,
-              );
-              if (!useELForChar && provider !== "gemini" && characterEngineState.get(charName) !== provider) {
-                characterEngineState.set(charName, provider);
-                console.warn(`[${ts()}][TTS] "${charName}" switched to ${provider} fallback for the rest of this production (Gemini TTS failed on a line)`);
-              }
-              const resolvedPath = [`${track.id}.mp3`, `${track.id}.wav`]
-                .map((n) => path.join(jobTmp, n))
-                .find((p) => fs.existsSync(p));
-              if (resolvedPath) {
-                pendingUploads.push({ hash: contentHash, localPath: resolvedPath, type: "dialogue", char: charName, text: line });
-              }
-            } catch (err) {
-              console.warn(`[${ts()}][TTS] Skipping ${track.id} (${charName}): "${line.slice(0, 80)}${line.length > 80 ? "…" : ""}"`, err instanceof Error ? err.message : err);
-              skippedLines.push(track.id);
-              writeSilence(2000, path.join(jobTmp, `${track.id}.wav`));
-            }
-          }
-          dialogueDone++;
-          updateJob(jobId, {
-            step: `🎙️ Recording dialogue (${dialogueDone}/${dialogueTracks.length})…`,
-            progress: 20 + Math.round((dialogueDone / dialogueTracks.length) * 35),
-          });
-        }),
-      );
-      // Skip quota delay when entire batch was served from cache (no API calls made)
-      const hasMore = batchStart + DIALOGUE_BATCH < dialogueTracks.length;
-      if (hasMore && !batchFromCache) await sleep(500);
-    }
-
-    // ── Step 3: SFX generation ────────────────────────────────────────────
+    // ── Step 3: SFX generation, concurrent with the dialogue still in flight ──
+    // SFX uses ElevenLabs while dialogue uses Gemini — different providers,
+    // different rate limits — so there's no reason for SFX to wait for all
+    // dialogue to finish the way it used to.
     let sfxDone = 0;
-    if (elevenKey && sfxTracks.length > 0) {
-      updateJob(jobId, {
-        status: "sfx",
-        step: `🔊 Generating sound effects (0/${sfxTracks.length})…`,
-        progress: 57,
-      });
+    const sfxPromise = (async () => {
+      if (!(elevenKey && sfxTracks.length > 0)) return;
 
       // EL concurrent limit is 5 — batch SFX at 4 to stay safe
       const SFX_BATCH = 4;
@@ -702,10 +693,8 @@ async function runProduction(
               cacheSfxHits++;
               bumpElementHitCount(cachedSfx.id).catch(() => {});
               sfxDone++;
-              updateJob(jobId, {
-                step: `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`,
-                progress: 57 + Math.round((sfxDone / sfxTracks.length) * 15),
-              });
+              setProgress(57 + (sfxDone / sfxTracks.length) * 15,
+                `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`);
               return; // skip generation
             }
           }
@@ -743,10 +732,8 @@ async function runProduction(
                 source: "sfx_library",
               });
               sfxDone++;
-              updateJob(jobId, {
-                step: `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`,
-                progress: 57 + Math.round((sfxDone / sfxTracks.length) * 15),
-              });
+              setProgress(57 + (sfxDone / sfxTracks.length) * 15,
+                `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`);
               return;
             }
           }
@@ -760,13 +747,44 @@ async function runProduction(
           }
 
           sfxDone++;
-          updateJob(jobId, {
-            step: `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`,
-            progress: 57 + Math.round((sfxDone / sfxTracks.length) * 15),
-          });
+          setProgress(57 + (sfxDone / sfxTracks.length) * 15,
+            `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`);
         }));
       }
+    })().catch((err) => {
+      // SFX failures already degrade to silence per-track above; this only
+      // catches unexpected errors so the concurrent await below can't reject.
+      console.warn(`[${ts()}][produce-drama] SFX stream failed:`, err);
+    });
+
+    // Both streams (Gemini dialogue + ElevenLabs SFX) run concurrently.
+    await Promise.all([dialoguePromise, sfxPromise]);
+
+    // ── Link block audio files to their planned track ids ───────────────────
+    // Dialogue was synthesized as dlg-<blockIndex>.* before the plan existed;
+    // everything downstream (timing fix, mixer, production log) looks files
+    // up by track id, so copy each block's audio to its track's name. Tracks
+    // carry an explicit block reference from the planner; if that's missing
+    // (old-style output), fall back to positional pairing when counts match.
+    const skippedLines: string[] = [];
+    const positionalOk = dialogueTracks.length === originalDialogueBlocks.length;
+    if (!positionalOk) {
+      console.warn(`[${ts()}][produce-drama] Dialogue track count (${dialogueTracks.length}) doesn't match source block count (${originalDialogueBlocks.length}) — tracks without a block reference will be skipped.`);
     }
+    dialogueTracks.forEach((t, pos) => {
+      const bi = typeof t.block === "number" && t.block >= 0 && t.block < originalDialogueBlocks.length
+        ? t.block
+        : positionalOk ? pos : undefined;
+      if (bi === undefined) {
+        skippedLines.push(t.id);
+        return;
+      }
+      for (const ext of ["wav", "mp3"]) {
+        const src = path.join(jobTmp, `dlg-${bi}.${ext}`);
+        if (fs.existsSync(src)) fs.copyFileSync(src, path.join(jobTmp, `${t.id}.${ext}`));
+      }
+      if (skippedBlockIdxs.has(bi)) skippedLines.push(t.id);
+    });
 
     // ── Step 3b: Upload newly generated elements to element-audio bucket ─────
     // This uploads to the *cache* bucket for future re-produces/cross-story
@@ -993,6 +1011,10 @@ async function runProduction(
     // and if it still fails, surface the job as done (with the audio/cover URLs)
     // rather than as a fatal error, so the user can still reach the file.
     let libraryError: string | undefined;
+    // Kicked off back in Step 1 alongside planning — normally long settled by
+    // now, so these awaits are instant.
+    const scenes = await scenesPromise;
+    const characterProfilesWithAvatars = await avatarsPromise;
     const entry = {
       id: storyId,
       title: drama.title,
