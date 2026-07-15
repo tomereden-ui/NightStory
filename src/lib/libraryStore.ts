@@ -61,6 +61,14 @@ export interface LibraryEntry {
    *  never shows up as a broken/unplayable item in Library or Home. Producing audio
    *  upserts the same row without this field, which defaults it back to false. */
   isDraft?: boolean;
+  /** Shared across every chapter of a multi-part story (e.g. all 3 "Cinderella"
+   *  chapters carry the same seriesId). Undefined = standalone, single-part story. */
+  seriesId?: string;
+  /** 1-based position within seriesId. Undefined on standalone stories. */
+  chapterNumber?: number;
+  /** Total chapter count in the series — denormalized onto every chapter row so
+   *  list views can show "Chapter 2 of 3" without a join or count query. */
+  chapterCount?: number;
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -101,6 +109,9 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
       : undefined,
     moralLessons: Array.isArray(row.moral_lessons) ? (row.moral_lessons as MoralLesson[]) : undefined,
     isDraft: row.is_draft ?? false,
+    seriesId: row.series_id ?? undefined,
+    chapterNumber: typeof row.chapter_number === "number" ? row.chapter_number : undefined,
+    chapterCount: typeof row.chapter_count === "number" ? row.chapter_count : undefined,
   };
 }
 
@@ -138,6 +149,9 @@ export async function addEntry(entry: LibraryEntry, familyId?: string): Promise<
     character_profiles: entry.characterProfiles ?? null,
     moral_lessons: entry.moralLessons ?? null,
     is_draft: entry.isDraft ?? false,
+    series_id: entry.seriesId ?? null,
+    chapter_number: entry.chapterNumber ?? null,
+    chapter_count: entry.chapterCount ?? null,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
 }
@@ -165,6 +179,8 @@ const COUNTER_COLUMNS = ", view_count, share_count";
 const PROMOTED_COLUMN = ", promoted";
 // Same deal for the cover-focus migration.
 const COVER_FOCUS_COLUMNS = ", cover_focus_x, cover_focus_y";
+// Same deal for the chapters migration.
+const SERIES_COLUMNS = ", series_id, chapter_number, chapter_count";
 
 // Lightweight, family-scoped list view — one DB round trip, no script
 // payloads. View/share counts come from the trigger-maintained counter
@@ -188,9 +204,9 @@ export async function getEntrySummaries(
     return q.order("created_at", { ascending: false }).limit(opts?.limit ?? 100);
   };
 
-  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS);
-  // Counter/promoted/cover-focus columns don't exist until their migrations run — retry without.
-  if (error && /view_count|share_count|promoted|cover_focus/.test(error.message)) {
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS + SERIES_COLUMNS);
+  // Counter/promoted/cover-focus/series columns don't exist until their migrations run — retry without.
+  if (error && /view_count|share_count|promoted|cover_focus|series_id|chapter_/.test(error.message)) {
     ({ data, error } = await run(LIST_COLUMNS));
   }
   if (error) throw new Error(`getEntrySummaries: ${error.message}`);
@@ -215,8 +231,8 @@ export async function getAllVisibleEntries(
       .limit(opts?.limit ?? 150);
   };
 
-  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS);
-  if (error && /view_count|share_count|promoted|cover_focus/.test(error.message)) {
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS + SERIES_COLUMNS);
+  if (error && /view_count|share_count|promoted|cover_focus|series_id|chapter_/.test(error.message)) {
     ({ data, error } = await run(LIST_COLUMNS));
   }
   if (error) throw new Error(`getAllVisibleEntries: ${error.message}`);
@@ -318,6 +334,66 @@ export async function getPromotedEntry(): Promise<LibraryEntry | undefined> {
   if (error) return undefined; // column doesn't exist pre-migration, or any other lookup failure
   if (!data) return undefined;
   return toEntry(data);
+}
+
+// All chapters in a series, ordered for display (siblings list on a story
+// detail page). Returns [] for a standalone story (no seriesId) rather than
+// erroring, so callers can call this unconditionally.
+export async function getSeriesChapters(seriesId: string, familyId?: string): Promise<LibraryEntry[]> {
+  if (!seriesId) return [];
+  let q = supabase
+    .from("stories")
+    .select(LIST_COLUMNS + SERIES_COLUMNS)
+    .eq("series_id", seriesId)
+    .eq("is_draft", false);
+  if (familyId) q = q.or(`family_id.eq.${familyId},family_id.is.null,is_public.eq.true`);
+  else q = q.eq("is_public", true);
+  const { data, error } = await q.order("chapter_number", { ascending: true });
+  if (error) throw new Error(`getSeriesChapters: ${error.message}`);
+  return (data ?? []).map((row) => toEntry(row));
+}
+
+export interface ContinueEntry extends LibraryEntry {
+  positionSeconds: number;
+  progressPercent: number;
+}
+
+// Real "resume where you left off" data, driven by listening_progress (see
+// listening-progress-migration.sql). Returns [] before that migration has
+// run, rather than erroring — callers can fall back to a plain recent-stories
+// list in that case. Chapter-level by design: a story that's part of a
+// series still resumes at the exact chapter the child was on, not the series.
+export async function getContinueListening(childId: string, familyId?: string, limit = 6): Promise<ContinueEntry[]> {
+  const { data: progress, error: progressError } = await supabase
+    .from("listening_progress")
+    .select("story_id, position_seconds, duration_seconds, last_played_at")
+    .eq("child_profile_id", childId)
+    .eq("completed", false)
+    .gt("position_seconds", 5)
+    .order("last_played_at", { ascending: false })
+    .limit(limit);
+  if (progressError || !progress?.length) return [];
+
+  const ids = progress.map((p) => p.story_id as string);
+  const base = supabase.from("stories").select(LIST_COLUMNS + SERIES_COLUMNS).in("id", ids);
+  const { data: rows, error: rowsError } = await (
+    familyId ? base.or(`family_id.eq.${familyId},family_id.is.null,is_public.eq.true`) : base
+  );
+  if (rowsError || !rows?.length) return [];
+
+  const byId = new Map(rows.map((r: any) => [r.id as string, r])); // eslint-disable-line
+  return progress
+    .filter((p) => byId.has(p.story_id as string))
+    .map((p) => {
+      const row = byId.get(p.story_id as string)!;
+      const duration = (p.duration_seconds as number) || (row.duration_seconds as number) || 0;
+      const position = p.position_seconds as number;
+      return {
+        ...toEntry(row),
+        positionSeconds: position,
+        progressPercent: duration > 0 ? Math.min(100, Math.round((position / duration) * 100)) : 0,
+      };
+    });
 }
 
 // ─── Trash ────────────────────────────────────────────────────────────────────

@@ -178,6 +178,16 @@ export default function StoryDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Sibling chapters — only fetched when this story is part of a series.
+  const [chapters, setChapters] = useState<LibraryEntry[]>([]);
+  useEffect(() => {
+    if (!entry?.seriesId) { setChapters([]); return; }
+    fetch(`/api/library?seriesId=${encodeURIComponent(entry.seriesId)}`)
+      .then((r) => r.json())
+      .then((data) => setChapters(Array.isArray(data) ? data : []))
+      .catch(() => setChapters([]));
+  }, [entry?.seriesId]);
+
   // Same key the home page uses to track which child profile is active —
   // favorites are scoped per-child, matching how child_ids scopes stories.
   useEffect(() => {
@@ -437,6 +447,44 @@ export default function StoryDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Chapter list — only shown for stories that are part of a series */}
+        {chapters.length > 1 && (
+          <div className="mx-5 mt-3 mb-1 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(79,195,247,0.45)" }}>
+              Chapters
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {chapters.map((c) => {
+                const isCurrent = c.id === entry.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => { if (!isCurrent) router.push(`/library/${c.id}`); }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]"
+                    style={isCurrent
+                      ? { background: "rgba(79,195,247,0.14)", border: "1px solid rgba(79,195,247,0.4)" }
+                      : { background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }
+                    }
+                  >
+                    <span
+                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-fs-body font-bold"
+                      style={{ background: isCurrent ? "rgba(79,195,247,0.3)" : "rgba(255,255,255,0.08)", color: isCurrent ? "#4fc3f7" : "rgba(255,255,255,0.5)" }}
+                    >
+                      {c.chapterNumber ?? "–"}
+                    </span>
+                    <span className="flex-1 text-fs-body font-semibold truncate" style={{ color: isCurrent ? "#fff" : "rgba(255,255,255,0.75)" }}>
+                      {c.title}
+                    </span>
+                    {isCurrent && (
+                      <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7" }}>▶</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Summary card */}
         {entry.summary && (

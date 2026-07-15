@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useViewMode } from "@/context/ViewModeContext";
 import { useLanguage } from "@/context/LanguageContext";
-import type { LibraryEntry } from "@/lib/libraryStore";
+import type { LibraryEntry, ContinueEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { MOCK_JOURNEY } from "@/components/profile/StoryJourney";
@@ -33,6 +33,26 @@ function durationLabel(seconds: number): string {
   return m <= 1 ? "1 min" : `${m} min`;
 }
 
+// Collapses a list to one card per multi-chapter series (recommendation/
+// browse surfaces should recommend the whole story, not each chapter
+// separately) — keeps the earliest chapter as the representative card and
+// preserves standalone (non-series) entries untouched.
+function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber?: number }>(entries: T[]): T[] {
+  const bestBySeries = new Map<string, T>();
+  const order: string[] = [];
+  for (const entry of entries) {
+    const key = entry.seriesId ?? entry.id;
+    const existing = bestBySeries.get(key);
+    if (!existing) {
+      bestBySeries.set(key, entry);
+      order.push(key);
+    } else if ((entry.chapterNumber ?? Infinity) < (existing.chapterNumber ?? Infinity)) {
+      bestBySeries.set(key, entry);
+    }
+  }
+  return order.map((key) => bestBySeries.get(key)!);
+}
+
 function greeting(hour: number, tFn: (key: string) => string): string {
   if (hour < 5) return tFn("sweetDreams");
   if (hour < 12) return tFn("goodMorning");
@@ -48,12 +68,15 @@ function StoryCard({
   coverUrl,
   href,
   progressPercent,
+  chapterLabel,
 }: {
   title: string;
   summary?: string;
   coverUrl?: string | null;
   href: string;
   progressPercent?: number;
+  /** e.g. "Chapter 2 of 3" — shown as a small badge for multi-part stories. */
+  chapterLabel?: string;
 }) {
   const [c1, c2] = cardPalette(title);
   return (
@@ -85,6 +108,21 @@ function StoryCard({
         className="absolute inset-0"
         style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.98) 100%)" }}
       />
+
+      {/* Chapter badge — top left, shown only for multi-part stories */}
+      {chapterLabel && (
+        <span
+          className="absolute top-2 left-2 text-fs-body font-bold px-2 py-0.5 rounded-full"
+          style={{
+            background: "rgba(79,195,247,0.22)",
+            border: "1px solid rgba(79,195,247,0.45)",
+            color: "#4fc3f7",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          {chapterLabel}
+        </span>
+      )}
 
       {/* Title — bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
@@ -284,6 +322,8 @@ type PickItem = {
   href: string;
   tag: "Your Story" | "Classic";
   emoji?: string;
+  /** Total chapters in the series this pick represents — shown as a badge when > 1. */
+  chapterCount?: number;
 };
 
 function TonightsPickCard({ item }: { item: PickItem }) {
@@ -334,6 +374,21 @@ function TonightsPickCard({ item }: { item: PickItem }) {
           }}
         >
           {item.tag}
+        </span>
+      )}
+
+      {/* Chapter count — top right, shown only for multi-part stories */}
+      {!!item.chapterCount && item.chapterCount > 1 && (
+        <span
+          className="absolute top-3 right-3 text-fs-body font-bold px-2 py-0.5 rounded-full"
+          style={{
+            background: "rgba(79,195,247,0.22)",
+            border: "1px solid rgba(79,195,247,0.45)",
+            color: "#4fc3f7",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          {item.chapterCount} chapters
         </span>
       )}
 
@@ -592,6 +647,7 @@ export default function HomePage() {
   const [storiesLoading, setStoriesLoading] = useState(true);
   const [hour, setHour] = useState(20);
   const [promotedStory, setPromotedStory] = useState<LibraryEntry | null>(null);
+  const [continueEntries, setContinueEntries] = useState<ContinueEntry[]>([]);
 
   // Load children + classics + all-family stories once on mount
   useEffect(() => {
@@ -639,6 +695,13 @@ export default function HomePage() {
       .then((lib) => setStories(Array.isArray(lib) ? lib : []))
       .catch(() => {})
       .finally(() => setStoriesLoading(false));
+
+    // Chapter-level "resume where you left off" — real data from listening_progress,
+    // returns [] before that migration has run (see getContinueListening).
+    fetch(`/api/library/continue?childId=${encodeURIComponent(activeChildId)}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((entries) => setContinueEntries(Array.isArray(entries) ? entries : []))
+      .catch(() => setContinueEntries([]));
   }, [activeChildId, loading]);
 
   // Persist active child selection across sessions
@@ -649,16 +712,21 @@ export default function HomePage() {
 
   const activeChild = children.find((c) => c.id === activeChildId) ?? null;
 
+  // Multi-chapter stories recommend as a single unit — collapse each series
+  // down to its earliest chapter before building any browse/recommend rail.
+  const dedupedStories = dedupeBySeries(stories);
+  const readyClassics = dedupeBySeries(classics.filter((c) => c.status === "ready"));
+
   // "Tonight's Picks" — up to 2 user stories + up to 3 ready classics, interleaved
-  const readyClassics = classics.filter((c) => c.status === "ready");
   const tonightsPicks: PickItem[] = [
-    ...stories.slice(0, 2).map((s) => ({
+    ...dedupedStories.slice(0, 2).map((s) => ({
       title: s.title,
       summary: s.summary ?? "",
       coverUrl: s.coverUrl,
       durationSeconds: s.durationSeconds,
       href: `/library/${s.id}`,
       tag: "Your Story" as const,
+      chapterCount: s.chapterCount,
     })),
     ...readyClassics.slice(0, 3).map((c) => ({
       title: c.title,
@@ -668,19 +736,23 @@ export default function HomePage() {
       href: `/library/classics/${c.id}`,
       tag: "Classic" as const,
       emoji: c.emoji,
+      chapterCount: c.chapterCount,
     })),
   ];
 
-  // Recent stories (last 6)
-  const recentStories = stories.slice(0, 6);
+  // Recent stories (last 6) — series-deduped, same reasoning as Tonight's Picks
+  const recentStories = dedupedStories.slice(0, 6);
 
-  // "Continue" — last 3 stories (simulate resume; no real progress tracking yet)
-  const continueStories = stories.slice(0, 3);
+  // "Continue Listening" — real per-chapter resume data from listening_progress
+  // (see getContinueListening); a story that's part of a series still shows
+  // the exact chapter being resumed, not the series as a whole.
+  const continueStories = continueEntries;
 
-  // Hero banner story — an admin-promoted pick takes priority over the
-  // default "most recent" placement; falls back when nothing is promoted
-  // (or the promoted story isn't one of this child's own stories).
-  const heroStory = promotedStory ?? continueStories[0];
+  // Hero banner story — an admin-promoted pick takes priority, then the most
+  // recently-resumed chapter, then falls back to the newest story if nothing
+  // has real progress yet.
+  const heroStory = promotedStory ?? continueEntries[0] ?? dedupedStories[0];
+  const heroProgressPercent = promotedStory ? 0 : continueEntries[0]?.progressPercent ?? 0;
 
   // "My List" — stories + classics the active child has favorited. Checked
   // against familyStories (not just `stories`) so a favorite sticks even if
@@ -837,26 +909,27 @@ export default function HomePage() {
 
           {/* ── Hero banner — admin-promoted pick, or Continue Listening fallback ── */}
           {heroStory && (
-            <HeroBanner story={heroStory} progressPercent={42} isPromoted={!!promotedStory} tFn={t} />
+            <HeroBanner story={heroStory} progressPercent={heroProgressPercent} isPromoted={!!promotedStory} tFn={t} />
           )}
 
           {/* ── Tonight's Picks ── */}
           <TonightsPicksRail picks={tonightsPicks} tFn={t} />
 
-          {/* ── Continue Listening rail (all in-progress stories) ── */}
+          {/* ── Continue Listening rail — real per-chapter resume data ── */}
           {continueStories.length > 0 && (
             <Rail
               title={t("continueListening")}
               action={{ label: t("allClassics"), href: "/library" }}
             >
-              {continueStories.map((s, idx) => (
+              {continueStories.map((s) => (
                 <StoryCard
                   key={s.id}
                   title={s.title}
                   summary={s.summary}
                   coverUrl={s.coverUrl}
                   href={`/library/${s.id}`}
-                  progressPercent={[42, 68, 23][idx] ?? 30}
+                  progressPercent={s.progressPercent}
+                  chapterLabel={s.chapterNumber && s.chapterCount ? `Chapter ${s.chapterNumber} of ${s.chapterCount}` : undefined}
                 />
               ))}
             </Rail>
@@ -893,6 +966,7 @@ export default function HomePage() {
                   summary={s.summary}
                   coverUrl={s.coverUrl}
                   href={`/library/${s.id}`}
+                  chapterLabel={s.chapterCount && s.chapterCount > 1 ? `${s.chapterCount} chapters` : undefined}
                 />
               ))}
             </Rail>

@@ -92,4 +92,8 @@ export interface ClassicMeta {
   language?: string;
   status: ClassicStatus;
   favoritedBy?: string[];
+  /** Set when this classic is one chapter of a multi-part story (see stories.series_id). */
+  seriesId?: string;
+  chapterNumber?: number;
+  chapterCount?: number;
 }

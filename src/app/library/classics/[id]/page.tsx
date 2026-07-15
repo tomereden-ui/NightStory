@@ -248,6 +248,16 @@ export default function ClassicDetailPage() {
     }).finally(() => setLoading(false));
   }, [id]);
 
+  // Sibling chapters — only fetched when this classic is part of a series.
+  const [chapters, setChapters] = useState<LibraryEntry[]>([]);
+  useEffect(() => {
+    if (!meta?.seriesId) { setChapters([]); return; }
+    fetch(`/api/library?seriesId=${encodeURIComponent(meta.seriesId)}`)
+      .then((r) => r.json())
+      .then((data) => setChapters(Array.isArray(data) ? data : []))
+      .catch(() => setChapters([]));
+  }, [meta?.seriesId]);
+
   // Same key the home page uses to track which child profile is active —
   // favorites are scoped per-child, matching how child_ids scopes stories.
   useEffect(() => {
@@ -481,6 +491,44 @@ export default function ClassicDetailPage() {
 
         {/* Divider */}
         <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+
+        {/* Chapter list — only shown for classics that are part of a series */}
+        {chapters.length > 1 && (
+          <div className="mx-5 mb-5 px-4 py-3.5 rounded-2xl" style={{ background: `linear-gradient(135deg, ${c1}0a, ${c2}0a)`, border: `1px solid ${c1}22` }}>
+            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5" style={{ color: `${c1}bb` }}>
+              Chapters
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {chapters.map((c) => {
+                const isCurrent = c.id === id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => { if (!isCurrent) router.push(`/library/classics/${c.id}`); }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]"
+                    style={isCurrent
+                      ? { background: `${c1}22`, border: `1px solid ${c1}66` }
+                      : { background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }
+                    }
+                  >
+                    <span
+                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-fs-body font-bold"
+                      style={{ background: isCurrent ? `${c1}44` : "rgba(255,255,255,0.08)", color: isCurrent ? c1 : "rgba(255,255,255,0.5)" }}
+                    >
+                      {c.chapterNumber ?? "–"}
+                    </span>
+                    <span className="flex-1 text-fs-body font-semibold truncate" style={{ color: isCurrent ? "#fff" : "rgba(255,255,255,0.75)" }}>
+                      {c.title}
+                    </span>
+                    {isCurrent && (
+                      <span className="text-fs-body font-bold flex-shrink-0" style={{ color: c1 }}>▶</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Story summary — the tagline used to be shown redundantly right above
             this same card (right under the title) as a second, separate

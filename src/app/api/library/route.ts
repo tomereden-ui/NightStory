@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEntrySummaries, getAllVisibleEntries, addEntry } from "@/lib/libraryStore";
+import { getEntrySummaries, getAllVisibleEntries, getSeriesChapters, addEntry } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
 import type { ScriptBlock, StoryScene } from "@/types";
 import type { CharacterProfile } from "@/lib/libraryStore";
@@ -13,8 +13,13 @@ export async function GET(req: NextRequest) {
 
   const childId = req.nextUrl.searchParams.get("childId") ?? undefined;
   const scope = req.nextUrl.searchParams.get("scope");
+  const seriesId = req.nextUrl.searchParams.get("seriesId");
   const rawLimit = Number(req.nextUrl.searchParams.get("limit"));
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 100;
+  // Chapter list for a story detail page — all siblings sharing seriesId.
+  if (seriesId) {
+    return NextResponse.json(await getSeriesChapters(seriesId, ctx.familyId));
+  }
   // List views never read blocks/scenes/profiles — don't ship every story's
   // full script (or pay the extra view/share-count queries) on each render.
   if (scope === "all") {

@@ -32,12 +32,23 @@ function publicUrl(path: string): string {
 export async function GET() {
   await ensureClassicsBucket();
 
-  // Load DB rows for classics that have been generated (is_classic=true)
-  const { data: dbRows } = await supabase
+  // Load DB rows for classics that have been generated (is_classic=true).
+  // series_id/chapter_number/chapter_count don't exist until chapters-migration.sql
+  // has run — retry without them so this route doesn't 500 before then.
+  const fullQuery = await supabase
     .from("stories")
-    .select("id, title, emoji, summary, cover_url, duration_seconds, favorited_by, language")
+    .select("id, title, emoji, summary, cover_url, duration_seconds, favorited_by, language, series_id, chapter_number, chapter_count")
     .eq("is_public", true)
     .eq("is_classic", true);
+  let dbRows: any[] | null = fullQuery.data; // eslint-disable-line
+  if (fullQuery.error) {
+    const fallback = await supabase
+      .from("stories")
+      .select("id, title, emoji, summary, cover_url, duration_seconds, favorited_by, language")
+      .eq("is_public", true)
+      .eq("is_classic", true);
+    dbRows = fallback.data;
+  }
 
   const dbById = new Map((dbRows ?? []).map((r) => [r.id, r]));
 
@@ -68,6 +79,9 @@ export async function GET() {
           language: row.language ?? "en",
           status: "ready",
           favoritedBy: Array.isArray(row.favorited_by) ? row.favorited_by : undefined,
+          seriesId: row.series_id ?? undefined,
+          chapterNumber: row.chapter_number ?? undefined,
+          chapterCount: row.chapter_count ?? undefined,
         } satisfies ClassicMeta;
       }
 
@@ -117,6 +131,9 @@ export async function GET() {
       language: r.language ?? undefined,
       status: "ready" as const,
       favoritedBy: Array.isArray(r.favorited_by) ? r.favorited_by : undefined,
+      seriesId: r.series_id ?? undefined,
+      chapterNumber: r.chapter_number ?? undefined,
+      chapterCount: r.chapter_count ?? undefined,
     }));
 
   return NextResponse.json([...metas, ...adminClassics]);
