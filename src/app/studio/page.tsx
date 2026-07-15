@@ -2965,7 +2965,7 @@ export default function Studio2Page() {
                   } : {
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.07)",
-                    color: "rgba(255,255,255,0.35)",
+                    color: "rgba(255,255,255,0.55)",
                     cursor: "not-allowed",
                   }}
                 >
@@ -3016,7 +3016,7 @@ export default function Studio2Page() {
                   } : {
                     background: "rgba(255,255,255,0.03)",
                     border: "1px solid rgba(255,255,255,0.07)",
-                    color: "rgba(255,255,255,0.35)",
+                    color: "rgba(255,255,255,0.55)",
                     cursor: "not-allowed",
                   }}
                 >
