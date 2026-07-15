@@ -123,7 +123,7 @@ export default function BottomNav() {
                     <span
                       className={`transition-all duration-200 ${isActive ? "scale-110" : "group-hover:scale-105"}`}
                       style={{
-                        color: isActive ? item.color : "rgba(255,255,255,0.3)",
+                        color: isActive ? item.color : "rgba(255,255,255,0.5)",
                         filter: isActive ? `drop-shadow(0 0 6px ${item.glow})` : undefined,
                       }}
                     >
@@ -132,7 +132,7 @@ export default function BottomNav() {
                   </span>
                   <span
                     className="text-fs-body font-semibold tracking-wide text-center"
-                    style={{ color: isActive ? item.color : "rgba(255,255,255,0.25)" }}
+                    style={{ color: isActive ? item.color : "rgba(255,255,255,0.45)" }}
                   >
                     {t(language, item.labelKey)}
                   </span>
@@ -180,7 +180,7 @@ export default function BottomNav() {
                   <span
                     className={`transition-all duration-200 ${isActive ? "scale-110" : "scale-95 group-hover:scale-100"}`}
                     style={{
-                      color: isActive ? item.color : "rgba(255,255,255,0.28)",
+                      color: isActive ? item.color : "rgba(255,255,255,0.5)",
                       filter: isActive ? `drop-shadow(0 0 8px ${item.glow})` : undefined,
                     }}
                   >
@@ -189,7 +189,7 @@ export default function BottomNav() {
                 </span>
                 <span
                   className="text-fs-body font-bold tracking-wide transition-colors duration-200"
-                  style={{ color: isActive ? item.color : "rgba(255,255,255,0.22)" }}
+                  style={{ color: isActive ? item.color : "rgba(255,255,255,0.45)" }}
                 >
                   {t(language, item.labelKey)}
                 </span>
