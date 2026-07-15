@@ -209,6 +209,22 @@ async function runHebrewPass(
   return changes;
 }
 
+// Deterministic backstop for the single highest-frequency Kamats Katan
+// trigger named in config/validate-blocks-hebrew-pass.txt: bare-Kamats כָּל
+// ("all/every") must always read as כּוֹל, in every position including
+// inside כּוֹל כָּךְ. Confirmed live that the LLM pass, even after fixing an
+// unrelated issue in the very same line, sometimes still misses this one
+// occurrence — so this runs unconditionally after the LLM pass rather than
+// relying solely on its recall. Only touches the vowel; whatever dagesh
+// state (or lack of one) the text already has on the כ is preserved as-is,
+// since forcing one on/off after certain prefixes is its own linguistic can
+// of worms. Deliberately does NOT touch כָּךְ (different final letter, ך not
+// ל) or already-corrected כּוֹל.
+const BARE_KAMATS_KOL_RE = /(?<![א-ת])כ(ּ?)ָ(ּ?)ל(?![א-ת])/g;
+function applyDeterministicHebrewFixes(text: string): string {
+  return text.replace(BARE_KAMATS_KOL_RE, (_m, d1, d2) => `כ${d1 || d2}וֹל`);
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
@@ -303,6 +319,16 @@ Also include the block's index (from the BLOCKS list below) as a line "- Index: 
 BLOCKS:
 ${pass3Blocks.map((b, i) => `[${i}] ${b.characterName}: ${b.bareText}`).join("\n")}`;
     changes += await runHebrewPass(genAI, hebrewPassPrompt, pass3Blocks, resultBlocks);
+
+    for (let i = 0; i < resultBlocks.length; i++) {
+      const before = resultBlocks[i].textPayload;
+      const after = applyDeterministicHebrewFixes(before);
+      if (after !== before) {
+        resultBlocks[i] = { ...resultBlocks[i], textPayload: after };
+        console.log(`[validate-blocks][pass3-deterministic] Fixed bare Kamats כָּל -> כּוֹל in "${resultBlocks[i].characterName}"`);
+        changes++;
+      }
+    }
   }
 
   if (changes > 0) console.log(`[validate-blocks] ${changes} total fix(es) across ${detectedLanguage === "he" ? "all three passes" : "both passes"}, ${textBlocks.length} block(s) reviewed.`);
