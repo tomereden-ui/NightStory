@@ -400,7 +400,7 @@ function SkipLink({ onSkip, label }: { onSkip: () => void; label: string }) {
   return (
     <button onClick={onSkip}
       className="text-center text-fs-body w-full py-3 rounded-2xl transition-all active:scale-[0.98]"
-      style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)", letterSpacing: "0.01em" }}>
+      style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.55)", letterSpacing: "0.01em" }}>
       {label}
     </button>
   );
@@ -417,13 +417,13 @@ function ConfirmRow({ confirmLabel, onConfirm, disabled, onSkip, skipLabel }: {
         className="flex-1 py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
         style={!disabled
           ? { background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }
-          : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.40)", border: "1px solid rgba(255,255,255,0.07)" }}>
         {confirmLabel}
       </button>
       {onSkip && (
         <button onClick={onSkip}
           className="flex-shrink-0 py-4 px-5 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
-          style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)" }}>
+          style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.55)" }}>
           {skipLabel}
         </button>
       )}
@@ -467,7 +467,7 @@ function QuestionShell({ onBack, onReset, children, lunaText, lunaSpeed, onLunaC
         {onReset ? (
           <button onClick={onReset}
             className="text-fs-body py-1.5 px-3 rounded-xl transition-all active:scale-95"
-            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)" }}>
+            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.55)" }}>
             {ui.startOver}
           </button>
         ) : <div className="w-16" />}
@@ -747,7 +747,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
             <p className="text-white/40 text-fs-body mb-0.5">{ui.yourHeroIs}</p>
             <p className="text-white text-fs-title font-bold" style={{ color: "#4fc3f7" }}>{surpriseHero.name}</p>
             <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.38)", fontStyle: "italic" }}>{surpriseHero.figure}</p>
-            <button onClick={handleSurprise} className="text-white/25 text-fs-body mt-3 block w-full">{ui.tryAnother}</button>
+            <button onClick={handleSurprise} className="text-white/48 text-fs-body mt-3 block w-full">{ui.tryAnother}</button>
           </div>
         )}
 
@@ -817,7 +817,7 @@ function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, a
             );
           })}
         </div>
-        <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{ui.orDescribeWorld}</p>
+        <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.52)" }}>{ui.orDescribeWorld}</p>
         <StoryInput
           value={customText}
           onChange={(v) => { setCustomText(v); setSelected(""); setValidationError(""); }}
@@ -1016,7 +1016,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
         )}
 
         {!selectedType && (
-          <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.3)" }}>{luna.q3Nudge}</p>
+          <p className="text-fs-body text-center" style={{ color: "rgba(255,255,255,0.52)" }}>{luna.q3Nudge}</p>
         )}
 
         <ConfirmRow
@@ -1233,7 +1233,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         {onReset ? (
           <button onClick={onReset}
             className="text-fs-body py-1.5 px-3 rounded-xl transition-all active:scale-95"
-            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.35)" }}>
+            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.55)" }}>
             {ui.startOver}
           </button>
         ) : <div className="w-16" />}
@@ -1243,7 +1243,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         {ROWS.map((row, i) => (
           <div key={row.label} className="flex items-center px-4 py-3 gap-3"
             style={{ borderBottom: i < ROWS.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-            <span className="text-fs-body font-bold uppercase tracking-widest w-20 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{row.label}</span>
+            <span className="text-fs-body font-bold uppercase tracking-widest w-20 flex-shrink-0" style={{ color: "rgba(255,255,255,0.52)" }}>{row.label}</span>
             <span className="flex-1 text-fs-body text-white/80 truncate">{row.value}</span>
             <button onClick={() => onEditStep(row.step)}
               className="text-fs-body px-2.5 py-1 rounded-lg flex-shrink-0"
@@ -1285,9 +1285,9 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
           <input type="range" min={1} max={10} step={1} value={durationMinutes}
             onChange={(e) => onDurationChange(+e.target.value)}
             className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
-          <div className="flex justify-between text-white/20 text-fs-body mt-1">
+          <div className="flex justify-between text-white/40 text-fs-body mt-1">
             <span>1 min</span>
-            <span className="text-white/15">· · · · · · · · ·</span>
+            <span className="text-white/35">· · · · · · · · ·</span>
             <span>10 min</span>
           </div>
         </div>

@@ -125,7 +125,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <span className="text-fs-display">🎭</span>
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold text-fs-body truncate">{job.title ?? "Your Audio Drama"}</p>
-            <p className="text-white/35 text-fs-body mt-0.5">
+            <p className="text-white/58 text-fs-body mt-0.5">
               {dialogueTracks.length} lines · {sfxTracks.length} SFX ·{" "}
               {formatTime(job.scriptJson ? (job.scriptJson as DramaScript).duration_estimate_seconds : 0)}
             </p>
@@ -156,7 +156,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           className="w-full cursor-pointer mb-1"
           style={{ accentColor: "#4fc3f7" }}
         />
-        <div className="flex justify-between text-white/20 text-fs-body mb-4">
+        <div className="flex justify-between text-white/40 text-fs-body mb-4">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
@@ -165,7 +165,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
         <div className="flex items-center justify-center gap-6">
           <button
             onClick={() => { if (audioRef.current) { audioRef.current.currentTime = 0; setCurrentTime(0); } }}
-            className="text-white/25 w-10 h-10 flex items-center justify-center"
+            className="text-white/48 w-10 h-10 flex items-center justify-center"
           >
             <Icon name="rewind" size={20} />
           </button>
@@ -179,7 +179,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           <a
             href={job.audioUrl}
             download={`${job.title ?? "drama"}.mp3`}
-            className="text-white/25 text-fs-subtitle w-10 h-10 flex items-center justify-center hover:text-white/60 transition-colors"
+            className="text-white/48 text-fs-subtitle w-10 h-10 flex items-center justify-center hover:text-white/60 transition-colors"
           >
             ↓
           </a>
@@ -205,7 +205,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           className="px-4 py-4 rounded-2xl"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <p className="text-fs-body font-bold uppercase tracking-widest text-white/25 mb-3">Cast</p>
+          <p className="text-fs-body font-bold uppercase tracking-widest text-white/48 mb-3">Cast</p>
           <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
             {castMembers.map(({ name, color, initial }) => (
               <div key={name} className="flex flex-col items-center gap-2 flex-shrink-0" style={{ minWidth: 64 }}>
@@ -234,7 +234,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
           className="px-4 py-3 rounded-2xl"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <p className="text-fs-body font-bold uppercase tracking-widest text-white/25 mb-3">Timeline</p>
+          <p className="text-fs-body font-bold uppercase tracking-widest text-white/48 mb-3">Timeline</p>
           <div className="relative h-8 rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
             {tracks.map((t) => {
               const left = (t.start_ms / 1000 / duration) * 100;
@@ -284,7 +284,7 @@ export default function DramaPlayer({ job, onGenerateAnother }: Props) {
             ].map((l) => (
               <div key={l.label} className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ background: l.color }} />
-                <span className="text-fs-body text-white/30">{l.label}</span>
+                <span className="text-fs-body text-white/55">{l.label}</span>
               </div>
             ))}
           </div>

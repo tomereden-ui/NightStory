@@ -13,7 +13,7 @@ function BuildTimestamp() {
     " " +
     d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   return (
-    <span className="text-white/15 text-fs-body font-mono tracking-wide">v {label}</span>
+    <span className="text-white/35 text-fs-body font-mono tracking-wide">v {label}</span>
   );
 }
 
@@ -36,7 +36,7 @@ export default function HeroSection() {
           {MOCK_USER.avatarEmoji}
         </div>
         <div>
-          <p className="text-white/25 text-fs-body uppercase tracking-widest">Good Night</p>
+          <p className="text-white/48 text-fs-body uppercase tracking-widest">Good Night</p>
           <p className="text-white text-fs-body font-semibold">{MOCK_USER.displayName}</p>
         </div>
       </div>
@@ -56,7 +56,7 @@ export default function HeroSection() {
         <h1 className="text-fs-display font-bold text-white mb-1.5 leading-tight tracking-tight">
           NightStory
         </h1>
-        <p className="text-white/35 text-fs-body max-w-xs mx-auto">{t("tagline")}</p>
+        <p className="text-white/58 text-fs-body max-w-xs mx-auto">{t("tagline")}</p>
 
         <div className="flex items-center justify-center gap-3 mt-5">
           <Link
@@ -85,7 +85,7 @@ export default function HeroSection() {
         ].map((s) => (
           <div key={s.label} className="text-center">
             <p className="font-bold text-fs-heading leading-none" style={{ color: "#00D4FF" }}>{s.value}</p>
-            <p className="text-white/25 text-fs-body mt-0.5">{s.label}</p>
+            <p className="text-white/48 text-fs-body mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>

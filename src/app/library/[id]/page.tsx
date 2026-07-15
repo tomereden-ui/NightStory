@@ -368,7 +368,7 @@ export default function StoryDetailPage() {
   if (loading) {
     return (
       <div className="cosmic-page min-h-full flex items-center justify-center">
-        <span className="text-white/30 text-fs-body animate-pulse">Loading…</span>
+        <span className="text-white/55 text-fs-body animate-pulse">Loading…</span>
       </div>
     );
   }
@@ -377,7 +377,7 @@ export default function StoryDetailPage() {
     return (
       <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
         <span className="text-fs-display">🌙</span>
-        <p className="text-white/30 text-fs-body">Story not found.</p>
+        <p className="text-white/55 text-fs-body">Story not found.</p>
         <button onClick={goBack} className="text-fs-body" style={{ color: "rgba(79,195,247,0.5)" }}>Go back</button>
       </div>
     );
@@ -545,7 +545,7 @@ export default function StoryDetailPage() {
                 style={summaryPlaying
                   ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7", boxShadow: "0 0 10px rgba(79,195,247,0.2)" }
                   : summaryLoading
-                    ? { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }
+                    ? { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)" }
                     : { background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.25)", color: "rgba(79,195,247,0.8)" }
                 }
               >
@@ -640,7 +640,7 @@ export default function StoryDetailPage() {
             <p className="text-fs-body text-white/70">
               Move to trash <span className="text-white font-medium">"{entry.title}"</span>?
             </p>
-            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.52)" }}>
               Kept for 30 days — you can restore it from Trash.
             </p>
             <div className="flex gap-2">
@@ -679,7 +679,7 @@ export default function StoryDetailPage() {
                 onClick={() => setConfirmingDelete(true)}
                 aria-label="Delete story"
                 className="w-14 flex-shrink-0 rounded-2xl flex items-center justify-center transition-all active:scale-[0.98]"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)" }}
               >
                 <Icon name="delete" size={16} />
               </button>
@@ -726,7 +726,7 @@ export default function StoryDetailPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-white text-fs-body font-medium truncate leading-snug">{entry.title}</p>
                 {entry.summary && (
-                  <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.52)" }}>
                     {entry.summary.split(" ").slice(0, 6).join(" ")}…
                   </p>
                 )}
@@ -741,7 +741,7 @@ export default function StoryDetailPage() {
                 <button
                   onClick={handleStartOver}
                   className="text-fs-body font-semibold"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
+                  style={{ color: "rgba(255,255,255,0.55)" }}
                 >
                   Start over
                 </button>
@@ -749,7 +749,7 @@ export default function StoryDetailPage() {
             )}
 
             <div className="flex items-center gap-2">
-              <span className="text-fs-body w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span className="text-fs-body w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.52)" }}>
                 {formatTime(currentTime)}
               </span>
               <input
@@ -762,7 +762,7 @@ export default function StoryDetailPage() {
                 className="flex-1 cursor-pointer"
                 style={{ accentColor: "#4fc3f7" }}
               />
-              <span className="text-fs-body w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span className="text-fs-body w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.52)" }}>
                 {formatTime(duration || entry.durationSeconds)}
               </span>
             </div>

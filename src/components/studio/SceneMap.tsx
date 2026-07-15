@@ -113,7 +113,7 @@ export default function SceneMap({ scenes, blocks, onSceneClick, totalDurationSe
         </div>
 
         <span
-          className="text-white/30 flex-shrink-0 transition-transform"
+          className="text-white/55 flex-shrink-0 transition-transform"
           style={{ fontSize: 22, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
@@ -175,7 +175,7 @@ export default function SceneMap({ scenes, blocks, onSceneClick, totalDurationSe
                         style={{
                           background: "rgba(255,255,255,0.06)",
                           border: "1px solid rgba(255,255,255,0.09)",
-                          color: "rgba(255,255,255,0.32)",
+                          color: "rgba(255,255,255,0.55)",
                         }}
                       >
                         {fmtDuration(duration)}

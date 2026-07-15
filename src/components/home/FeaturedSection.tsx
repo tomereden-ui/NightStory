@@ -17,7 +17,7 @@ export default function FeaturedSection() {
     <section className="mb-4">
       <div className="flex items-center justify-between px-5 mb-3">
         <h2 className="text-white/80 font-semibold text-fs-body tracking-wide">{t("featuredStories")}</h2>
-        <Link href="/library" className="text-white/25 text-fs-body">See all <Icon name="chevronRight" size={14} className="inline-block align-middle" /></Link>
+        <Link href="/library" className="text-white/48 text-fs-body">See all <Icon name="chevronRight" size={14} className="inline-block align-middle" /></Link>
       </div>
 
       <div className="flex gap-3 overflow-x-auto hide-scrollbar px-5 pb-2">
@@ -47,7 +47,7 @@ export default function FeaturedSection() {
               <div className="px-3 py-2.5" style={{ background: "rgba(10,12,20,0.9)" }}>
                 <p className="text-white text-fs-body font-semibold leading-snug line-clamp-2 mb-1.5">{title}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-white/35 text-fs-body">
+                  <span className="text-white/58 text-fs-body">
                     {story.voice.avatarEmoji} {voiceName}
                   </span>
                   <span className="text-fs-body font-bold" style={{ color: "#00D4FF" }}>

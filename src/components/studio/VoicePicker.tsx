@@ -112,7 +112,7 @@ export default function VoicePicker({
             <p className={`text-fs-body font-semibold ${isSelected ? "text-teal" : "text-white/80"}`}>
               {voice.name}
             </p>
-            <p className="text-fs-body text-white/25 capitalize">{voice.description ?? voice.style}</p>
+            <p className="text-fs-body text-white/48 capitalize">{voice.description ?? voice.style}</p>
             {heElName && (
               <p className="text-fs-body" style={{ color: "rgba(167,139,250,0.7)" }}>
                 עב: {heElName}
@@ -149,7 +149,7 @@ export default function VoicePicker({
             </li>
             {hebrewVoices.map(renderVoiceItem)}
             <li className="px-3 pt-3 pb-1">
-              <p className="text-white/20 text-fs-body uppercase tracking-widest">General</p>
+              <p className="text-white/40 text-fs-body uppercase tracking-widest">General</p>
             </li>
           </>
         )}
@@ -157,7 +157,7 @@ export default function VoicePicker({
         {familyVoices.length > 0 && (
           <>
             <li className="px-3 pt-3 pb-1">
-              <p className="text-white/20 text-fs-body uppercase tracking-widest">Family Voices</p>
+              <p className="text-white/40 text-fs-body uppercase tracking-widest">Family Voices</p>
             </li>
             {familyVoices.map(renderVoiceItem)}
           </>
@@ -193,7 +193,7 @@ export default function VoicePicker({
       }}
     >
       <div className="px-3 py-2 border-b border-white/5 flex-shrink-0">
-        <p className="text-white/30 text-fs-body uppercase tracking-widest">Assign Voice</p>
+        <p className="text-white/55 text-fs-body uppercase tracking-widest">Assign Voice</p>
       </div>
       {listContent}
     </div>

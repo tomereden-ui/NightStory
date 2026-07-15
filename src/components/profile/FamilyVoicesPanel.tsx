@@ -141,7 +141,7 @@ function AvatarGallerySheet({
         <div className="w-full h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
         {/* Bank avatars */}
         <div className="overflow-y-auto flex-1 px-5 py-3">
-          {loading ? <p className="text-white/30 text-fs-body text-center py-6">Loading…</p> : (
+          {loading ? <p className="text-white/55 text-fs-body text-center py-6">Loading…</p> : (
             <div className="grid grid-cols-5 gap-2">
               {avatars.map((a) => (
                 <button key={a.id} onClick={() => onSelect(a.image_url)} className="relative rounded-2xl overflow-hidden aspect-square transition-all active:scale-90" style={{ border: currentValue === a.image_url ? "2px solid #4fc3f7" : "2px solid transparent", boxShadow: currentValue === a.image_url ? "0 0 0 2px rgba(79,195,247,0.3)" : "none" }}>
@@ -298,7 +298,7 @@ function VoiceCard({
             </button>
           </div>
         ) : (
-          <button onClick={() => setConfirmDelete(true)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <button onClick={() => setConfirmDelete(true)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.52)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <Icon name="close" size={16} />
           </button>
         )}
@@ -358,7 +358,7 @@ function VoiceCard({
                   >
                     <span style={{ fontSize: 17, flexShrink: 0 }}>{v.emoji}</span>
                     <span className="text-fs-body flex-1" style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.65)", fontWeight: isActive ? 600 : 400 }}>{v.label}</span>
-                    {isSwitching && <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>…</span>}
+                    {isSwitching && <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.52)" }}>…</span>}
                     {isActive && !isSwitching && <span style={{ color: "#4fc3f7", fontSize: 14 }}>✓</span>}
                   </button>
                 </div>
@@ -685,7 +685,7 @@ function AddVoiceSheet({
               <p className="text-white font-semibold text-fs-heading">
                 {isEditMode ? `Re-record ${editVoice!.name}'s Voice` : "Add a Family Voice"}
               </p>
-              <p className="text-white/35 text-fs-body mt-0.5">
+              <p className="text-white/58 text-fs-body mt-0.5">
                 {isEditMode ? "Record a new sample to update this voice" : "Record their voice to clone it into stories"}
               </p>
             </div>
@@ -702,7 +702,7 @@ function AddVoiceSheet({
               </div>
             </div>
             <div className="flex-1">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Dad, Grandma…)" maxLength={32} className="w-full bg-transparent text-white font-medium outline-none placeholder:text-white/20 border-b pb-1" style={{ borderColor: "rgba(255,255,255,0.12)", fontSize: "var(--fs-heading)" }} />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Dad, Grandma…)" maxLength={32} className="w-full bg-transparent text-white font-medium outline-none placeholder:text-white/40 border-b pb-1" style={{ borderColor: "rgba(255,255,255,0.12)", fontSize: "var(--fs-heading)" }} />
             </div>
           </div>
 
@@ -992,7 +992,7 @@ export default function FamilyVoicesPanel() {
         </div>
 
         <span
-          className="text-white/30 text-fs-body transition-transform flex-shrink-0"
+          className="text-white/55 text-fs-body transition-transform flex-shrink-0"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
@@ -1010,7 +1010,7 @@ export default function FamilyVoicesPanel() {
               <span className="text-fs-display">🎙</span>
               <div className="text-center">
                 <p className="text-white/50 text-fs-body font-medium">{t("addFamilyVoicesEmpty")}</p>
-                <p className="text-white/25 text-fs-body mt-1">{t("dadMomGrandma")}</p>
+                <p className="text-white/48 text-fs-body mt-1">{t("dadMomGrandma")}</p>
               </div>
               <span className="px-4 py-1.5 rounded-full text-fs-body font-semibold" style={{ background: "rgba(167,139,250,0.15)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.3)" }}>
                 {t("getStarted")}

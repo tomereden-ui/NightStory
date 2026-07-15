@@ -73,7 +73,7 @@ function CalendarLegend() {
       {items.map(({ key, style }) => (
         <div key={key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", ...style }} />
-          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.3)" }}>{t(key)}</span>
+          <span style={{ fontSize: "var(--fs-micro)", color: "rgba(255,255,255,0.52)" }}>{t(key)}</span>
         </div>
       ))}
     </div>
@@ -86,7 +86,7 @@ function CalendarHeatmap({ days }: { days: number[] }) {
   return (
     <div style={{ width: "100%" }}>
       {/* directional hint: oldest night starts top-left */}
-      <p style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)", marginBottom: 4 }}>
+      <p style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.45)", marginBottom: 4 }}>
         Older
       </p>
       {/* day-of-week labels */}
@@ -135,7 +135,7 @@ function CalendarHeatmap({ days }: { days: number[] }) {
         })}
       </div>
       {/* directional hint: today's slot lands bottom-right */}
-      <p style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)", textAlign: "right", marginTop: 6 }}>
+      <p style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.45)", textAlign: "right", marginTop: 6 }}>
         Today
       </p>
       {/* legend */}
@@ -377,7 +377,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
           </div>
           <div className="text-left">
             <p className="text-white text-fs-body font-bold">{child.name}&apos;s {t("storyJourneyTitle" as TranslationKey).replace(" ✨", "")}</p>
-            <p className="text-white/30 text-fs-body">{t(open ? ("thisMonthClose" as TranslationKey) : ("thisMonthExpand" as TranslationKey))}</p>
+            <p className="text-white/55 text-fs-body">{t(open ? ("thisMonthClose" as TranslationKey) : ("thisMonthExpand" as TranslationKey))}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -396,7 +396,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
           </div>
           {/* Chevron */}
           <span
-            className="text-white/25 text-fs-body transition-transform"
+            className="text-white/48 text-fs-body transition-transform"
             style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
           >
             ▾
@@ -418,7 +418,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
             >
               <p className="text-fs-body font-bold" style={{ color: stat.color }}>{stat.value}</p>
-              <p className="text-fs-body font-semibold tracking-wide uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <p className="text-fs-body font-semibold tracking-wide uppercase" style={{ color: "rgba(255,255,255,0.52)" }}>
                 {stat.label}
               </p>
             </div>
@@ -427,7 +427,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 
         {/* Lessons */}
         <div>
-          <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.52)" }}>
             {t("valuesHeard" as TranslationKey)}
           </p>
           <div className="flex overflow-x-auto hide-scrollbar" style={{ gap: 20, paddingTop: 8, paddingBottom: 4 }}>
@@ -439,7 +439,7 @@ function ChildJourneyCard({ child }: { child: typeof MOCK_CHILDREN[0] }) {
 
         {/* Calendar */}
         <div>
-          <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="text-fs-body font-bold tracking-widest uppercase mb-2" style={{ color: "rgba(255,255,255,0.52)" }}>
             {t("bedtimeRitual" as TranslationKey)}
           </p>
           <CalendarHeatmap days={child.calendar} />
@@ -521,7 +521,7 @@ export default function StoryJourney() {
         </div>
 
         <span
-          className="text-white/30 flex-shrink-0 transition-transform"
+          className="text-white/55 flex-shrink-0 transition-transform"
           style={{ fontSize: 22, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
@@ -531,7 +531,7 @@ export default function StoryJourney() {
       {expanded && (
         <div>
           {/* Privacy note — only shown once opened, alongside the actual content it explains */}
-          <p className="text-white/18 text-fs-body mb-3 leading-relaxed">
+          <p className="text-white/40 text-fs-body mb-3 leading-relaxed">
             {t("privacyGuardNote" as TranslationKey)}
           </p>
 

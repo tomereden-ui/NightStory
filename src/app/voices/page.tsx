@@ -107,7 +107,7 @@ function AvatarGallerySheet({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
             <h2 className="text-white font-bold text-fs-body">Choose Avatar</h2>
-            <p className="text-white/30 text-fs-body mt-0.5">{loading ? "Loading…" : `${avatars.length} characters`}</p>
+            <p className="text-white/55 text-fs-body mt-0.5">{loading ? "Loading…" : `${avatars.length} characters`}</p>
           </div>
           <button
             onClick={onClose}
@@ -145,7 +145,7 @@ function AvatarGallerySheet({
 
         {/* Divider + Color section */}
         <div className="flex-shrink-0 px-5 pt-3 pb-6" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <p className="text-white/30 text-fs-body uppercase tracking-widest mb-2.5 font-semibold">Color style</p>
+          <p className="text-white/55 text-fs-body uppercase tracking-widest mb-2.5 font-semibold">Color style</p>
           <div className="flex gap-2.5 flex-wrap">
             {AVATAR_STYLES.map(({ key, gradient, label }) => (
               <button
@@ -254,7 +254,7 @@ function VoiceCard({
           className="w-8 h-8 rounded-full flex items-center justify-center text-fs-body flex-shrink-0 transition-all active:scale-95"
           style={{
             background: "rgba(255,255,255,0.04)",
-            color: "rgba(255,255,255,0.3)",
+            color: "rgba(255,255,255,0.52)",
             border: "1px solid rgba(255,255,255,0.07)",
           }}
           title="Delete voice"
@@ -582,7 +582,7 @@ function AddVoiceSheet({
               <span className="text-white/50 text-fs-body flex-1 text-left">
                 {currentAvatarIsUrl ? "Custom avatar selected" : "Choose from gallery…"}
               </span>
-              <span className="text-white/30 text-fs-body">›</span>
+              <span className="text-white/55 text-fs-body">›</span>
             </button>
           </div>
 
@@ -663,7 +663,7 @@ function AddVoiceSheet({
                 {recordState === "recording" ? <Icon name="stop" size={14} /> : "🎤"}
               </button>
               {recordState === "done" && (
-                <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setRecordingSeconds(0); setPreviewState("idle"); setPreviewAudioUrl(null); stopPreviewAudio(); }} className="text-white/30 text-fs-body">
+                <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setRecordingSeconds(0); setPreviewState("idle"); setPreviewAudioUrl(null); stopPreviewAudio(); }} className="text-white/55 text-fs-body">
                   Re-record
                 </button>
               )}
@@ -700,7 +700,7 @@ function AddVoiceSheet({
               </button>
               <div className="flex-1 min-w-0">
                 <p className="text-[#4fc3f7] text-fs-body font-medium">Preview ready</p>
-                {previewGeminiVoiceName && <p className="text-white/30 text-fs-body">Voice: {previewGeminiVoiceName}</p>}
+                {previewGeminiVoiceName && <p className="text-white/55 text-fs-body">Voice: {previewGeminiVoiceName}</p>}
               </div>
             </div>
           )}
@@ -913,7 +913,7 @@ export default function VoicesPage() {
       <div className="px-5 pt-12 pb-4 flex items-center justify-between">
         <div>
           <h1 className="text-fs-heading font-semibold text-white tracking-wide mb-0.5">{i18nT(language, "navVoices")}</h1>
-          <p className="text-white/30 text-fs-body">Manage narrators for your stories</p>
+          <p className="text-white/55 text-fs-body">Manage narrators for your stories</p>
         </div>
         <button
           onClick={() => setShowAddSheet(true)}
@@ -955,8 +955,8 @@ export default function VoicesPage() {
           {familyVoices.length === 0 && !loadError && (
             <div className="py-10 flex flex-col items-center gap-2">
               <p className="text-fs-display">🎙</p>
-              <p className="text-white/30 text-fs-body text-center">No family voices yet.</p>
-              <p className="text-white/20 text-fs-body text-center">Add a voice to personalize your stories.</p>
+              <p className="text-white/55 text-fs-body text-center">No family voices yet.</p>
+              <p className="text-white/40 text-fs-body text-center">Add a voice to personalize your stories.</p>
             </div>
           )}
           {familyVoices.map((v) => (

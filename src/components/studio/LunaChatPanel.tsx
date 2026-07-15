@@ -766,7 +766,7 @@ export default function LunaChatPanel({
       <div className="flex items-center gap-2">
         {topResetConfirm ? (
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
+            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>Start over?</span>
             <button
               onClick={handleDiscard}
               className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
@@ -777,7 +777,7 @@ export default function LunaChatPanel({
             <button
               onClick={() => setTopResetConfirm(false)}
               className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)" }}
             >
               Cancel
             </button>
@@ -897,9 +897,9 @@ export default function LunaChatPanel({
               <input type="range" min={1} max={10} step={1} value={durationMinutes}
                 onChange={(e) => setDurationMinutes(+e.target.value)}
                 className="w-full cursor-pointer" style={{ accentColor: "#4fc3f7" }} />
-              <div className="flex justify-between text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.2)" }}>
+              <div className="flex justify-between text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.40)" }}>
                 <span>1 {wizardUi.minutesUnit}</span>
-                <span style={{ color: "rgba(255,255,255,0.12)" }}>· · · · · · · · ·</span>
+                <span style={{ color: "rgba(255,255,255,0.35)" }}>· · · · · · · · ·</span>
                 <span>10 {wizardUi.minutesUnit}</span>
               </div>
             </div>
@@ -1008,7 +1008,7 @@ export default function LunaChatPanel({
         )}
 
         {micSupported && (
-          <p className="text-center mt-1.5" style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.13)" }}>
+          <p className="text-center mt-1.5" style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.35)" }}>
             {listening ? "🎤 Tap mic to stop" : "🎤 Tap mic to speak · Enter to send"}
           </p>
         )}

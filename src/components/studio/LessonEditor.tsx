@@ -208,7 +208,7 @@ export default function LessonEditor({
           )}
 
           {!analyzing && !hasDisplayedLessons && (
-            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.48)" }}>
               {hasLessons ? ui.emptyNoConfirmed : ui.emptyNoLessons}
             </p>
           )}
@@ -262,13 +262,13 @@ export default function LessonEditor({
             <Icon name="sparkles" size={14} />
             {ui.panelTitle}
           </span>
-          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
             {ui.expandedSubtitle}
           </p>
         </div>
         <button
           onClick={cancelEditor}
-          className="text-white/25"
+          className="text-white/48"
         >
           <Icon name="close" size={16} />
         </button>
@@ -365,7 +365,7 @@ export default function LessonEditor({
                     <p className="text-fs-body font-bold leading-tight" style={{ color: isSelected ? color.text : "rgba(255,255,255,0.85)" }}>
                       {label}
                     </p>
-                    <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    <p className="text-fs-body leading-snug mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
                       {desc}
                     </p>
                   </div>
@@ -402,7 +402,7 @@ export default function LessonEditor({
         <button
           onClick={() => { onChange([]); setExpanded(false); }}
           className="text-center text-fs-body font-medium transition-opacity"
-          style={{ color: "rgba(255,255,255,0.2)" }}
+          style={{ color: "rgba(255,255,255,0.40)" }}
         >
           {ui.removeAll}
         </button>

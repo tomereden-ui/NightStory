@@ -50,7 +50,7 @@ export default function SpeechPlayerModal({
                 style={{ color: soundActive ? "#4fc3f7" : "rgba(255,255,255,0.4)" }}>
                 {block.characterName}
               </p>
-              <p className="text-white/35 text-fs-body">{voice.name} · Gemini TTS</p>
+              <p className="text-white/58 text-fs-body">{voice.name} · Gemini TTS</p>
             </div>
             {/* Sound bars or spinner */}
             {isLoading ? (
@@ -100,7 +100,7 @@ export default function SpeechPlayerModal({
               disabled={isLoading}
               className="flex-1 py-3 rounded-2xl font-semibold text-fs-body flex items-center justify-center gap-2 transition-all active:scale-95"
               style={isLoading ? {
-                background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.40)",
               } : {
                 background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)",
                 color: "#05080F", boxShadow: "0 4px 16px rgba(79,195,247,0.3)",

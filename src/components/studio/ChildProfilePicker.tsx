@@ -196,7 +196,7 @@ function AddProfileModal({
               className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(236,72,153,0.2)" }}
             />
-            <p className="text-white/20 text-fs-body mt-1.5 leading-snug">
+            <p className="text-white/40 text-fs-body mt-1.5 leading-snug">
               Gemini will never include these in any story
             </p>
           </div>

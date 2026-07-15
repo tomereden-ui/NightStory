@@ -92,7 +92,7 @@ function Divider({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-3 my-6">
       <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-      <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }}>{title}</span>
+      <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.48)" }}>{title}</span>
       <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
     </div>
   );
@@ -207,7 +207,7 @@ function AvatarGallery({ currentUrl, characterType, onSelect }: {
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-bold transition-all active:scale-95"
             style={activeTab === key
               ? { background: "linear-gradient(135deg,rgba(139,92,246,0.3),rgba(79,195,247,0.15))", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.45)" }
-              : { color: "rgba(255,255,255,0.25)", border: "1px solid transparent" }}>
+              : { color: "rgba(255,255,255,0.48)", border: "1px solid transparent" }}>
             <span style={{ fontSize: "var(--fs-label)" }}>{emoji}</span>
             <span>{label}</span>
           </button>
@@ -220,7 +220,7 @@ function AvatarGallery({ currentUrl, characterType, onSelect }: {
               style={{ borderColor: "rgba(167,139,250,0.15)", borderTopColor: "#A78BFA" }} />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center py-6 text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>No avatars yet</p>
+          <p className="text-center py-6 text-fs-body" style={{ color: "rgba(255,255,255,0.40)" }}>No avatars yet</p>
         ) : (
           <div className="grid grid-cols-5 gap-2">
             {filtered.map((avatar) => {
@@ -347,7 +347,7 @@ function DirectionSheet({
               </p>
               {voice && (
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.35)" }}>🎙</span>
+                  <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.55)" }}>🎙</span>
                   <span className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{voice.name}</span>
                 </div>
               )}
@@ -662,9 +662,9 @@ function SummaryChips({ items }: { items: { label: string; value: string | numbe
       {items.map((item) => (
         <div key={item.label} className="rounded-xl px-3 py-3"
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>{item.label}</p>
+          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>{item.label}</p>
           <p className="text-white font-bold text-fs-subtitle">{item.value}</p>
-          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>{item.sub}</p>
+          <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.48)" }}>{item.sub}</p>
         </div>
       ))}
     </div>
@@ -676,7 +676,7 @@ function CostRow({ label, usage, cost, sub }: { label: string; usage: string; co
     <div className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
       <div className="flex-1 min-w-0">
         <p className="text-white text-fs-body">{label}</p>
-        {sub && <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>{sub}</p>}
+        {sub && <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.52)" }}>{sub}</p>}
       </div>
       <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)", minWidth: 80, textAlign: "right" }}>{usage}</span>
       <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7", minWidth: 70, textAlign: "right" }}>{fmtCost(cost)}</span>
@@ -689,9 +689,9 @@ function BreakdownTable({ rows, total }: { rows: { label: string; usage: string;
     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
       <div className="flex items-center gap-3 px-3 py-2"
         style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-        <span className="flex-1 text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>Service</span>
-        <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 80, textAlign: "right" }}>Usage</span>
-        <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)", minWidth: 70, textAlign: "right" }}>Cost</span>
+        <span className="flex-1 text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.52)" }}>Service</span>
+        <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.52)", minWidth: 80, textAlign: "right" }}>Usage</span>
+        <span className="text-fs-body font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "rgba(255,255,255,0.52)", minWidth: 70, textAlign: "right" }}>Cost</span>
       </div>
       <div className="px-3">
         {rows.map((r) => <CostRow key={r.label} {...r} />)}
@@ -733,7 +733,7 @@ function UsageMode({ data, onRefresh }: { data: CostData; onRefresh: () => void 
       ]} />
 
       <div className="rounded-xl px-3 py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>TTS Voice Split</p>
+        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.55)" }}>TTS Voice Split</p>
         <div className="flex rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
           <div style={{ width: `${100 - elPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
           <div style={{ width: `${elPct}%`, background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
@@ -752,11 +752,11 @@ function UsageMode({ data, onRefresh }: { data: CostData; onRefresh: () => void 
         { label: "ElevenLabs SFX",   usage: `${totals.el_sfx_calls} effects`,         cost: costs.el_sfx,       sub: `${fmtNum(totals.el_sfx_chars)} prompt chars · $0.08/effect` },
       ]} />
 
-      <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
+      <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.40)" }}>
         Includes test runs, retries, voice previews — not just produced stories
       </p>
       <button onClick={onRefresh} className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
-        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}>
         ↻ Refresh
       </button>
     </div>
@@ -781,7 +781,7 @@ function LibraryMode({ data, onRefresh }: { data: LibraryCostData; onRefresh: ()
       ]} />
 
       <div className="rounded-xl px-3 py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>TTS Voice Split (from blocks)</p>
+        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.55)" }}>TTS Voice Split (from blocks)</p>
         <div className="flex rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
           <div style={{ width: `${100-elPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
           <div style={{ width: `${elPct}%`,     background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
@@ -801,7 +801,7 @@ function LibraryMode({ data, onRefresh }: { data: LibraryCostData; onRefresh: ()
       ]} />
 
       {/* Per-story breakdown */}
-      <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.28)" }}>Per Story</p>
+      <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.50)" }}>Per Story</p>
       <div className="flex flex-col gap-1.5">
         {[...stories].sort((a, b) => b.costs.total - a.costs.total).map((s) => (
           <div key={s.id}>
@@ -809,11 +809,11 @@ function LibraryMode({ data, onRefresh }: { data: LibraryCostData; onRefresh: ()
               onClick={() => setExpanded(expanded === s.id ? null : s.id)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
               style={{ background: expanded === s.id ? "rgba(79,195,247,0.07)" : "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.25)" }}>
+              <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.48)" }}>
                 {s.isPublic ? "🌍" : "🔒"}
               </span>
               <span className="flex-1 text-white text-fs-body truncate">{s.title}</span>
-              <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.55)" }}>
                 {fmtDuration(s.durationSeconds)}
               </span>
               <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7", minWidth: 60, textAlign: "right" }}>
@@ -832,7 +832,7 @@ function LibraryMode({ data, onRefresh }: { data: LibraryCostData; onRefresh: ()
                 ].map(([name, usage, cost]) => (
                   <div key={name as string} className="flex items-center gap-2">
                     <span className="flex-1 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>{name as string}</span>
-                    <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.25)" }}>{usage as string}</span>
+                    <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.48)" }}>{usage as string}</span>
                     <span className="text-fs-body font-bold" style={{ color: "#4fc3f7", minWidth: 60, textAlign: "right" }}>{fmtCost(cost as number)}</span>
                   </div>
                 ))}
@@ -842,11 +842,11 @@ function LibraryMode({ data, onRefresh }: { data: LibraryCostData; onRefresh: ()
         ))}
       </div>
 
-      <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
+      <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.40)" }}>
         Derived from script blocks · SFX & text-gen are estimated
       </p>
       <button onClick={onRefresh} className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
-        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}>
         ↻ Refresh
       </button>
     </div>
@@ -876,7 +876,7 @@ function CostAnalysis({
             className="px-4 py-2 rounded-full text-fs-body font-medium transition-all"
             style={mode === m
               ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
-              : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }}>
+              : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)" }}>
             {m === "library" ? "📖 Script Analysis" : "📊 API Usage"}
           </button>
         ))}
@@ -914,7 +914,7 @@ function ClassicsList({ classics, loading }: { classics: ClassicMeta[]; loading:
     );
   }
   if (!classics.length) {
-    return <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>No public stories yet.</p>;
+    return <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.40)" }}>No public stories yet.</p>;
   }
   return (
     <div className="flex flex-col gap-2">
@@ -924,7 +924,7 @@ function ClassicsList({ classics, loading }: { classics: ClassicMeta[]; loading:
           <span className="text-fs-subtitle flex-shrink-0">{c.emoji}</span>
           <div className="flex-1 min-w-0">
             <p className="text-white text-fs-body font-medium truncate">{c.title}</p>
-            <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.28)" }}>{c.tagline}</p>
+            <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.50)" }}>{c.tagline}</p>
           </div>
           <span className="text-fs-body flex-shrink-0 px-2 py-0.5 rounded-full font-bold"
             style={{
@@ -965,7 +965,7 @@ function SfxLibrarySeeder() {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>
+      <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>
         Scan all existing SFX in story_elements, deduplicate by description, embed each one with
         Gemini text-embedding-004, and insert into the global sfx_library for cross-story reuse.
       </p>
@@ -2072,12 +2072,12 @@ export default function AdminPage() {
               style={{ background: "linear-gradient(135deg,#fff 0%,#4fc3f7 50%,#a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
               Admin
             </h1>
-            <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>{user.email}</p>
+            <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.48)" }}>{user.email}</p>
           </div>
           {adminTab === "factory" && (
             <button onClick={resetAddStory}
               className="text-fs-body px-3 py-1.5 rounded-lg transition-all active:scale-95"
-              style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}>
               Reset
             </button>
           )}
@@ -2094,7 +2094,7 @@ export default function AdminPage() {
               className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all"
               style={adminTab === tab.id
                 ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
-                : { background: "transparent", border: "1px solid transparent", color: "rgba(255,255,255,0.35)" }}>
+                : { background: "transparent", border: "1px solid transparent", color: "rgba(255,255,255,0.55)" }}>
               {tab.label}
             </button>
           ))}
@@ -2117,7 +2117,7 @@ export default function AdminPage() {
                   className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all"
                   style={addCategory === cat
                     ? { background: cat === "classics" ? "rgba(251,191,36,0.15)" : "rgba(167,139,250,0.15)", border: `1px solid ${cat === "classics" ? "rgba(251,191,36,0.4)" : "rgba(167,139,250,0.4)"}`, color: cat === "classics" ? "#fbbf24" : "#a78bfa" }
-                    : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }}>
+                    : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.52)" }}>
                   {cat === "classics" ? "✨ Classics" : "🌍 Community"}
                 </button>
               ))}
@@ -2133,7 +2133,7 @@ export default function AdminPage() {
           {addAsEpisode && (
             <div className="flex flex-col gap-2.5 rounded-2xl p-4"
               style={{ background: "rgba(167,139,250,0.04)", border: "1px solid rgba(167,139,250,0.18)" }}>
-              <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>
                 Once this story is saved, it's linked as a chapter of the series below — its cover image
                 and every returning character's avatar + voice (matched by exact name) are copied from
                 that series so the cast looks and sounds identical across episodes.
@@ -2181,11 +2181,11 @@ export default function AdminPage() {
 
         {/* ── Script ── */}
         <Divider title="Script" />
-        <p className="text-fs-body mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="text-fs-body mb-3" style={{ color: "rgba(255,255,255,0.52)" }}>
           Use <span style={{ color: "#4fc3f7" }}>[Character Name]</span> to mark each speaker. Example:
         </p>
         <div className="rounded-xl px-3 py-2.5 mb-3 text-fs-body leading-relaxed"
-          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.35)", fontFamily: "monospace", fontSize: 12 }}>
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.55)", fontFamily: "monospace", fontSize: 12 }}>
           [Narrator] Once upon a time…{"\n"}[Maya] Oh, what&apos;s out there?{"\n"}[Miss Cassandra] Stay safe inside, little bee.
         </div>
         <textarea
@@ -2295,7 +2295,7 @@ export default function AdminPage() {
                     <p className="text-fs-body mt-0.5" style={{ color: "rgba(251,191,36,0.7)" }}>
                       {(job as { libraryError?: string }).libraryError}
                     </p>
-                    <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.52)" }}>
                       Audio was produced but could not be saved. Try clicking "Produce Story" again.
                     </p>
                   </div>
@@ -2431,7 +2431,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🔊 SFX Cache</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Scans all story_elements for SFX clips and seeds the sfx_library table for cross-story reuse.
                   </p>
                 </div>
@@ -2459,7 +2459,7 @@ export default function AdminPage() {
                       }}
                     />
                   </div>
-                  <p className="text-fs-body mt-1 text-right" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  <p className="text-fs-body mt-1 text-right" style={{ color: "rgba(255,255,255,0.48)" }}>
                     {sfxProgress}%
                   </p>
                 </div>
@@ -2490,7 +2490,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🎭 Reassign Cast Voices</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Runs a fresh character analysis (type/appearance) for every speaking character, then
                     recomputes each one&apos;s assigned voice using nature-based matching (gender/style/age).
                     The Narrator is excluded from analysis and always gets this browser&apos;s own default
@@ -2552,7 +2552,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🖼️ Reassign Cast Avatars</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Re-classifies every character from the script (type/gender/age/visual description —
                     same analysis as Reassign Cast Voices) and rematches their avatar-bank portrait against
                     it, with gender and age as hard/soft filters so a character doesn't end up with a
@@ -2614,7 +2614,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🧬 Backfill Character Profiles</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Runs the same character classifier used for new stories (type + visual description)
                     against stories generated before that data was saved. Skips stories that already have
                     character profile data, and skips any story with no audio yet.
@@ -2674,7 +2674,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🗺️ Regenerate Scene Maps</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Re-runs the scene breakdown against the current policy in config/story-guidance.txt
                     (same-language summaries, no-spoiler teasing questions for the climax/resolution).
                     Only produced stories (with a script) can be regenerated; already-produced audio is
@@ -2735,7 +2735,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🔄 Refresh Story Policies</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Re-applies every generation-time rule to an already-produced story — cast/voice
                     assignment, moral-lesson analysis, scene breakdown, and the summary blurb — as if it
                     were being generated fresh today. Never touches the script text, cover image, or audio.
@@ -2806,7 +2806,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🔊 Generate Voice Preview Samples</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Synthesizes the sample line "Hello. This is my voice." for every voice (Gemini presets +
                     curated ElevenLabs Hebrew pool), in English and Hebrew, so the Studio voice picker can
                     preview a voice in the story's own language instead of one fixed generic clip.
@@ -2867,7 +2867,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🌟 Promote Story</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Features a story on the home hero banner for every family, instead of it defaulting
                     to the most recently created story. Only one story can be promoted at a time —
                     promoting a new one automatically un-promotes the last.
@@ -2926,7 +2926,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🗑️ Delete Story</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Moves a story to trash by its story ID — the same action a user gets from their own
                     story's card, just usable on any story regardless of owner. Recoverable from Trash for
                     30 days; this is not a permanent delete.
@@ -2978,7 +2978,7 @@ export default function AdminPage() {
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <p className="text-white font-bold text-fs-body">🔇 Delete Audio Only</p>
-                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
                     Removes just the produced audio file and clears audio_url, by story ID — usable on any
                     story regardless of owner. Script, cover, scenes, and everything else stay untouched.
                     Not recoverable; re-produce the story to generate new audio.

@@ -106,7 +106,7 @@ export default function ProductionProgress({ jobId, onDone, onError, coverUrl }:
       {/* Current step */}
       <div>
         <p className="text-white font-semibold text-fs-heading mb-1">{step}</p>
-        <p className="text-white/35 text-fs-body">{t("producingSubtitle")}</p>
+        <p className="text-white/58 text-fs-body">{t("producingSubtitle")}</p>
       </div>
 
       {/* Progress bar */}
@@ -122,7 +122,7 @@ export default function ProductionProgress({ jobId, onDone, onError, coverUrl }:
           }}
         />
       </div>
-      <p className="text-white/25 text-fs-body -mt-3">{progress}%</p>
+      <p className="text-white/48 text-fs-body -mt-3">{progress}%</p>
 
       {/* Step tracker */}
       <div className="flex flex-col gap-2 w-full max-w-xs">

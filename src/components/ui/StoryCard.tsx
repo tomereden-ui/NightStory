@@ -72,13 +72,13 @@ export default function StoryCard({ story, variant = "compact" }: StoryCardProps
           {/* Info */}
           <div className="flex-1 min-w-0">
             <h3 className="text-white text-fs-body font-semibold truncate">{title}</h3>
-            <p className="text-white/35 text-fs-body mt-0.5 truncate">{description}</p>
+            <p className="text-white/58 text-fs-body mt-0.5 truncate">{description}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-teal/60 text-fs-body">
                 {story.voice.avatarEmoji} {language === "he" ? story.voice.nameHe : story.voice.name}
               </span>
-              <span className="text-white/20 text-fs-body">·</span>
-              <span className="text-white/30 text-fs-body">{formatDuration(story.durationSeconds)}</span>
+              <span className="text-white/40 text-fs-body">·</span>
+              <span className="text-white/55 text-fs-body">{formatDuration(story.durationSeconds)}</span>
             </div>
           </div>
 

@@ -248,7 +248,7 @@ function ClipCard({
         {/* Delete */}
         <button
           onClick={onDelete}
-          className="w-7 h-7 flex items-center justify-center text-white/20 hover:text-red-400 transition-colors text-fs-body flex-shrink-0"
+          className="w-7 h-7 flex items-center justify-center text-white/40 hover:text-red-400 transition-colors text-fs-body flex-shrink-0"
         >
           ✕
         </button>
@@ -256,12 +256,12 @@ function ClipCard({
 
       {/* Seek bar */}
       <div className="flex items-center gap-2 px-3 pb-2">
-        <span className="text-white/20 text-fs-body w-7 text-right flex-shrink-0 tabular-nums">{formatTime(currentTime)}</span>
+        <span className="text-white/40 text-fs-body w-7 text-right flex-shrink-0 tabular-nums">{formatTime(currentTime)}</span>
         <input
           type="range" min={0} max={duration || 1} step={0.1} value={currentTime}
           onChange={(e) => { const a = audioRef.current; if (a) a.currentTime = +e.target.value; }}
           className="flex-1 cursor-pointer" style={{ accentColor: accent }} />
-        <span className="text-white/20 text-fs-body w-7 flex-shrink-0 tabular-nums">{formatTime(duration)}</span>
+        <span className="text-white/40 text-fs-body w-7 flex-shrink-0 tabular-nums">{formatTime(duration)}</span>
       </div>
 
       {/* Expanded timing controls */}
@@ -362,7 +362,7 @@ function MergedPlayer({ audioUrl }: { audioUrl: string }) {
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-white text-fs-body font-semibold">Final Mix</p>
-            <p className="text-white/30 text-fs-body">{formatTime(duration)} · browser-mixed WAV</p>
+            <p className="text-white/55 text-fs-body">{formatTime(duration)} · browser-mixed WAV</p>
           </div>
           <a href={audioUrl} download="nightstory-mix.wav"
             className="text-fs-body px-2.5 py-1.5 rounded-xl font-semibold flex-shrink-0"
@@ -371,11 +371,11 @@ function MergedPlayer({ audioUrl }: { audioUrl: string }) {
           </a>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-white/25 text-fs-body w-7 text-right flex-shrink-0 tabular-nums">{formatTime(currentTime)}</span>
+          <span className="text-white/48 text-fs-body w-7 text-right flex-shrink-0 tabular-nums">{formatTime(currentTime)}</span>
           <input type="range" min={0} max={duration || 1} step={0.1} value={currentTime}
             onChange={(e) => { const a = audioRef.current; if (a) a.currentTime = +e.target.value; }}
             className="flex-1 cursor-pointer" style={{ accentColor: "#8B5CF6" }} />
-          <span className="text-white/25 text-fs-body w-7 flex-shrink-0 tabular-nums">{formatTime(duration)}</span>
+          <span className="text-white/48 text-fs-body w-7 flex-shrink-0 tabular-nums">{formatTime(duration)}</span>
         </div>
       </div>
     </>
@@ -580,7 +580,7 @@ export default function TestPage() {
                 background: m === "tts" ? "rgba(79,195,247,0.12)" : "rgba(139,92,246,0.12)",
                 color: m === "tts" ? "#4fc3f7" : "#a78bfa",
                 border: `1px solid ${m === "tts" ? "rgba(79,195,247,0.25)" : "rgba(139,92,246,0.25)"}`,
-              } : { color: "rgba(255,255,255,0.3)" }}>
+              } : { color: "rgba(255,255,255,0.52)" }}>
               {m === "tts" ? "🎙️ Voice (TTS)" : "🔊 Sound FX"}
             </button>
           ))}
@@ -609,7 +609,7 @@ export default function TestPage() {
         </div>
 
         {mode === "sfx" && (
-          <p className="text-white/20 text-fs-body mb-3">
+          <p className="text-white/40 text-fs-body mb-3">
             Requires <span style={{ color: "rgba(139,92,246,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
           </p>
         )}
@@ -620,7 +620,7 @@ export default function TestPage() {
 
             {/* Provider toggle */}
             <div>
-              <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">Model</p>
+              <p className="text-white/55 text-fs-body font-bold uppercase tracking-widest mb-1.5">Model</p>
               <div className="flex rounded-xl p-0.5 gap-0.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                 {(["gemini", "el", "gcloud", "family"] as TtsProvider[]).map((p) => {
                   const colors: Record<TtsProvider, { bg: string; color: string; border: string }> = {
@@ -638,7 +638,7 @@ export default function TestPage() {
                         background: colors[p].bg,
                         color: colors[p].color,
                         border: `1px solid ${colors[p].border}`,
-                      } : { color: "rgba(255,255,255,0.3)" }}>
+                      } : { color: "rgba(255,255,255,0.52)" }}>
                       {labels[p]}
                     </button>
                   );
@@ -650,7 +650,7 @@ export default function TestPage() {
             {ttsProvider === "gemini" && (
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest">Voice</p>
+                  <p className="text-white/55 text-fs-body font-bold uppercase tracking-widest">Voice</p>
                   <button
                     onClick={generateAllSamples}
                     disabled={generatingSamples}
@@ -700,7 +700,7 @@ export default function TestPage() {
             {ttsProvider === "el" && (
               <>
                 <div>
-                  <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                  <p className="text-white/55 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {elVoices.map((v) => {
                       const active = elVoiceId === v.id;
@@ -720,7 +720,7 @@ export default function TestPage() {
                   </div>
                 </div>
 
-                <p className="text-white/20 text-fs-body -mt-1">
+                <p className="text-white/40 text-fs-body -mt-1">
                   Requires <span style={{ color: "rgba(245,158,11,0.5)" }}>ELEVENLABS_API_KEY</span> in .env.local
                 </p>
               </>
@@ -730,7 +730,7 @@ export default function TestPage() {
             {ttsProvider === "gcloud" && (
               <>
                 <div>
-                  <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                  <p className="text-white/55 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {CLOUD_TTS_VOICES.map((v) => {
                       const active = cloudVoiceId === v.id;
@@ -749,7 +749,7 @@ export default function TestPage() {
                     })}
                   </div>
                 </div>
-                <p className="text-white/20 text-fs-body -mt-1">
+                <p className="text-white/40 text-fs-body -mt-1">
                   Requires <span style={{ color: "rgba(52,168,83,0.5)" }}>GOOGLE_CLOUD_TTS_API_KEY</span> in .env.local
                 </p>
               </>
@@ -758,9 +758,9 @@ export default function TestPage() {
             {/* My Family voice grid */}
             {ttsProvider === "family" && (
               <div>
-                <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
+                <p className="text-white/55 text-fs-body font-bold uppercase tracking-widest mb-1.5">Voice</p>
                 {familyVoices.length === 0 ? (
-                  <p className="text-white/25 text-fs-body py-3 text-center">No family voices yet — add them in the Voices tab.</p>
+                  <p className="text-white/48 text-fs-body py-3 text-center">No family voices yet — add them in the Voices tab.</p>
                 ) : (
                   <div className="flex flex-col gap-1.5">
                     {familyVoices.map((v) => {
@@ -793,8 +793,8 @@ export default function TestPage() {
               const focusColor = ttsProvider === "gemini" ? "rgba(79,195,247,0.4)" : ttsProvider === "family" ? "rgba(139,92,246,0.4)" : ttsProvider === "gcloud" ? "rgba(52,168,83,0.4)" : "rgba(245,158,11,0.4)";
               return (
                 <div>
-                  <p className="text-white/30 text-fs-body font-bold uppercase tracking-widest mb-1.5">
-                    Voice style <span className="normal-case font-normal text-white/20">(optional — e.g. "warmly", "whispering")</span>
+                  <p className="text-white/55 text-fs-body font-bold uppercase tracking-widest mb-1.5">
+                    Voice style <span className="normal-case font-normal text-white/40">(optional — e.g. "warmly", "whispering")</span>
                   </p>
                   <input
                     type="text"
@@ -821,7 +821,7 @@ export default function TestPage() {
             background: "linear-gradient(90deg,#8B5CF6,#6d44d0)", color: "#fff",
             boxShadow: "0 4px 20px rgba(139,92,246,0.3)",
           }) : {
-            background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)",
+            background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.40)",
             border: "1px solid rgba(255,255,255,0.07)",
           }}>
           {loading ? (
@@ -843,7 +843,7 @@ export default function TestPage() {
         {clips.length > 0 && (
           <div className="mt-6">
             <div className="flex items-center gap-2 mb-3">
-              <p className="text-white/25 text-fs-body font-bold uppercase tracking-widest flex-1">
+              <p className="text-white/48 text-fs-body font-bold uppercase tracking-widest flex-1">
                 Mix Tracks ({clips.length})
               </p>
               {speechCount > 0 && (
@@ -884,7 +884,7 @@ export default function TestPage() {
                 background: "linear-gradient(90deg,#8B5CF6,#4fc3f7)", color: "#05080F",
                 boxShadow: "0 4px 24px rgba(139,92,246,0.35)",
               } : {
-                background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.40)",
                 border: "1px solid rgba(255,255,255,0.07)",
               }}>
               {merging ? (

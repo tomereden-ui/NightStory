@@ -328,7 +328,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
             >
               {isRecording ? "🔴" : "🎙️"}
             </button>
-            <span className="text-white/30 text-fs-body">
+            <span className="text-white/55 text-fs-body">
               {t("holdToSpeak")}
             </span>
           </div>
@@ -370,7 +370,7 @@ Weave this answer naturally into a surprising, emotionally satisfying arc.`;
               }
             : {
                 background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.2)",
+                color: "rgba(255,255,255,0.40)",
                 border: "1px solid rgba(255,255,255,0.07)",
               }
         }

@@ -116,10 +116,10 @@ function ChildCard({
 
       {/* Edit / delete */}
       <div className="flex items-center gap-3">
-        <button onClick={onEdit} title="Edit profile" className="transition-opacity hover:opacity-70" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <button onClick={onEdit} title="Edit profile" className="transition-opacity hover:opacity-70" style={{ color: "rgba(255,255,255,0.52)" }}>
           <Icon name="edit" size={12} />
         </button>
-        <button onClick={onDelete} title="Delete profile" className="transition-opacity hover:opacity-70" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <button onClick={onDelete} title="Delete profile" className="transition-opacity hover:opacity-70" style={{ color: "rgba(255,255,255,0.52)" }}>
           <Icon name="delete" size={12} />
         </button>
       </div>
@@ -172,7 +172,7 @@ function AvatarPicker({
         <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
           <div>
             <p className="text-white font-bold text-fs-body">{t("chooseAvatar")}</p>
-            <p className="text-white/30 text-fs-body mt-0.5">{loading ? t("loading") : `${avatars.length} characters`}</p>
+            <p className="text-white/55 text-fs-body mt-0.5">{loading ? t("loading") : `${avatars.length} characters`}</p>
           </div>
           <button
             onClick={onClose}
@@ -264,7 +264,7 @@ function AddChildModal({
       >
         <div className="flex items-center justify-between mb-5">
           <p className="text-white/70 text-fs-body uppercase tracking-widest font-bold">{t("addChild")}</p>
-          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors"><Icon name="close" size={18} /></button>
+          <button onClick={onClose} className="text-white/55 hover:text-white/60 transition-colors"><Icon name="close" size={18} /></button>
         </div>
 
         {/* Avatar picker trigger */}
@@ -280,7 +280,7 @@ function AddChildModal({
             {emoji?.startsWith("http") ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={emoji} alt="avatar" className="w-full h-full rounded-full object-cover" />
-            ) : emoji || <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-display)" }}>＋</span>}
+            ) : emoji || <span style={{ color: "rgba(255,255,255,0.52)", fontSize: "var(--fs-display)" }}>＋</span>}
             <span
               className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-fs-body"
               style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
@@ -450,7 +450,7 @@ function EditChildModal({
       >
         <div className="flex items-center justify-between mb-5">
           <p className="text-white/70 text-fs-body uppercase tracking-widest font-bold">Edit profile</p>
-          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors"><Icon name="close" size={18} /></button>
+          <button onClick={onClose} className="text-white/55 hover:text-white/60 transition-colors"><Icon name="close" size={18} /></button>
         </div>
 
         {/* Avatar picker trigger */}
@@ -466,7 +466,7 @@ function EditChildModal({
             {avatar?.startsWith("http") ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
-            ) : avatar || <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-display)" }}>＋</span>}
+            ) : avatar || <span style={{ color: "rgba(255,255,255,0.52)", fontSize: "var(--fs-display)" }}>＋</span>}
             <span
               className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-fs-body"
               style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
@@ -649,7 +649,7 @@ function SettingRow({
         <Icon name={iconName} size={18} />
       </div>
       <span className="flex-1 text-white/80 text-fs-body font-medium">{label}</span>
-      {value && <span className="text-white/30 text-fs-body">{value}</span>}
+      {value && <span className="text-white/55 text-fs-body">{value}</span>}
       <Icon name="chevronRight" size={14} />
     </div>
   );
@@ -659,7 +659,7 @@ function SettingRow({
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
+    <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.50)" }}>
       {label}
     </p>
   );
@@ -691,7 +691,7 @@ function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onTogg
   return (
     <div className="mb-7">
       {/* Section label */}
-      <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
+      <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.50)" }}>
         {label}
       </p>
 
@@ -713,10 +713,10 @@ function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onTogg
         />
         <div className="flex-1 text-left">
           <p className="text-fs-body font-semibold" style={{ color: "#4fc3f7" }}>{selectedVoice.name}</p>
-          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{selectedVoice.desc}</p>
+          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>{selectedVoice.desc}</p>
         </div>
         <span
-          className="text-white/30 text-fs-body flex-shrink-0 transition-transform"
+          className="text-white/55 text-fs-body flex-shrink-0 transition-transform"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
@@ -727,7 +727,7 @@ function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onTogg
       {open && (
         <div className="mt-3">
           <NarratorVoicePicker selected={selected} onPick={pick} />
-          <p className="text-white/18 text-fs-body mt-2 leading-relaxed">
+          <p className="text-white/40 text-fs-body mt-2 leading-relaxed">
             Used for Luna&apos;s chat voice and as the narrator in new stories.
           </p>
         </div>
@@ -1077,7 +1077,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-fs-heading font-semibold text-white tracking-wide mb-0.5">{t("profile")}</h1>
-              <p className="text-white/30 text-fs-body">{t("manageAccount")}</p>
+              <p className="text-white/55 text-fs-body">{t("manageAccount")}</p>
             </div>
             <LanguageToggle />
           </div>
@@ -1171,7 +1171,7 @@ export default function ProfilePage() {
               </div>
 
               <span
-                className="text-white/30 flex-shrink-0 transition-transform"
+                className="text-white/55 flex-shrink-0 transition-transform"
                 style={{ fontSize: 22, transform: familyMembersOpen ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
               >
                 ▾
@@ -1260,7 +1260,7 @@ export default function ProfilePage() {
                 />
               ))}
             </div>
-            <p className="text-white/18 text-fs-body mt-2 leading-relaxed">
+            <p className="text-white/40 text-fs-body mt-2 leading-relaxed">
               {t("viewModeDescription" as never)}
             </p>
           </div>
@@ -1313,7 +1313,7 @@ export default function ProfilePage() {
           className="text-fs-body font-mono px-2.5 py-1 rounded-full"
           style={{
             background: "rgba(255,255,255,0.04)",
-            color: "rgba(255,255,255,0.18)",
+            color: "rgba(255,255,255,0.40)",
             border: "1px solid rgba(255,255,255,0.07)",
           }}
         >

@@ -132,7 +132,7 @@ export default function TrashPage() {
 
         {/* Info blurb */}
         {entries.length > 0 && (
-          <p className="text-fs-body text-center mb-5" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-fs-body text-center mb-5" style={{ color: "rgba(255,255,255,0.48)" }}>
             {t("keptFor30Days")}
           </p>
         )}
@@ -140,12 +140,12 @@ export default function TrashPage() {
         {/* Content */}
         {loading ? (
           <div className="flex justify-center pt-24">
-            <span className="text-white/30 text-fs-body animate-pulse">Loading…</span>
+            <span className="text-white/55 text-fs-body animate-pulse">Loading…</span>
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
             <span className="text-5xl opacity-30">🗑</span>
-            <p className="text-white/30 text-fs-body font-light">{t("trashEmpty")}</p>
+            <p className="text-white/55 text-fs-body font-light">{t("trashEmpty")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -194,7 +194,7 @@ export default function TrashPage() {
                           style={
                             days <= 3
                               ? { background: "rgba(236,72,153,0.12)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.3)" }
-                              : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.1)" }
+                              : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.52)", border: "1px solid rgba(255,255,255,0.1)" }
                           }
                         >
                           {days === 0 ? "Deletes today" : `${days}d left`}

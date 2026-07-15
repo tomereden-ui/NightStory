@@ -148,7 +148,7 @@ function ScriptBrowser({
             <span className="min-w-[18px] h-4 px-1.5 rounded-full text-fs-body font-bold flex items-center justify-center"
               style={{ background: "rgba(79,195,247,0.15)", color: "rgba(79,195,247,0.85)", border: "1px solid rgba(79,195,247,0.3)" }}>{saves.length}</span>
           </div>
-          <span className="text-white/25 text-fs-body">{expanded ? "↑" : "↓"}</span>
+          <span className="text-white/48 text-fs-body">{expanded ? "↑" : "↓"}</span>
         </button>
         {expanded && <VersionList saves={saves} loadingId={loadingId} deletingId={deletingId} onLoad={handleLoad} onDelete={handleDelete} />}
       </div>
@@ -236,7 +236,7 @@ function VersionList({
                     {summarySnip}
                   </p>
                 )}
-                <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.22)" }}>
+                <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.45)" }}>
                   {timeAgo(s.savedAt)}
                 </p>
               </div>
@@ -254,7 +254,7 @@ function VersionList({
                 onClick={(e) => onDelete(s.id, e)}
                 disabled={isDeleting}
                 className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }}
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.52)" }}
                 title="Delete this version"
               >
                 <Icon name="close" size={10} />
@@ -269,7 +269,7 @@ function VersionList({
         <div className="flex items-center justify-center pt-3 pb-1">
           <button onClick={onClearAll} disabled={clearing}
             className="text-fs-body font-medium px-4 py-1.5 rounded-xl transition-all active:scale-95"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }}>
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.52)" }}>
             {clearing ? i18nT(language, "deleting" as Parameters<typeof i18nT>[1]) : i18nT(language, "deleteAllVersions" as Parameters<typeof i18nT>[1])}
           </button>
         </div>
@@ -411,7 +411,7 @@ function AvatarGallery({
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-bold transition-all active:scale-95"
             style={activeTab === key
               ? { background: "linear-gradient(135deg,rgba(139,92,246,0.3),rgba(79,195,247,0.15))", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.45)" }
-              : { color: "rgba(255,255,255,0.25)", border: "1px solid transparent" }
+              : { color: "rgba(255,255,255,0.48)", border: "1px solid transparent" }
             }
           >
             <span style={{ fontSize: "var(--fs-label)" }}>{emoji}</span>
@@ -427,7 +427,7 @@ function AvatarGallery({
               style={{ borderColor: "rgba(167,139,250,0.15)", borderTopColor: "#A78BFA" }} />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center py-6 text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>{i18nT(language, "noAvatarsYet")}</p>
+          <p className="text-center py-6 text-fs-body" style={{ color: "rgba(255,255,255,0.40)" }}>{i18nT(language, "noAvatarsYet")}</p>
         ) : (
           <div className="grid grid-cols-5 gap-2">
             {filtered.map((avatar) => {
@@ -608,7 +608,7 @@ function DirectionSheet({
               </p>
               {voice && (
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.35)" }}>🎙</span>
+                  <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.55)" }}>🎙</span>
                   <span className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{voice.name}</span>
                 </div>
               )}
@@ -937,7 +937,7 @@ function PromptTabContent({
             {i18nT(language as Parameters<typeof i18nT>[0], "yourStoryIdea" as Parameters<typeof i18nT>[1])}
           </label>
           {wordCount > 0 && (
-            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>{wordCount} words</span>
+            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.40)" }}>{wordCount} words</span>
           )}
         </div>
         <div className="relative">
@@ -960,7 +960,7 @@ function PromptTabContent({
 
       {!promptText && (
         <div>
-          <p className="text-fs-body font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+          <p className="text-fs-body font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.40)" }}>
             {i18nT(language as Parameters<typeof i18nT>[0], "orTryIdea" as Parameters<typeof i18nT>[1])}
           </p>
           <div className="flex flex-col gap-1.5">
@@ -1015,7 +1015,7 @@ function PromptTabContent({
         if (!meta) return null;
         return (
           <div className="flex items-center justify-center gap-1.5 py-1.5">
-            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.52)" }}>
               Story will be generated in <span style={{ color: "rgba(255,255,255,0.55)" }}>{meta.label}</span>
             </span>
           </div>
@@ -1030,7 +1030,7 @@ function PromptTabContent({
         style={
           canGenerate && !generating
             ? { background: "linear-gradient(90deg,#4fc3f7,#8B5CF6)", color: "#fff", boxShadow: "0 4px 28px rgba(79,195,247,0.3), 0 2px 8px rgba(139,92,246,0.3)" }
-            : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }
+            : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.40)", border: "1px solid rgba(255,255,255,0.07)" }
         }
       >
         {generating ? (
@@ -2306,7 +2306,7 @@ export default function Studio2Page() {
               className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
               style={savesCount > 0
                 ? { background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
-                : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }
+                : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.52)" }
               }
             >
               <Icon name="folder" size={15} />
@@ -2342,7 +2342,7 @@ export default function Studio2Page() {
             <button
               onClick={() => { if (hasScript) setActiveTab("script"); }}
               disabled={!hasScript}
-              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${activeTab === "script" ? "text-white" : !hasScript ? "text-white/25 cursor-not-allowed" : "text-white/50"}`}
+              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${activeTab === "script" ? "text-white" : !hasScript ? "text-white/48 cursor-not-allowed" : "text-white/50"}`}
             >
               <span className="flex items-center justify-center gap-1.5">
                 <span>📜</span>
@@ -2362,7 +2362,7 @@ export default function Studio2Page() {
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.97]"
               style={createMode === "chat"
                 ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
-                : { color: "rgba(255,255,255,0.35)" }
+                : { color: "rgba(255,255,255,0.55)" }
               }
             >
               <span>💬</span>
@@ -2373,7 +2373,7 @@ export default function Studio2Page() {
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.97]"
               style={createMode === "step-by-step"
                 ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
-                : { color: "rgba(255,255,255,0.35)" }
+                : { color: "rgba(255,255,255,0.55)" }
               }
             >
               <span>🧚</span>
@@ -2491,7 +2491,7 @@ export default function Studio2Page() {
             <div className="flex items-center gap-2 px-5 mb-4">
               {wizardResetConfirm ? (
                 <div className="flex items-center gap-2 flex-1">
-                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
+                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>Start over?</span>
                   <button
                     onClick={() => {
                       try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
@@ -2507,7 +2507,7 @@ export default function Studio2Page() {
                   <button
                     onClick={() => setWizardResetConfirm(false)}
                     className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)" }}
                   >
                     Cancel
                   </button>
@@ -2624,7 +2624,7 @@ export default function Studio2Page() {
             <div className="flex items-center gap-2 mb-4">
               {scriptResetConfirm ? (
                 <div className="flex items-center gap-2 flex-1">
-                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>Start over?</span>
+                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>Start over?</span>
                   <button
                     onClick={resetScript}
                     className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
@@ -2635,7 +2635,7 @@ export default function Studio2Page() {
                   <button
                     onClick={() => setScriptResetConfirm(false)}
                     className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)" }}
                   >
                     Cancel
                   </button>
@@ -2777,7 +2777,7 @@ export default function Studio2Page() {
                   <button
                     onClick={() => setSaveValidationIssues([])}
                     className="ml-auto text-fs-body px-1"
-                    style={{ color: "rgba(255,255,255,0.35)" }}
+                    style={{ color: "rgba(255,255,255,0.55)" }}
                     aria-label="Dismiss"
                   >
                     ✕
@@ -2921,7 +2921,7 @@ export default function Studio2Page() {
                       className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-1.5"
                       style={hasPending && !isRevising && !checkingDirection
                         ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
-                        : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.25)" }
+                        : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.48)" }
                       }
                     >
                       {checkingDirection && (

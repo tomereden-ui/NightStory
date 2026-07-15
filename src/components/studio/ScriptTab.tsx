@@ -97,7 +97,7 @@ function SfxInsertForm({
         <span className="text-fs-body font-bold uppercase tracking-widest flex-1" style={{ color: "rgba(245,158,11,0.7)" }}>
           {t("newSoundEffect")}
         </span>
-        <button onClick={onCancel} className="text-white/30 text-fs-body hover:text-white/60 transition-colors">
+        <button onClick={onCancel} className="text-white/55 text-fs-body hover:text-white/60 transition-colors">
           {t("cancel")}
         </button>
       </div>
@@ -119,7 +119,7 @@ function SfxInsertForm({
         className="w-full px-4 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
         style={desc.trim()
           ? { background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.5)", color: "#F59E0B" }
-          : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
+          : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.40)" }
         }
       >
         {t("insertSfx")}
@@ -153,14 +153,14 @@ function BlockSeparator({ onAddSfx, onAddText }: { onAddSfx: () => void; onAddTe
           </button>
           <button
             onClick={() => setExpanded(false)}
-            className="text-white/20 hover:text-white/40"
+            className="text-white/40 hover:text-white/40"
           ><Icon name="close" size={10} /></button>
         </>
       ) : (
         <button
           onClick={() => setExpanded(true)}
           className="w-6 h-6 rounded-full flex items-center justify-center text-fs-body font-light transition-all"
-          style={{ color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}
+          style={{ color: "rgba(255,255,255,0.40)", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}
         >
           +
         </button>
@@ -218,12 +218,12 @@ function AIBlockSeparator({
             className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-fs-body transition-all active:scale-95"
             style={text.trim() && !isInserting
               ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)", color: "#A78BFA" }
-              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.2)" }
+              : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.40)" }
             }
           >
             {isInserting ? <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(139,92,246,0.3)", borderTopColor: "#A78BFA" }} /> : <Icon name="submit" size={12} />}
           </button>
-          <button onClick={() => { setExpanded(false); setText(""); }} className="text-white/20 hover:text-white/40 flex-shrink-0"><Icon name="close" size={10} /></button>
+          <button onClick={() => { setExpanded(false); setText(""); }} className="text-white/40 hover:text-white/40 flex-shrink-0"><Icon name="close" size={10} /></button>
         </>
       ) : (
         <>
@@ -231,7 +231,7 @@ function AIBlockSeparator({
           <button
             onClick={() => setExpanded(true)}
             className="w-6 h-6 rounded-full flex items-center justify-center text-fs-body font-light transition-all"
-            style={{ color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}
+            style={{ color: "rgba(255,255,255,0.40)", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}
           >
             +
           </button>
@@ -305,13 +305,13 @@ function TextInsertModal({
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-fs-body font-semibold text-white">Add Dialogue</h3>
-          <button onClick={onCancel} className="w-7 h-7 rounded-full flex items-center justify-center text-white/30 hover:text-white/60 transition-colors"
+          <button onClick={onCancel} className="w-7 h-7 rounded-full flex items-center justify-center text-white/55 hover:text-white/60 transition-colors"
             style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="close" size={12} /></button>
         </div>
 
         {/* Character name */}
         <div>
-          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/30 mb-2">Character</label>
+          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/55 mb-2">Character</label>
           <input
             type="text"
             value={charName}
@@ -340,7 +340,7 @@ function TextInsertModal({
 
         {/* Voice picker */}
         <div>
-          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/30 mb-2">Voice</label>
+          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/55 mb-2">Voice</label>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {voices.map((v) => (
               <button
@@ -360,13 +360,13 @@ function TextInsertModal({
             ))}
           </div>
           {selectedVoice && (
-            <p className="text-fs-body text-white/20 mt-1">{selectedVoice.name} · {selectedVoice.style}</p>
+            <p className="text-fs-body text-white/40 mt-1">{selectedVoice.name} · {selectedVoice.style}</p>
           )}
         </div>
 
         {/* Text input */}
         <div>
-          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/30 mb-2">Text</label>
+          <label className="block text-fs-body font-bold uppercase tracking-widest text-white/55 mb-2">Text</label>
           <textarea
             ref={textareaRef}
             value={text}
@@ -397,7 +397,7 @@ function TextInsertModal({
           className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           style={text.trim() && !isValidating
             ? { background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F" }
-            : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.07)" }
+            : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.40)", border: "1px solid rgba(255,255,255,0.07)" }
           }
         >
           {isValidating ? (
@@ -723,7 +723,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     return (
       <div className="flex flex-col items-center py-20 text-center">
         <span className="text-5xl mb-3 opacity-40">📜</span>
-        <p className="text-white/25 text-fs-body">{t("scriptEmpty")}</p>
+        <p className="text-white/48 text-fs-body">{t("scriptEmpty")}</p>
       </div>
     );
   }
@@ -1029,7 +1029,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               </button>
 
               {scriptExpanded && (
-                <p className="text-white/30 text-fs-body">
+                <p className="text-white/55 text-fs-body">
                   {speechBlocks.length} lines · {sfxBlocks.length} sfx · ~{estMin}:{String(estSec).padStart(2, "0")} min
                 </p>
               )}
@@ -1148,7 +1148,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               className="w-full py-3 rounded-2xl font-semibold text-fs-body transition-all flex items-center justify-center gap-2"
               style={
                 isValidating
-                  ? { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.25)" }
+                  ? { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.48)" }
                   : { background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.35)", color: "#A78BFA" }
               }
             >
@@ -1201,7 +1201,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               className="w-full accent-teal h-1.5 rounded-full cursor-pointer"
               style={{ accentColor: "#4fc3f7" }}
             />
-            <div className="flex justify-between text-fs-body" style={{ color: "rgba(255,255,255,0.2)" }}>
+            <div className="flex justify-between text-fs-body" style={{ color: "rgba(255,255,255,0.40)" }}>
               <span>1 min</span>
               <span>5 min</span>
               <span>10 min</span>
@@ -1276,7 +1276,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               className="flex-shrink-0 px-3 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
               style={directorNote.trim() && !isRevising
                 ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.45)", color: "#A78BFA" }
-                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.2)" }
+                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.40)" }
               }
             >
               <Icon name="submit" size={14} />
@@ -1294,7 +1294,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             onClick={() => onProduce(blocks, durationMinutes)}
             disabled={isProducing}
             className={`w-full py-4 rounded-2xl font-semibold text-fs-body transition-all ${
-              !isProducing ? "btn-vivid" : "bg-bg-card text-white/20 border border-bg-border cursor-not-allowed"
+              !isProducing ? "btn-vivid" : "bg-bg-card text-white/40 border border-bg-border cursor-not-allowed"
             }`}
           >
             {isProducing ? (

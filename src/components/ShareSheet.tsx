@@ -256,7 +256,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
                   <div className="flex" style={{ gap: -6 }}>
                     {assignedChildren.slice(0, 3).map((c) => <ChildAvatar key={c.id} child={c} />)}
                   </div>
-                  <span style={{ color: "rgba(255,255,255,0.35)", fontSize: "var(--fs-body)" }}>for {forLabel}</span>
+                  <span style={{ color: "rgba(255,255,255,0.55)", fontSize: "var(--fs-body)" }}>for {forLabel}</span>
                 </div>
               )}
             </div>
@@ -283,7 +283,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
               onFocus={(e) => (e.target.style.borderColor = "rgba(79,195,247,0.4)")}
               onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
             />
-            <p style={{ color: "rgba(255,255,255,0.18)", fontSize: "var(--fs-label)", marginTop: 6 }}>
+            <p style={{ color: "rgba(255,255,255,0.40)", fontSize: "var(--fs-label)", marginTop: 6 }}>
               {sl.hint}
             </p>
           </div>
@@ -294,7 +294,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
             style={{ background: "rgba(79,195,247,0.05)", border: "1px solid rgba(79,195,247,0.12)" }}
           >
             <span style={{ fontSize: 14, flexShrink: 0 }}>🔗</span>
-            <span className="flex-1 truncate" style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-body)" }}>{storyUrl}</span>
+            <span className="flex-1 truncate" style={{ color: "rgba(255,255,255,0.52)", fontSize: "var(--fs-body)" }}>{storyUrl}</span>
           </div>
 
           {/* Divider */}
@@ -354,7 +354,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
           <button
             onClick={onClose}
             className="text-center py-1"
-            style={{ color: "rgba(255,255,255,0.2)", fontSize: "var(--fs-body)" }}
+            style={{ color: "rgba(255,255,255,0.40)", fontSize: "var(--fs-body)" }}
           >
             {sl.cancel}
           </button>

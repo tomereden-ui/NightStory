@@ -202,7 +202,7 @@ function SfxCard({ block, onTextChange, onDelete, readOnly }: Pick<ScriptBlockCa
               <button
                 onClick={() => setEditingDur(false)}
                 className="text-fs-body ml-1"
-                style={{ color: "rgba(255,255,255,0.2)" }}
+                style={{ color: "rgba(255,255,255,0.40)" }}
               >✓</button>
             </div>
           ) : (
@@ -286,7 +286,7 @@ function SfxCard({ block, onTextChange, onDelete, readOnly }: Pick<ScriptBlockCa
         {!readOnly && (
           <button
             onClick={() => onDelete(block.id)}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 transition-colors"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white/40 hover:text-red-400 transition-colors"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
             title="Remove SFX"
           >
@@ -406,9 +406,9 @@ function SpeechCard({
           </span>
           {block.validated && <ValidatedBadge />}
           {assignedVoice && (
-            <span className="text-white/25 text-fs-body">· {assignedVoice.name}</span>
+            <span className="text-white/48 text-fs-body">· {assignedVoice.name}</span>
           )}
-          {!readOnly && !isDirty && <span className="ml-auto text-fs-body text-white/25 italic">{t("tapToEdit")}</span>}
+          {!readOnly && !isDirty && <span className="ml-auto text-fs-body text-white/48 italic">{t("tapToEdit")}</span>}
           {!readOnly && isDirty && onSave && (
             <button
               onClick={(e) => { e.stopPropagation(); onSave(); }}
@@ -463,7 +463,7 @@ function SpeechCard({
               <span className="w-0.5 h-2 bg-teal rounded-full animate-[bounce_0.6s_ease-in-out_0.3s_infinite]" />
             </span>
           ) : (
-            <Icon name="play" size={10} className="text-white/30 ml-px" />
+            <Icon name="play" size={10} className="text-white/55 ml-px" />
           )}
         </button>
 
@@ -471,7 +471,7 @@ function SpeechCard({
         {!readOnly && (
           <button
             onClick={() => onDelete(block.id)}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 transition-colors"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white/40 hover:text-red-400 transition-colors"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
             title="Delete block"
           >

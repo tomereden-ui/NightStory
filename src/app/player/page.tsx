@@ -146,7 +146,7 @@ function PlayerContent() {
       <div className="flex items-center justify-between px-5 pt-12 pb-3">
         <Link href="/library" className="w-8 h-8 flex items-center justify-center text-white/40 text-fs-heading">←</Link>
         <p className="text-white text-fs-body font-semibold truncate max-w-[55%] text-center">{title}</p>
-        <button onClick={handleStop} className="w-8 h-8 flex items-center justify-center text-white/30 text-fs-heading hover:text-white/60 transition-colors">■</button>
+        <button onClick={handleStop} className="w-8 h-8 flex items-center justify-center text-white/55 text-fs-heading hover:text-white/60 transition-colors">■</button>
       </div>
 
       {/* Preparing overlay */}
@@ -158,7 +158,7 @@ function PlayerContent() {
           </div>
           <div>
             <p className="text-white font-semibold mb-1">Preparing story voices…</p>
-            <p className="text-white/35 text-fs-body">Generating natural AI speech ({prepareProgress}%)</p>
+            <p className="text-white/58 text-fs-body">Generating natural AI speech ({prepareProgress}%)</p>
           </div>
           <div className="w-48 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
             <div className="h-full rounded-full transition-all duration-300" style={{ width: `${prepareProgress}%`, background: "linear-gradient(90deg,#00D4FF,#0088AA)" }} />
@@ -223,9 +223,9 @@ function PlayerContent() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-fs-body font-semibold truncate">{title}</p>
-              <p className="text-white/30 text-fs-body">Gemini AI · Natural Voice</p>
+              <p className="text-white/55 text-fs-body">Gemini AI · Natural Voice</p>
             </div>
-            <button className="text-white/25 text-fs-heading hover:text-white/50 transition-colors">
+            <button className="text-white/48 text-fs-heading hover:text-white/50 transition-colors">
               {story.isFavorite ? "♥" : "♡"}
             </button>
           </div>
@@ -234,22 +234,22 @@ function PlayerContent() {
           <input type="range" min={0} max={100} value={progress}
             onChange={(e) => setProgress(+e.target.value)}
             className="w-full cursor-pointer mb-1" style={{ accentColor: "#00D4FF" }} />
-          <div className="flex justify-between text-white/20 text-fs-body mb-3">
+          <div className="flex justify-between text-white/40 text-fs-body mb-3">
             <span>{formatTime(currentSec)}</span>
             <span>{formatTime(story.durationSeconds)}</span>
           </div>
 
           {/* Controls */}
           <div className="flex items-center justify-between">
-            <button onClick={handleStop} className="text-white/25 text-fs-subtitle w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors">⏮</button>
-            <button className="text-white/25 text-fs-heading w-9 h-9 flex items-center justify-center">«</button>
+            <button onClick={handleStop} className="text-white/48 text-fs-subtitle w-9 h-9 flex items-center justify-center hover:text-white/50 transition-colors">⏮</button>
+            <button className="text-white/48 text-fs-heading w-9 h-9 flex items-center justify-center">«</button>
             <button onClick={handlePlay}
               className="w-14 h-14 rounded-full flex items-center justify-center text-fs-subtitle active:scale-95 transition-transform font-bold"
               style={{ background: "linear-gradient(135deg,#00D4FF,#00A8C8)", color: "#0A0C14", boxShadow: "0 4px 20px rgba(0,212,255,0.4)" }}>
               {phase === "preparing" ? "…" : phase === "playing" ? "⏸" : "▶"}
             </button>
-            <button className="text-white/25 text-fs-heading w-9 h-9 flex items-center justify-center">»</button>
-            <button className="text-white/25 text-fs-body w-9 h-9 flex items-center justify-center rounded-xl"
+            <button className="text-white/48 text-fs-heading w-9 h-9 flex items-center justify-center">»</button>
+            <button className="text-white/48 text-fs-body w-9 h-9 flex items-center justify-center rounded-xl"
               style={{ border: "1px solid rgba(255,255,255,0.08)" }}>↗</button>
           </div>
         </div>

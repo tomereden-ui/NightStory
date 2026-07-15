@@ -134,7 +134,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
       <div className="relative mb-3">
         <span
           className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
-          style={{ color: "rgba(255,255,255,0.25)" }}
+          style={{ color: "rgba(255,255,255,0.48)" }}
         >
           <Icon name="search" size={14} />
         </span>
@@ -152,7 +152,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
         {search && (
           <button
             onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/55 hover:text-white/60 transition-colors"
           >
             <Icon name="close" size={14} />
           </button>
@@ -234,7 +234,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
                 </div>
               )}
               {meta.status === "pending" && (
-                <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.2)" }}>{t("pending")}</p>
+                <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.40)" }}>{t("pending")}</p>
               )}
             </div>
           </>
@@ -616,7 +616,7 @@ export default function LibraryPage() {
             <Link
               href="/library/trash"
               className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
-              style={{ color: "rgba(255,255,255,0.3)" }}
+              style={{ color: "rgba(255,255,255,0.52)" }}
             >
               <Icon name="delete" size={18} />
               {trashCount > 0 && (
@@ -650,7 +650,7 @@ export default function LibraryPage() {
         {/* Recently Played — spans both tabs */}
         {!loading && (entries.length > 0 || recentClassics.length > 0) && (
           <div className="mb-4">
-            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.28)" }}>
+            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.50)" }}>
               {t("recentlyPlayedSection")}
             </p>
             <div className="relative">
@@ -733,7 +733,7 @@ export default function LibraryPage() {
                 className="flex-shrink-0 px-4 py-2 rounded-full text-fs-body font-medium tracking-wide transition-all"
                 style={active
                   ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
-                  : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" }
+                  : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)" }
                 }
               >
                 {label}
@@ -758,7 +758,7 @@ export default function LibraryPage() {
           >
             <span
               className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
-              style={{ color: "rgba(255,255,255,0.25)" }}
+              style={{ color: "rgba(255,255,255,0.48)" }}
             >
               <Icon name="search" size={14} />
             </span>
@@ -776,7 +776,7 @@ export default function LibraryPage() {
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/55 hover:text-white/60 transition-colors"
               >
                 <Icon name="close" size={14} />
               </button>
@@ -896,7 +896,7 @@ export default function LibraryPage() {
             <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
               <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(167,139,250,0.4))" }}>👨‍👩‍👧‍👦</span>
               <p className="text-white/40 text-fs-body font-light tracking-wide">No family stories yet</p>
-              <p className="text-white/20 text-fs-body">Stories created for any child will appear here</p>
+              <p className="text-white/40 text-fs-body">Stories created for any child will appear here</p>
             </div>
           ) : filteredFamily.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
@@ -930,7 +930,7 @@ export default function LibraryPage() {
             <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
               <span className="text-5xl" style={{ filter: "drop-shadow(0 0 24px rgba(167,139,250,0.5))" }}>🌍</span>
               <p className="text-white/50 text-fs-body font-medium tracking-wide">{t("communityStories")}</p>
-              <p className="text-white/25 text-fs-body max-w-[220px] leading-relaxed">{t("communityStoriesSoon")}</p>
+              <p className="text-white/48 text-fs-body max-w-[220px] leading-relaxed">{t("communityStoriesSoon")}</p>
             </div>
           ) : filteredCommunity.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
@@ -946,7 +946,7 @@ export default function LibraryPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              <p className="text-fs-body px-1" style={{ color: "rgba(255,255,255,0.28)" }}>
+              <p className="text-fs-body px-1" style={{ color: "rgba(255,255,255,0.50)" }}>
                 🌍 Stories made with NightStory
               </p>
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
@@ -982,7 +982,7 @@ export default function LibraryPage() {
             <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
               <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>🌙</span>
               <p className="text-white/40 text-fs-body font-light tracking-wide">{t("noStories")}</p>
-              <p className="text-white/20 text-fs-body">{t("createFirstStory")}</p>
+              <p className="text-white/40 text-fs-body">{t("createFirstStory")}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
@@ -1018,7 +1018,7 @@ export default function LibraryPage() {
                         <p className="text-fs-body text-white/70">
                           {t("moveToTrash")} <span className="text-white font-medium">"{entry.title}"</span>?
                         </p>
-                        <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>{t("keptFor30Days")}</p>
+                        <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.52)" }}>{t("keptFor30Days")}</p>
                         <div className="flex gap-2">
                           <button onClick={() => setConfirmingId(null)} className="flex-1 py-2.5 rounded-xl text-fs-body transition-all active:scale-[0.98]"
                             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
@@ -1083,7 +1083,7 @@ export default function LibraryPage() {
                       </div>
                       <button onClick={() => setConfirmingId(entry.id)}
                         className="w-6 h-6 flex items-center justify-center flex-shrink-0 rounded-full transition-opacity active:opacity-50 mt-0.5"
-                        style={{ color: "rgba(255,255,255,0.2)" }} aria-label="Delete story">
+                        style={{ color: "rgba(255,255,255,0.40)" }} aria-label="Delete story">
                         <Icon name="delete" size={13} />
                       </button>
                     </div>

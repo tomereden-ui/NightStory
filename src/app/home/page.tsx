@@ -295,7 +295,7 @@ function Rail({
           <Link
             href={action.href}
             className="text-fs-body font-semibold tracking-wider uppercase transition-opacity hover:opacity-80"
-            style={{ color: "rgba(255,255,255,0.28)" }}
+            style={{ color: "rgba(255,255,255,0.50)" }}
           >
             {action.label} →
           </Link>
@@ -524,7 +524,7 @@ function SharedEmptyState() {
       <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 12px rgba(167,139,250,0.5))" }}>💌</span>
       <div>
         <p className="text-white/50 text-fs-body font-medium">No stories shared yet</p>
-        <p className="text-white/25 text-fs-body mt-1">Stories your family shares will appear here</p>
+        <p className="text-white/48 text-fs-body mt-1">Stories your family shares will appear here</p>
       </div>
     </div>
   );
@@ -600,7 +600,7 @@ function JourneySnippet({ childName }: { childName?: string }) {
       </div>
       <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
       {/* stats */}
-      <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
+      <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.52)" }}>
         {data.storiesThisMonth} stories · {timeLabel} this month
       </span>
       {/* spacer */}
@@ -623,7 +623,7 @@ function JourneySnippet({ childName }: { childName?: string }) {
           />
         ))}
       </div>
-      <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.2)" }}>›</span>
+      <span style={{ fontSize: "var(--fs-caption)", color: "rgba(255,255,255,0.40)" }}>›</span>
     </Link>
   );
 }
@@ -811,7 +811,7 @@ export default function HomePage() {
             >
               {greetingText}{greetingName} 🌙
             </h1>
-            <p className="text-white/30 text-fs-body mt-1 tracking-wide">
+            <p className="text-white/55 text-fs-body mt-1 tracking-wide">
               {stories.length > 0
                 ? `${stories.length} ${stories.length === 1 ? "story" : "stories"} ${t("inYourLibrary")}`
                 : t("readyToCreate")}

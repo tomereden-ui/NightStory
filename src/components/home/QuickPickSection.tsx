@@ -16,7 +16,7 @@ export default function QuickPickSection() {
     <section className="px-5 mb-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-white/80 font-semibold text-fs-body tracking-wide">{t("forYou")}</h2>
-        <Link href="/library" className="text-white/25 text-fs-body">
+        <Link href="/library" className="text-white/48 text-fs-body">
           {t("seeAll")}
         </Link>
       </div>
@@ -43,7 +43,7 @@ export default function QuickPickSection() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-white text-fs-body font-semibold truncate leading-snug">{title}</p>
-                <p className="text-white/30 text-fs-body truncate mt-0.5">{desc}</p>
+                <p className="text-white/55 text-fs-body truncate mt-0.5">{desc}</p>
               </div>
               {/* Duration pill — teal */}
               <span

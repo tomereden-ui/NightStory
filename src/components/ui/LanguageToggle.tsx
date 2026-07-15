@@ -56,7 +56,7 @@ export default function LanguageToggle({ value, onLanguageChange }: LanguageTogg
       >
         <FlagImg countryCode={current.countryCode} label={current.label} />
         <span className="text-white/70 text-fs-body font-semibold">{current.nativeName}</span>
-        <span className="text-white/25 text-fs-body">{open ? "▲" : "▼"}</span>
+        <span className="text-white/48 text-fs-body">{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
@@ -69,7 +69,7 @@ export default function LanguageToggle({ value, onLanguageChange }: LanguageTogg
           }}
         >
           <div className="px-3 py-2 border-b border-white/5">
-            <p className="text-white/30 text-fs-body uppercase tracking-widest">Language</p>
+            <p className="text-white/55 text-fs-body uppercase tracking-widest">Language</p>
           </div>
           <ul className="py-1 max-h-80 overflow-y-auto">
             {SUPPORTED_LANGUAGES.map((lang: Language) => {
@@ -88,7 +88,7 @@ export default function LanguageToggle({ value, onLanguageChange }: LanguageTogg
                       <p className={`text-fs-body font-semibold ${isSelected ? "text-purple-bright" : "text-white/80"}`}>
                         {meta.nativeName}
                       </p>
-                      <p className="text-fs-body text-white/25">{meta.label}</p>
+                      <p className="text-fs-body text-white/48">{meta.label}</p>
                     </div>
                     {isSelected && <span className="text-purple-bright text-fs-body flex-shrink-0">✓</span>}
                   </button>

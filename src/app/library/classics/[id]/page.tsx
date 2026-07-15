@@ -410,7 +410,7 @@ export default function ClassicDetailPage() {
   if (loading) {
     return (
       <div className="cosmic-page min-h-full flex items-center justify-center">
-        <span className="text-white/30 text-fs-body animate-pulse">Loading…</span>
+        <span className="text-white/55 text-fs-body animate-pulse">Loading…</span>
       </div>
     );
   }
@@ -419,7 +419,7 @@ export default function ClassicDetailPage() {
     return (
       <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
         <span className="text-fs-display">✨</span>
-        <p className="text-white/30 text-fs-body">Classic not found.</p>
+        <p className="text-white/55 text-fs-body">Classic not found.</p>
         <button onClick={goBack} className="text-fs-body" style={{ color: "rgba(79,195,247,0.5)" }}>
           Go back
         </button>
@@ -734,12 +734,12 @@ export default function ClassicDetailPage() {
                   className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
                   style={{ borderColor: `${c1} transparent transparent transparent` }}
                 />
-                <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>
                   {meta.status === "generating" ? "Generating script…" : "Preparing this classic…"}
                 </p>
               </>
             ) : (
-              <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>Script unavailable.</p>
+              <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.52)" }}>Script unavailable.</p>
             )}
           </div>
         )}
@@ -758,7 +758,7 @@ export default function ClassicDetailPage() {
               } : {
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.08)",
-                color: "rgba(255,255,255,0.2)",
+                color: "rgba(255,255,255,0.40)",
               }}
             >
               <span>🎬</span>
@@ -789,7 +789,7 @@ export default function ClassicDetailPage() {
                 </button>
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-fs-body font-medium truncate leading-snug">{meta.title}</p>
-                  <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.3)" }}>✨ Classic story</p>
+                  <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.52)" }}>✨ Classic story</p>
                 </div>
               </div>
 
@@ -801,7 +801,7 @@ export default function ClassicDetailPage() {
                   <button
                     onClick={handleStartOver}
                     className="text-fs-body font-semibold"
-                    style={{ color: "rgba(255,255,255,0.35)" }}
+                    style={{ color: "rgba(255,255,255,0.55)" }}
                   >
                     Start over
                   </button>
@@ -809,7 +809,7 @@ export default function ClassicDetailPage() {
               )}
 
               <div className="flex items-center gap-2">
-                <span className="text-fs-body w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <span className="text-fs-body w-8 text-right flex-shrink-0" style={{ color: "rgba(255,255,255,0.52)" }}>
                   {formatTime(currentTime)}
                 </span>
                 <input
@@ -822,7 +822,7 @@ export default function ClassicDetailPage() {
                   className="flex-1 cursor-pointer"
                   style={{ accentColor: "#4fc3f7" }}
                 />
-                <span className="text-fs-body w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <span className="text-fs-body w-8 flex-shrink-0" style={{ color: "rgba(255,255,255,0.52)" }}>
                   {formatTime(audioDuration || (meta.durationSeconds ?? 180))}
                 </span>
               </div>

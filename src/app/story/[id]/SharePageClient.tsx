@@ -294,7 +294,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
             style={{ borderColor: "#4fc3f7 transparent transparent transparent" }} />
-          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-body)" }}>Loading story…</p>
+          <p style={{ color: "rgba(255,255,255,0.52)", fontSize: "var(--fs-body)" }}>Loading story…</p>
         </div>
       </div>
     );
@@ -304,7 +304,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-8 text-center" style={{ background: "#040612" }}>
         <span style={{ fontSize: 64 }}>🌙</span>
-        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "var(--fs-body)" }}>Story not found.</p>
+        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "var(--fs-body)" }}>Story not found.</p>
         <a href="/" style={{ color: "#4fc3f7", fontSize: "var(--fs-body)" }}>Go to NightStory →</a>
       </div>
     );
@@ -541,7 +541,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
             not text, and flipping it under dir="rtl" made current-time and
             duration swap sides (and looked like the seek bar ran backwards). */}
         <div className="flex items-center gap-3 w-full mb-10" dir="ltr" style={{ maxWidth: 360 }}>
-          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-body)", width: 36, textAlign: "right", flexShrink: 0 }}>
+          <span style={{ color: "rgba(255,255,255,0.52)", fontSize: "var(--fs-body)", width: 36, textAlign: "right", flexShrink: 0 }}>
             {formatTime(currentTime)}
           </span>
           <div className="flex-1 relative" style={{ height: 4 }}>
@@ -561,7 +561,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
               style={{ height: "100%" }}
             />
           </div>
-          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-body)", width: 36, flexShrink: 0 }}>
+          <span style={{ color: "rgba(255,255,255,0.52)", fontSize: "var(--fs-body)", width: 36, flexShrink: 0 }}>
             {formatTime(duration || story.durationSeconds)}
           </span>
         </div>
@@ -569,7 +569,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         {/* Summary */}
         {story.summary && (
           <p className="text-center mb-10" style={{
-            color: "rgba(255,255,255,0.3)", fontSize: "var(--fs-body)",
+            color: "rgba(255,255,255,0.52)", fontSize: "var(--fs-body)",
             lineHeight: 1.7, maxWidth: 320,
           }}>
             {story.summary}
