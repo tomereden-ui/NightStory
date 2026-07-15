@@ -41,7 +41,15 @@ function formatDuration(seconds?: number): string | null {
 // Collapses a list to one card per multi-chapter series — a browse grid
 // should show the whole story once, not one card per chapter. Keeps the
 // earliest chapter as the representative card; standalone entries pass through.
-function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber?: number }>(entries: T[]): T[] {
+function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber?: number; durationSeconds?: number }>(entries: T[]): T[] {
+  // A series card should show how long the whole story takes to listen to,
+  // not just its first chapter — sum every chapter's duration up front.
+  const totalDurationBySeries = new Map<string, number>();
+  for (const entry of entries) {
+    if (!entry.seriesId) continue;
+    totalDurationBySeries.set(entry.seriesId, (totalDurationBySeries.get(entry.seriesId) ?? 0) + (entry.durationSeconds ?? 0));
+  }
+
   const bestBySeries = new Map<string, T>();
   const order: string[] = [];
   for (const entry of entries) {
@@ -54,7 +62,11 @@ function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber
       bestBySeries.set(key, entry);
     }
   }
-  return order.map((key) => bestBySeries.get(key)!);
+  return order.map((key) => {
+    const rep = bestBySeries.get(key)!;
+    const totalDuration = rep.seriesId ? totalDurationBySeries.get(rep.seriesId) : undefined;
+    return totalDuration !== undefined ? { ...rep, durationSeconds: totalDuration } : rep;
+  });
 }
 
 // ── Classics tab ─────────────────────────────────────────────────────────────

@@ -38,7 +38,15 @@ function durationLabel(seconds: number): string {
 // browse surfaces should recommend the whole story, not each chapter
 // separately) — keeps the earliest chapter as the representative card and
 // preserves standalone (non-series) entries untouched.
-function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber?: number }>(entries: T[]): T[] {
+function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber?: number; durationSeconds?: number }>(entries: T[]): T[] {
+  // A series card should show how long the whole story takes to listen to,
+  // not just its first chapter — sum every chapter's duration up front.
+  const totalDurationBySeries = new Map<string, number>();
+  for (const entry of entries) {
+    if (!entry.seriesId) continue;
+    totalDurationBySeries.set(entry.seriesId, (totalDurationBySeries.get(entry.seriesId) ?? 0) + (entry.durationSeconds ?? 0));
+  }
+
   const bestBySeries = new Map<string, T>();
   const order: string[] = [];
   for (const entry of entries) {
@@ -51,7 +59,11 @@ function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber
       bestBySeries.set(key, entry);
     }
   }
-  return order.map((key) => bestBySeries.get(key)!);
+  return order.map((key) => {
+    const rep = bestBySeries.get(key)!;
+    const totalDuration = rep.seriesId ? totalDurationBySeries.get(rep.seriesId) : undefined;
+    return totalDuration !== undefined ? { ...rep, durationSeconds: totalDuration } : rep;
+  });
 }
 
 function greeting(hour: number, tFn: (key: string) => string): string {
