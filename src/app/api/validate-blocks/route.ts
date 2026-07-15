@@ -108,6 +108,15 @@ type HebrewFlag = { characterName: string; originalText: string; index?: number;
 // itself was right. Anchoring on the known character names we sent, instead
 // of trusting Gemini's punctuation, works regardless of which format it
 // picks this time.
+//
+// Two more drift variants confirmed live (a real run returned ZERO parsed
+// records despite Gemini computing every correction correctly): (1) the
+// header on its OWN line — "[Name]" alone, with the original text on a
+// separate (sometimes ```-fenced) line below instead of the same line —
+// which neither the "name + trailing text" nor the "line === name" branch
+// below matched; (2) "* Status:"/"* Correction:" markdown bullets instead
+// of "- Status:". Both are handled below; ``` fence lines are skipped
+// outright since they carry no field/name content of their own.
 function parseHebrewPassFlags(raw: string, knownNames: string[]): HebrewFlag[] {
   const records: HebrewFlag[] = [];
   let current: HebrewFlag | null = null;
@@ -115,9 +124,10 @@ function parseHebrewPassFlags(raw: string, knownNames: string[]): HebrewFlag[] {
   const sortedNames = Array.from(new Set(knownNames)).sort((a, b) => b.length - a.length);
   for (const rawLine of raw.split("\n")) {
     const line = rawLine.trim();
-    if (!line) continue;
+    if (!line || /^```/.test(line)) continue;
 
-    const field = line.match(/^-?\s*(Index|Status|Correction|Reason)\s*:\s*(.+)$/i);
+    // Tolerates "- Field:", "* Field:", "**Field:**", or no bullet at all.
+    const field = line.match(/^[-*]?\s*\**\s*(Index|Status|Correction|Reason)\s*\**\s*:\s*(.+)$/i);
     if (field && current) {
       const [, key, value] = field;
       if (/^index$/i.test(key)) current.index = Number(value.trim());
@@ -129,12 +139,24 @@ function parseHebrewPassFlags(raw: string, knownNames: string[]): HebrewFlag[] {
 
     const matchedName = sortedNames.find((name) => {
       const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      return new RegExp(`^\\[?${escaped}\\]?\\s*:?\\s`).test(line) || line === name;
+      return new RegExp(`^\\[?${escaped}\\]?\\s*:?\\s`).test(line)
+        || line === name
+        // "[Name]" alone on its line, nothing trailing (text follows below).
+        || new RegExp(`^\\[${escaped}\\]$`).test(line);
     });
     if (matchedName) {
       if (current) records.push(current);
       const rest = line.replace(new RegExp(`^\\[?${matchedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\]?\\s*:?\\s*`), "").trim();
       current = { characterName: matchedName, originalText: rest };
+      continue;
+    }
+
+    // A non-empty, non-field, non-header line while a record is open and
+    // still missing its original text — the "[Name]" alone / fenced-text
+    // case: append it (the app never trusts originalText for anything but
+    // a fallback match, so a slightly imprecise multi-line join is fine).
+    if (current && !current.originalText) {
+      current.originalText = line;
     }
   }
   if (current) records.push(current);
