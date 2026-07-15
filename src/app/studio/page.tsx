@@ -1259,8 +1259,10 @@ export default function Studio2Page() {
     setDirectionCheckIssues([]);
   };
 
-  const checkDirectorNote = async () => {
-    if (!directorNote.trim() || checkingDirection) return;
+  // Returns whether the note passed, so a caller (the "Ok" button) can chain
+  // straight into applying it without a separate click once this resolves.
+  const checkDirectorNote = async (): Promise<boolean> => {
+    if (!directorNote.trim() || checkingDirection) return false;
     setCheckingDirection(true);
     setDirectionCheckIssues([]);
     try {
@@ -1273,11 +1275,14 @@ export default function Studio2Page() {
         body: JSON.stringify({ instruction: directorNote, chipInstructions, blocks: scriptBlocks, summary }),
       });
       const data = await res.json() as { reasonable?: boolean; issues?: string[] };
-      setDirectionValid(data.reasonable !== false);
-      setDirectionCheckIssues(data.reasonable === false ? (data.issues ?? []) : []);
+      const ok = data.reasonable !== false;
+      setDirectionValid(ok);
+      setDirectionCheckIssues(ok ? [] : (data.issues ?? []));
+      return ok;
     } catch {
       setDirectionValid(false);
       setDirectionCheckIssues([]);
+      return false;
     } finally {
       setCheckingDirection(false);
     }
@@ -2909,17 +2914,20 @@ export default function Studio2Page() {
                   ) : (
                     <button
                       disabled={!hasPending || isRevising || checkingDirection}
-                      onClick={checkDirectorNote}
+                      onClick={async () => {
+                        const ok = await checkDirectorNote();
+                        if (ok) handleRevise(buildCombinedInstruction(), () => setSelectedMoodChips(new Set()));
+                      }}
                       className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-1.5"
                       style={hasPending && !isRevising && !checkingDirection
-                        ? { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" }
-                        : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.15)" }
+                        ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
+                        : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.25)" }
                       }
                     >
                       {checkingDirection && (
                         <span className="w-3 h-3 border-2 rounded-full animate-spin flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.6)" }} />
                       )}
-                      {checkingDirection ? i18nT(language, "checkingDirection" as never) : i18nT(language, "checkWording" as never)}
+                      {checkingDirection ? i18nT(language, "checkingDirection" as never) : "Ok"}
                     </button>
                   )}
                 </div>
