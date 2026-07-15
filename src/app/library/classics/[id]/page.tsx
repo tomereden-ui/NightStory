@@ -30,6 +30,12 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// Strips a trailing "- Chapter N" / "- פרק N" suffix so the hero title reads
+// as the story's name, not one specific chapter's title.
+function seriesDisplayTitle(title: string): string {
+  return title.replace(/\s*-\s*(chapter|פרק)\s*\d+\s*$/i, "").trim();
+}
+
 // Last-resort fallback for a classic with no curated tagline (e.g. an
 // admin-added one nobody wrote a blurb for) -- NOT the primary summary
 // source. Capped at 40 words: this used to join up to 3 full narration
@@ -481,8 +487,13 @@ export default function ClassicDetailPage() {
               filter: `drop-shadow(0 0 20px ${c1}44)`,
             }}
           >
-            {meta.title}
+            {meta.chapterCount && meta.chapterCount > 1 ? seriesDisplayTitle(meta.title) : meta.title}
           </h1>
+          {meta.chapterCount && meta.chapterCount > 1 && (
+            <p className="text-fs-body font-semibold mb-1" style={{ color: c1 }}>
+              Chapter {meta.chapterNumber ?? 1}
+            </p>
+          )}
 
           <p className="text-fs-caption font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
             Id = {id}

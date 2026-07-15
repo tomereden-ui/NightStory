@@ -42,6 +42,12 @@ function cardPalette(title: string): [string, string] {
   return CARD_PALETTES[h % CARD_PALETTES.length];
 }
 
+// Strips a trailing "- Chapter N" / "- פרק N" suffix so the hero title reads
+// as the story's name, not one specific chapter's title.
+function seriesDisplayTitle(title: string): string {
+  return title.replace(/\s*-\s*(chapter|פרק)\s*\d+\s*$/i, "").trim();
+}
+
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
@@ -444,8 +450,13 @@ export default function StoryDetailPage() {
               filter: "drop-shadow(0 0 14px rgba(79,195,247,0.3))",
             }}
           >
-            {entry.title}
+            {entry.chapterCount && entry.chapterCount > 1 ? seriesDisplayTitle(entry.title) : entry.title}
           </h1>
+          {entry.chapterCount && entry.chapterCount > 1 && (
+            <p className="text-fs-body font-semibold mb-1" style={{ color: "rgba(79,195,247,0.7)" }}>
+              Chapter {entry.chapterNumber ?? 1}
+            </p>
+          )}
           <p className="text-fs-caption font-mono mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
             Id = {entry.id}
           </p>
@@ -453,12 +464,6 @@ export default function StoryDetailPage() {
             <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
               {timeAgo(entry.createdAt)}
             </p>
-            {(entry.viewCount ?? 0) > 0 && (
-              <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>
-                · 👁 {entry.viewCount} {entry.viewCount === 1 ? "view" : "views"}
-                {(entry.shareCount ?? 0) > 0 && ` · 📤 shared ${entry.shareCount}×`}
-              </p>
-            )}
           </div>
         </div>
 

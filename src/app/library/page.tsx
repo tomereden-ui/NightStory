@@ -68,82 +68,21 @@ function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber
   return order.map((key) => bestBySeries.get(key)!);
 }
 
-// Stacked-cards glyph marking a card as a multi-chapter series — placed
-// inline below the title (not overlaid on the cover), sized a step up from
-// the duration/language pills so it reads as the more important signal.
+// Compact "×N" chip marking a card as a multi-chapter series — sits at the
+// right end of the duration/language badge row rather than its own line, so
+// it doesn't eat vertical space a longer title needs.
 function SeriesBadge({ chapterCount }: { chapterCount: number }) {
   return (
     <span
-      className="inline-flex items-center gap-1 text-fs-body font-bold mt-1 px-2 py-0.5 rounded-full"
+      className="ml-auto flex-shrink-0 inline-flex items-center text-fs-body font-bold px-1.5 py-0.5 rounded-full"
       style={{
         background: "rgba(79,195,247,0.14)",
         border: "1px solid rgba(79,195,247,0.35)",
         color: "#4fc3f7",
       }}
     >
-      📚 {chapterCount} chapters
+      ×{chapterCount}
     </span>
-  );
-}
-
-type ChapterOption = { id: string; title: string; coverUrl?: string; chapterNumber?: number };
-
-// Bottom sheet listing every chapter in a series — opened instead of
-// navigating straight into a chapter when a collapsed series card is tapped.
-function ChapterPickerSheet({ seriesTitle, chapters, hrefBase, onClose }: {
-  seriesTitle: string;
-  chapters: ChapterOption[];
-  hrefBase: string;
-  onClose: () => void;
-}) {
-  const sorted = [...chapters].sort((a, b) => (a.chapterNumber ?? 0) - (b.chapterNumber ?? 0));
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: "rgba(2,4,10,0.7)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
-    >
-      <div
-        className="w-full rounded-t-3xl px-5 pt-5 pb-8"
-        style={{ maxWidth: 480, background: "#0a0d1f", border: "1px solid rgba(255,255,255,0.1)", borderBottom: "none" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-fs-subtitle font-bold text-white">{seriesTitle}</p>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <Icon name="close" size={14} className="text-white/60" />
-          </button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {sorted.map((c) => (
-            <Link
-              key={c.id}
-              href={`${hrefBase}/${c.id}`}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-[0.98]"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              {c.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.coverUrl} alt="" className="w-11 h-11 rounded-lg object-cover flex-shrink-0" />
-              ) : (
-                <span
-                  className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 text-fs-body font-bold"
-                  style={{ background: "rgba(79,195,247,0.15)", color: "#4fc3f7" }}
-                >
-                  {c.chapterNumber ?? "–"}
-                </span>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.6)" }}>
-                  Chapter {c.chapterNumber ?? "–"}
-                </p>
-                <p className="text-fs-body font-semibold text-white truncate">{c.title}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -159,7 +98,6 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
 
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [openSeriesId, setOpenSeriesId] = useState<string | null>(null);
   const seedingRef = useRef(false);
 
   // Background: generate missing classics one by one
@@ -206,7 +144,6 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
   const filtered = dedupeBySeries(classics.filter(
     (c) => !q || c.title.toLowerCase().includes(q) || c.tagline.toLowerCase().includes(q)
   ));
-  const openSeries = openSeriesId ? classics.filter((c) => c.seriesId === openSeriesId) : [];
 
   return (
     <div className="pt-2">
@@ -292,8 +229,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
             {/* Info */}
             <div className="px-2 pt-2 pb-2.5">
               <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
-              {isSeries && <SeriesBadge chapterCount={meta.chapterCount!} />}
-              {(duration || langCode) && (
+              {(duration || langCode || isSeries) && (
                 <div className="flex items-center gap-1 mt-1">
                   {duration && (
                     <span
@@ -311,6 +247,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
                       {langCode}
                     </span>
                   )}
+                  {isSeries && <SeriesBadge chapterCount={meta.chapterCount!} />}
                 </div>
               )}
               {meta.status === "pending" && (
@@ -320,29 +257,18 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
           </>
         );
 
-        const cardClassName = "flex flex-col rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none text-left";
-        const cardStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" };
-
-        return isSeries ? (
-          <button key={meta.id} onClick={() => setOpenSeriesId(meta.seriesId!)} className={cardClassName} style={cardStyle}>
-            {cardBody}
-          </button>
-        ) : (
-          <Link key={meta.id} href={`/library/classics/${meta.id}`} className={cardClassName} style={cardStyle}>
+        return (
+          <Link
+            key={meta.id}
+            href={`/library/classics/${meta.id}`}
+            className="flex flex-col rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
             {cardBody}
           </Link>
         );
       })}
     </div>
-
-    {openSeriesId && (
-      <ChapterPickerSheet
-        seriesTitle={seriesDisplayTitle(openSeries[0]?.title ?? "")}
-        chapters={openSeries.map((c) => ({ id: c.id, title: c.title, coverUrl: c.coverUrl, chapterNumber: c.chapterNumber }))}
-        hrefBase="/library/classics"
-        onClose={() => setOpenSeriesId(null)}
-      />
-    )}
     </div>
   );
 }
@@ -611,16 +537,6 @@ export default function LibraryPage() {
   const recentScrollRef = useRef<HTMLDivElement>(null);
   const [recentCanScrollLeft, setRecentCanScrollLeft] = useState(false);
   const [recentCanScrollRight, setRecentCanScrollRight] = useState(false);
-
-  // Chapter picker sheet shared by every own-story grid (All / My Stories) —
-  // set both together when a collapsed series card is tapped.
-  const [openSeriesTitle, setOpenSeriesTitle] = useState<string | null>(null);
-  const [openSeriesChapters, setOpenSeriesChapters] = useState<LibraryEntry[]>([]);
-  const openSeriesPicker = (chapters: LibraryEntry[]) => {
-    if (chapters.length === 0) return;
-    setOpenSeriesTitle(seriesDisplayTitle(chapters[0].title));
-    setOpenSeriesChapters(chapters);
-  };
 
   const updateRecentScroll = () => {
     const el = recentScrollRef.current;
@@ -933,55 +849,50 @@ export default function LibraryPage() {
                 const [c1, c2] = cardPalette(entry.title);
                 const isSeries = !!entry.chapterCount && entry.chapterCount > 1;
                 const displayTitle = isSeries ? seriesDisplayTitle(entry.title) : entry.title;
-                const openPicker = () => openSeriesPicker(allEntries.filter((e) => e.seriesId === entry.seriesId));
-
-                const coverInner = (
-                  <>
-                    {entry.coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-fs-display"
-                        style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
-                        <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>{entry.isClassic ? "✨" : "🌙"}</span>
-                      </div>
-                    )}
-                    {entry.isPublic && (
-                      <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-fs-caption font-bold uppercase tracking-wide"
-                        style={{ background: "rgba(4,6,18,0.75)", color: "rgba(255,255,255,0.6)", backdropFilter: "blur(4px)" }}>
-                        {entry.isClassic ? t("classicsTab") : t("communityTab")}
-                      </span>
-                    )}
-                  </>
-                );
+                const duration = formatDuration(entry.durationSeconds);
+                const langCode = entry.language?.slice(0, 2).toUpperCase();
 
                 return (
                   <div key={entry.id} className="flex flex-col rounded-xl overflow-hidden transition-all select-none"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    {isSeries ? (
-                      <button onClick={openPicker} className="relative w-full overflow-hidden active:opacity-80 transition-opacity text-left" style={{ aspectRatio: "2/3" }}>
-                        {coverInner}
-                      </button>
-                    ) : (
-                      <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
-                        {coverInner}
-                      </Link>
-                    )}
+                    <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
+                      {entry.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                          <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>{entry.isClassic ? "✨" : "🌙"}</span>
+                        </div>
+                      )}
+                      {entry.isPublic && (
+                        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-fs-caption font-bold uppercase tracking-wide"
+                          style={{ background: "rgba(4,6,18,0.75)", color: "rgba(255,255,255,0.6)", backdropFilter: "blur(4px)" }}>
+                          {entry.isClassic ? t("classicsTab") : t("communityTab")}
+                        </span>
+                      )}
+                    </Link>
                     <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
                       <div className="flex-1 min-w-0">
-                        {isSeries ? (
-                          <button onClick={openPicker} className="text-left">
-                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
-                          </button>
-                        ) : (
-                          <Link href={`/library/${entry.id}`}>
-                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
-                          </Link>
-                        )}
-                        {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt, t)}</span>
+                        <Link href={`/library/${entry.id}`}>
+                          <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+                        </Link>
+                        <div className="flex items-center gap-1 mt-1">
+                          {duration && (
+                            <span className="text-fs-caption tracking-wide"
+                              style={{ padding: "1px 6px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.4)" }}>
+                              {duration}
+                            </span>
+                          )}
+                          {langCode && (
+                            <span className="text-fs-caption font-semibold tracking-wide"
+                              style={{ padding: "1px 6px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.4)" }}>
+                              {langCode}
+                            </span>
+                          )}
+                          {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
                         </div>
+                        <span className="text-white/20 text-fs-body mt-1 block">{timeAgo(entry.createdAt, t)}</span>
                       </div>
                     </div>
                   </div>
@@ -1144,7 +1055,8 @@ export default function LibraryPage() {
 
                 const isSeries = !!entry.chapterCount && entry.chapterCount > 1;
                 const displayTitle = isSeries ? seriesDisplayTitle(entry.title) : entry.title;
-                const openPicker = () => openSeriesPicker(entries.filter((e) => e.seriesId === entry.seriesId));
+                const duration = formatDuration(entry.durationSeconds);
+                const langCode = entry.language?.slice(0, 2).toUpperCase();
 
                 return (
                   <div
@@ -1153,48 +1065,40 @@ export default function LibraryPage() {
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", opacity: isDeleting ? 0.4 : 1, transition: "opacity 0.2s" }}
                   >
                     {/* Image */}
-                    {isSeries ? (
-                      <button onClick={openPicker} className="relative w-full overflow-hidden active:opacity-80 transition-opacity text-left" style={{ aspectRatio: "2/3" }}>
-                        {entry.coverUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-fs-display"
-                            style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
-                            <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
-                          </div>
-                        )}
-                      </button>
-                    ) : (
-                      <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
-                        {entry.coverUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-fs-display"
-                            style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
-                            <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
-                          </div>
-                        )}
-                      </Link>
-                    )}
+                    <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
+                      {entry.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                          <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
+                        </div>
+                      )}
+                    </Link>
 
                     {/* Info row */}
                     <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
                       <div className="flex-1 min-w-0">
-                        {isSeries ? (
-                          <button onClick={openPicker} className="text-left">
-                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
-                          </button>
-                        ) : (
-                          <Link href={`/library/${entry.id}`}>
-                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
-                          </Link>
-                        )}
-                        {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt, t)}</span>
+                        <Link href={`/library/${entry.id}`}>
+                          <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+                        </Link>
+                        <div className="flex items-center gap-1 mt-1">
+                          {duration && (
+                            <span className="text-fs-caption tracking-wide"
+                              style={{ padding: "1px 6px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.4)" }}>
+                              {duration}
+                            </span>
+                          )}
+                          {langCode && (
+                            <span className="text-fs-caption font-semibold tracking-wide"
+                              style={{ padding: "1px 6px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.4)" }}>
+                              {langCode}
+                            </span>
+                          )}
+                          {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
                         </div>
+                        <span className="text-white/20 text-fs-body mt-1 block">{timeAgo(entry.createdAt, t)}</span>
                       </div>
                       <button onClick={() => setConfirmingId(entry.id)}
                         className="w-6 h-6 flex items-center justify-center flex-shrink-0 rounded-full transition-opacity active:opacity-50 mt-0.5"
@@ -1227,15 +1131,6 @@ export default function LibraryPage() {
         >
           ✦
         </Link>
-      )}
-
-      {openSeriesTitle && (
-        <ChapterPickerSheet
-          seriesTitle={openSeriesTitle}
-          chapters={openSeriesChapters.map((c) => ({ id: c.id, title: c.title, coverUrl: c.coverUrl, chapterNumber: c.chapterNumber }))}
-          hrefBase="/library"
-          onClose={() => setOpenSeriesTitle(null)}
-        />
       )}
     </div>
   );
