@@ -9,18 +9,6 @@ import type { ClassicMeta } from "@/lib/classicStories";
 import Icon from "@/components/ui/Icon";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 
-function timeAgo(ts: number, tFn: (key: string) => string): string {
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return tFn("justNow");
-  if (mins < 60) return `${mins}${tFn("minutesAgo")}`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}${tFn("hoursAgo")}`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return tFn("yesterday");
-  return `${days}${tFn("daysAgo")}`;
-}
-
 
 const CARD_PALETTES: [string, string][] = [
   ["#4fc3f7", "#7c3aed"],
@@ -892,7 +880,6 @@ export default function LibraryPage() {
                           )}
                           {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
                         </div>
-                        <span className="text-white/20 text-fs-body mt-1 block">{timeAgo(entry.createdAt, t)}</span>
                       </div>
                     </div>
                   </div>
@@ -1098,7 +1085,6 @@ export default function LibraryPage() {
                           )}
                           {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
                         </div>
-                        <span className="text-white/20 text-fs-body mt-1 block">{timeAgo(entry.createdAt, t)}</span>
                       </div>
                       <button onClick={() => setConfirmingId(entry.id)}
                         className="w-6 h-6 flex items-center justify-center flex-shrink-0 rounded-full transition-opacity active:opacity-50 mt-0.5"

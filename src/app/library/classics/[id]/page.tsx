@@ -86,7 +86,12 @@ function cardPalette(title: string): [string, string] {
 }
 
 export default function ClassicDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: routeId } = useParams<{ id: string }>();
+  // The chapter actually being viewed — starts at the route id, but chapter
+  // switching updates this in place (see switchChapter) instead of
+  // navigating, so the cover hero / back button never unmount or reflow.
+  const [id, setId] = useState(routeId);
+  useEffect(() => { setId(routeId); }, [routeId]);
   const router = useRouter();
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -252,6 +257,25 @@ export default function ClassicDetailPage() {
       if (full?.characterProfiles) setCharacterProfiles(full.characterProfiles);
       if (Array.isArray(full?.moralLessons)) setMoralLessons(full.moralLessons);
     }).finally(() => setLoading(false));
+  }, [id]);
+
+  // True for the moment between requesting a chapter switch and the fetch
+  // effect above actually landing new data for it (meta.id still reflects
+  // the previous chapter until then).
+  const switchingChapter = meta?.id !== id;
+
+  // Swaps to a sibling chapter in place — updates `id` state (re-triggering
+  // the fetch effect above) instead of navigating, so the cover hero, back
+  // button, and chapters row never unmount/reflow. meta.seriesId stays the
+  // same across chapters, so the chapters-row effect below doesn't re-fetch.
+  const switchChapter = useCallback((newId: string) => {
+    if (newId === id) return;
+    setPlaying(false);
+    setCurrentTime(0);
+    setAudioDuration(0);
+    setStoryAudioUrl(null);
+    setId(newId);
+    window.history.replaceState(null, "", `/library/classics/${newId}`);
   }, [id]);
 
   // Sibling chapters — only fetched when this classic is part of a series.
@@ -489,11 +513,6 @@ export default function ClassicDetailPage() {
           >
             {meta.chapterCount && meta.chapterCount > 1 ? seriesDisplayTitle(meta.title) : meta.title}
           </h1>
-          {meta.chapterCount && meta.chapterCount > 1 && (
-            <p className="text-fs-body font-semibold mb-1" style={{ color: c1 }}>
-              Chapter {meta.chapterNumber ?? 1}
-            </p>
-          )}
 
           <p className="text-fs-caption font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
             Id = {id}
@@ -519,13 +538,15 @@ export default function ClassicDetailPage() {
                 return (
                   <button
                     key={c.id}
-                    onClick={() => { if (!isCurrent) router.push(`/library/classics/${c.id}`); }}
+                    onClick={() => switchChapter(c.id)}
+                    disabled={switchingChapter}
                     className="flex-shrink-0 rounded-2xl overflow-hidden text-left transition-all active:scale-[0.96] select-none relative"
                     style={{
                       width: 108,
                       height: 152,
                       border: isCurrent ? `2px solid ${c1}` : "1px solid rgba(255,255,255,0.1)",
                       boxShadow: isCurrent ? `0 0 16px ${c1}55` : "0 4px 14px rgba(0,0,0,0.4)",
+                      opacity: switchingChapter && !isCurrent ? 0.5 : 1,
                     }}
                   >
                     {c.coverUrl ? (

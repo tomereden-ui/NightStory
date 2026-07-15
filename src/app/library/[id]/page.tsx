@@ -48,18 +48,6 @@ function seriesDisplayTitle(title: string): string {
   return title.replace(/\s*-\s*(chapter|פרק)\s*\d+\s*$/i, "").trim();
 }
 
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  return `${days} days ago`;
-}
-
 export default function StoryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -207,6 +195,33 @@ export default function StoryDetailPage() {
       .then((data) => setChapters(Array.isArray(data) ? data : []))
       .catch(() => setChapters([]));
   }, [entry?.seriesId]);
+
+  const [switchingChapter, setSwitchingChapter] = useState(false);
+
+  // Swaps to a sibling chapter in place — no router navigation, so the cover
+  // hero, back button, and chapters row never unmount/reflow. Only the audio
+  // player and script content update to the new chapter's data. entry.seriesId
+  // stays the same across chapters, so the chapters-row effect above doesn't
+  // re-fetch either.
+  const switchChapter = useCallback(async (newId: string) => {
+    if (newId === entry?.id || switchingChapter) return;
+    setSwitchingChapter(true);
+    try {
+      const res = await fetch(`/api/library/${newId}`);
+      const data = await res.json();
+      if ("id" in data) {
+        setEntry(data);
+        setPlaying(false);
+        setCurrentTime(0);
+        setDuration(0);
+        window.history.replaceState(null, "", `/library/${newId}`);
+      }
+    } catch {
+      // keep current chapter on failure
+    } finally {
+      setSwitchingChapter(false);
+    }
+  }, [entry?.id, switchingChapter]);
 
   // Same key the home page uses to track which child profile is active —
   // favorites are scoped per-child, matching how child_ids scopes stories.
@@ -422,12 +437,6 @@ export default function StoryDetailPage() {
             className="absolute bottom-0 left-0 right-0 h-20"
             style={{ background: "linear-gradient(to bottom, transparent, #05080F)" }}
           />
-          {/* Now playing label */}
-          <div className="absolute bottom-6 left-5">
-            <span className="text-fs-body tracking-widest uppercase" style={{ color: "rgba(79,195,247,0.7)" }}>
-              Now Playing
-            </span>
-          </div>
           {/* Back button */}
           <button
             onClick={() => router.back()}
@@ -452,19 +461,9 @@ export default function StoryDetailPage() {
           >
             {entry.chapterCount && entry.chapterCount > 1 ? seriesDisplayTitle(entry.title) : entry.title}
           </h1>
-          {entry.chapterCount && entry.chapterCount > 1 && (
-            <p className="text-fs-body font-semibold mb-1" style={{ color: "rgba(79,195,247,0.7)" }}>
-              Chapter {entry.chapterNumber ?? 1}
-            </p>
-          )}
           <p className="text-fs-caption font-mono mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
             Id = {entry.id}
           </p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.3)" }}>
-              {timeAgo(entry.createdAt)}
-            </p>
-          </div>
         </div>
 
         {/* Chapter list — only shown for stories that are part of a series.
@@ -484,13 +483,15 @@ export default function StoryDetailPage() {
                 return (
                   <button
                     key={c.id}
-                    onClick={() => { if (!isCurrent) router.push(`/library/${c.id}`); }}
+                    onClick={() => switchChapter(c.id)}
+                    disabled={switchingChapter}
                     className="flex-shrink-0 rounded-2xl overflow-hidden text-left transition-all active:scale-[0.96] select-none relative"
                     style={{
                       width: 108,
                       height: 152,
                       border: isCurrent ? "2px solid #4fc3f7" : "1px solid rgba(255,255,255,0.1)",
                       boxShadow: isCurrent ? "0 0 16px rgba(79,195,247,0.35)" : "0 4px 14px rgba(0,0,0,0.4)",
+                      opacity: switchingChapter && !isCurrent ? 0.5 : 1,
                     }}
                   >
                     {c.coverUrl ? (
