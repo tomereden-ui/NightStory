@@ -4,12 +4,20 @@ A single block can have more than one issue at once — e.g. a stylistic mismatc
 
   Step 1 — Nikkud & Grammar Check: Read the spoken text with its vowel points. Look for:
     - Missing nikkud on letters within a punctuated word.
-    - Grammatically incorrect nikkud (e.g., using a Shuruk instead of a Chalam, or incorrect Begadkefat dagesh after a preposition).
+    - Grammatically incorrect nikkud (e.g., using a Shuruk instead of a Chalam, or incorrect Begadkefat dagesh after a preposition — verify the presence/absence of a Dagesh Kal (ּ) following the prefix letters ב, כ, ל, מ correctly reflects the plosive/fricative sound).
     - Phrasing or semantic errors (e.g., incorrect construct state / סמיכות).
+    - Kamats Katan (קמץ קטן — an "O" sound in a closed unstressed syllable) written as a bare Kamats instead of Cholam Male (וֹ): convert it, adding the Vav anchor, so the TTS engine doesn't read it as "A". High-frequency words to check for this: כָּל meaning "all/every" (pronounced "Kol") → must become כּוֹל, including inside כּוֹל כָּךְ; צָהֳרַיִם → צוֹהֳרַיִם; אֳנִיָּה → אוֹנִיָּה; the תָּכְ- prefix in תָּכְנִית/תָּכְנָה → תּוֹכְנִית/תּוֹכְנָה.
+      Exception: do NOT touch a Kamats Gadol (a native "A" sound in an open syllable, e.g. the ה in הָיָה or the כ in כָּךְ) — כָּךְ stays כָּךְ even right next to a converted כּוֹל.
+    - Qubuts (ֻ) that should be a Shuruq (וּ) with a Vav anchor for TTS clarity — e.g. כֻּלָּם → כּוּלָּם, דֻּבְדְּבָן → דּוּבְדְּבָן. Skip this where the vowel is really a native Kamats Gadol or other structure the word depends on.
+    - A single consonantal Yod (the "Y" sound before a Kamats/Patach, under a Chiriq-Chaser) that should be doubled (יי) with its nikkud preserved — e.g. נִגְרִיָּה → נִגְרִייָּה, קְרִיָּה → קְרִייָּה.
+    - The classic fairy-tale opening "היה היה" mispronounced by TTS as written — it must always read הָיֹה הָיָה (first "היה" is an infinitive absolute with Cholem Chaser on the Yod — "Hayo"; the second is the past-tense verb with Kamats Gadol — "Haya").
+    - A homograph (הומוגרף) vocalized for the wrong part of speech given its context — e.g. the noun סֵפֶר vocalized like the verb סִפֵּר, or מִשְׁפָּחָה (family) vocalized like מְשַׁפְּחָה (marrying off). Fix it to match how the word is actually used in this sentence.
+    - A vocal Shva (שווא נע) under a guttural letter or at the start of a word that a TTS engine would likely drop or blur — if so, substitute a Chatef-Patach (ֲ) or Chatef-Segol (ֱ) instead to force a clear, audible transition.
 
   Step 2 — Proofread Check (Strip Nikkud): Mentally strip ALL nikkud from the spoken text to view it as "naked" Hebrew text. Re-read it word-by-word, purely for spelling, IGNORING the nikkud entirely this time. Look for:
     - Missing letters in quadriliteral/repeated roots (שורשים מרובעים/חוזרים), such as "שפשתי" instead of "שפשפתי".
-    - Foreign or English characters accidentally typed via keyboard layout errors (e.g., "וְאַרְBַע").
+    - Foreign or English characters accidentally typed via keyboard layout errors (e.g., "וְאַרְBַע"), including similar-looking Latin letters that crept in from a keyboard-layout slip (e.g. English 'o' in place of Hebrew ס, or English 'x' in place of צ).
+    - Final letters (אותיות סופיות — ך, ם, ן, ף, ץ) swapped back to their regular form at the end of a word during vocalization — e.g. a trailing ן that got typed as נ.
     - Swapped, missing, or duplicated letters that might still look plausible at a glance.
 
 If either step finds something, your rewrite must fix everything found across BOTH steps, not just whichever one you noticed first.
