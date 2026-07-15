@@ -181,6 +181,12 @@ const PROMOTED_COLUMN = ", promoted";
 const COVER_FOCUS_COLUMNS = ", cover_focus_x, cover_focus_y";
 // Same deal for the chapters migration.
 const SERIES_COLUMNS = ", series_id, chapter_number, chapter_count";
+// Present since the original schema (no migration gate needed) — pulled in
+// separately from LIST_COLUMNS because most list views don't need them, but
+// library search does: character names (from character_profiles), mood
+// (derived from scenes[].primaryMood), and moral_lessons all become
+// filterable there. Still much lighter than `blocks`, the actual script text.
+const SEARCH_COLUMNS = ", character_profiles, scenes, moral_lessons";
 
 // Lightweight, family-scoped list view — one DB round trip, no script
 // payloads. View/share counts come from the trigger-maintained counter
@@ -204,10 +210,10 @@ export async function getEntrySummaries(
     return q.order("created_at", { ascending: false }).limit(opts?.limit ?? 100);
   };
 
-  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS + SERIES_COLUMNS);
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS + SERIES_COLUMNS + SEARCH_COLUMNS);
   // Counter/promoted/cover-focus/series columns don't exist until their migrations run — retry without.
   if (error && /view_count|share_count|promoted|cover_focus|series_id|chapter_/.test(error.message)) {
-    ({ data, error } = await run(LIST_COLUMNS));
+    ({ data, error } = await run(LIST_COLUMNS + SEARCH_COLUMNS));
   }
   if (error) throw new Error(`getEntrySummaries: ${error.message}`);
   return (data ?? []).map((row) => toEntry(row));
@@ -231,9 +237,9 @@ export async function getAllVisibleEntries(
       .limit(opts?.limit ?? 150);
   };
 
-  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS + SERIES_COLUMNS);
+  let { data, error } = await run(LIST_COLUMNS + COUNTER_COLUMNS + PROMOTED_COLUMN + COVER_FOCUS_COLUMNS + SERIES_COLUMNS + SEARCH_COLUMNS);
   if (error && /view_count|share_count|promoted|cover_focus|series_id|chapter_/.test(error.message)) {
-    ({ data, error } = await run(LIST_COLUMNS));
+    ({ data, error } = await run(LIST_COLUMNS + SEARCH_COLUMNS));
   }
   if (error) throw new Error(`getAllVisibleEntries: ${error.message}`);
   return (data ?? []).map((row) => toEntry(row));

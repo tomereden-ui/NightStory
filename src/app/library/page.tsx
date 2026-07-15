@@ -9,6 +9,9 @@ import type { ClassicMeta } from "@/lib/classicStories";
 import Icon from "@/components/ui/Icon";
 import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
+import { getLessonsCatalog } from "@/constants/lessonsUi";
+import { LANGUAGE_META } from "@/lib/i18n";
+import type { Language } from "@/types";
 
 
 const CARD_PALETTES: [string, string][] = [
@@ -36,6 +39,36 @@ function formatDuration(seconds?: number): string | null {
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// Same 7 moods scenes are tagged with (see story-guidance.txt's SCENE
+// BREAKDOWN section) — one color/emoji per mood, reused for the library's
+// mood filter chips.
+const MOODS: { id: string; emoji: string; color: string }[] = [
+  { id: "Gentle",    emoji: "🌤️", color: "#4fc3f7" },
+  { id: "Whimsical", emoji: "✨",  color: "#a78bfa" },
+  { id: "Playful",   emoji: "🎈",  color: "#fbbf24" },
+  { id: "Tense",     emoji: "⚡",  color: "#fb923c" },
+  { id: "Soothing",  emoji: "🌊",  color: "#10b981" },
+  { id: "Wondrous",  emoji: "🌟",  color: "#f472b6" },
+  { id: "Cozy",      emoji: "🕯️", color: "#f59e0b" },
+];
+
+// A story doesn't have one mood of its own — only its scenes do — so this
+// picks the most common primaryMood across them (first one wins a tie) as
+// the story-level mood shown/filtered on in the library.
+function dominantMood(entry: { scenes?: { primaryMood?: string }[] }): string | undefined {
+  const moods = (entry.scenes ?? []).map((s) => s.primaryMood).filter(Boolean) as string[];
+  if (moods.length === 0) return undefined;
+  const counts = new Map<string, number>();
+  for (const m of moods) counts.set(m, (counts.get(m) ?? 0) + 1);
+  let best: string | undefined;
+  let bestCount = 0;
+  for (const m of moods) {
+    const c = counts.get(m)!;
+    if (c > bestCount) { best = m; bestCount = c; }
+  }
+  return best;
 }
 
 // Collapses a list to one card per multi-chapter series — a browse grid
@@ -491,7 +524,7 @@ function FamilyStoriesGrid({
 }
 
 export default function LibraryPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { effective } = useViewMode();
   const isMobile = effective === "mobile";
 
@@ -517,6 +550,9 @@ export default function LibraryPage() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedMoods, setSelectedMoods] = useState<Set<string>>(new Set());
+  const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
+  const [selectedLanguage, setSelectedLanguage] = useState("");
   const recentScrollRef = useRef<HTMLDivElement>(null);
   const [recentCanScrollLeft, setRecentCanScrollLeft] = useState(false);
   const [recentCanScrollRight, setRecentCanScrollRight] = useState(false);
@@ -582,15 +618,53 @@ export default function LibraryPage() {
   }, [activeChildId]);
 
   const q = search.toLowerCase().trim();
-  const matchesQuery = (title: string, summary?: string) =>
-    !q || title.toLowerCase().includes(q) || (summary ?? "").toLowerCase().includes(q);
-  const filtered = dedupeBySeries(entries.filter((e) => matchesQuery(e.title, e.summary)));
-  // Same search box now applies to every tab except Classics, which already
-  // has its own self-contained search — one filtered list per tab's own
-  // dataset, all driven by the same `search` state.
-  const filteredAll = dedupeBySeries(allEntries.filter((e) => matchesQuery(e.title, e.summary)));
-  const filteredFamily = familyEntries.filter((e) => matchesQuery(e.title, e.summary));
+  // Text box also matches character names now, not just title/summary —
+  // parents often remember "the fox story" or a character's name, not the
+  // title. characterProfiles is only present on entries fetched with
+  // SEARCH_COLUMNS (My Stories/All/Family) — undefined elsewhere, so this
+  // degrades to the old title/summary-only match there.
+  const matchesQuery = (title: string, summary?: string, characterProfiles?: Record<string, unknown>) =>
+    !q || title.toLowerCase().includes(q) || (summary ?? "").toLowerCase().includes(q)
+      || Object.keys(characterProfiles ?? {}).some((name) => name.toLowerCase().includes(q));
+
+  const matchesMood = (entry: LibraryEntry) =>
+    selectedMoods.size === 0 || (dominantMood(entry) !== undefined && selectedMoods.has(dominantMood(entry)!));
+  const matchesLessons = (entry: LibraryEntry) =>
+    selectedLessons.size === 0 || (entry.moralLessons ?? []).some((l) => selectedLessons.has(l.lesson));
+  const matchesLanguage = (entry: LibraryEntry) =>
+    !selectedLanguage || entry.language === selectedLanguage;
+  const matchesFilters = (e: LibraryEntry) =>
+    matchesQuery(e.title, e.summary, e.characterProfiles) && matchesMood(e) && matchesLessons(e) && matchesLanguage(e);
+
+  const filtered = dedupeBySeries(entries.filter(matchesFilters));
+  // Same search box + filter chips now apply to every tab except Classics
+  // (self-contained search) and Community (its list endpoint doesn't carry
+  // character/mood/lesson/language data) — one filtered list per tab's own
+  // dataset, all driven by the same shared filter state.
+  const filteredAll = dedupeBySeries(allEntries.filter(matchesFilters));
+  const filteredFamily = familyEntries.filter(matchesFilters);
   const filteredCommunity = communityStories.filter((s) => matchesQuery(s.title, s.summary));
+
+  // Filter chip/dropdown options — only ever show a mood/lesson/language the
+  // family's own visible library actually has at least one story for, not
+  // every possible value, so every chip shown is guaranteed to do something.
+  const filterableEntries = [...entries, ...allEntries, ...familyEntries];
+  const availableMoods = MOODS.filter((m) => filterableEntries.some((e) => dominantMood(e) === m.id));
+  const availableLessonIds = Array.from(new Set(filterableEntries.flatMap((e) => (e.moralLessons ?? []).map((l) => l.lesson))));
+  const availableLanguages = Array.from(new Set(filterableEntries.map((e) => e.language).filter(Boolean))) as string[];
+  const hasFilterableData = availableMoods.length > 0 || availableLessonIds.length > 0 || availableLanguages.length > 0;
+  const lessonCatalog = getLessonsCatalog(language);
+
+  const toggleMood = (id: string) => setSelectedMoods((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleLesson = (id: string) => setSelectedLessons((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const handleDeleteConfirm = async (id: string) => {
     setDeletingId(id);
@@ -780,6 +854,81 @@ export default function LibraryPage() {
               >
                 <Icon name="close" size={14} />
               </button>
+            )}
+          </div>
+        )}
+
+        {/* Filter chips — mood + moral lessons + language. Shares the same
+            filter state across My Stories/All/Family; hidden on Classics
+            (own search) and Community (its list endpoint has none of this
+            data yet). Each chip/option only ever shows a value that's
+            actually present on a visible story, so nothing is a dead end. */}
+        {activeTab !== "classics" && activeTab !== "community" && hasFilterableData && (
+          <div className="flex flex-col gap-2 mb-3">
+            {availableMoods.length > 0 && (
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+                {availableMoods.map((m) => {
+                  const active = selectedMoods.has(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => toggleMood(m.id)}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                      style={active
+                        ? { background: `${m.color}26`, border: `1px solid ${m.color}66`, color: m.color }
+                        : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+                    >
+                      <span>{m.emoji}</span>
+                      <span>{m.id}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {availableLessonIds.length > 0 && (
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+                {lessonCatalog.filter((l) => availableLessonIds.includes(l.id)).map((l) => {
+                  const active = selectedLessons.has(l.id);
+                  return (
+                    <button
+                      key={l.id}
+                      onClick={() => toggleLesson(l.id)}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                      style={active
+                        ? { background: "rgba(139,92,246,0.16)", border: "1px solid rgba(139,92,246,0.45)", color: "#c4b5fd" }
+                        : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+                    >
+                      <Icon name={l.icon} size={13} />
+                      <span>{l.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {availableLanguages.length > 1 && (
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="self-start px-3 py-2 rounded-xl text-fs-body outline-none"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.09)",
+                  color: selectedLanguage ? "#fff" : "rgba(255,255,255,0.55)",
+                  appearance: "none",
+                }}
+              >
+                <option value="" style={{ background: "#0D1120" }}>🌐 All languages</option>
+                {availableLanguages.map((code) => {
+                  const meta = LANGUAGE_META[code as Language];
+                  return (
+                    <option key={code} value={code} style={{ background: "#0D1120" }}>
+                      {meta ? `${meta.flag} ${meta.label}` : code}
+                    </option>
+                  );
+                })}
+              </select>
             )}
           </div>
         )}
