@@ -186,6 +186,43 @@ export async function reassignAvatarsForStory(
   return { characterProfiles: updated, changedCount };
 }
 
+// ─── Series cast sync ───────────────────────────────────────────────────────
+// Used when adding a new episode to an existing series (admin/assign-to-series) —
+// makes a returning character (e.g. "Alice") look and sound identical across
+// chapters by copying avatar + voice assignments from an already-cast chapter
+// onto the new one, matched by exact character name. Cover art is copied
+// separately by the caller (a plain coverUrl assignment, no per-character
+// logic needed there).
+
+export function copyCastAssignments(
+  source: LibraryEntry,
+  target: LibraryEntry,
+): { characterProfiles: Record<string, CharacterProfile>; blocks: ScriptBlock[]; matchedCount: number } {
+  const castMap: Record<string, { avatarUrl?: string; voiceId?: string }> = {};
+  for (const [name, profile] of Object.entries(source.characterProfiles ?? {})) {
+    const voiceId = source.blocks.find((b) => b.characterName === name && b.assignedVoiceId)?.assignedVoiceId;
+    castMap[name] = { avatarUrl: profile.avatarUrl, voiceId };
+  }
+
+  let matchedCount = 0;
+  const characterProfiles: Record<string, CharacterProfile> = { ...(target.characterProfiles ?? {}) };
+  for (const name of Object.keys(characterProfiles)) {
+    const match = castMap[name];
+    if (match?.avatarUrl && match.avatarUrl !== characterProfiles[name].avatarUrl) {
+      characterProfiles[name] = { ...characterProfiles[name], avatarUrl: match.avatarUrl };
+      matchedCount++;
+    }
+  }
+
+  const blocks = target.blocks.map((b) => {
+    const match = castMap[b.characterName];
+    if (match?.voiceId && match.voiceId !== b.assignedVoiceId) return { ...b, assignedVoiceId: match.voiceId };
+    return b;
+  });
+
+  return { characterProfiles, blocks, matchedCount };
+}
+
 // ─── Moral lessons ──────────────────────────────────────────────────────────
 // Moved here from analyze-lessons/route.ts (which still owns persisting the
 // result for its own single-story use from Studio); refresh-story calls this

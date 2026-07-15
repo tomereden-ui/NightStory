@@ -14,6 +14,7 @@ import { stripNamePrefix } from "@/utils/stripSoundCues";
 import type { CharacterProfile } from "@/lib/libraryStore";
 import type { CharacterClassification } from "@/lib/services/characterClassifier";
 import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
+import type { AdminStoryOption } from "@/app/api/admin/list-all-stories/route";
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -1849,6 +1850,56 @@ export default function AdminPage() {
     runRefreshStory({ applyAll: true });
   };
 
+  // ── Admin Services: Add an existing story to a series as a new episode ─────
+  const [seriesStoryList, setSeriesStoryList] = useState<AdminStoryOption[]>([]);
+  const [seriesEpisodeId, setSeriesEpisodeId] = useState("");
+  const [seriesAnchorId, setSeriesAnchorId] = useState("");
+  const [seriesChapterNumber, setSeriesChapterNumber] = useState("");
+  const [seriesAssignRunning, setSeriesAssignRunning] = useState(false);
+  const [seriesAssignLog, setSeriesAssignLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/list-all-stories").then((r) => r.json()).then((data) => {
+      if (Array.isArray(data)) setSeriesStoryList(data);
+    }).catch(() => {});
+  }, []);
+
+  const seriesAnchorEntry = seriesStoryList.find((s) => s.id === seriesAnchorId);
+  const seriesAnchorChapters = seriesAnchorEntry
+    ? seriesStoryList.filter((s) => s.seriesId && s.seriesId === seriesAnchorEntry.seriesId)
+    : [];
+
+  const handleAssignToSeries = async () => {
+    const chapterNumber = Number(seriesChapterNumber);
+    if (!seriesEpisodeId || !seriesAnchorId || !Number.isInteger(chapterNumber) || chapterNumber < 1) return;
+    setSeriesAssignRunning(true);
+    setSeriesAssignLog([{ type: "info", text: "Copying cover, avatars, and voices from the series…" }]);
+    try {
+      const res = await fetch("/api/admin/assign-to-series", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId: seriesEpisodeId, seriesAnchorId, chapterNumber }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSeriesAssignLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      setSeriesAssignLog((l) => [...l, {
+        type: "success",
+        text: `✅ Added as Chapter ${data.chapterNumber} — series now has ${data.chapterCount} chapters. Cast matched: ${data.castMatched}/${data.castTotal} character(s).`,
+      }]);
+      // Refresh the list so the picker reflects the new series membership immediately.
+      fetch("/api/admin/list-all-stories").then((r) => r.json()).then((d) => { if (Array.isArray(d)) setSeriesStoryList(d); }).catch(() => {});
+      setSeriesEpisodeId("");
+      setSeriesChapterNumber("");
+    } catch (e) {
+      setSeriesAssignLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setSeriesAssignRunning(false);
+    }
+  };
+
   // ── Admin Services: Feature a story on the home hero banner ───────────────
   const [promoteStoryId, setPromoteStoryId] = useState("");
   const [promoteRunning, setPromoteRunning] = useState(false);
@@ -2724,6 +2775,104 @@ export default function AdminPage() {
                 <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
                   style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   {previewLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Add Episode to Series Panel ── */}
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(167,139,250,0.04)", border: "1px solid rgba(167,139,250,0.18)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">📚 Add Episode to Series</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Links an existing story to another story's series as a specific chapter. Copies the
+                    cover image and every returning character's avatar + voice from the series so the
+                    cast looks and sounds identical across episodes. If the series story isn't part of a
+                    series yet, it automatically becomes Chapter 1.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5 mt-4">
+                <div>
+                  <Label>Story to add as an episode</Label>
+                  <Select
+                    value={seriesEpisodeId}
+                    onChange={setSeriesEpisodeId}
+                    options={[
+                      { value: "", label: "— Select a story —" },
+                      ...seriesStoryList.map((s) => ({
+                        value: s.id,
+                        label: `${s.title}${s.seriesId ? ` (already Ch. ${s.chapterNumber ?? "?"})` : ""} — ${new Date(s.createdAt).toLocaleDateString()}`,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                <div>
+                  <Label>Add to the series of this story</Label>
+                  <Select
+                    value={seriesAnchorId}
+                    onChange={setSeriesAnchorId}
+                    options={[
+                      { value: "", label: "— Select a story —" },
+                      ...seriesStoryList.filter((s) => s.id !== seriesEpisodeId).map((s) => ({
+                        value: s.id,
+                        label: `${s.title}${s.seriesId ? ` (series, ${s.chapterCount ?? "?"} ch.)` : " (standalone → becomes Ch. 1)"} — ${new Date(s.createdAt).toLocaleDateString()}`,
+                      })),
+                    ]}
+                  />
+                  {seriesAnchorChapters.length > 0 && (
+                    <p className="text-fs-body mt-1.5" style={{ color: "rgba(167,139,250,0.7)" }}>
+                      Existing chapters: {seriesAnchorChapters
+                        .slice()
+                        .sort((a, b) => (a.chapterNumber ?? 0) - (b.chapterNumber ?? 0))
+                        .map((c) => `Ch.${c.chapterNumber ?? "?"} "${c.title}"`)
+                        .join(", ")}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <Label>Chapter number for the new episode</Label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={seriesChapterNumber}
+                      onChange={(e) => setSeriesChapterNumber(e.target.value)}
+                      placeholder="e.g. 2"
+                      disabled={seriesAssignRunning}
+                      className="w-full rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    />
+                  </div>
+                  <button
+                    onClick={handleAssignToSeries}
+                    disabled={seriesAssignRunning || !seriesEpisodeId || !seriesAnchorId || !seriesChapterNumber.trim()}
+                    className="px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                    style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.4)", color: "#a78bfa" }}>
+                    {seriesAssignRunning ? "Adding…" : "Add as Episode"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Log output */}
+              {seriesAssignLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {seriesAssignLog.map((entry, i) => (
                     <p key={i} className="text-fs-body leading-snug"
                       style={{
                         color: entry.type === "error" ? "#f87171"

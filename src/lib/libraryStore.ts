@@ -339,15 +339,27 @@ export async function getPromotedEntry(): Promise<LibraryEntry | undefined> {
 // All chapters in a series, ordered for display (siblings list on a story
 // detail page). Returns [] for a standalone story (no seriesId) rather than
 // erroring, so callers can call this unconditionally.
-export async function getSeriesChapters(seriesId: string, familyId?: string): Promise<LibraryEntry[]> {
+//
+// allFamilies bypasses the visibility filter entirely (every chapter
+// regardless of owner or public/private) — for admin tooling, which must be
+// able to see a private family's chapters too, not just public ones. Without
+// it, an absent familyId defaults to public-only (the pre-existing behavior
+// for the user-facing chapter row, where "no session" should only ever see
+// public/classic chapters).
+export async function getSeriesChapters(seriesId: string, familyId?: string, allFamilies = false): Promise<LibraryEntry[]> {
   if (!seriesId) return [];
   let q = supabase
     .from("stories")
     .select(LIST_COLUMNS + SERIES_COLUMNS)
     .eq("series_id", seriesId)
     .eq("is_draft", false);
-  if (familyId) q = q.or(`family_id.eq.${familyId},family_id.is.null,is_public.eq.true`);
-  else q = q.eq("is_public", true);
+  if (allFamilies) {
+    // no visibility filter — every chapter, any owner
+  } else if (familyId) {
+    q = q.or(`family_id.eq.${familyId},family_id.is.null,is_public.eq.true`);
+  } else {
+    q = q.eq("is_public", true);
+  }
   const { data, error } = await q.order("chapter_number", { ascending: true });
   if (error) throw new Error(`getSeriesChapters: ${error.message}`);
   return (data ?? []).map((row) => toEntry(row));
