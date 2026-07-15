@@ -73,6 +73,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.access_token) {
         const maxAge = session.expires_in ?? 3600;
         document.cookie = `ns-session=${session.access_token}; path=/; max-age=${maxAge}; SameSite=Strict`;
+
+        // Best-effort IP → country lookup, once per browser tab session.
+        // The endpoint itself skips the actual geolocation call once
+        // country_code is already set, but this flag avoids even hitting
+        // it again on every auth-state change within the same session
+        // (e.g. token refresh fires this listener too).
+        if (!sessionStorage.getItem("ns-country-checked")) {
+          sessionStorage.setItem("ns-country-checked", "1");
+          fetch("/api/account/detect-country", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }).catch(() => {});
+        }
       } else {
         document.cookie = "ns-session=; path=/; max-age=0; SameSite=Strict";
       }
