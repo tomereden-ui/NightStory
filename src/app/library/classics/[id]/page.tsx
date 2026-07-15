@@ -492,37 +492,52 @@ export default function ClassicDetailPage() {
         {/* Divider */}
         <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
 
-        {/* Chapter list — only shown for classics that are part of a series */}
+        {/* Chapter list — only shown for classics that are part of a series.
+            Horizontal row of small cover cards (Netflix "episodes" style) —
+            a spread of cover thumbnails reads at a glance which chapter is
+            which, instead of relying on title text alone. */}
         {chapters.length > 1 && (
-          <div className="mx-5 mb-5 px-4 py-3.5 rounded-2xl" style={{ background: `linear-gradient(135deg, ${c1}0a, ${c2}0a)`, border: `1px solid ${c1}22` }}>
-            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5" style={{ color: `${c1}bb` }}>
+          <div className="mb-5">
+            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5 px-5" style={{ color: `${c1}bb` }}>
               Chapters
             </p>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex gap-3 overflow-x-auto px-5 pb-1" style={{ scrollbarWidth: "none" }}>
               {chapters.map((c) => {
                 const isCurrent = c.id === id;
+                const [cc1, cc2] = cardPalette(c.title);
                 return (
                   <button
                     key={c.id}
                     onClick={() => { if (!isCurrent) router.push(`/library/classics/${c.id}`); }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]"
-                    style={isCurrent
-                      ? { background: `${c1}22`, border: `1px solid ${c1}66` }
-                      : { background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }
-                    }
+                    className="flex-shrink-0 rounded-2xl overflow-hidden text-left transition-all active:scale-[0.96] select-none relative"
+                    style={{
+                      width: 108,
+                      height: 152,
+                      border: isCurrent ? `2px solid ${c1}` : "1px solid rgba(255,255,255,0.1)",
+                      boxShadow: isCurrent ? `0 0 16px ${c1}55` : "0 4px 14px rgba(0,0,0,0.4)",
+                    }}
                   >
+                    {c.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.coverUrl} alt={c.title} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ background: `linear-gradient(145deg, ${cc1}33, ${cc2}66)` }}>
+                        🌙
+                      </div>
+                    )}
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.95) 100%)" }} />
                     <span
-                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-fs-body font-bold"
-                      style={{ background: isCurrent ? `${c1}44` : "rgba(255,255,255,0.08)", color: isCurrent ? c1 : "rgba(255,255,255,0.5)" }}
+                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full flex items-center justify-center text-fs-body font-bold"
+                      style={{ background: isCurrent ? c1 : "rgba(5,8,20,0.75)", color: isCurrent ? "#04101a" : "rgba(255,255,255,0.75)", backdropFilter: "blur(4px)" }}
                     >
                       {c.chapterNumber ?? "–"}
                     </span>
-                    <span className="flex-1 text-fs-body font-semibold truncate" style={{ color: isCurrent ? "#fff" : "rgba(255,255,255,0.75)" }}>
-                      {c.title}
-                    </span>
                     {isCurrent && (
-                      <span className="text-fs-body font-bold flex-shrink-0" style={{ color: c1 }}>▶</span>
+                      <span className="absolute top-1.5 right-1.5 text-fs-body" style={{ color: c1 }}>▶</span>
                     )}
+                    <p className="absolute bottom-1.5 left-2 right-2 text-fs-body font-semibold text-white line-clamp-2 leading-tight">
+                      {c.title}
+                    </p>
                   </button>
                 );
               })}

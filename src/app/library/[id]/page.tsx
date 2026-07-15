@@ -28,6 +28,20 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+const CARD_PALETTES: [string, string][] = [
+  ["#4fc3f7", "#7c3aed"],
+  ["#f59e0b", "#ec4899"],
+  ["#10b981", "#4fc3f7"],
+  ["#a78bfa", "#f472b6"],
+  ["#38bdf8", "#818cf8"],
+  ["#fb923c", "#e879f9"],
+];
+function cardPalette(title: string): [string, string] {
+  let h = 0;
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) >>> 0;
+  return CARD_PALETTES[h % CARD_PALETTES.length];
+}
+
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
@@ -448,37 +462,53 @@ export default function StoryDetailPage() {
           </div>
         </div>
 
-        {/* Chapter list — only shown for stories that are part of a series */}
+        {/* Chapter list — only shown for stories that are part of a series.
+            Horizontal row of small cover cards (Netflix "episodes" style) —
+            replaced the earlier full-width row list because a spread of
+            cover thumbnails reads at a glance which chapter is which,
+            instead of relying on title text alone. */}
         {chapters.length > 1 && (
-          <div className="mx-5 mt-3 mb-1 px-4 py-3.5 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5" style={{ color: "rgba(79,195,247,0.45)" }}>
+          <div className="mt-3 mb-1">
+            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5 px-5" style={{ color: "rgba(79,195,247,0.45)" }}>
               Chapters
             </p>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex gap-3 overflow-x-auto px-5 pb-1" style={{ scrollbarWidth: "none" }}>
               {chapters.map((c) => {
                 const isCurrent = c.id === entry.id;
+                const [cc1, cc2] = cardPalette(c.title);
                 return (
                   <button
                     key={c.id}
                     onClick={() => { if (!isCurrent) router.push(`/library/${c.id}`); }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98]"
-                    style={isCurrent
-                      ? { background: "rgba(79,195,247,0.14)", border: "1px solid rgba(79,195,247,0.4)" }
-                      : { background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }
-                    }
+                    className="flex-shrink-0 rounded-2xl overflow-hidden text-left transition-all active:scale-[0.96] select-none relative"
+                    style={{
+                      width: 108,
+                      height: 152,
+                      border: isCurrent ? "2px solid #4fc3f7" : "1px solid rgba(255,255,255,0.1)",
+                      boxShadow: isCurrent ? "0 0 16px rgba(79,195,247,0.35)" : "0 4px 14px rgba(0,0,0,0.4)",
+                    }}
                   >
+                    {c.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.coverUrl} alt={c.title} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-3xl" style={{ background: `linear-gradient(145deg, ${cc1}33, ${cc2}66)` }}>
+                        🌙
+                      </div>
+                    )}
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.95) 100%)" }} />
                     <span
-                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-fs-body font-bold"
-                      style={{ background: isCurrent ? "rgba(79,195,247,0.3)" : "rgba(255,255,255,0.08)", color: isCurrent ? "#4fc3f7" : "rgba(255,255,255,0.5)" }}
+                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full flex items-center justify-center text-fs-body font-bold"
+                      style={{ background: isCurrent ? "#4fc3f7" : "rgba(5,8,20,0.75)", color: isCurrent ? "#04101a" : "rgba(255,255,255,0.75)", backdropFilter: "blur(4px)" }}
                     >
                       {c.chapterNumber ?? "–"}
                     </span>
-                    <span className="flex-1 text-fs-body font-semibold truncate" style={{ color: isCurrent ? "#fff" : "rgba(255,255,255,0.75)" }}>
-                      {c.title}
-                    </span>
                     {isCurrent && (
-                      <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7" }}>▶</span>
+                      <span className="absolute top-1.5 right-1.5 text-fs-body" style={{ color: "#4fc3f7" }}>▶</span>
                     )}
+                    <p className="absolute bottom-1.5 left-2 right-2 text-fs-body font-semibold text-white line-clamp-2 leading-tight">
+                      {c.title}
+                    </p>
                   </button>
                 );
               })}
