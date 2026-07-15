@@ -19,6 +19,7 @@
 CREATE TABLE IF NOT EXISTS public.user_profiles (
   id              uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   display_name    text,
+  email           text,          -- denormalized from auth.users.email, kept in sync by triggers below
   phone           text,          -- E.164 format, e.g. "+972501234567"
   country_code    text,          -- ISO 3166-1 alpha-2, e.g. "IL", "US"
   preferred_language text NOT NULL DEFAULT 'en',
@@ -34,8 +35,8 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-  INSERT INTO public.user_profiles (id, display_name)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'))
+  INSERT INTO public.user_profiles (id, display_name, email)
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'), NEW.email)
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
@@ -45,6 +46,22 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Keep user_profiles.email in sync if it changes after signup.
+CREATE OR REPLACE FUNCTION public.handle_user_email_updated()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF NEW.email IS DISTINCT FROM OLD.email THEN
+    UPDATE public.user_profiles SET email = NEW.email, updated_at = now() WHERE id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_email_updated ON auth.users;
+CREATE TRIGGER on_auth_user_email_updated
+  AFTER UPDATE OF email ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_user_email_updated();
 
 
 -- ─── 2. Families & members ───────────────────────────────────────────────────
