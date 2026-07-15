@@ -804,7 +804,7 @@ function CharacterCard({
           {characterName}
         </span>
         {voice && (
-          <span className="text-fs-body font-medium text-center truncate w-full" style={{ color: "rgba(255,255,255,0.4)" }}>{voice.name.split(" ")[0]}</span>
+          <span className="text-fs-body font-medium text-center truncate w-full" style={{ color: "rgba(255,255,255,0.6)" }}>{voice.name.split(" ")[0]}</span>
         )}
       </button>
     </div>
@@ -2325,7 +2325,7 @@ export default function Studio2Page() {
             {/* CREATE tab */}
             <button
               onClick={() => setActiveTab(createMode)}
-              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${isOnCreateTab ? "text-white" : "text-white/30"}`}
+              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${isOnCreateTab ? "text-white" : "text-white/50"}`}
             >
               <span className="flex items-center justify-center gap-1.5">
                 <span>✨</span>
@@ -2337,7 +2337,7 @@ export default function Studio2Page() {
             <button
               onClick={() => { if (hasScript) setActiveTab("script"); }}
               disabled={!hasScript}
-              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${activeTab === "script" ? "text-white" : !hasScript ? "text-white/15 cursor-not-allowed" : "text-white/30"}`}
+              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${activeTab === "script" ? "text-white" : !hasScript ? "text-white/25 cursor-not-allowed" : "text-white/50"}`}
             >
               <span className="flex items-center justify-center gap-1.5">
                 <span>📜</span>
@@ -2639,7 +2639,7 @@ export default function Studio2Page() {
                 <button
                   onClick={() => setScriptResetConfirm(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                 >
                   <Icon name="submit" size={12} />
                   <span>Clear</span>
@@ -2853,7 +2853,7 @@ export default function Studio2Page() {
                           : {
                               background: isRevising ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.06)",
                               border: "1px solid rgba(255,255,255,0.1)",
-                              color: isRevising ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.55)",
+                              color: isRevising ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.68)",
                             }
                         }
                       >
@@ -2893,7 +2893,7 @@ export default function Studio2Page() {
                     disabled={!hasPending || isRevising}
                     onClick={() => { setDirectorNote(""); setSelectedMoodChips(new Set()); }}
                     className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98] disabled:opacity-40"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                   >
                     {i18nT(language, "cancel")}
                   </button>
@@ -2957,7 +2957,7 @@ export default function Studio2Page() {
                   } : {
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.07)",
-                    color: "rgba(255,255,255,0.2)",
+                    color: "rgba(255,255,255,0.35)",
                     cursor: "not-allowed",
                   }}
                 >
@@ -3008,7 +3008,7 @@ export default function Studio2Page() {
                   } : {
                     background: "rgba(255,255,255,0.03)",
                     border: "1px solid rgba(255,255,255,0.07)",
-                    color: "rgba(255,255,255,0.18)",
+                    color: "rgba(255,255,255,0.35)",
                     cursor: "not-allowed",
                   }}
                 >

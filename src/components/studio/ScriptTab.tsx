@@ -935,7 +935,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                     className="flex items-center gap-1 px-2 py-0.5 rounded-full text-fs-body font-medium transition-all active:scale-95"
                     style={summaryPlaying || summaryLoading
                       ? { background: "rgba(79,195,247,0.18)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
-                      : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }
+                      : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.65)" }
                     }
                   >
                     {summaryLoading
@@ -950,7 +950,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                   const long = summary.length > LIMIT;
                   const shown = !summaryExpanded && long ? summary.slice(0, LIMIT).trimEnd() : summary;
                   return (
-                    <p style={{ fontSize: "var(--fs-body)", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
+                    <p style={{ fontSize: "var(--fs-heading)", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", fontWeight: 400 }}>
                       {shown}
                       {long && !summaryExpanded && (
                         <button

@@ -329,7 +329,7 @@ export default function ChildProfilePicker({
   return (
     <>
       <div className="mb-5">
-        <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.28)" }}>
+        <p className="text-fs-body font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.5)" }}>
           {t("creatingFor")}
         </p>
         <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
@@ -373,7 +373,7 @@ export default function ChildProfilePicker({
                 </div>
                 <span
                   className="text-fs-body font-bold text-center truncate w-full leading-tight"
-                  style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.55)" }}
+                  style={{ color: isActive ? "#4fc3f7" : "rgba(255,255,255,0.7)" }}
                 >
                   {p.name}
                 </span>
