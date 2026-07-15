@@ -36,11 +36,114 @@ function cardPalette(title: string): [string, string] {
   return CARD_PALETTES[h % CARD_PALETTES.length];
 }
 
+// Strips a trailing "- Chapter N" / "- פרק N" suffix so a collapsed series
+// card reads as the story's name, not just its first chapter's title.
+function seriesDisplayTitle(title: string): string {
+  return title.replace(/\s*-\s*(chapter|פרק)\s*\d+\s*$/i, "").trim();
+}
+
 function formatDuration(seconds?: number): string | null {
   if (!seconds || seconds <= 0) return null;
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// Collapses a list to one card per multi-chapter series — a browse grid
+// should show the whole story once, not one card per chapter. Keeps the
+// earliest chapter as the representative card; standalone entries pass through.
+function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber?: number }>(entries: T[]): T[] {
+  const bestBySeries = new Map<string, T>();
+  const order: string[] = [];
+  for (const entry of entries) {
+    const key = entry.seriesId ?? entry.id;
+    const existing = bestBySeries.get(key);
+    if (!existing) {
+      bestBySeries.set(key, entry);
+      order.push(key);
+    } else if ((entry.chapterNumber ?? Infinity) < (existing.chapterNumber ?? Infinity)) {
+      bestBySeries.set(key, entry);
+    }
+  }
+  return order.map((key) => bestBySeries.get(key)!);
+}
+
+// Small stacked-cards glyph marking a card as a multi-chapter series.
+function SeriesBadge({ chapterCount }: { chapterCount: number }) {
+  return (
+    <span
+      className="absolute top-1.5 right-1.5 flex items-center gap-0.5 text-fs-caption font-bold px-1.5 py-0.5 rounded-full"
+      style={{
+        background: "rgba(5,8,20,0.72)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        color: "rgba(255,255,255,0.85)",
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      📚 {chapterCount}
+    </span>
+  );
+}
+
+type ChapterOption = { id: string; title: string; coverUrl?: string; chapterNumber?: number };
+
+// Bottom sheet listing every chapter in a series — opened instead of
+// navigating straight into a chapter when a collapsed series card is tapped.
+function ChapterPickerSheet({ seriesTitle, chapters, hrefBase, onClose }: {
+  seriesTitle: string;
+  chapters: ChapterOption[];
+  hrefBase: string;
+  onClose: () => void;
+}) {
+  const sorted = [...chapters].sort((a, b) => (a.chapterNumber ?? 0) - (b.chapterNumber ?? 0));
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: "rgba(2,4,10,0.7)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-3xl px-5 pt-5 pb-8"
+        style={{ maxWidth: 480, background: "#0a0d1f", border: "1px solid rgba(255,255,255,0.1)", borderBottom: "none" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-fs-subtitle font-bold text-white">{seriesTitle}</p>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+            <Icon name="close" size={14} className="text-white/60" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-2">
+          {sorted.map((c) => (
+            <Link
+              key={c.id}
+              href={`${hrefBase}/${c.id}`}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-[0.98]"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              {c.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.coverUrl} alt="" className="w-11 h-11 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <span
+                  className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 text-fs-body font-bold"
+                  style={{ background: "rgba(79,195,247,0.15)", color: "#4fc3f7" }}
+                >
+                  {c.chapterNumber ?? "–"}
+                </span>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-fs-caption font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.6)" }}>
+                  Chapter {c.chapterNumber ?? "–"}
+                </p>
+                <p className="text-fs-body font-semibold text-white truncate">{c.title}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Classics tab ─────────────────────────────────────────────────────────────
@@ -55,6 +158,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
 
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [openSeriesId, setOpenSeriesId] = useState<string | null>(null);
   const seedingRef = useRef(false);
 
   // Background: generate missing classics one by one
@@ -98,9 +202,10 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
   }
 
   const q = search.toLowerCase().trim();
-  const filtered = classics.filter(
+  const filtered = dedupeBySeries(classics.filter(
     (c) => !q || c.title.toLowerCase().includes(q) || c.tagline.toLowerCase().includes(q)
-  );
+  ));
+  const openSeries = openSeriesId ? classics.filter((c) => c.seriesId === openSeriesId) : [];
 
   return (
     <div className="pt-2">
@@ -156,19 +261,16 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
         const [c1, c2] = cardPalette(meta.title);
         const duration = formatDuration(meta.durationSeconds);
         const langCode = meta.language?.slice(0, 2).toUpperCase();
+        const isSeries = !!meta.chapterCount && meta.chapterCount > 1;
+        const displayTitle = isSeries ? seriesDisplayTitle(meta.title) : meta.title;
 
-        return (
-          <Link
-            key={meta.id}
-            href={`/library/classics/${meta.id}`}
-            className="flex flex-col rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
-          >
+        const cardBody = (
+          <>
             {/* Image */}
             <div className="relative w-full overflow-hidden" style={{ aspectRatio: "2/3" }}>
               {meta.coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={meta.coverUrl} alt={meta.title} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={meta.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-fs-display"
                   style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
@@ -184,11 +286,12 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
                     style={{ borderColor: `${c1} transparent transparent transparent` }} />
                 </div>
               )}
+              {isSeries && <SeriesBadge chapterCount={meta.chapterCount!} />}
             </div>
 
             {/* Info */}
             <div className="px-2 pt-2 pb-2.5">
-              <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{meta.title}</p>
+              <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
               {(duration || langCode) && (
                 <div className="flex items-center gap-1 mt-1">
                   {duration && (
@@ -213,10 +316,32 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
                 <p className="text-fs-body mt-1" style={{ color: "rgba(255,255,255,0.2)" }}>{t("pending")}</p>
               )}
             </div>
+          </>
+        );
+
+        const cardClassName = "flex flex-col rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none text-left";
+        const cardStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" };
+
+        return isSeries ? (
+          <button key={meta.id} onClick={() => setOpenSeriesId(meta.seriesId!)} className={cardClassName} style={cardStyle}>
+            {cardBody}
+          </button>
+        ) : (
+          <Link key={meta.id} href={`/library/classics/${meta.id}`} className={cardClassName} style={cardStyle}>
+            {cardBody}
           </Link>
         );
       })}
     </div>
+
+    {openSeriesId && (
+      <ChapterPickerSheet
+        seriesTitle={seriesDisplayTitle(openSeries[0]?.title ?? "")}
+        chapters={openSeries.map((c) => ({ id: c.id, title: c.title, coverUrl: c.coverUrl, chapterNumber: c.chapterNumber }))}
+        hrefBase="/library/classics"
+        onClose={() => setOpenSeriesId(null)}
+      />
+    )}
     </div>
   );
 }
