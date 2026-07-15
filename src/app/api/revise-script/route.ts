@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { trackGemini } from "@/lib/usageTracker";
 import { splitLongBlocks } from "@/lib/services/scriptGenerationHelpers";
+import { readRevisionGuidance } from "@/lib/services/storyGuidance";
 import type { ScriptBlock } from "@/types";
 
 interface RawBlock {
@@ -47,10 +48,15 @@ After the blocks, include a "lessonImplementations" array (one entry per lesson)
     ? `Return a JSON object: { "blocks": [...same-order array...], "lessonImplementations": [...] }. No markdown fences.`
     : `Return ONLY the raw JSON array. No markdown fences, no explanation.`;
 
+  const guidance = readRevisionGuidance();
+  const guidanceSection = guidance
+    ? `\nSTORY POLICY — this story was originally written to these standards; every edit you make must stay within them too:\n${guidance}\n`
+    : "";
+
   const systemInstruction = `You are a creative script editor for NightStory, a children's bedtime audio drama app.
 You will receive a script as a JSON array and a director's instruction. Apply the instruction faithfully.
-
-RULES:
+${guidanceSection}
+EDIT RULES (these govern HOW you apply the instruction — the policy above governs WHAT is allowed in the result):
 - Preserve EVERY block's id, blockOrder, characterName, and assignedVoiceId exactly.
 - Make the SMALLEST edit that achieves the instruction — change as few blocks as possible, and leave the wording of every other block exactly as it was. Only modify textPayload where the instruction actually applies.
 - Preserve existing [audio tags] style marks or update them to match the new tone.
