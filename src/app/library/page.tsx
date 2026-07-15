@@ -68,19 +68,20 @@ function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber
   return order.map((key) => bestBySeries.get(key)!);
 }
 
-// Small stacked-cards glyph marking a card as a multi-chapter series.
+// Stacked-cards glyph marking a card as a multi-chapter series — placed
+// inline below the title (not overlaid on the cover), sized a step up from
+// the duration/language pills so it reads as the more important signal.
 function SeriesBadge({ chapterCount }: { chapterCount: number }) {
   return (
     <span
-      className="absolute top-1.5 right-1.5 flex items-center gap-0.5 text-fs-caption font-bold px-1.5 py-0.5 rounded-full"
+      className="inline-flex items-center gap-1 text-fs-body font-bold mt-1 px-2 py-0.5 rounded-full"
       style={{
-        background: "rgba(5,8,20,0.72)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        color: "rgba(255,255,255,0.85)",
-        backdropFilter: "blur(6px)",
+        background: "rgba(79,195,247,0.14)",
+        border: "1px solid rgba(79,195,247,0.35)",
+        color: "#4fc3f7",
       }}
     >
-      📚 {chapterCount}
+      📚 {chapterCount} chapters
     </span>
   );
 }
@@ -286,12 +287,12 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
                     style={{ borderColor: `${c1} transparent transparent transparent` }} />
                 </div>
               )}
-              {isSeries && <SeriesBadge chapterCount={meta.chapterCount!} />}
             </div>
 
             {/* Info */}
             <div className="px-2 pt-2 pb-2.5">
               <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+              {isSeries && <SeriesBadge chapterCount={meta.chapterCount!} />}
               {(duration || langCode) && (
                 <div className="flex items-center gap-1 mt-1">
                   {duration && (
@@ -611,6 +612,16 @@ export default function LibraryPage() {
   const [recentCanScrollLeft, setRecentCanScrollLeft] = useState(false);
   const [recentCanScrollRight, setRecentCanScrollRight] = useState(false);
 
+  // Chapter picker sheet shared by every own-story grid (All / My Stories) —
+  // set both together when a collapsed series card is tapped.
+  const [openSeriesTitle, setOpenSeriesTitle] = useState<string | null>(null);
+  const [openSeriesChapters, setOpenSeriesChapters] = useState<LibraryEntry[]>([]);
+  const openSeriesPicker = (chapters: LibraryEntry[]) => {
+    if (chapters.length === 0) return;
+    setOpenSeriesTitle(seriesDisplayTitle(chapters[0].title));
+    setOpenSeriesChapters(chapters);
+  };
+
   const updateRecentScroll = () => {
     const el = recentScrollRef.current;
     if (!el) return;
@@ -674,11 +685,11 @@ export default function LibraryPage() {
   const q = search.toLowerCase().trim();
   const matchesQuery = (title: string, summary?: string) =>
     !q || title.toLowerCase().includes(q) || (summary ?? "").toLowerCase().includes(q);
-  const filtered = entries.filter((e) => matchesQuery(e.title, e.summary));
+  const filtered = dedupeBySeries(entries.filter((e) => matchesQuery(e.title, e.summary)));
   // Same search box now applies to every tab except Classics, which already
   // has its own self-contained search — one filtered list per tab's own
   // dataset, all driven by the same `search` state.
-  const filteredAll = allEntries.filter((e) => matchesQuery(e.title, e.summary));
+  const filteredAll = dedupeBySeries(allEntries.filter((e) => matchesQuery(e.title, e.summary)));
   const filteredFamily = familyEntries.filter((e) => matchesQuery(e.title, e.summary));
   const filteredCommunity = communityStories.filter((s) => matchesQuery(s.title, s.summary));
 
@@ -920,31 +931,54 @@ export default function LibraryPage() {
             >
               {filteredAll.map((entry) => {
                 const [c1, c2] = cardPalette(entry.title);
+                const isSeries = !!entry.chapterCount && entry.chapterCount > 1;
+                const displayTitle = isSeries ? seriesDisplayTitle(entry.title) : entry.title;
+                const openPicker = () => openSeriesPicker(allEntries.filter((e) => e.seriesId === entry.seriesId));
+
+                const coverInner = (
+                  <>
+                    {entry.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                        style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                        <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>{entry.isClassic ? "✨" : "🌙"}</span>
+                      </div>
+                    )}
+                    {entry.isPublic && (
+                      <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-fs-caption font-bold uppercase tracking-wide"
+                        style={{ background: "rgba(4,6,18,0.75)", color: "rgba(255,255,255,0.6)", backdropFilter: "blur(4px)" }}>
+                        {entry.isClassic ? t("classicsTab") : t("communityTab")}
+                      </span>
+                    )}
+                  </>
+                );
+
                 return (
                   <div key={entry.id} className="flex flex-col rounded-xl overflow-hidden transition-all select-none"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
-                      {entry.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-fs-display"
-                          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
-                          <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>{entry.isClassic ? "✨" : "🌙"}</span>
-                        </div>
-                      )}
-                      {entry.isPublic && (
-                        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-fs-caption font-bold uppercase tracking-wide"
-                          style={{ background: "rgba(4,6,18,0.75)", color: "rgba(255,255,255,0.6)", backdropFilter: "blur(4px)" }}>
-                          {entry.isClassic ? t("classicsTab") : t("communityTab")}
-                        </span>
-                      )}
-                    </Link>
+                    {isSeries ? (
+                      <button onClick={openPicker} className="relative w-full overflow-hidden active:opacity-80 transition-opacity text-left" style={{ aspectRatio: "2/3" }}>
+                        {coverInner}
+                      </button>
+                    ) : (
+                      <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
+                        {coverInner}
+                      </Link>
+                    )}
                     <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
                       <div className="flex-1 min-w-0">
-                        <Link href={`/library/${entry.id}`}>
-                          <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
-                        </Link>
+                        {isSeries ? (
+                          <button onClick={openPicker} className="text-left">
+                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+                          </button>
+                        ) : (
+                          <Link href={`/library/${entry.id}`}>
+                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+                          </Link>
+                        )}
+                        {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt, t)}</span>
                         </div>
@@ -1108,6 +1142,10 @@ export default function LibraryPage() {
                   );
                 }
 
+                const isSeries = !!entry.chapterCount && entry.chapterCount > 1;
+                const displayTitle = isSeries ? seriesDisplayTitle(entry.title) : entry.title;
+                const openPicker = () => openSeriesPicker(entries.filter((e) => e.seriesId === entry.seriesId));
+
                 return (
                   <div
                     key={entry.id}
@@ -1115,24 +1153,45 @@ export default function LibraryPage() {
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", opacity: isDeleting ? 0.4 : 1, transition: "opacity 0.2s" }}
                   >
                     {/* Image */}
-                    <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
-                      {entry.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-fs-display"
-                          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
-                          <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
-                        </div>
-                      )}
-                    </Link>
+                    {isSeries ? (
+                      <button onClick={openPicker} className="relative w-full overflow-hidden active:opacity-80 transition-opacity text-left" style={{ aspectRatio: "2/3" }}>
+                        {entry.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                            style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                            <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
+                          </div>
+                        )}
+                      </button>
+                    ) : (
+                      <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
+                        {entry.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                            style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                            <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
+                          </div>
+                        )}
+                      </Link>
+                    )}
 
                     {/* Info row */}
                     <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
                       <div className="flex-1 min-w-0">
-                        <Link href={`/library/${entry.id}`}>
-                          <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{entry.title}</p>
-                        </Link>
+                        {isSeries ? (
+                          <button onClick={openPicker} className="text-left">
+                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+                          </button>
+                        ) : (
+                          <Link href={`/library/${entry.id}`}>
+                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+                          </Link>
+                        )}
+                        {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className="text-white/20 text-fs-body">{timeAgo(entry.createdAt, t)}</span>
                         </div>
@@ -1168,6 +1227,15 @@ export default function LibraryPage() {
         >
           ✦
         </Link>
+      )}
+
+      {openSeriesTitle && (
+        <ChapterPickerSheet
+          seriesTitle={openSeriesTitle}
+          chapters={openSeriesChapters.map((c) => ({ id: c.id, title: c.title, coverUrl: c.coverUrl, chapterNumber: c.chapterNumber }))}
+          hrefBase="/library"
+          onClose={() => setOpenSeriesTitle(null)}
+        />
       )}
     </div>
   );
