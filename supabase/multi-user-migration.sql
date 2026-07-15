@@ -32,12 +32,31 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 -- is seeded from OAuth metadata when available (Google's 'full_name', or
 -- 'name' as a fallback for other providers) — email/password sign-ups have
 -- no name to pull from, so display_name just stays null for those.
+--
+-- Also auto-provisions a family + owner family_members row for the new user
+-- (see family-auto-provision-migration.sql for why this matters: without
+-- it, only this migration's own one-time seed block below ever created a
+-- family, so every OTHER signup ended up with zero family_members rows).
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_family_id uuid;
+  v_display_name text;
 BEGIN
+  v_display_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name');
+
   INSERT INTO public.user_profiles (id, display_name, email)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'), NEW.email)
+  VALUES (NEW.id, v_display_name, NEW.email)
   ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO public.families (name)
+  VALUES (COALESCE(v_display_name, 'My') || '''s Family')
+  RETURNING id INTO v_family_id;
+
+  INSERT INTO public.family_members (family_id, user_id, role)
+  VALUES (v_family_id, NEW.id, 'owner')
+  ON CONFLICT DO NOTHING;
+
   RETURN NEW;
 END;
 $$;

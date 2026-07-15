@@ -1124,11 +1124,20 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // Resolve the caller's family before the request context is gone, so the
-    // produced story row is stamped with its owner.
+    // produced story row is stamped with its owner. Unlike every other write
+    // route (child-profiles, library POST), this used to fall through to
+    // `familyCtx?.familyId` being undefined on failure/no-session instead of
+    // rejecting — which silently produced a real, playable story with
+    // family_id NULL: invisible to any per-family query, unrecoverably
+    // unattributable to whoever made it (stories have no per-user owner
+    // column, only family_id). Reject instead, matching every other route.
     const familyCtx = await getFamilyContext(req).catch(() => null);
+    if (!familyCtx) {
+      return NextResponse.json({ error: "No family — sign in again and retry." }, { status: 403 });
+    }
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave, body.moralLessons, familyCtx?.familyId, body.title);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave, body.moralLessons, familyCtx.familyId, body.title);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {
