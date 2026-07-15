@@ -78,13 +78,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // The endpoint itself skips the actual geolocation call once
         // country_code is already set, but this flag avoids even hitting
         // it again on every auth-state change within the same session
-        // (e.g. token refresh fires this listener too).
+        // (e.g. token refresh fires this listener too). Only set the flag
+        // on a genuine "nothing left to do" response (succeeded, or the
+        // server confirms it already had a country) — a failed attempt
+        // (deploy still rolling out, transient network error, ipapi rate
+        // limit) must NOT get permanently remembered as "done", or it'd
+        // never retry for the rest of this tab session.
         if (!sessionStorage.getItem("ns-country-checked")) {
-          sessionStorage.setItem("ns-country-checked", "1");
           fetch("/api/account/detect-country", {
             method: "POST",
             headers: { Authorization: `Bearer ${session.access_token}` },
-          }).catch(() => {});
+          })
+            .then((r) => r.json())
+            // The route returns HTTP 200 even for soft failures (e.g. an
+            // ipapi rate limit) with { ok: false } in the body — checking
+            // r.ok (HTTP status) alone would wrongly mark those as done too.
+            .then((data) => { if (data?.ok) sessionStorage.setItem("ns-country-checked", "1"); })
+            .catch(() => {});
         }
       } else {
         document.cookie = "ns-session=; path=/; max-age=0; SameSite=Strict";
