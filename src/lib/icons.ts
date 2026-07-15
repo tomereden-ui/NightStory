@@ -159,6 +159,14 @@ export const ICONS = {
     line(18.5, 3, 18.5, 6.5),
     line(16.75, 4.75, 20.25, 4.75),
   ),
+
+  // ── Multi-chapter story indicator (stacked cards + play) ───────────────────
+  episodes: mixed(
+    React.createElement("rect", { x: 8, y: 1.5, width: 14.5, height: 14.5, rx: 3.5, opacity: 0.35 }),
+    React.createElement("rect", { x: 5, y: 4.5, width: 14.5, height: 14.5, rx: 3.5, opacity: 0.65 }),
+    rect(2, 7.5, 14.5, 14.5, 3.5),
+    React.createElement("path", { d: "M7.6 12.2v5.6l4.9-2.8z", fill: "currentColor", stroke: "none" }),
+  ),
 } as const;
 
 export type IconName = keyof typeof ICONS;

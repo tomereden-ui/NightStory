@@ -7,6 +7,7 @@ import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import Icon from "@/components/ui/Icon";
+import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 
 
@@ -54,24 +55,6 @@ function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber
     }
   }
   return order.map((key) => bestBySeries.get(key)!);
-}
-
-// Compact "×N" chip marking a card as a multi-chapter series — sits at the
-// right end of the duration/language badge row rather than its own line, so
-// it doesn't eat vertical space a longer title needs.
-function SeriesBadge({ chapterCount }: { chapterCount: number }) {
-  return (
-    <span
-      className="ml-auto flex-shrink-0 inline-flex items-center text-fs-body font-bold px-1.5 py-0.5 rounded-full"
-      style={{
-        background: "rgba(79,195,247,0.14)",
-        border: "1px solid rgba(79,195,247,0.35)",
-        color: "#4fc3f7",
-      }}
-    >
-      ×{chapterCount}
-    </span>
-  );
 }
 
 // ── Classics tab ─────────────────────────────────────────────────────────────
@@ -235,7 +218,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
                       {langCode}
                     </span>
                   )}
-                  {isSeries && <SeriesBadge chapterCount={meta.chapterCount!} />}
+                  {isSeries && <span className="ml-auto"><SeriesCountBadge count={meta.chapterCount!} size="sm" /></span>}
                 </div>
               )}
               {meta.status === "pending" && (
@@ -878,7 +861,7 @@ export default function LibraryPage() {
                               {langCode}
                             </span>
                           )}
-                          {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
+                          {isSeries && <span className="ml-auto"><SeriesCountBadge count={entry.chapterCount!} size="sm" /></span>}
                         </div>
                       </div>
                     </div>
@@ -1083,7 +1066,7 @@ export default function LibraryPage() {
                               {langCode}
                             </span>
                           )}
-                          {isSeries && <SeriesBadge chapterCount={entry.chapterCount!} />}
+                          {isSeries && <span className="ml-auto"><SeriesCountBadge count={entry.chapterCount!} size="sm" /></span>}
                         </div>
                       </div>
                       <button onClick={() => setConfirmingId(entry.id)}

@@ -10,6 +10,7 @@ import type { LibraryEntry, ContinueEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { MOCK_JOURNEY } from "@/components/profile/StoryJourney";
+import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,14 +70,17 @@ function StoryCard({
   href,
   progressPercent,
   chapterLabel,
+  chapterCount,
 }: {
   title: string;
   summary?: string;
   coverUrl?: string | null;
   href: string;
   progressPercent?: number;
-  /** e.g. "Chapter 2 of 3" — shown as a small badge for multi-part stories. */
+  /** e.g. "Chapter 2 of 3" — text badge showing playback position within a series. */
   chapterLabel?: string;
+  /** Total chapters in the series — shown as the episodes-icon count badge. */
+  chapterCount?: number;
 }) {
   const [c1, c2] = cardPalette(title);
   return (
@@ -121,6 +125,11 @@ function StoryCard({
           }}
         >
           {chapterLabel}
+        </span>
+      )}
+      {!chapterLabel && !!chapterCount && chapterCount > 1 && (
+        <span className="absolute top-2 left-2">
+          <SeriesCountBadge count={chapterCount} size="sm" />
         </span>
       )}
 
@@ -379,16 +388,8 @@ function TonightsPickCard({ item }: { item: PickItem }) {
 
       {/* Chapter count — top right, shown only for multi-part stories */}
       {!!item.chapterCount && item.chapterCount > 1 && (
-        <span
-          className="absolute top-3 right-3 text-fs-body font-bold px-2 py-0.5 rounded-full"
-          style={{
-            background: "rgba(79,195,247,0.22)",
-            border: "1px solid rgba(79,195,247,0.45)",
-            color: "#4fc3f7",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          {item.chapterCount} chapters
+        <span className="absolute top-3 right-3">
+          <SeriesCountBadge count={item.chapterCount} />
         </span>
       )}
 
@@ -966,7 +967,7 @@ export default function HomePage() {
                   summary={s.summary}
                   coverUrl={s.coverUrl}
                   href={`/library/${s.id}`}
-                  chapterLabel={s.chapterCount && s.chapterCount > 1 ? `${s.chapterCount} chapters` : undefined}
+                  chapterCount={s.chapterCount}
                 />
               ))}
             </Rail>

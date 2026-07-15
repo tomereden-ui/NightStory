@@ -203,6 +203,16 @@ export default function StoryDetailPage() {
   // player and script content update to the new chapter's data. entry.seriesId
   // stays the same across chapters, so the chapters-row effect above doesn't
   // re-fetch either.
+  // Once we've silently swapped the URL via replaceState at least once, the
+  // browser's "previous" history entry is no longer reliable — router.back()
+  // can land back on this same page's earlier chapter instead of wherever
+  // the user actually came from. Falls back to a fixed destination instead.
+  const [urlWasReplaced, setUrlWasReplaced] = useState(false);
+  const goBack = useCallback(() => {
+    if (urlWasReplaced) router.push("/library");
+    else router.back();
+  }, [urlWasReplaced, router]);
+
   const switchChapter = useCallback(async (newId: string) => {
     if (newId === entry?.id || switchingChapter) return;
     setSwitchingChapter(true);
@@ -215,6 +225,7 @@ export default function StoryDetailPage() {
         setCurrentTime(0);
         setDuration(0);
         window.history.replaceState(null, "", `/library/${newId}`);
+        setUrlWasReplaced(true);
       }
     } catch {
       // keep current chapter on failure
@@ -346,7 +357,7 @@ export default function StoryDetailPage() {
       // Go back to wherever the user came from (library grid, home, a child's
       // profile, etc.) instead of hardcoding one destination — the story no
       // longer exists, so there's nothing to show by staying on this card.
-      router.back();
+      goBack();
     } catch (err) {
       console.error("[handleDeleteConfirm]", err);
       setIsDeleting(false);
@@ -367,7 +378,7 @@ export default function StoryDetailPage() {
       <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
         <span className="text-fs-display">🌙</span>
         <p className="text-white/30 text-fs-body">Story not found.</p>
-        <button onClick={() => router.back()} className="text-fs-body" style={{ color: "rgba(79,195,247,0.5)" }}>Go back</button>
+        <button onClick={goBack} className="text-fs-body" style={{ color: "rgba(79,195,247,0.5)" }}>Go back</button>
       </div>
     );
   }
@@ -439,7 +450,7 @@ export default function StoryDetailPage() {
           />
           {/* Back button */}
           <button
-            onClick={() => router.back()}
+            onClick={goBack}
             className="absolute top-12 left-4 w-8 h-8 flex items-center justify-center rounded-full"
             style={{ background: "rgba(5,8,20,0.6)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)" }}
           >

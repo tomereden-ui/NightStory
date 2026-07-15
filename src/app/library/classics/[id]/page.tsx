@@ -264,6 +264,16 @@ export default function ClassicDetailPage() {
   // the previous chapter until then).
   const switchingChapter = meta?.id !== id;
 
+  // Once we've silently swapped the URL via replaceState at least once, the
+  // browser's "previous" history entry is no longer reliable — router.back()
+  // can land back on this same page's earlier chapter instead of wherever
+  // the user actually came from. Falls back to a fixed destination instead.
+  const [urlWasReplaced, setUrlWasReplaced] = useState(false);
+  const goBack = useCallback(() => {
+    if (urlWasReplaced) router.push("/library");
+    else router.back();
+  }, [urlWasReplaced, router]);
+
   // Swaps to a sibling chapter in place — updates `id` state (re-triggering
   // the fetch effect above) instead of navigating, so the cover hero, back
   // button, and chapters row never unmount/reflow. meta.seriesId stays the
@@ -276,6 +286,7 @@ export default function ClassicDetailPage() {
     setStoryAudioUrl(null);
     setId(newId);
     window.history.replaceState(null, "", `/library/classics/${newId}`);
+    setUrlWasReplaced(true);
   }, [id]);
 
   // Sibling chapters — only fetched when this classic is part of a series.
@@ -409,7 +420,7 @@ export default function ClassicDetailPage() {
       <div className="cosmic-page min-h-full flex flex-col items-center justify-center gap-4">
         <span className="text-fs-display">✨</span>
         <p className="text-white/30 text-fs-body">Classic not found.</p>
-        <button onClick={() => router.back()} className="text-fs-body" style={{ color: "rgba(79,195,247,0.5)" }}>
+        <button onClick={goBack} className="text-fs-body" style={{ color: "rgba(79,195,247,0.5)" }}>
           Go back
         </button>
       </div>
@@ -468,7 +479,7 @@ export default function ClassicDetailPage() {
 
           {/* Back button */}
           <button
-            onClick={() => router.back()}
+            onClick={goBack}
             aria-label="Back"
             className="absolute top-12 left-4 w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-90"
             style={{
