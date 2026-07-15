@@ -175,11 +175,17 @@ async function runHebrewPass(
 ): Promise<number> {
   let changes = 0;
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+    // Pro, not flash: confirmed live that flash can miss a subtle nikkud
+    // pattern (bare Kamats Katan in כָּל) even right next to another fix it
+    // DID catch in the same block, while pro-preview catches both reliably
+    // on the identical prompt — this narrow, quality-sensitive final gate is
+    // worth the extra latency/cost that the rest of the app's flash-only
+    // passes avoid.
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: promptText }] }],
       // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
-      generationConfig: { temperature: 0.2, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 2048 } },
+      generationConfig: { temperature: 0.2, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 4096 } },
     });
     const tokens = result.response.usageMetadata?.totalTokenCount;
     if (tokens) trackGemini(tokens).catch(() => {});
