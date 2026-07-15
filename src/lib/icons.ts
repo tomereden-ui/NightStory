@@ -160,12 +160,14 @@ export const ICONS = {
     line(16.75, 4.75, 20.25, 4.75),
   ),
 
-  // ── Multi-chapter story indicator (stacked cards + play) ───────────────────
+  // ── Multi-chapter story indicator (stacked cards + sound glyph) ────────────
   episodes: mixed(
     React.createElement("rect", { x: 8, y: 1.5, width: 14.5, height: 14.5, rx: 3.5, opacity: 0.35 }),
     React.createElement("rect", { x: 5, y: 4.5, width: 14.5, height: 14.5, rx: 3.5, opacity: 0.65 }),
     rect(2, 7.5, 14.5, 14.5, 3.5),
-    React.createElement("path", { d: "M7.6 12.2v5.6l4.9-2.8z", fill: "currentColor", stroke: "none" }),
+    c(9.25, 14.75, 4.6),
+    React.createElement("path", { d: "M7 13v3.5h1.5l2.5 1.8v-7.1l-2.5 1.8z", fill: "currentColor", stroke: "currentColor", strokeWidth: 0.6 }),
+    React.createElement("path", { d: "M12.2 12.9 Q14.3 14.75 12.2 16.6", fill: "none", strokeWidth: 1.3 }),
   ),
 } as const;
 
