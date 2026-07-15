@@ -13,6 +13,7 @@ import { PRESET_VOICES } from "@/config/presetVoices";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
 import { generateScenes } from "@/lib/services/sceneGenerator";
+import { ProductionTimer } from "@/lib/perfMetrics";
 import { findBestAvatarForCharacter } from "@/lib/services/avatarBankService";
 
 // Match every character's persisted profile (type/gender/visualDescription)
@@ -375,6 +376,15 @@ async function runProduction(
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
 
+  // Stage-level performance measurement for this run — spans are stored as
+  // offsets from run start so concurrent stages show up as overlapping
+  // ranges. Flushed to public.production_metrics at the end (done or error).
+  const perf = new ProductionTimer();
+  const perfMeta: {
+    storyTitle?: string; language?: string; dialogueCount?: number; sfxCount?: number;
+    cacheDialogueHits?: number; cacheSfxHits?: number; skippedLines?: number;
+  } = {};
+
   // Wrap EVERYTHING including dynamic imports so job always gets an error state
   try {
     const { planDrama, MAX_TRAILING_SFX_SECONDS } = await import("@/lib/services/dramaPlanner");
@@ -431,7 +441,7 @@ async function runProduction(
     // disappears from the critical path instead of gating everything.
     // (.then wrappers so a rejection settling before its await is reached
     // can't fire Node's unhandled-rejection handler.)
-    const planPromise = planDrama(blocks, geminiKey, durationMinutes, existingTitle)
+    const planPromise = perf.track("planning", planDrama(blocks, geminiKey, durationMinutes, existingTitle))
       .then((d) => ({ ok: true as const, d }), (e) => ({ ok: false as const, e }));
     // Consumed only at library-save time — failures degrade to "no scenes" /
     // unmatched avatars rather than failing the production.
@@ -444,13 +454,14 @@ async function runProduction(
       return characterProfiles;
     });
 
-    const [voiceProfiles, scriptLanguage, voiceOverrides, elementCache] = await Promise.all([
+    const [voiceProfiles, scriptLanguage, voiceOverrides, elementCache] = await perf.track("voice_profiling", Promise.all([
       profileCharacters(blocks, geminiKey, characterDescriptions, characterTypes),
       detectScriptLanguage(blocks, geminiKey),
       buildVoiceOverrides(blocks, supabase),
       getElementsForStory(storyId),
-    ]);
+    ]));
     console.log(`[${ts()}][TTS] Detected language: ${scriptLanguage}`);
+    perfMeta.language = scriptLanguage;
 
     // The user's default narrator voice always wins for the Narrator
     // character. Nature-based casting at generation time already assigns
@@ -599,10 +610,11 @@ async function runProduction(
         `🎙️ Recording dialogue (${dialogueDone}/${originalDialogueBlocks.length})…`);
     };
 
+    perfMeta.dialogueCount = originalDialogueBlocks.length;
     // Never rejects — every line failure is caught above (worst case: the
     // line is recorded as skipped silence), so awaiting this later can't
     // blow up the whole production.
-    const dialoguePromise = (async () => {
+    const dialoguePromise = perf.track("dialogue_tts", (async () => {
       let next = 0;
       await Promise.all(
         Array.from({ length: Math.min(DIALOGUE_CONCURRENCY, originalDialogueBlocks.length) }, async () => {
@@ -618,12 +630,13 @@ async function runProduction(
           }
         }),
       );
-    })();
+    })());
 
     // ── Await the plan (dialogue keeps synthesizing meanwhile) ──────────────
     const planResult = await planPromise;
     if (!planResult.ok) throw planResult.e;
     const drama = planResult.d;
+    perfMeta.storyTitle = drama.title;
     updateJob(jobId, { scriptJson: drama as unknown as object, title: drama.title });
 
     // Snapshot the plan exactly as planDrama returned it, before anything
@@ -655,7 +668,7 @@ async function runProduction(
       }
     };
 
-    const coverPromise: Promise<{ buf: Buffer; mimeType: string } | null> = existingCover
+    const coverPromise: Promise<{ buf: Buffer; mimeType: string } | null> = perf.track("cover_image", existingCover
       ? Promise.resolve({ buf: Buffer.from(existingCover.data, "base64"), mimeType: existingCover.mimeType })
       : existingCoverUrl && isSafeStorageUrl(existingCoverUrl)
         ? fetch(existingCoverUrl).then(async (r) => {
@@ -664,14 +677,15 @@ async function runProduction(
             const mimeType = r.headers.get("content-type") ?? "image/jpeg";
             return { buf, mimeType };
           }).catch(() => generateCoverImage(drama.title, blocks, geminiKey, coverPrompt))
-        : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
+        : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt));
 
     // ── Step 3: SFX generation, concurrent with the dialogue still in flight ──
     // SFX uses ElevenLabs while dialogue uses Gemini — different providers,
     // different rate limits — so there's no reason for SFX to wait for all
     // dialogue to finish the way it used to.
+    perfMeta.sfxCount = sfxTracks.length;
     let sfxDone = 0;
-    const sfxPromise = (async () => {
+    const sfxPromise = perf.track("sfx", (async () => {
       if (!(elevenKey && sfxTracks.length > 0)) return;
 
       // EL concurrent limit is 5 — batch SFX at 4 to stay safe
@@ -751,7 +765,7 @@ async function runProduction(
             `🔊 Generating sound effects (${sfxDone}/${sfxTracks.length})…`);
         }));
       }
-    })().catch((err) => {
+    })()).catch((err) => {
       // SFX failures already degrade to silence per-track above; this only
       // catches unexpected errors so the concurrent await below can't reject.
       console.warn(`[${ts()}][produce-drama] SFX stream failed:`, err);
@@ -794,7 +808,7 @@ async function runProduction(
     // read once, at the DB-persist step after mixing/upload/library-save),
     // letting the cache upload run concurrently with the rest of production
     // instead of serializing in front of it.
-    const elementUploadPromise = pendingUploads.length === 0 ? Promise.resolve() : Promise.all(pendingUploads.map(async (pu) => {
+    const elementUploadPromise = pendingUploads.length === 0 ? Promise.resolve() : perf.track("element_upload", Promise.all(pendingUploads.map(async (pu) => {
       try {
         const audioUrl = await uploadElementAudio(storyId, pu.hash, pu.localPath);
         const durationMs = audioDurationMs(pu.localPath);
@@ -816,7 +830,7 @@ async function runProduction(
       } catch (uploadErr) {
         console.warn(`[${ts()}][ElementStore] Upload failed for ${pu.hash.slice(0, 8)}:`, uploadErr);
       }
-    })).then(() => {
+    }))).then(() => {
       console.log(`[${ts()}][ElementStore] Uploaded ${newElements.length}/${pendingUploads.length} new elements`);
     });
 
@@ -940,6 +954,7 @@ async function runProduction(
       adjustedTotal,
     );
 
+    perf.start("mixing");
     try {
       await mixTracks(mixTrackList, tmpMp3Path, adjustedTotal);
     } catch (mixErr) {
@@ -953,10 +968,12 @@ async function runProduction(
         audioExt = "wav";
       }
     }
+    perf.end("mixing");
 
     // Upload audio to Supabase Storage (retry up to 3 times — upload errors used to
     // silently fall back to a local /output/ path that has no serving route, causing
     // the story to be saved with a dead audio URL).
+    perf.start("audio_upload");
     let audioUrl = "";
     if (fs.existsSync(localAudioPath)) {
       const audioBuf = fs.readFileSync(localAudioPath);
@@ -981,6 +998,8 @@ async function runProduction(
         throw new Error(`Audio upload to Supabase storage failed after 3 attempts: ${uploadErr.message}`);
       }
     }
+
+    perf.end("audio_upload");
 
     if (!audioUrl) throw new Error("No audio produced");
 
@@ -1033,6 +1052,7 @@ async function runProduction(
       moralLessons: moralLessons?.length ? moralLessons : undefined,
     };
 
+    perf.start("library_save");
     if (skipLibrarySave) {
       // Admin "preview before save" flow: store entry in job so /api/admin/save-story can persist it later
       updateJob(jobId, { pendingEntry: entry, durationSeconds: Math.round(adjustedTotal / 1000) });
@@ -1049,6 +1069,7 @@ async function runProduction(
         }
       }
     }
+    perf.end("library_save");
 
     // Wait for the element-audio cache upload kicked off before mixing —
     // it's had the entire mixing/cover/library-save duration to finish in
@@ -1078,10 +1099,23 @@ async function runProduction(
       skippedLines,
       scenes: scenes.length ? scenes : undefined,
     });
+
+    perfMeta.cacheDialogueHits = cacheDialogueHits;
+    perfMeta.cacheSfxHits = cacheSfxHits;
+    perfMeta.skippedLines = skippedLines.length;
+    console.log(`[${ts()}][perf] ${perf.summaryLine()}`);
+    await perf.flush(supabase, { storyId, jobId, ...perfMeta, outcome: "done" });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown production error";
     console.error(`[${ts()}][produce-drama] Fatal error:`, msg);
     updateJob(jobId, { status: "error", step: "❌ Production failed", error: msg, progress: 0 });
+    console.log(`[${ts()}][perf] (failed run) ${perf.summaryLine()}`);
+    // supabase was dynamically imported inside the try — the import may not
+    // have run if the failure happened first, so re-import for the flush.
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      await perf.flush(supabase, { storyId, jobId, ...perfMeta, outcome: "error", errorMessage: msg });
+    } catch { /* metrics are best-effort */ }
   } finally {
     cleanTempDir(jobId);
   }
