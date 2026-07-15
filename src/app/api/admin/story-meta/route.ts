@@ -20,6 +20,14 @@ export async function POST(req: NextRequest) {
     .map((b) => `${b.characterName}: ${b.textPayload}`)
     .join("\n");
 
+  // Detected from the actual pasted text rather than a client-supplied
+  // language flag, since an admin-pasted script's language isn't otherwise
+  // known to this route at the point Process Script calls it.
+  const isHebrew = /[֐-׿]/.test(scriptText);
+  const niqqudLine = isHebrew
+    ? `\nHEBREW VOCALIZATION — MANDATORY: write the "summary" field fully niqqud-ed (with vowel points, ניקוד מלא), e.g. "שָׁלוֹם" not "שלום" — matching the same vocalization the rest of the story's script uses. Unvocalized Hebrew text-to-speech mispronounces words constantly, so this is required for correct audio, not stylistic.`
+    : "";
+
   const prompt = `You are analyzing a children's bedtime audio drama script.
 Story title: "${title ?? "Untitled"}"
 
@@ -33,7 +41,7 @@ Return ONLY valid JSON (no markdown):
   "coverPrompt": "a vivid Pixar-style 3D illustration for the story cover — you MUST name the main characters by name with a brief visual description (hair, clothing, species if animal), then describe the key scene or setting. 2-3 sentences, child-safe, magical. Do NOT use generic phrases like 'a child' or 'a character' — use the actual names from this script."
 }
 
-For ageGroup, pick the range that best matches the vocabulary, themes, and complexity of this script.`;
+For ageGroup, pick the range that best matches the vocabulary, themes, and complexity of this script.${niqqudLine}`;
 
   try {
     const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
