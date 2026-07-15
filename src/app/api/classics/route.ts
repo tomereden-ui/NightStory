@@ -37,7 +37,7 @@ export async function GET() {
   // has run — retry without them so this route doesn't 500 before then.
   const fullQuery = await supabase
     .from("stories")
-    .select("id, title, emoji, summary, cover_url, duration_seconds, favorited_by, language, series_id, chapter_number, chapter_count")
+    .select("id, title, emoji, summary, cover_url, duration_seconds, favorited_by, language, series_id, chapter_number, chapter_count, character_profiles, scenes, moral_lessons")
     .eq("is_public", true)
     .eq("is_classic", true);
   let dbRows: any[] | null = fullQuery.data; // eslint-disable-line
@@ -82,6 +82,9 @@ export async function GET() {
           seriesId: row.series_id ?? undefined,
           chapterNumber: row.chapter_number ?? undefined,
           chapterCount: row.chapter_count ?? undefined,
+          characterProfiles: row.character_profiles ?? undefined,
+          scenes: Array.isArray(row.scenes) ? row.scenes : undefined,
+          moralLessons: Array.isArray(row.moral_lessons) ? row.moral_lessons : undefined,
         } satisfies ClassicMeta;
       }
 
@@ -134,6 +137,9 @@ export async function GET() {
       seriesId: r.series_id ?? undefined,
       chapterNumber: r.chapter_number ?? undefined,
       chapterCount: r.chapter_count ?? undefined,
+      characterProfiles: r.character_profiles ?? undefined,
+      scenes: Array.isArray(r.scenes) ? r.scenes : undefined,
+      moralLessons: Array.isArray(r.moral_lessons) ? r.moral_lessons : undefined,
     }));
 
   return NextResponse.json([...metas, ...adminClassics]);

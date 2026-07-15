@@ -258,6 +258,23 @@ export async function getEntryTitles(familyId: string): Promise<string[]> {
   return (data ?? []).map((r) => r.title as string).filter(Boolean);
 }
 
+// Public, non-classic stories (the "Community" tab) — same LibraryEntry
+// shape as everywhere else (including character_profiles/scenes/moral_lessons
+// for library search), rather than the ad-hoc narrower shape this used to
+// return, so the same search/filter logic works across every tab.
+export async function getCommunityEntries(limit = 50): Promise<LibraryEntry[]> {
+  const { data, error } = await supabase
+    .from("stories")
+    .select(LIST_COLUMNS + SEARCH_COLUMNS)
+    .eq("is_public", true)
+    .eq("is_classic", false)
+    .eq("is_draft", false)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`getCommunityEntries: ${error.message}`);
+  return (data ?? []).map((row) => toEntry(row));
+}
+
 // Full private stories including blocks. Admin/maintenance routes call this
 // without a familyId (whole-table pass is their job); user-facing routes must
 // pass one so the query is scoped to the caller's own family.

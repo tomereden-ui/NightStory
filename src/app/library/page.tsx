@@ -104,16 +104,19 @@ function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber
 
 // ── Classics tab ─────────────────────────────────────────────────────────────
 
-function ClassicsTab({ classics, loading, onClassicUpdated }: {
+function ClassicsTab({ classics, loading, onClassicUpdated, matchesFilter }: {
   classics: ClassicMeta[];
   loading: boolean;
   onClassicUpdated: (updated: ClassicMeta) => void;
+  /** Shared search/mood/lesson/language filter from the parent's one unified
+   *  search bar — the background auto-generate effect below still scans the
+   *  full unfiltered `classics` list, only the display grid is filtered. */
+  matchesFilter: (c: ClassicMeta) => boolean;
 }) {
   const { effective } = useViewMode();
   const { t } = useLanguage();
 
   const [generatingId, setGeneratingId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
   const seedingRef = useRef(false);
 
   // Background: generate missing classics one by one
@@ -156,53 +159,14 @@ function ClassicsTab({ classics, loading, onClassicUpdated }: {
     );
   }
 
-  const q = search.toLowerCase().trim();
-  const filtered = dedupeBySeries(classics.filter(
-    (c) => !q || c.title.toLowerCase().includes(q) || c.tagline.toLowerCase().includes(q)
-  ));
+  const filtered = dedupeBySeries(classics.filter(matchesFilter));
 
   return (
     <div className="pt-2">
-      {/* Search bar */}
-      <div className="relative mb-3">
-        <span
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
-          style={{ color: "rgba(255,255,255,0.48)" }}
-        >
-          <Icon name="search" size={14} />
-        </span>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("searchClassics")}
-          className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-fs-body text-white placeholder-white/20 outline-none"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.09)",
-          }}
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/55 hover:text-white/60 transition-colors"
-          >
-            <Icon name="close" size={14} />
-          </button>
-        )}
-      </div>
-
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center pt-16 gap-3 text-center">
           <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
           <p className="text-white/40 text-fs-body">{t("noClassicsMatch")}</p>
-          <button
-            onClick={() => setSearch("")}
-            className="text-fs-body px-4 py-2 rounded-full transition-all"
-            style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
-          >
-            {t("clearSearch")}
-          </button>
         </div>
       )}
 
@@ -544,7 +508,7 @@ export default function LibraryPage() {
   const [allEntries, setAllEntries] = useState<LibraryEntry[]>([]);
   const [classics, setClassics] = useState<ClassicMeta[]>([]);
   const [recentClassics, setRecentClassics] = useState<ClassicMeta[]>([]);
-  const [communityStories, setCommunityStories] = useState<Array<{id: string; title: string; emoji?: string; summary?: string; cover_url?: string; duration_seconds?: number}>>([]);
+  const [communityStories, setCommunityStories] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [trashCount, setTrashCount] = useState(0);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -553,6 +517,11 @@ export default function LibraryPage() {
   const [selectedMoods, setSelectedMoods] = useState<Set<string>>(new Set());
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
   const [selectedLanguage, setSelectedLanguage] = useState("");
+  // Filter chips/dropdown stay collapsed until the search bar is focused —
+  // opened on focus, and kept open (rather than closing on blur) whenever
+  // there's an active search/filter, so tapping a chip doesn't immediately
+  // hide the row it's in.
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const recentScrollRef = useRef<HTMLDivElement>(null);
   const [recentCanScrollLeft, setRecentCanScrollLeft] = useState(false);
   const [recentCanScrollRight, setRecentCanScrollRight] = useState(false);
@@ -618,42 +587,54 @@ export default function LibraryPage() {
   }, [activeChildId]);
 
   const q = search.toLowerCase().trim();
-  // Text box also matches character names now, not just title/summary —
-  // parents often remember "the fox story" or a character's name, not the
-  // title. characterProfiles is only present on entries fetched with
-  // SEARCH_COLUMNS (My Stories/All/Family) — undefined elsewhere, so this
-  // degrades to the old title/summary-only match there.
-  const matchesQuery = (title: string, summary?: string, characterProfiles?: Record<string, unknown>) =>
-    !q || title.toLowerCase().includes(q) || (summary ?? "").toLowerCase().includes(q)
-      || Object.keys(characterProfiles ?? {}).some((name) => name.toLowerCase().includes(q));
 
-  const matchesMood = (entry: LibraryEntry) =>
-    selectedMoods.size === 0 || (dominantMood(entry) !== undefined && selectedMoods.has(dominantMood(entry)!));
-  const matchesLessons = (entry: LibraryEntry) =>
-    selectedLessons.size === 0 || (entry.moralLessons ?? []).some((l) => selectedLessons.has(l.lesson));
-  const matchesLanguage = (entry: LibraryEntry) =>
-    !selectedLanguage || entry.language === selectedLanguage;
-  const matchesFilters = (e: LibraryEntry) =>
-    matchesQuery(e.title, e.summary, e.characterProfiles) && matchesMood(e) && matchesLessons(e) && matchesLanguage(e);
+  // One shared filter, structural enough to cover both LibraryEntry (My
+  // Stories/All/Family/Community — all four now carry the same
+  // character_profiles/scenes/moral_lessons via SEARCH_COLUMNS) and
+  // ClassicMeta (tagline instead of summary; only populated once a classic
+  // is actually generated). Text box also matches character names now, not
+  // just title/summary — parents often remember "the fox story," not the title.
+  type Searchable = {
+    title: string;
+    summary?: string;
+    tagline?: string;
+    characterProfiles?: Record<string, unknown>;
+    scenes?: { primaryMood?: string }[];
+    moralLessons?: { lesson: string }[];
+    language?: string;
+  };
+  const matchesQuery = (item: Searchable) => {
+    if (!q) return true;
+    const text = `${item.title} ${item.summary ?? item.tagline ?? ""}`.toLowerCase();
+    if (text.includes(q)) return true;
+    return Object.keys(item.characterProfiles ?? {}).some((name) => name.toLowerCase().includes(q));
+  };
+  const matchesMood = (item: Searchable) => {
+    if (selectedMoods.size === 0) return true;
+    const mood = dominantMood(item);
+    return mood !== undefined && selectedMoods.has(mood);
+  };
+  const matchesLessons = (item: Searchable) =>
+    selectedLessons.size === 0 || (item.moralLessons ?? []).some((l) => selectedLessons.has(l.lesson));
+  const matchesLanguage = (item: Searchable) => !selectedLanguage || item.language === selectedLanguage;
+  const matchesFilters = (item: Searchable) =>
+    matchesQuery(item) && matchesMood(item) && matchesLessons(item) && matchesLanguage(item);
 
+  // One shared search bar + chip row now drives every tab's filtering —
+  // My Stories/All/Family/Community/Classics all use the exact same
+  // matchesFilters predicate against their own dataset.
   const filtered = dedupeBySeries(entries.filter(matchesFilters));
-  // Same search box + filter chips now apply to every tab except Classics
-  // (self-contained search) and Community (its list endpoint doesn't carry
-  // character/mood/lesson/language data) — one filtered list per tab's own
-  // dataset, all driven by the same shared filter state.
   const filteredAll = dedupeBySeries(allEntries.filter(matchesFilters));
   const filteredFamily = familyEntries.filter(matchesFilters);
-  const filteredCommunity = communityStories.filter((s) => matchesQuery(s.title, s.summary));
+  const filteredCommunity = communityStories.filter(matchesFilters);
 
-  // Filter chip/dropdown options — only ever show a mood/lesson/language the
-  // family's own visible library actually has at least one story for, not
-  // every possible value, so every chip shown is guaranteed to do something.
-  const filterableEntries = [...entries, ...allEntries, ...familyEntries];
-  const availableMoods = MOODS.filter((m) => filterableEntries.some((e) => dominantMood(e) === m.id));
-  const availableLessonIds = Array.from(new Set(filterableEntries.flatMap((e) => (e.moralLessons ?? []).map((l) => l.lesson))));
-  const availableLanguages = Array.from(new Set(filterableEntries.map((e) => e.language).filter(Boolean))) as string[];
-  const hasFilterableData = availableMoods.length > 0 || availableLessonIds.length > 0 || availableLanguages.length > 0;
+  // Chip/dropdown options are the full canonical catalogs, not just whatever
+  // happens to already be present in a loaded list — the same fixed
+  // vocabularies used at generation time (7 moods, 10 lesson values, every
+  // supported UI language), so every possible search facet is always
+  // reachable regardless of which tab you're on.
   const lessonCatalog = getLessonsCatalog(language);
+  const allLanguages = Object.entries(LANGUAGE_META) as [Language, typeof LANGUAGE_META[Language]][];
 
   const toggleMood = (id: string) => setSelectedMoods((prev) => {
     const next = new Set(prev);
@@ -665,6 +646,12 @@ export default function LibraryPage() {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+  const clearAllFilters = () => {
+    setSearch("");
+    setSelectedMoods(new Set());
+    setSelectedLessons(new Set());
+    setSelectedLanguage("");
+  };
 
   const handleDeleteConfirm = async (id: string) => {
     setDeletingId(id);
@@ -816,120 +803,103 @@ export default function LibraryPage() {
           })}
         </div>
 
-        {/* Search — shared across every tab except Classics, which has its
-            own self-contained search bar inside ClassicsTab. */}
-        {activeTab !== "classics" && (
-          <div
-            className="relative mb-3"
-            style={{
-              display: (
-                activeTab === "my-stories" ? entries.length > 0 :
-                activeTab === "all" ? allEntries.length > 0 :
-                activeTab === "family" ? familyEntries.length > 0 :
-                communityStories.length > 0
-              ) || search ? "block" : "none",
-            }}
+        {/* Search — ONE shared bar for every tab. Mood/lesson/language chips
+            stay collapsed until the bar is focused (or a filter is already
+            active), then expand below it. onMouseDown/preventDefault on the
+            chip row stops the input from blurring (and the row from
+            collapsing) when a chip is tapped. */}
+        <div className="relative mb-3">
+          <span
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
+            style={{ color: "rgba(255,255,255,0.48)" }}
           >
-            <span
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fs-body pointer-events-none"
-              style={{ color: "rgba(255,255,255,0.48)" }}
+            <Icon name="search" size={14} />
+          </span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onFocus={() => setSearchExpanded(true)}
+            onBlur={() => setSearchExpanded(false)}
+            placeholder={t("search")}
+            className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-fs-body text-white placeholder-white/20 outline-none"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.09)",
+            }}
+          />
+          {search && (
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/55 hover:text-white/60 transition-colors"
             >
-              <Icon name="search" size={14} />
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("search")}
-              className="w-full pl-9 pr-9 py-2.5 rounded-2xl text-fs-body text-white placeholder-white/20 outline-none"
+              <Icon name="close" size={14} />
+            </button>
+          )}
+        </div>
+
+        {(searchExpanded || search || selectedMoods.size > 0 || selectedLessons.size > 0 || selectedLanguage) && (
+          <div
+            className="flex flex-col gap-2 mb-3"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+              {MOODS.map((m) => {
+                const active = selectedMoods.has(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggleMood(m.id)}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                    style={active
+                      ? { background: `${m.color}26`, border: `1px solid ${m.color}66`, color: m.color }
+                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+                  >
+                    <span>{m.emoji}</span>
+                    <span>{m.id}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+              {lessonCatalog.map((l) => {
+                const active = selectedLessons.has(l.id);
+                return (
+                  <button
+                    key={l.id}
+                    onClick={() => toggleLesson(l.id)}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                    style={active
+                      ? { background: "rgba(139,92,246,0.16)", border: "1px solid rgba(139,92,246,0.45)", color: "#c4b5fd" }
+                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+                  >
+                    <Icon name={l.icon} size={13} />
+                    <span>{l.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="self-start px-3 py-2 rounded-xl text-fs-body outline-none"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.09)",
+                color: selectedLanguage ? "#fff" : "rgba(255,255,255,0.55)",
+                appearance: "none",
               }}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/55 hover:text-white/60 transition-colors"
-              >
-                <Icon name="close" size={14} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Filter chips — mood + moral lessons + language. Shares the same
-            filter state across My Stories/All/Family; hidden on Classics
-            (own search) and Community (its list endpoint has none of this
-            data yet). Each chip/option only ever shows a value that's
-            actually present on a visible story, so nothing is a dead end. */}
-        {activeTab !== "classics" && activeTab !== "community" && hasFilterableData && (
-          <div className="flex flex-col gap-2 mb-3">
-            {availableMoods.length > 0 && (
-              <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
-                {availableMoods.map((m) => {
-                  const active = selectedMoods.has(m.id);
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => toggleMood(m.id)}
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
-                      style={active
-                        ? { background: `${m.color}26`, border: `1px solid ${m.color}66`, color: m.color }
-                        : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
-                    >
-                      <span>{m.emoji}</span>
-                      <span>{m.id}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {availableLessonIds.length > 0 && (
-              <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
-                {lessonCatalog.filter((l) => availableLessonIds.includes(l.id)).map((l) => {
-                  const active = selectedLessons.has(l.id);
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => toggleLesson(l.id)}
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
-                      style={active
-                        ? { background: "rgba(139,92,246,0.16)", border: "1px solid rgba(139,92,246,0.45)", color: "#c4b5fd" }
-                        : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
-                    >
-                      <Icon name={l.icon} size={13} />
-                      <span>{l.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {availableLanguages.length > 1 && (
-              <select
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-                className="self-start px-3 py-2 rounded-xl text-fs-body outline-none"
-                style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.09)",
-                  color: selectedLanguage ? "#fff" : "rgba(255,255,255,0.55)",
-                  appearance: "none",
-                }}
-              >
-                <option value="" style={{ background: "#0D1120" }}>🌐 All languages</option>
-                {availableLanguages.map((code) => {
-                  const meta = LANGUAGE_META[code as Language];
-                  return (
-                    <option key={code} value={code} style={{ background: "#0D1120" }}>
-                      {meta ? `${meta.flag} ${meta.label}` : code}
-                    </option>
-                  );
-                })}
-              </select>
-            )}
+            >
+              <option value="" style={{ background: "#0D1120" }}>🌐 All languages</option>
+              {allLanguages.map(([code, meta]) => (
+                <option key={code} value={code} style={{ background: "#0D1120" }}>
+                  {meta.flag} {meta.label}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
@@ -941,6 +911,7 @@ export default function LibraryPage() {
             classics={classics}
             loading={loading}
             onClassicUpdated={(updated) => setClassics((prev) => prev.map((c) => c.id === updated.id ? updated : c))}
+            matchesFilter={matchesFilters}
           />
         </div>
 
@@ -965,7 +936,7 @@ export default function LibraryPage() {
               <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
               <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
               <button
-                onClick={() => setSearch("")}
+                onClick={clearAllFilters}
                 className="text-fs-body px-4 py-2 rounded-full transition-all"
                 style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
               >
@@ -1052,7 +1023,7 @@ export default function LibraryPage() {
               <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
               <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
               <button
-                onClick={() => setSearch("")}
+                onClick={clearAllFilters}
                 className="text-fs-body px-4 py-2 rounded-full transition-all"
                 style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
               >
@@ -1086,7 +1057,7 @@ export default function LibraryPage() {
               <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
               <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
               <button
-                onClick={() => setSearch("")}
+                onClick={clearAllFilters}
                 className="text-fs-body px-4 py-2 rounded-full transition-all"
                 style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
               >
@@ -1104,8 +1075,8 @@ export default function LibraryPage() {
                     className="flex flex-col rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                     <div style={{ position: "relative", paddingBottom: "100%", background: "rgba(167,139,250,0.08)" }}>
-                      {s.cover_url
-                        ? <img src={s.cover_url} alt={s.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                      {s.coverUrl
+                        ? <img src={s.coverUrl} alt={s.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
                         : <div className="absolute inset-0 flex items-center justify-center text-3xl">{s.emoji ?? "🌙"}</div>
                       }
                     </div>
@@ -1138,7 +1109,7 @@ export default function LibraryPage() {
               <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
               <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
               <button
-                onClick={() => setSearch("")}
+                onClick={clearAllFilters}
                 className="text-fs-body px-4 py-2 rounded-full transition-all"
                 style={{ color: "#4fc3f7", background: "rgba(79,195,247,0.1)", border: "1px solid rgba(79,195,247,0.25)" }}
               >
