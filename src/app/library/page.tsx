@@ -155,14 +155,12 @@ function ClassicsTab({ classics, loading, onClassicUpdated, matchesFilter }: {
 
         const cardBody = (
           <>
-            {/* Image — the outer card (below) has overflow-hidden for its own
-                rounded corners, so unlike the other grids this box needs
-                real padding, not just p-1: the book's skewY tilt shifts its
-                top-right corner upward (see BookCover.tsx's header comment),
-                and its drop shadow reaches right and down — both were
-                getting clipped by the card's overflow-hidden with only 4px
-                to work with. */}
-            <div className="relative w-full pt-3 pr-3 pl-1 pb-1" style={{ aspectRatio: "2/3" }}>
+            {/* Image — BookCover now reserves its own top/right breathing
+                room internally (percentage padding on its outer container —
+                see BookCover.tsx's header comment), so this no longer needs
+                the asymmetric pt/pr padding two earlier attempts here
+                needed and still under-shot. */}
+            <div className="relative w-full p-1" style={{ aspectRatio: "2/3" }}>
               {meta.coverUrl ? (
                 <BookCover coverUrl={meta.coverUrl} alt={displayTitle} borderRadius={8} />
               ) : (
@@ -708,7 +706,7 @@ export default function LibraryPage() {
                 </button>
               )}
             <div ref={recentScrollRef} onScroll={updateRecentScroll}
-              className="flex gap-3 overflow-x-auto pt-4 pb-4 -mt-4 -mb-4" style={{ scrollbarWidth: "none" }}>
+              className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {[
                 ...entries.slice(0, 3).map((e) => ({
                   key: `s-${e.id}`,

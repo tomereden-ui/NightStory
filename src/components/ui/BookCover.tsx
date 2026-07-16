@@ -17,18 +17,22 @@ import type { ReactNode } from "react";
 // skewY(ay) shifts a point's Y by x*tan(ay) — i.e. it shears based on
 // horizontal position, not vertical — so the whole right edge of the
 // (skewed) book translates vertically as one unit relative to the left
-// edge, growing the bounding box by roughly width*tan(3.5deg) (≈8px at
-// 130px wide, ≈16px at 260px wide). Box-shadow blur adds more on top of
-// that. Callers MUST give this component's own box some breathing room in
-// whatever scrolls/clips it (padding on a scrolling rail, gap in a grid) —
-// see the -mt-4/-mb-4 + pt-4/pb-4 pattern on the rail containers in
-// home/page.tsx and library/page.tsx. This component has no way to reserve
-// that space itself since it always fills 100% of the box it's given.
-// The LEFT edge (x=0) is the transform-origin ("left center"), so both
-// skewY and scaleX leave it stationary — dy = 0*tan(ay) = 0 — there's no
-// equivalent bounding-box growth to guard against on that side, and the
-// rails' existing horizontal padding (px-5, 20px) is already ample room
-// for the spine's own shadow/highlight glow.
+// edge, growing the bounding box by roughly width*tan(3.5deg) (≈6.1% of
+// width, at any card size). Box-shadow reach adds more on top of that,
+// toward the right and bottom.
+//
+// This used to be the caller's problem — every rail/grid that renders a
+// BookCover had to remember to add exactly the right padding around it, in
+// px, tuned per card size. That went through two rounds of "still clipping"
+// before landing here instead: the component now reserves its own
+// breathing room via PERCENTAGE padding on book-container. Percentage
+// padding resolves against the parent's WIDTH for all four sides (a real,
+// if obscure, CSS rule — see CSS2.1 §10.2), which is exactly the quantity
+// the skew excursion scales with, so this stays correct at every card size
+// this component is used at without any caller-side tuning. Only top+right
+// get padding — the LEFT edge sits at the transform-origin ("left center"),
+// so skewY/scaleX leave it stationary (dy = 0*tan(ay) = 0), and the bottom
+// doesn't need it since the shadow's offset is down-RIGHT, not down-left.
 //
 // Do NOT append " !important" inside a React inline style value (e.g.
 // width: "95% !important") to try to force-win a cascade fight — React
@@ -74,8 +78,14 @@ export default function BookCover({
   overlay?: ReactNode;
 }) {
   return (
-    // .book-container
-    <div className={`relative w-full h-full ${className ?? ""}`}>
+    // .book-container — reserves room for the skew's own overflow (see the
+    // header comment) via percentage padding, so book-wrapper below
+    // naturally renders inset from the top/right by the right amount at any
+    // size, with zero per-caller tuning needed.
+    <div
+      className={`relative w-full h-full ${className ?? ""}`}
+      style={{ boxSizing: "border-box", paddingTop: "8%", paddingRight: "10%" }}
+    >
       {/* .book-wrapper — skewY(-3deg) scaleX(0.95); hover straightens + lifts via globals.css */}
       <div className="book-wrapper relative w-full h-full">
         {/* .book-pages — sits behind the cover. Sized visibly larger than
