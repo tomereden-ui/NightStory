@@ -11,8 +11,19 @@ import type { ReactNode } from "react";
 // skewed (.book-wrapper in globals.css, which also holds the hover lift —
 // inline styles can't express :hover); cover and pages are plain
 // absolutely-positioned siblings underneath that skew, with the pages'
-// left edge tucked at 3px so nothing peeks out past the cover's spine on
-// the left.
+// left edge tucked in just enough to stay hidden under the cover's spine
+// on the left.
+//
+// skewY(ay) shifts a point's Y by x*tan(ay) — i.e. it shears based on
+// horizontal position, not vertical — so the whole right edge of the
+// (skewed) book translates vertically as one unit relative to the left
+// edge, growing the bounding box by roughly width*tan(3.5deg) (≈8px at
+// 130px wide, ≈16px at 260px wide). Box-shadow blur adds more on top of
+// that. Callers MUST give this component's own box some breathing room in
+// whatever scrolls/clips it (padding on a scrolling rail, gap in a grid) —
+// see the -mt-4/-mb-4 + pt-4/pb-4 pattern on the rail containers in
+// home/page.tsx and library/page.tsx. This component has no way to reserve
+// that space itself since it always fills 100% of the box it's given.
 //
 // Do NOT append " !important" inside a React inline style value (e.g.
 // width: "95% !important") to try to force-win a cascade fight — React
@@ -62,14 +73,17 @@ export default function BookCover({
     <div className={`relative w-full h-full ${className ?? ""}`}>
       {/* .book-wrapper — skewY(-3deg) scaleX(0.95); hover straightens + lifts via globals.css */}
       <div className="book-wrapper relative w-full h-full">
-        {/* .book-pages — sits behind the cover. */}
+        {/* .book-pages — sits behind the cover. Sized visibly larger than
+            the cover (not the same width) so a real margin of paper shows
+            on the right and bottom — at equal widths the "peek" was just a
+            few px, too thin to read as a page block at all. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "95%",
-            height: "96.5%",
-            top: "1.5%",
-            left: "3px",
+            width: "97%",
+            height: "97.5%",
+            top: "1%",
+            left: "2px",
             zIndex: 1,
             backgroundColor: "#f4f2eb",
             backgroundImage:
@@ -81,12 +95,14 @@ export default function BookCover({
               : undefined,
           }}
         />
-        {/* .book-cover — the front hardcover, leaves room on the right and bottom for the pages */}
+        {/* .book-cover — the front hardcover. Narrower than the pages
+            behind it (92% vs 97%) so a genuine, visible strip of paper
+            shows on the right and bottom instead of a hairline. */}
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
-            width: "95%",
-            height: "96%",
+            width: "92%",
+            height: "95%",
             zIndex: 2,
             borderRadius: "4px 6px 6px 4px",
             boxShadow:
@@ -95,13 +111,25 @@ export default function BookCover({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={coverUrl} alt={alt} className="absolute inset-0 w-full h-full object-cover" onError={onImgError} />
-          {/* .spine-crease */}
+          {/* .spine-crease — left edge (the hinge) */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               zIndex: 3,
               background:
                 "linear-gradient(to right, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.15) 1.5%, rgba(0,0,0,0.08) 3%, rgba(0,0,0,0.25) 4.5%, rgba(0,0,0,0) 7%)",
+            }}
+          />
+          {/* Right-edge blend — a soft shadow fading in from the right so
+              the artwork visually recedes INTO the page block behind it
+              instead of ending in a hard, disconnected line. Mirrors the
+              spine-crease's approach on the opposite edge. */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 3,
+              background:
+                "linear-gradient(to left, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.08) 3%, rgba(0,0,0,0) 9%)",
             }}
           />
           {overlay}

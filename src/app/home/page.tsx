@@ -293,7 +293,7 @@ function Rail({
       {hasChildren ? (
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto px-5 pb-1"
+          className="flex gap-3 overflow-x-auto px-5 pt-4 pb-4 -mt-4 -mb-4"
           style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
         >
           {children}
@@ -411,7 +411,7 @@ function TonightsPicksRail({ picks, tFn }: { picks: PickItem[]; tFn: (key: strin
         </h2>
       </div>
       <div
-        className="flex gap-3 overflow-x-auto px-5 pb-1"
+        className="flex gap-3 overflow-x-auto px-5 pt-4 pb-4 -mt-4 -mb-4"
         style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
       >
         {picks.map((item, i) => (

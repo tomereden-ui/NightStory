@@ -732,7 +732,7 @@ export default function LibraryPage() {
                 </button>
               )}
             <div ref={recentScrollRef} onScroll={updateRecentScroll}
-              className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              className="flex gap-3 overflow-x-auto pt-4 pb-4 -mt-4 -mb-4" style={{ scrollbarWidth: "none" }}>
               {[
                 ...entries.slice(0, 3).map((e) => ({
                   key: `s-${e.id}`,
