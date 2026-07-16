@@ -3,16 +3,19 @@
 import type { ReactNode } from "react";
 
 // Pure-CSS 3D book-cover treatment for existing flat cover art — no new
-// images, no server work. This is a faithful implementation of the
-// reference CSS the user supplied (.book-container / .book / .book-pages /
-// .book-cover / .spine-crease): a warm paper "pages" block sits behind the
-// cover, inset 1% and 98% wide/tall so its right edge peeks out past the
-// narrower (96%) front cover; vertical repeating lines on it simulate the
-// stacked page edges; the whole book leans a very slight rotateY(-4deg);
-// the cover carries a rim-light inset shadow plus a shadow falling onto
-// the pages, and the spine crease is a soft highlight-then-shadow gradient
-// along the left edge. Values match the reference — resist "improving"
-// them; earlier rounds that strengthened tilt/peek/contrast all read worse.
+// images, no server work. Based on the reference CSS the user supplied
+// (.book-container / .book / .book-pages / .book-cover / .spine-crease),
+// extended to match the approved grid screenshot, which reads "thicker,
+// more physical" because of three extra cues:
+//   1. a dark back-cover board behind everything, peeking past the pages
+//      on the right — the outermost edge of the book;
+//   2. a thicker cream page block between that board and the front cover;
+//   3. visible thickness along the TOP edge — the front cover sits slightly
+//      below the top of the book block, so a strip of dark board shows
+//      above the art (as if viewing the book from a touch above).
+// The bottom edge stays flush — earlier rounds proved a bottom sliver
+// reads as a distracting stripe, so all depth cues live on the right and
+// top only. Percentages keep every dimension proportional to the card size.
 //
 // Usage: swap an existing `<img className="absolute inset-0 w-full h-full
 // object-cover" src={coverUrl} />` for `<BookCover coverUrl={coverUrl}
@@ -54,35 +57,48 @@ export default function BookCover({
         className="relative w-full h-full transition-transform duration-300 ease-out"
         style={{ transformStyle: "preserve-3d", transform: "rotateY(-4deg)" }}
       >
-        {/* .book-pages — the physical paper edge revealed on the right.
-            The left edge stays well behind the cover (not at 1% like the
-            reference) so the paper can't peek through the notches left by
-            the cover's rounded top-left/bottom-left corners; the right
-            edge is unchanged at 99%. */}
+        {/* back-cover board — the outermost dark edge of the book, visible
+            past the pages on the right and as a thin strip of thickness
+            along the top */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            zIndex: 0,
+            background: "linear-gradient(115deg, #2a2018 0%, #3a2d20 55%, #1c150e 100%)",
+            borderRadius: `${spineRadius}px ${borderRadius}px ${borderRadius}px ${spineRadius}px`,
+            boxShadow: showShadow
+              ? "3px 2px 5px rgba(0,0,0,0.5), 8px 8px 16px rgba(0,0,0,0.35), 12px 16px 28px rgba(0,0,0,0.2)"
+              : undefined,
+          }}
+        />
+        {/* .book-pages — the physical paper edge revealed on the right,
+            between the front cover and the back board. Left edge stays well
+            behind the cover so paper can't peek through the cover's rounded
+            left-corner notches. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "89%",
-            height: "98%",
-            top: "1%",
+            width: "88%",
+            height: "95%",
+            top: "2.5%",
             left: "10%",
             zIndex: 1,
             background: "#f4f3ef",
             backgroundImage:
               "repeating-linear-gradient(to right, #f4f3ef 0px, #f4f3ef 1px, #e3dfd5 2px, #e3dfd5 3px)",
             borderRadius: `0 ${spineRadius}px ${spineRadius}px 0`,
-            boxShadow: showShadow
-              ? "3px 2px 5px rgba(0,0,0,0.5), 8px 8px 16px rgba(0,0,0,0.35), 12px 16px 28px rgba(0,0,0,0.2)"
-              : undefined,
+            boxShadow: "1px 1px 3px rgba(0,0,0,0.35)",
           }}
         />
-        {/* .book-cover — the front cover hardback, slightly narrower so the
-            pages show on the right */}
+        {/* .book-cover — the front cover hardback: narrower than the book so
+            the pages + board show on the right, and dropped slightly below
+            the top so the board's thickness shows above the art */}
         <div
-          className="absolute top-0 left-0 overflow-hidden"
+          className="absolute left-0 overflow-hidden"
           style={{
-            width: "96%",
-            height: "100%",
+            width: "94.5%",
+            height: "97.5%",
+            top: "2.5%",
             zIndex: 2,
             borderRadius: `${spineRadius}px ${borderRadius}px ${borderRadius}px ${spineRadius}px`,
             boxShadow:
