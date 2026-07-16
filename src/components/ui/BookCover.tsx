@@ -7,20 +7,22 @@ import type { ReactNode } from "react";
 //   - The container carries perspective: 1500px AND transform-style:
 //     preserve-3d so the child rotation renders with true depth instead of
 //     being flattened by the parent rendering context.
-//   - The book leans rotateY(-7deg) rotateX(1deg) (.book-3d in globals.css,
-//     which also holds the hover lift — inline styles can't express :hover).
-//   - The cover is the baseline front face: 96% wide / 96% tall, leaving 4%
-//     on the right and bottom for the page edges. Crisp book corners
+//   - The book leans rotateY(-8deg) rotateX(1.5deg) (.book-3d in
+//     globals.css, which also holds the hover lift — inline styles can't
+//     express :hover).
+//   - The cover is the baseline front face: 96% wide / 97% tall, leaving
+//     room on the right and bottom for the page edges. Crisp book corners
 //     (4px spine side / 2px page side).
-//   - The page block spans the FULL width behind the cover (left: 2%,
-//     width: 96% → right edge 98%), offset slightly down + right. Its left
-//     corners are square — border-radius: 0 4px 4px 0 — so nothing peeks
-//     out of the cover's rounded left corners; the cover simply overlaps
-//     it cleanly. (Never hide the left side by shrinking the block — that
-//     makes the book read as a hollow flap.)
+//   - The page block spans the full width behind the cover, but its left
+//     edge sits a fixed 4px in from the container (not a percentage) —
+//     just enough to hide completely behind the cover's left edge at any
+//     card size, without shrinking the block enough to read as a hollow
+//     flap. Square left corners (border-radius: 0 4px 4px 0) mean nothing
+//     can peek through the cover's rounded left corners either.
 //   - Fine stacked-page texture runs in both directions (vertical lines
-//     for the right edge, horizontal for the bottom), multiply-blended,
-//     plus the three-layer ambient-occlusion shadow stack.
+//     for the right edge, horizontal for the bottom) as subtle dark
+//     overlays on the warm paper base, plus a three-layer ambient-
+//     occlusion shadow stack (tight contact / soft spread / far ambient).
 //
 // Layout guidance for callers: keep the artwork clean — titles, chapter
 // info, and progress live BELOW the book in normal flow. The `overlay`
@@ -55,37 +57,37 @@ export default function BookCover({
       className={`relative w-full h-full ${className ?? ""}`}
       style={{ perspective: 1500, transformStyle: "preserve-3d" }}
     >
-      {/* .book — rotateY(-7deg) rotateX(1deg); hover lift via globals.css */}
+      {/* .book — rotateY(-8deg) rotateX(1.5deg); hover lift via globals.css */}
       <div className="book-3d relative w-full h-full">
-        {/* .book-pages — solid continuous block behind the entire cover,
-            offset slightly down + right; square left corners keep it
-            cleanly hidden under the cover's spine */}
+        {/* .book-pages — solid continuous block behind the cover. Left edge
+            sits just 4px in from the container (fixed px, not a percentage)
+            so it hides completely behind the cover's left edge at any card
+            size, while still peeking out on the right and bottom. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "96%",
-            height: "96%",
-            top: "2%",
-            left: "2%",
+            width: "calc(100% - 4px)",
+            height: "97.5%",
+            top: "1%",
+            left: "4px",
             zIndex: 1,
-            backgroundColor: "#f5f2eb",
+            backgroundColor: "#f4f2eb",
             backgroundImage:
-              "repeating-linear-gradient(to right, #f5f2eb 0px, #f5f2eb 1px, #e3dfd5 2px, #e3dfd5 3px)," +
-              "repeating-linear-gradient(to bottom, #f5f2eb 0px, #f5f2eb 1px, #e3dfd5 2px, #e3dfd5 3px)",
-            backgroundBlendMode: "multiply",
+              "repeating-linear-gradient(to right, transparent 0px, transparent 1px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 3px)," +
+              "repeating-linear-gradient(to bottom, transparent 0px, transparent 1px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 3px)",
             borderRadius: "0 4px 4px 0",
             boxShadow: showShadow
-              ? "3px 2px 5px rgba(0,0,0,0.5), 8px 8px 16px rgba(0,0,0,0.35), 12px 16px 28px rgba(0,0,0,0.2)"
+              ? "3px 3px 6px rgba(0,0,0,0.55), 10px 12px 24px rgba(0,0,0,0.4), 15px 22px 35px rgba(0,0,0,0.25)"
               : undefined,
           }}
         />
-        {/* .book-cover — the full front face of the book; leaves 4% on the
-            right and bottom for the page edges */}
+        {/* .book-cover — the full front face of the book; leaves room on
+            the right and bottom for the page block to peek out */}
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
             width: "96%",
-            height: "96%",
+            height: "97%",
             zIndex: 2,
             borderRadius: "4px 2px 2px 4px",
             boxShadow:
