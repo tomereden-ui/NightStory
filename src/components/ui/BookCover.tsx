@@ -24,6 +24,11 @@ import type { ReactNode } from "react";
 // see the -mt-4/-mb-4 + pt-4/pb-4 pattern on the rail containers in
 // home/page.tsx and library/page.tsx. This component has no way to reserve
 // that space itself since it always fills 100% of the box it's given.
+// The LEFT edge (x=0) is the transform-origin ("left center"), so both
+// skewY and scaleX leave it stationary — dy = 0*tan(ay) = 0 — there's no
+// equivalent bounding-box growth to guard against on that side, and the
+// rails' existing horizontal padding (px-5, 20px) is already ample room
+// for the spine's own shadow/highlight glow.
 //
 // Do NOT append " !important" inside a React inline style value (e.g.
 // width: "95% !important") to try to force-win a cascade fight — React
@@ -97,27 +102,35 @@ export default function BookCover({
         />
         {/* .book-cover — the front hardcover. Narrower than the pages
             behind it (92% vs 97%) so a genuine, visible strip of paper
-            shows on the right and bottom instead of a hairline. */}
+            shows on the right and bottom instead of a hairline. Corners are
+            asymmetric on purpose: the left (spine) side gets a slight 3px
+            round to soften it into a curve; the right side is perfectly
+            sharp (0) since that's a clean seam against the page stack, not
+            an outer corner. */}
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
             width: "92%",
             height: "95%",
             zIndex: 2,
-            borderRadius: "4px 6px 6px 4px",
+            borderRadius: "3px 0 0 3px",
             boxShadow:
               "inset 1px 1px 1px rgba(255,255,255,0.2), 3px 2px 6px rgba(0,0,0,0.45)",
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={coverUrl} alt={alt} className="absolute inset-0 w-full h-full object-cover" onError={onImgError} />
-          {/* .spine-crease — left edge (the hinge) */}
+          {/* .spine-crease — the left edge read as "just cropped, no book"
+              until this was strengthened: a bright ridge highlight right at
+              the edge, then a real dark crease, spanning the left 8% (was
+              7% at much lower opacity — 0.12/0.25 peak — nowhere near
+              visible enough against a busy illustration). */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               zIndex: 3,
               background:
-                "linear-gradient(to right, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.15) 1.5%, rgba(0,0,0,0.08) 3%, rgba(0,0,0,0.25) 4.5%, rgba(0,0,0,0) 7%)",
+                "linear-gradient(to right, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.45) 1%, rgba(0,0,0,0.15) 2.5%, rgba(0,0,0,0.5) 5%, rgba(0,0,0,0.18) 6.5%, rgba(0,0,0,0) 8%)",
             }}
           />
           {/* Right-edge blend — a soft shadow fading in from the right so
