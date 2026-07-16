@@ -10,7 +10,7 @@ import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
 import { generateScenes } from "@/lib/services/sceneGenerator";
 
 export const maxDuration = 120;
@@ -24,6 +24,17 @@ export interface FiveQuestionStoryRequest {
   // the active child's default moral lessons (Profile/onboarding) — woven in
   // the same way generate-story's STORY VALUES section does
   lessons?: string[];
+  // remaining child-profile fields — this route previously ignored all of
+  // these (age, avoid, gender, themes, animals, figures, interests, notes),
+  // so the wizard's generation never adjusted to the real active child at all
+  childAgeGroup?: string;
+  avoid?: string;
+  gender?: "boy" | "girl" | "other";
+  favoriteThemes?: string[];
+  favoriteAnimals?: string[];
+  preferredFigures?: string[];
+  interests?: string;
+  notes?: string;
 }
 
 interface RawBlock {
@@ -66,13 +77,18 @@ function readGuidance(): string {
   }
 }
 
-function buildSystemInstruction(guidance: string, durationMinutes: number, language?: string, existingTitles?: string[], lessons?: string[]): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, language?: string, existingTitles?: string[], lessons?: string[], childAgeGroup?: string, avoid?: string, child?: ChildPersonalizationInput): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
   const lessonPart = lessons?.length
     ? `\n\nSTORY VALUES\n------------\nEmbed the following values into the story through concrete actions the hero takes. Do NOT state the morals explicitly — let the character's choices show them:\n${lessons.map((l, i) => `${i + 1}. ${l}`).join("\n")}`
     : "";
+  const agePart = childAgeGroup ? `\n\n${ageLanguageRules(childAgeGroup)}` : "";
+  const avoidPart = avoid
+    ? `\n\nCONTENT TO STRICTLY AVOID\n--------------------------\n${avoid}\nThis is a HARD rule. Never include these elements — not even briefly, not even resolved positively. The child has fears or sensitivities around these topics.`
+    : "";
+  const childPart = child ? buildChildPersonalizationPart(child) : "";
   const langPart = language && language !== "en"
     ? `\n\nLANGUAGE\n--------\nWrite all DIALOGUE and NARRATION in ${language} (ISO 639-1: "${language}"). Character names, the story title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) must also be in this language — these are shown directly to the listener, so they must match the story's language exactly like the dialogue does.\nEXCEPTIONS — keep these fields in English regardless of story language:\n  • SFX textPayload descriptions (sent to ElevenLabs sound generator — non-English produces garbled audio)\n  • visualDescription in the characters map (sent to Imagen avatar generator — non-English produces wrong images)\n  • coverPrompt (sent to Imagen image generator)\n  • The bracketed performance tag at the start of EVERY SINGLE dialogue/narration textPayload (e.g. "[warmly]", "[excited]") — the tag word itself always stays in English, from the first line to the last, with no drift back to the story's language partway through; only the spoken text after the closing "]" switches language. Example: "[warmly] בְּלֵב שְׁכוּנָה מְלֵאָה בְּצִבְעִים וְקולוֹת, גָּר רוֹן הַקָּטָן." NOT "[חַמִּים] ...".${language === "he" ? `\nHEBREW VOCALIZATION — MANDATORY, no exceptions: write every Hebrew word fully niqqud-ed (with vowel points, ניקוד מלא), e.g. "שָׁלוֹם" not "שלום". This applies to EVERY Hebrew field you output — the dialogue/narration text, the title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) — not just the spoken lines. The top-level "summary" is shown to parents browsing the library and is also read by some screen readers, so it needs niqqud exactly as much as the script itself does. Unvocalized Hebrew text-to-speech mispronounces words constantly, so this is required for correct audio, not stylistic.` : ""}`
     : "";
@@ -81,7 +97,7 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, langu
     ? `\n\nTITLE UNIQUENESS\n----------------\nThe following titles already exist in this family's library. You MUST pick a title that does NOT appear in this list (not even as a close variant or reordering of the same words):\n${existingTitles.map((t) => `  - "${t}"`).join("\n")}\nIf your first choice matches any of these, invent a different title.`
     : "";
 
-  return `${guidance}${lessonPart}${langPart}${titleUniquePart}\n\nRUNTIME TARGETS FOR THIS STORY\n-------------------------------\nTarget duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}\nTarget word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)\nTarget blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)\n\nSCENE STRUCTURE (required — output in "scenes" array)\n------------------------------------------------------\nDivide the story into 3–5 logical scenes based on natural story beats. For each scene output:\n  - sceneNumber: integer starting at 1\n  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")\n  - summary: exactly 1 sentence describing what happens in this scene\n  - primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy\n  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])\n  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }\n\nScene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).\nlineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
+  return `${guidance}${lessonPart}${agePart}${childPart}${langPart}${avoidPart}${titleUniquePart}\n\nRUNTIME TARGETS FOR THIS STORY\n-------------------------------\nTarget duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}\nTarget word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)\nTarget blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)\n\nSCENE STRUCTURE (required — output in "scenes" array)\n------------------------------------------------------\nDivide the story into 3–5 logical scenes based on natural story beats. For each scene output:\n  - sceneNumber: integer starting at 1\n  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")\n  - summary: exactly 1 sentence describing what happens in this scene\n  - primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy\n  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])\n  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }\n\nScene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).\nlineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
 }
 
 function buildUserPrompt(seeds: StorySeeds): string {
@@ -130,7 +146,14 @@ export async function POST(req: NextRequest) {
     if (ctx) existingTitles = await getEntryTitles(ctx.familyId);
   } catch { /* best-effort */ }
 
-  const systemInstruction = buildSystemInstruction(guidance, clampedDuration, body.language, existingTitles, body.lessons);
+  const systemInstruction = buildSystemInstruction(guidance, clampedDuration, body.language, existingTitles, body.lessons, body.childAgeGroup, body.avoid, {
+    gender: body.gender,
+    favoriteThemes: body.favoriteThemes,
+    favoriteAnimals: body.favoriteAnimals,
+    preferredFigures: body.preferredFigures,
+    interests: body.interests,
+    notes: body.notes,
+  });
   const userPrompt = buildUserPrompt(seeds);
 
   try {

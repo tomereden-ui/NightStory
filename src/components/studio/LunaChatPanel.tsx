@@ -470,6 +470,21 @@ export default function LunaChatPanel({
     return age <= 4 ? "2-4" : age <= 6 ? "4-6" : age <= 8 ? "6-8" : age <= 10 ? "8-10" : "10-12";
   }
 
+  // Every remaining field on the active child's profile — folded into every
+  // generate-story call so the full profile (not just age/lessons) actually
+  // reaches the story prompt, not just this panel's own /api/chat context.
+  function getChildContext() {
+    return {
+      avoid: activeChild?.avoid,
+      gender: activeChild?.gender,
+      favoriteThemes: activeChild?.favorite_themes,
+      favoriteAnimals: activeChild?.favorite_animals,
+      preferredFigures: activeChild?.preferred_figures,
+      interests: activeChild?.interests,
+      notes: activeChild?.notes,
+    };
+  }
+
   // ─── Send message ──────────────────────────────────────────────────
 
   async function sendMessage(overrideText?: string) {
@@ -494,7 +509,7 @@ export default function LunaChatPanel({
         const res = await fetch("/api/generate-story", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language, narratorVoiceId: getNarratorVoiceId(), lessons: activeChild?.default_moral_lessons ?? [] }),
+          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language, narratorVoiceId: getNarratorVoiceId(), lessons: activeChild?.default_moral_lessons ?? [], ...getChildContext() }),
         });
         const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; scenes?: StoryScene[]; error?: string };
         if (!res.ok) throw new Error(data.error || "Generation failed");
@@ -632,6 +647,7 @@ export default function LunaChatPanel({
           language,
           narratorVoiceId: getNarratorVoiceId(),
           lessons: activeChild?.default_moral_lessons ?? [],
+          ...getChildContext(),
         }),
       });
       const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; scenes?: StoryScene[]; error?: string; blocked?: boolean; suggestedRewrite?: Record<string, string> };

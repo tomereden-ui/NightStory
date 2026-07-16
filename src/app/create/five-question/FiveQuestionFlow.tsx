@@ -1355,11 +1355,16 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 
 // ─── Generating screen ────────────────────────────────────────────────────────────────────────
 
-function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, lessons, onDone, onError, luna }: {
+function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, lessons, childContext, onDone, onError, luna }: {
   worldName: string;
   seeds: StorySeeds; durationMinutes: number;
   contentLanguage?: string;
   lessons?: string[];
+  childContext?: {
+    childAgeGroup?: string; avoid?: string; gender?: "boy" | "girl" | "other";
+    favoriteThemes?: string[]; favoriteAnimals?: string[]; preferredFigures?: string[];
+    interests?: string; notes?: string;
+  };
   onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => void;
   onError: (msg: string) => void;
   luna: LunaCopy;
@@ -1380,7 +1385,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
     fetch("/api/five-question-story", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seeds, durationMinutes, language: contentLanguage, narratorVoiceId: getNarratorVoiceId(), lessons }),
+      body: JSON.stringify({ seeds, durationMinutes, language: contentLanguage, narratorVoiceId: getNarratorVoiceId(), lessons, ...childContext }),
       signal: controller.signal,
     })
       .then(async (res) => {
@@ -1447,16 +1452,42 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   // The active child's own default moral lessons (Profile > Edit / onboarding)
   // — pre-applied to the generated story so the wizard never has to ask.
   const [defaultLessons, setDefaultLessons] = useState<string[]>([]);
+  // Rest of the active child's profile — age (for language-level targeting),
+  // avoid (fears/sensitivities), and the lighter personalization fields
+  // (gender, themes, favorite animals, preferred figures, interests, notes).
+  // This route previously never read any of this, so the wizard's generated
+  // stories ignored the whole profile beyond the name typed into Q1.
+  const [childContext, setChildContext] = useState<{
+    childAgeGroup?: string; avoid?: string; gender?: "boy" | "girl" | "other";
+    favoriteThemes?: string[]; favoriteAnimals?: string[]; preferredFigures?: string[];
+    interests?: string; notes?: string;
+  }>({});
   useEffect(() => {
     let cancelled = false;
     fetch("/api/child-profiles", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : []))
-      .then((profiles: { id: string; name: string; default_moral_lessons?: string[] }[]) => {
+      .then((profiles: {
+        id: string; name: string; age?: number; gender?: "boy" | "girl" | "other";
+        default_moral_lessons?: string[]; avoid?: string; favorite_themes?: string[];
+        favorite_animals?: string[]; preferred_figures?: string[]; interests?: string; notes?: string;
+      }[]) => {
         if (cancelled) return;
         const siblings = (profiles ?? []).filter((p) => p.id !== childId && p.name?.trim()).map((p) => p.name.trim());
         setSiblingNames(siblings);
         const self = (profiles ?? []).find((p) => p.id === childId);
         setDefaultLessons(self?.default_moral_lessons ?? []);
+        setChildContext({
+          childAgeGroup: self?.age != null
+            ? (self.age <= 4 ? "2-4" : self.age <= 6 ? "4-6" : self.age <= 8 ? "6-8" : self.age <= 10 ? "8-10" : "10-12")
+            : undefined,
+          avoid: self?.avoid,
+          gender: self?.gender,
+          favoriteThemes: self?.favorite_themes,
+          favoriteAnimals: self?.favorite_animals,
+          preferredFigures: self?.preferred_figures,
+          interests: self?.interests,
+          notes: self?.notes,
+        });
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -1782,7 +1813,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   );
 
   if (step === "generating" && seeds) return (
-    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} lessons={defaultLessons} onDone={handleDone} onError={handleGenError} luna={luna} />
+    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} lessons={defaultLessons} childContext={childContext} onDone={handleDone} onError={handleGenError} luna={luna} />
   );
 
   if (step === "done") {

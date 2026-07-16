@@ -6,7 +6,7 @@ import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
 import { generateScenes } from "@/lib/services/sceneGenerator";
 import type { ScriptBlock } from "@/types";
 
@@ -110,6 +110,13 @@ export interface GenerateStoryRequest {
   avoid?: string;
   // user's chosen default narrator voice — always wins for the "Narrator" character
   narratorVoiceId?: string;
+  // remaining child-profile fields — see buildChildPersonalizationPart
+  gender?: "boy" | "girl" | "other";
+  favoriteThemes?: string[];
+  favoriteAnimals?: string[];
+  preferredFigures?: string[];
+  interests?: string;
+  notes?: string;
 }
 
 interface RawBlock {
@@ -168,47 +175,12 @@ function readGuidance(): string {
 
 // ─── System instruction — guidance file + runtime numbers only ────────────────
 
-function ageLanguageRules(ageGroup: string): string {
-  const lo = parseInt(ageGroup.split(/[-–]/)[0] ?? "5", 10);
-  if (lo <= 4) return (
-    `LANGUAGE LEVEL: Ages 4–5
-- Sentences: max 6–7 words each. One idea per sentence.
-- Vocabulary: everyday words only (no metaphors, no abstract concepts).
-- Rhythm: short, bouncy, repetitive where it helps memory. Use sound words freely (POP, WHOOSH).
-- Emotions: name them directly — "she felt happy", "he was a little scared".
-- No subordinate clauses. No irony. No ambiguity.`
-  );
-  if (lo <= 6) return (
-    `LANGUAGE LEVEL: Ages 6–7
-- Sentences: 8–12 words. Simple structure, one or two ideas joined by "and" or "but".
-- Vocabulary: common words; introduce ONE new word per scene, explained immediately in context.
-- Light similes are fine ("as bright as the sun"), but no complex metaphors.
-- Emotions can be implied through actions, not just named.
-- Keep paragraphs short. Vary pace: short sentences for tension, longer for wonder.`
-  );
-  if (lo <= 8) return (
-    `LANGUAGE LEVEL: Ages 8–9
-- Sentences: 10–18 words. Can use subordinate clauses and varied structure.
-- Vocabulary: richer words welcome — but always clear from context. Max 2 new words per scene.
-- Metaphors and imagery allowed; keep them concrete (nature, familiar objects).
-- Characters can have inner thoughts and nuanced feelings.
-- Mild plot complexity is fine (a small mystery, a twist). No cliffhangers.`
-  );
-  return (
-    `LANGUAGE LEVEL: Ages 9–10
-- Sentences: varied length, 10–22 words. Full narrative voice allowed.
-- Vocabulary: near-chapter-book level. Rich descriptive language. Unusual words fine if contextually clear.
-- Complex metaphors, imagery, and layered emotions are welcome.
-- Plot can carry a mild theme or moral beyond the surface story.
-- Writing should feel like a well-crafted short story read aloud, not a simplified tale.`
-  );
-}
-
-function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string, lessons?: string[], language?: string, avoid?: string, existingTitles?: string[]): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, childAgeGroup?: string, lesson?: string, lessons?: string[], language?: string, avoid?: string, existingTitles?: string[], child?: ChildPersonalizationInput): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
   const agePart     = childAgeGroup ? `\n\n${ageLanguageRules(childAgeGroup)}` : "";
+  const childPart   = child ? buildChildPersonalizationPart(child) : "";
   // Merge lessons[] and legacy lesson string into one deduplicated list
   const allLessons  = Array.from(new Set([...(lessons ?? []), ...(lesson ? [lesson] : [])])).filter(Boolean);
   const lessonPart  = allLessons.length > 0
@@ -227,7 +199,7 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, child
     ? `\n\nTITLE UNIQUENESS\n----------------\nThe following titles already exist in this family's library. You MUST pick a title that does NOT appear in this list (not even as a close variant or reordering of the same words):\n${existingTitles.map((t) => `  - "${t}"`).join("\n")}\nIf your first choice matches any of these, invent a different title.`
     : "";
 
-  return `${guidance}${lessonPart}${agePart}${langPart}${avoidPart}${titleUniquePart}\n\nRUNTIME TARGETS FOR THIS STORY\n-------------------------------\nTarget duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}\nTarget word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)\nTarget blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)\n\nSCENE STRUCTURE (required — output in "scenes" array)\n------------------------------------------------------\nDivide the story into 3–5 logical scenes based on natural story beats. For each scene output:\n  - sceneNumber: integer starting at 1\n  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")\n  - summary: exactly 1 sentence describing what happens in this scene\n  - primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy\n  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])\n  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }\n\nScene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).\nlineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
+  return `${guidance}${lessonPart}${agePart}${childPart}${langPart}${avoidPart}${titleUniquePart}\n\nRUNTIME TARGETS FOR THIS STORY\n-------------------------------\nTarget duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}\nTarget word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)\nTarget blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)\n\nSCENE STRUCTURE (required — output in "scenes" array)\n------------------------------------------------------\nDivide the story into 3–5 logical scenes based on natural story beats. For each scene output:\n  - sceneNumber: integer starting at 1\n  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")\n  - summary: exactly 1 sentence describing what happens in this scene\n  - primaryMood: exactly one of — Gentle, Whimsical, Playful, Tense, Soothing, Wondrous, Cozy\n  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])\n  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }\n\nScene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).\nlineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
 }
 
 // ─── User prompt — story description only ────────────────────────────────────
@@ -270,7 +242,14 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-3.5-flash",
-      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons, body.language, body.avoid, existingTitles),
+      systemInstruction: buildSystemInstruction(guidance, durationMinutes, body.childAgeGroup, body.lesson, body.lessons, body.language, body.avoid, existingTitles, {
+        gender: body.gender,
+        favoriteThemes: body.favoriteThemes,
+        favoriteAnimals: body.favoriteAnimals,
+        preferredFigures: body.preferredFigures,
+        interests: body.interests,
+        notes: body.notes,
+      }),
       generationConfig: {
         temperature: 0.85,
         maxOutputTokens: 8192,

@@ -150,6 +150,83 @@ export function buildLengthCorrectionNote(actual: number, target: number): strin
     `\nRegenerate the FULL response in the exact same JSON format as before.`;
 }
 
+// ─── Age-based language rules ───────────────────────────────────────────────
+// Shared by generate-story and five-question-story — was previously a local
+// function only in generate-story/route.ts, which meant the wizard's
+// generation never adjusted sentence length/vocabulary to the active child's
+// real age at all.
+
+export function ageLanguageRules(ageGroup: string): string {
+  const lo = parseInt(ageGroup.split(/[-–]/)[0] ?? "5", 10);
+  if (lo <= 4) return (
+    `LANGUAGE LEVEL: Ages 4–5
+- Sentences: max 6–7 words each. One idea per sentence.
+- Vocabulary: everyday words only (no metaphors, no abstract concepts).
+- Rhythm: short, bouncy, repetitive where it helps memory. Use sound words freely (POP, WHOOSH).
+- Emotions: name them directly — "she felt happy", "he was a little scared".
+- No subordinate clauses. No irony. No ambiguity.`
+  );
+  if (lo <= 6) return (
+    `LANGUAGE LEVEL: Ages 6–7
+- Sentences: 8–12 words. Simple structure, one or two ideas joined by "and" or "but".
+- Vocabulary: common words; introduce ONE new word per scene, explained immediately in context.
+- Light similes are fine ("as bright as the sun"), but no complex metaphors.
+- Emotions can be implied through actions, not just named.
+- Keep paragraphs short. Vary pace: short sentences for tension, longer for wonder.`
+  );
+  if (lo <= 8) return (
+    `LANGUAGE LEVEL: Ages 8–9
+- Sentences: 10–18 words. Can use subordinate clauses and varied structure.
+- Vocabulary: richer words welcome — but always clear from context. Max 2 new words per scene.
+- Metaphors and imagery allowed; keep them concrete (nature, familiar objects).
+- Characters can have inner thoughts and nuanced feelings.
+- Mild plot complexity is fine (a small mystery, a twist). No cliffhangers.`
+  );
+  return (
+    `LANGUAGE LEVEL: Ages 9–10
+- Sentences: varied length, 10–22 words. Full narrative voice allowed.
+- Vocabulary: near-chapter-book level. Rich descriptive language. Unusual words fine if contextually clear.
+- Complex metaphors, imagery, and layered emotions are welcome.
+- Plot can carry a mild theme or moral beyond the surface story.
+- Writing should feel like a well-crafted short story read aloud, not a simplified tale.`
+  );
+}
+
+// ─── Child personalization ──────────────────────────────────────────────────
+// Folds the rest of the active child's profile (beyond age and the
+// dedicated moral-lessons/avoid sections each route already has) into the
+// prompt — themes, favorite animals, preferred storybook figures, free-text
+// interests, and gender (for pronoun/grammar agreement when the child's own
+// name is the hero). All optional and additive: a field the parent never
+// filled in is simply omitted, never left as an empty/awkward line.
+
+function humanize(id: string): string {
+  return id.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export interface ChildPersonalizationInput {
+  gender?: "boy" | "girl" | "other";
+  favoriteThemes?: string[];
+  favoriteAnimals?: string[];
+  preferredFigures?: string[];
+  interests?: string;
+  notes?: string;
+}
+
+export function buildChildPersonalizationPart(child: ChildPersonalizationInput): string {
+  const lines: string[] = [];
+  if (child.favoriteThemes?.length) lines.push(`- Favorite story themes: ${child.favoriteThemes.map(humanize).join(", ")}`);
+  if (child.favoriteAnimals?.length) lines.push(`- Favorite animals: ${child.favoriteAnimals.map(humanize).join(", ")}`);
+  if (child.preferredFigures?.length) lines.push(`- Favorite storybook figures: ${child.preferredFigures.map(humanize).join(", ")}`);
+  if (child.interests?.trim()) lines.push(`- Other interests: ${child.interests.trim()}`);
+  if (child.notes?.trim()) lines.push(`- Notes from the parent: ${child.notes.trim()}`);
+  if (child.gender === "boy" || child.gender === "girl") {
+    lines.push(`- This child is a ${child.gender} — if the hero is the child themself (their own name/identity), match pronouns and grammatical gender accordingly`);
+  }
+  if (lines.length === 0) return "";
+  return `\n\nCHILD PERSONALIZATION\n----------------------\nLight touches only — weave these in naturally wherever they genuinely fit the hero/world/plot already chosen for THIS story. Never force one in, and never let it override or contradict what was explicitly asked for:\n${lines.join("\n")}`;
+}
+
 // ─── Title conflict resolution ────────────────────────────────────────────────
 // Replaces each route's old fixConflictingTitle: previously fell back to
 // appending a generic suffix ("A New Adventure", "(New)", etc.) after a single

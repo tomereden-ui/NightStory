@@ -1773,6 +1773,12 @@ export default function Studio2Page() {
       narratorVoiceId: getNarratorVoiceId(),
       ...(selectedLessons.length > 0 ? { lessons: selectedLessons } : {}),
       ...(activeChild?.avoid ? { avoid: activeChild.avoid } : {}),
+      gender: activeChild?.gender,
+      favoriteThemes: activeChild?.favorite_themes,
+      favoriteAnimals: activeChild?.favorite_animals,
+      preferredFigures: activeChild?.preferred_figures,
+      interests: activeChild?.interests,
+      notes: activeChild?.notes,
     };
 
     try {

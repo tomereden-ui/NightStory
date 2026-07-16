@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
       preferred_figures: Array.isArray(body.preferred_figures) ? body.preferred_figures : [],
       default_moral_lessons: Array.isArray(body.default_moral_lessons) ? body.default_moral_lessons : [],
       interests: body.interests ?? "",
+      avoid: body.avoid ?? "",
       notes: body.notes ?? "",
       created_at: now,
       updated_at: now,
