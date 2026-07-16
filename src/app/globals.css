@@ -187,14 +187,18 @@ body::before {
 /* BookCover's layout CSS lives as inline styles in
    src/components/ui/BookCover.tsx (plain percentage-based layering). Only
    the hover behaviour lives here, because inline styles can't express
-   :hover — the book gently lifts toward the viewer and straightens. */
-.book-3d {
-  transform-style: preserve-3d;
-  transform: rotateY(-8deg) rotateX(1deg);
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+   :hover.
+   2D skew & scale technique (not perspective/rotateY/preserve-3d): the
+   scrolling rails' overflow-x-auto containers were flattening real 3D
+   transforms in some browser engines, so the "3D book" look is simulated
+   with a plain 2D skewY + scaleX instead — standard 2D transforms can't be
+   flattened by an ancestor's overflow the way 3D ones can. */
+.book-wrapper {
+  transform: skewY(-3deg) scaleX(0.95);
+  transition: transform 0.3s ease;
 }
-.book-3d:hover {
-  transform: rotateY(-2deg) translateZ(10px);
+.book-wrapper:hover {
+  transform: skewY(-0.5deg) scale(1.03) translateY(-4px);
 }
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
