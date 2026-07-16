@@ -105,6 +105,12 @@ export class ProductionTimer {
         console.warn("[perfMetrics] update failed:", updateError.message);
       } else if (updated && updated.length > 0) {
         return;
+      } else {
+        // No matching 'script_done' row for this story_id — either a
+        // pre-existing story from before markScriptDone existed, or (worth
+        // investigating if this shows up) the two phases disagreed on
+        // story_id and this insert is about to orphan an earlier row.
+        console.warn(`[perfMetrics] no script_done row found for story_id=${meta.storyId}; inserting a fresh row instead of updating`);
       }
 
       const { error } = await supabase.from("production_metrics").insert({ story_id: meta.storyId, ...payload });

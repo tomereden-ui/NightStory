@@ -1348,6 +1348,21 @@ export default function Studio2Page() {
   // Guards the draft-creation POST below from firing twice for the same
   // script (e.g. React re-renders before the fetch resolves).
   const creatingDraftRef = useRef(false);
+  // Mirrors editingStoryId but updated synchronously (not on React's render/
+  // effect schedule) the instant the draft-save POST below resolves, so
+  // handleProduce can read the freshest value right after awaiting
+  // draftSaveInFlightRef without a stale-closure risk.
+  const editingStoryIdRef = useRef<string | null>(null);
+  // The in-flight draft-creation POST (see the effect below), so Produce can
+  // be clicked immediately and just wait on this internally instead of the
+  // button being disabled — see handleProduce.
+  const draftSaveInFlightRef = useRef<Promise<void> | null>(null);
+  // Catch-all sync for every OTHER setEditingStoryId call site (draft load,
+  // clearing on new/forked story, the job-id fallback, etc.) — the draft-
+  // save effect above additionally sets the ref synchronously itself for
+  // the one race-sensitive path where handleProduce can't afford to wait
+  // for this effect to run.
+  useEffect(() => { editingStoryIdRef.current = editingStoryId; }, [editingStoryId]);
   // Keeps the raw base64 payload from the last cover generation so production
   // can reuse it even after coverUrl has been swapped to a CDN URL
   const coverBase64Ref = useRef<{ data: string; mimeType: string } | null>(null);
@@ -1558,7 +1573,12 @@ export default function Studio2Page() {
     if (!loaded || scriptBlocks.length === 0 || totalExpectedBlocks !== undefined || editingStoryId || creatingDraftRef.current) return;
     creatingDraftRef.current = true;
     const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
-    fetch("/api/library", {
+    // Stored so handleProduce can await this exact in-flight request instead
+    // of racing it — the user can click Produce the instant the script
+    // finishes, before this save has even resolved, without ending up with
+    // a produce-drama request that has no editingStoryId and orphans the
+    // production_metrics row this save is about to create (markScriptDone).
+    draftSaveInFlightRef.current = fetch("/api/library", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1573,9 +1593,15 @@ export default function Studio2Page() {
       }),
     })
       .then((r) => r.json())
-      .then((d) => { if (d?.id) setEditingStoryId(d.id); })
+      .then((d) => {
+        // Updated synchronously (not via a React effect keyed on state) so
+        // it's guaranteed fresh the instant this promise settles, with no
+        // dependency on when React actually commits the setEditingStoryId
+        // re-render.
+        if (d?.id) { editingStoryIdRef.current = d.id; setEditingStoryId(d.id); }
+      })
       .catch(() => {})
-      .finally(() => { creatingDraftRef.current = false; });
+      .finally(() => { creatingDraftRef.current = false; draftSaveInFlightRef.current = null; });
   }, [loaded, scriptBlocks, totalExpectedBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons]);
 
   // No silent autosave here by design: the live story row (and the version
@@ -2212,10 +2238,23 @@ export default function Studio2Page() {
     setProduceError(null);
     setActiveTab("producing");
     try {
+      // The button is clickable the instant the script is ready — it doesn't
+      // wait on the background draft-save (markScriptDone/production_metrics
+      // 'script_done' row) to finish. Instead, wait on it right here, before
+      // the actual produce-drama request goes out: without this, a fast
+      // click can fire before editingStoryId exists yet, and produce-drama
+      // falls back to a fresh jobId as the story id — silently orphaning the
+      // 'script_done' row instead of completing it. editingStoryIdRef (not
+      // the editingStoryId closure variable) is read below because it's
+      // updated synchronously the moment the save resolves, not on React's
+      // next render/effect tick.
+      if (!editingStoryIdRef.current && draftSaveInFlightRef.current) {
+        await draftSaveInFlightRef.current;
+      }
       const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
       const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined, ...(activeChildId ? { childIds: [activeChildId] } : {}) };
-      if (editingStoryId) {
-        body.editingStoryId = editingStoryId;
+      if (editingStoryIdRef.current) {
+        body.editingStoryId = editingStoryIdRef.current;
         // Always force re-production when editing an existing story — the server-side
         // guard would otherwise return the old cached audio without reading the new blocks.
         // Per-element audio cache still avoids re-synthesizing unchanged lines.
@@ -2247,7 +2286,7 @@ export default function Studio2Page() {
       setIsProducing(false);
       setActiveTab("script");
     }
-  }, [editingStoryId, summary, coverPrompt, coverUrl, moralLessons, characterProfiles, characterDescriptions, characterTypes]);
+  }, [summary, coverPrompt, coverUrl, moralLessons, characterProfiles, characterDescriptions, characterTypes]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job);
