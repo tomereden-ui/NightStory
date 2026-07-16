@@ -686,6 +686,11 @@ export default function HomePage() {
   // down to its earliest chapter before building any browse/recommend rail.
   const dedupedStories = dedupeBySeries(stories);
   const readyClassics = dedupeBySeries(classics.filter((c) => c.status === "ready"));
+  // Same reasoning for the plain Classics/Family Stories browse rails below —
+  // these previously mapped over the raw arrays directly, so a multi-chapter
+  // classic (or family story) showed one card per chapter instead of once.
+  const dedupedClassicsRail = dedupeBySeries(classics);
+  const dedupedFamilyStories = dedupeBySeries(familyStories);
 
   // "Tonight's Picks" — up to 2 user stories + up to 3 ready classics, interleaved
   const tonightsPicks: PickItem[] = [
@@ -732,11 +737,14 @@ export default function HomePage() {
   type MyListItem = { id: string; title: string; summary: string; coverUrl?: string; href: string };
   const myList: MyListItem[] = activeChildId
     ? [
-        ...familyStories
-          .filter((s) => s.favoritedBy?.includes(activeChildId))
+        // dedupeBySeries runs AFTER the favorite filter (not before, like the
+        // other rails) — favoriting is per-chapter, so collapsing to chapter
+        // 1 first could drop a favorite that was only marked on chapter 2+.
+        // This only merges cards when multiple chapters of the same series
+        // both happen to be favorited.
+        ...dedupeBySeries(familyStories.filter((s) => s.favoritedBy?.includes(activeChildId)))
           .map((s) => ({ id: s.id, title: s.title, summary: s.summary ?? "", coverUrl: s.coverUrl, href: `/library/${s.id}` })),
-        ...classics
-          .filter((c) => c.favoritedBy?.includes(activeChildId))
+        ...dedupeBySeries(classics.filter((c) => c.favoritedBy?.includes(activeChildId)))
           .map((c) => ({ id: c.id, title: c.title, summary: c.tagline, coverUrl: c.coverUrl, href: `/library/classics/${c.id}` })),
       ]
     : [];
@@ -951,7 +959,7 @@ export default function HomePage() {
               title="Family Stories"
               action={{ label: t("viewAll"), href: "/library" }}
             >
-              {familyStories.slice(0, 8).map((s) => (
+              {dedupedFamilyStories.slice(0, 8).map((s) => (
                 <StoryCard
                   key={s.id}
                   title={s.title}
@@ -983,7 +991,7 @@ export default function HomePage() {
               title={t("classicsSection")}
               action={{ label: t("allClassics"), href: "/library" }}
             >
-              {classics.slice(0, 8).map((c) => (
+              {dedupedClassicsRail.slice(0, 8).map((c) => (
                 <StoryCard
                   key={c.id}
                   title={c.title}

@@ -599,8 +599,8 @@ export default function LibraryPage() {
   // matchesFilters predicate against their own dataset.
   const filtered = dedupeBySeries(entries.filter(matchesFilters));
   const filteredAll = dedupeBySeries(allEntries.filter(matchesFilters));
-  const filteredFamily = familyEntries.filter(matchesFilters);
-  const filteredCommunity = communityStories.filter(matchesFilters);
+  const filteredFamily = dedupeBySeries(familyEntries.filter(matchesFilters));
+  const filteredCommunity = dedupeBySeries(communityStories.filter(matchesFilters));
 
   // Chip/dropdown options are the full canonical catalogs, not just whatever
   // happens to already be present in a loaded list — the same fixed
