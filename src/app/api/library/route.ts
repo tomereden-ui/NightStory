@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEntrySummaries, getAllVisibleEntries, getSeriesChapters, addEntry } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
+import { supabase } from "@/lib/supabase";
+import { markScriptDone } from "@/lib/perfMetrics";
 import type { ScriptBlock, StoryScene } from "@/types";
 import type { CharacterProfile } from "@/lib/libraryStore";
 import type { MoralLesson } from "@/types";
@@ -74,6 +76,17 @@ export async function POST(req: NextRequest) {
     childIds: body.childIds,
     isDraft: true,
   }, ctx.familyId);
+
+  // Best-effort — records the "script done" stage in production_metrics
+  // right away, well before Produce Audio (which may never run). See
+  // ProductionTimer.flush in perfMetrics.ts for how the row gets completed.
+  void markScriptDone(supabase, {
+    storyId: id,
+    storyTitle: body.title,
+    language: body.language,
+    dialogueCount: body.blocks.filter((b) => b.characterName !== "SFX").length,
+    sfxCount: body.blocks.filter((b) => b.characterName === "SFX").length,
+  });
 
   return NextResponse.json({ id });
 }

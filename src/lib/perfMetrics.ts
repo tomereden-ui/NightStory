@@ -49,6 +49,14 @@ export class ProductionTimer {
    * Persist the run to public.production_metrics. Never throws — a missing
    * table (migration not run yet) or transient DB error must not affect a
    * finished production; it just logs a warning.
+   *
+   * markScriptDone (below) already inserted a 'script_done' row for this
+   * story_id the moment the script itself was saved, well before audio
+   * production even started — this updates that same row in place with the
+   * audio-stage metrics and the final outcome, rather than leaving a stale
+   * "script done, audio never happened" row sitting next to a separate one.
+   * Falls back to a fresh insert when no such row exists (older stories from
+   * before this existed, or any flow that bypasses POST /api/library).
    */
   async flush(
     supabase: SupabaseClient,
@@ -69,26 +77,68 @@ export class ProductionTimer {
       errorMessage?: string;
     },
   ): Promise<void> {
+    const payload = {
+      job_id: meta.jobId,
+      story_title: meta.storyTitle ?? null,
+      language: meta.language ?? null,
+      dialogue_count: meta.dialogueCount ?? null,
+      sfx_count: meta.sfxCount ?? null,
+      cache_dialogue_hits: meta.cacheDialogueHits ?? null,
+      cache_sfx_hits: meta.cacheSfxHits ?? null,
+      skipped_lines: meta.skippedLines ?? null,
+      duration_seconds: meta.durationSeconds ?? null,
+      outcome: meta.outcome,
+      error_message: meta.errorMessage ?? null,
+      total_ms: this.totalMs(),
+      stages: this.stages,
+    };
+
     try {
-      const { error } = await supabase.from("production_metrics").insert({
-        story_id: meta.storyId,
-        job_id: meta.jobId,
-        story_title: meta.storyTitle ?? null,
-        language: meta.language ?? null,
-        dialogue_count: meta.dialogueCount ?? null,
-        sfx_count: meta.sfxCount ?? null,
-        cache_dialogue_hits: meta.cacheDialogueHits ?? null,
-        cache_sfx_hits: meta.cacheSfxHits ?? null,
-        skipped_lines: meta.skippedLines ?? null,
-        duration_seconds: meta.durationSeconds ?? null,
-        outcome: meta.outcome,
-        error_message: meta.errorMessage ?? null,
-        total_ms: this.totalMs(),
-        stages: this.stages,
-      });
+      const { data: updated, error: updateError } = await supabase
+        .from("production_metrics")
+        .update(payload)
+        .eq("story_id", meta.storyId)
+        .eq("outcome", "script_done")
+        .select("id");
+
+      if (updateError) {
+        console.warn("[perfMetrics] update failed:", updateError.message);
+      } else if (updated && updated.length > 0) {
+        return;
+      }
+
+      const { error } = await supabase.from("production_metrics").insert({ story_id: meta.storyId, ...payload });
       if (error) console.warn("[perfMetrics] insert failed:", error.message);
     } catch (err) {
       console.warn("[perfMetrics] flush failed:", err);
     }
+  }
+}
+
+/**
+ * Marks the "script done, audio not yet produced" stage — call this the
+ * moment a freshly generated script is first persisted (POST /api/library,
+ * long before Produce Audio ever runs, and it may never run at all). Records
+ * whatever's known at that point; ProductionTimer.flush later finds this row
+ * by story_id and fills in the rest once/if audio production finishes.
+ * Never throws — same rationale as ProductionTimer.flush.
+ */
+export async function markScriptDone(
+  supabase: SupabaseClient,
+  meta: { storyId: string; storyTitle?: string; language?: string; dialogueCount?: number; sfxCount?: number },
+): Promise<void> {
+  try {
+    const { error } = await supabase.from("production_metrics").insert({
+      story_id: meta.storyId,
+      story_title: meta.storyTitle ?? null,
+      language: meta.language ?? null,
+      dialogue_count: meta.dialogueCount ?? null,
+      sfx_count: meta.sfxCount ?? null,
+      outcome: "script_done",
+      total_ms: 0,
+    });
+    if (error) console.warn("[perfMetrics] markScriptDone insert failed:", error.message);
+  } catch (err) {
+    console.warn("[perfMetrics] markScriptDone failed:", err);
   }
 }
