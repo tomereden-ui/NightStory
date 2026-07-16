@@ -1545,7 +1545,17 @@ export default function Studio2Page() {
   // in the produce-drama request) and upserts the row without isDraft, which
   // promotes it to a real, visible library entry.
   useEffect(() => {
-    if (!loaded || scriptBlocks.length === 0 || editingStoryId || creatingDraftRef.current) return;
+    // totalExpectedBlocks is only set (non-undefined) while the staggered
+    // block-reveal animation is still running (see onScriptReady/onComplete/
+    // handleGenerate) — waiting for it to clear means this fires once with
+    // the COMPLETE script, not on whichever partial scriptBlocks state
+    // happened to exist right after the very first block rendered. Without
+    // this, the very first render tick (scriptBlocks.length === 1) already
+    // satisfies every other condition here, so the draft (and its
+    // production_metrics 'script_done' row) got saved with just 1-2 blocks
+    // instead of the real full script — an incomplete snapshot that then
+    // never gets corrected unless the user manually clicks "Update Version."
+    if (!loaded || scriptBlocks.length === 0 || totalExpectedBlocks !== undefined || editingStoryId || creatingDraftRef.current) return;
     creatingDraftRef.current = true;
     const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
     fetch("/api/library", {
@@ -1566,7 +1576,7 @@ export default function Studio2Page() {
       .then((d) => { if (d?.id) setEditingStoryId(d.id); })
       .catch(() => {})
       .finally(() => { creatingDraftRef.current = false; });
-  }, [loaded, scriptBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons]);
+  }, [loaded, scriptBlocks, totalExpectedBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons]);
 
   // No silent autosave here by design: the live story row (and the version
   // history) must only ever change when the user explicitly clicks Update
