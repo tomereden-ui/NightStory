@@ -58,32 +58,41 @@ export default function BookCover({
     <div className={`relative w-full h-full ${className ?? ""}`} style={{ perspective: 1200 }}>
       {/* .book — leans rotateY(-4deg); lifts/straightens on hover (globals.css) */}
       <div className="book-3d relative w-full h-full">
-        {/* .book-pages — warm stacked-paper block peeking out on the right
-            and slightly at the bottom */}
+        {/* .book-pages — a single cohesive page block sitting BEHIND the
+            cover, offset diagonally (down + right) so it peeks out naturally
+            on the right and bottom edges — never a flat bar under the image.
+            Fine stacked-page texture runs in BOTH directions (vertical lines
+            for the right edge, horizontal lines for the bottom edge),
+            blended with multiply. The left edge stays well inside the cover
+            (10%, not the spec's 2%) so paper can't peek through the notches
+            of the cover's rounded left corners; the right edge lands at 98%
+            exactly as specified. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "91%",
-            height: "99%",
-            top: "1%",
-            left: "8%",
+            width: "88%",
+            height: "97%",
+            top: "1.5%",
+            left: "10%",
             zIndex: 1,
-            background: "#f4f3ef",
+            backgroundColor: "#f2efe9",
             backgroundImage:
-              "repeating-linear-gradient(to right, #f4f3ef 0px, #f4f3ef 1px, #e3dfd5 1.5px, #e3dfd5 2px)",
+              "repeating-linear-gradient(to right, #f2efe9 0px, #f2efe9 1px, #e3dfd5 2px, #e3dfd5 3px)," +
+              "repeating-linear-gradient(to bottom, #f2efe9 0px, #f2efe9 1px, #e3dfd5 2px, #e3dfd5 3px)",
+            backgroundBlendMode: "multiply",
             borderRadius: `0 ${pageRadius}px ${pageRadius}px 0`,
             boxShadow: showShadow
               ? "3px 2px 5px rgba(0,0,0,0.5), 8px 8px 16px rgba(0,0,0,0.35), 12px 16px 28px rgba(0,0,0,0.2)"
               : undefined,
           }}
         />
-        {/* .book-cover — the hardcover front board; narrower and a touch
-            shorter than the pages so they peek right + bottom */}
+        {/* .book-cover — the hardcover front board; narrower and shorter
+            than the book so the offset page block peeks right + bottom */}
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
             width: "96%",
-            height: "98%",
+            height: "97%",
             zIndex: 2,
             borderRadius: `${spineRadius}px ${borderRadius}px ${borderRadius}px ${spineRadius}px`,
             boxShadow:
