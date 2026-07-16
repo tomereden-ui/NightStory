@@ -155,8 +155,14 @@ function ClassicsTab({ classics, loading, onClassicUpdated, matchesFilter }: {
 
         const cardBody = (
           <>
-            {/* Image — padded so the 3D book's spine/page slivers have room to peek */}
-            <div className="relative w-full p-1" style={{ aspectRatio: "2/3" }}>
+            {/* Image — the outer card (below) has overflow-hidden for its own
+                rounded corners, so unlike the other grids this box needs
+                real padding, not just p-1: the book's skewY tilt shifts its
+                top-right corner upward (see BookCover.tsx's header comment),
+                and its drop shadow reaches right and down — both were
+                getting clipped by the card's overflow-hidden with only 4px
+                to work with. */}
+            <div className="relative w-full pt-3 pr-3 pl-1 pb-1" style={{ aspectRatio: "2/3" }}>
               {meta.coverUrl ? (
                 <BookCover coverUrl={meta.coverUrl} alt={displayTitle} borderRadius={8} />
               ) : (
