@@ -54,14 +54,18 @@ export default function BookCover({
         className="relative w-full h-full transition-transform duration-300 ease-out"
         style={{ transformStyle: "preserve-3d", transform: "rotateY(-4deg)" }}
       >
-        {/* .book-pages — the physical paper edge revealed on the right */}
+        {/* .book-pages — the physical paper edge revealed on the right.
+            The left edge stays well behind the cover (not at 1% like the
+            reference) so the paper can't peek through the notches left by
+            the cover's rounded top-left/bottom-left corners; the right
+            edge is unchanged at 99%. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "98%",
+            width: "89%",
             height: "98%",
             top: "1%",
-            left: "1%",
+            left: "10%",
             zIndex: 1,
             background: "#f4f3ef",
             backgroundImage:
