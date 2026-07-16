@@ -249,7 +249,7 @@ export default function OnboardingPage() {
           <button
             onClick={() => finishOnboarding(router)}
             className="text-fs-body font-medium"
-            style={{ color: "rgba(148,163,184,0.6)" }}
+            style={{ color: "rgba(148,163,184,0.8)" }}
           >
             Skip for now
           </button>
@@ -261,7 +261,7 @@ export default function OnboardingPage() {
           <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
             <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 20px rgba(167,139,250,0.4))" }}>🌙✨</span>
             <h1 className="font-bold" style={{ fontSize: 26, color: "#e2e8f0" }}>Let&apos;s meet your family</h1>
-            <p className="text-fs-body leading-relaxed" style={{ color: "rgba(148,163,184,0.75)", maxWidth: 320 }}>
+            <p className="text-fs-body leading-relaxed" style={{ color: "rgba(148,163,184,0.9)", maxWidth: 320 }}>
               Tell us a little about your child so every story feels made just for them. It only takes a minute — and you can skip anything.
             </p>
             <button
@@ -448,7 +448,7 @@ export default function OnboardingPage() {
               })}
             </div>
             {imagesGenerating && (
-              <p className="text-center text-fs-body mt-3" style={{ color: "rgba(148,163,184,0.5)" }}>✨ Painting the rest of the artwork…</p>
+              <p className="text-center text-fs-body mt-3" style={{ color: "rgba(148,163,184,0.7)" }}>✨ Painting the rest of the artwork…</p>
             )}
           </StepShell>
         )}
@@ -496,7 +496,7 @@ export default function OnboardingPage() {
             <h1 className="font-bold" style={{ fontSize: 24, color: "#e2e8f0" }}>
               {savedChildren[savedChildren.length - 1]?.name ?? "Your child"} is ready for bedtime stories!
             </h1>
-            <p className="text-fs-body" style={{ color: "rgba(148,163,184,0.7)" }}>
+            <p className="text-fs-body" style={{ color: "rgba(148,163,184,0.9)" }}>
               {savedChildren.length} {savedChildren.length === 1 ? "child" : "children"} added so far.
             </p>
             <div className="w-full flex flex-col gap-2.5 mt-4">
@@ -536,7 +536,7 @@ export default function OnboardingPage() {
               <button
                 onClick={goNext}
                 className="text-fs-body font-medium mx-auto"
-                style={{ color: "rgba(148,163,184,0.55)" }}
+                style={{ color: "rgba(148,163,184,0.75)" }}
               >
                 Skip this step
               </button>
@@ -553,7 +553,7 @@ function StepShell({ title, subtitle, children }: { title: string; subtitle: str
     <div className="flex-1 flex flex-col justify-center gap-6">
       <div className="text-center">
         <h1 className="font-bold mb-1.5" style={{ fontSize: 22, color: "#e2e8f0" }}>{title}</h1>
-        <p className="text-fs-body" style={{ color: "rgba(148,163,184,0.7)" }}>{subtitle}</p>
+        <p className="text-fs-body" style={{ color: "rgba(148,163,184,0.9)" }}>{subtitle}</p>
       </div>
       {children}
     </div>
