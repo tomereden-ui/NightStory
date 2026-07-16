@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 // Pure-CSS 3D book-cover treatment for existing flat cover art — no new
 // images, no server work. Two flat, percentage-sized layers plus a subtle
 // whole-group tilt: a "pages" rectangle (warm paper color, striped to
@@ -11,13 +13,21 @@
 // dimension is already proportional to this component's own size — no
 // container queries, no fixed-px thicknesses that only look right at one
 // size, no relying on browsers (or the build's CSS minifier) to preserve
-// a duplicate-declaration fallback correctly.
+// a duplicate-declaration fallback correctly. Rotation is anchored at the
+// left edge (transformOrigin "left center") — a book hinges at its spine,
+// not its center, so the left edge stays put and only the right recedes.
 //
 // Usage: swap an existing `<img className="absolute inset-0 w-full h-full
 // object-cover" src={coverUrl} />` for `<BookCover coverUrl={coverUrl}
 // alt={title} />`. The parent container keeps its sizing (width/height or
 // aspectRatio) but must NOT also clip with `overflow-hidden` — the pages
-// layer peeks a couple percent past the cover's right edge by design.
+// layer peeks past the cover's right/bottom edges by design. Any title/
+// gradient/badge chrome that needs to sit ON the cover must go through the
+// `overlay` prop (rendered inside the same box as the image) rather than
+// a separate sibling positioned at inset-0 — the cover is intentionally
+// smaller than the full container (to reveal the pages behind it), so an
+// external overlay sized to the old full-bleed bounds visibly misaligns
+// with the actual displayed image.
 export default function BookCover({
   coverUrl,
   alt,
@@ -25,6 +35,7 @@ export default function BookCover({
   showShadow = true,
   className,
   onImgError,
+  overlay,
 }: {
   coverUrl: string;
   alt: string;
@@ -35,6 +46,10 @@ export default function BookCover({
   /** Forwarded to the inner <img>'s onError, same as callers used to attach
    *  directly (e.g. classics falling back to an emoji placeholder). */
   onImgError?: () => void;
+  /** Title/gradient/badge chrome rendered on top of the image, inside the
+   *  same tilted+inset front-cover box so it can never drift out of
+   *  alignment with the displayed cover. */
+  overlay?: ReactNode;
 }) {
   const spineRadius = Math.max(2, borderRadius - 2);
 
@@ -42,7 +57,7 @@ export default function BookCover({
     <div className={`relative w-full h-full ${className ?? ""}`} style={{ perspective: 1200 }}>
       <div
         className="relative w-full h-full transition-transform duration-300 ease-out"
-        style={{ transformStyle: "preserve-3d", transform: "rotateY(-9deg) rotateX(1.5deg)" }}
+        style={{ transformStyle: "preserve-3d", transform: "rotateY(-9deg) rotateX(1.5deg)", transformOrigin: "left center" }}
       >
         {/* pages — flat, slightly larger on the right AND bottom edges (a
             book's fore-edge and tail — the two edges that actually show
@@ -84,6 +99,7 @@ export default function BookCover({
                 "linear-gradient(to right, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.3) 2%, rgba(0,0,0,0.16) 4%, rgba(0,0,0,0.42) 6%, rgba(0,0,0,0) 10%)",
             }}
           />
+          {overlay}
         </div>
       </div>
     </div>

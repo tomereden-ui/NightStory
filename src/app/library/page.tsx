@@ -332,24 +332,39 @@ function FamilyStoriesGrid({
               className="absolute inset-1 transition-all active:scale-[0.97] select-none block"
             >
               {entry.coverUrl ? (
-                <BookCover coverUrl={entry.coverUrl} alt={entry.title} borderRadius={8} />
+                <BookCover
+                  coverUrl={entry.coverUrl}
+                  alt={entry.title}
+                  borderRadius={8}
+                  overlay={
+                    <>
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
+                      <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
+                        <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {(entry.viewCount ?? 0) > 0 && (
+                            <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  }
+                />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center rounded-lg overflow-hidden"
                   style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
                   <span className="text-fs-display" style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
-                </div>
-              )}
-              <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
-                <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
-                <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
-                  <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {(entry.viewCount ?? 0) > 0 && (
-                      <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
-                    )}
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
+                  <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
+                    <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {(entry.viewCount ?? 0) > 0 && (
+                        <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </Link>
 
             {/* Bottom strip — avatars when assigned, "+Assign" button when not */}
@@ -756,19 +771,29 @@ export default function LibraryPage() {
                     style={{ width: 110, height: 160, flexShrink: 0 }}
                   >
                     {item.coverUrl ? (
-                      <BookCover coverUrl={item.coverUrl} alt={item.title} borderRadius={12} />
+                      <BookCover
+                        coverUrl={item.coverUrl}
+                        alt={item.title}
+                        borderRadius={12}
+                        overlay={
+                          <>
+                            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
+                            <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
+                              <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
+                            </div>
+                          </>
+                        }
+                      />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-fs-display rounded-2xl overflow-hidden"
                         style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)`, border: "1px solid rgba(255,255,255,0.07)" }}>
                         <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
+                        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
+                        <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
+                          <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
+                        </div>
                       </div>
                     )}
-                    <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-                      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
-                      <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
-                        <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
-                      </div>
-                    </div>
                   </Link>
                 );
               })}
