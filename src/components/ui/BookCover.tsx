@@ -57,34 +57,34 @@ export default function BookCover({
     <div className={`relative w-full h-full ${className ?? ""}`} style={{ perspective: 1200 }}>
       <div
         className="relative w-full h-full transition-transform duration-300 ease-out"
-        style={{ transformStyle: "preserve-3d", transform: "rotateY(-9deg) rotateX(1.5deg)", transformOrigin: "left center" }}
+        style={{ transformStyle: "preserve-3d", transform: "rotateY(-5deg) rotateX(1deg)", transformOrigin: "left center" }}
       >
-        {/* pages — flat, slightly larger on the right AND bottom edges (a
-            book's fore-edge and tail — the two edges that actually show
-            stacked paper; the spine/left and head/top stay flush) */}
+        {/* pages — flat, JUST slightly larger on the right and bottom edges
+            (a book's fore-edge and tail) — a thin hint of stacked paper,
+            not a wide visible border. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            top: "1%", left: "1%", width: "99%", height: "99%",
+            top: "0.5%", left: "0.5%", width: "99.5%", height: "99.5%",
             zIndex: 1,
             borderRadius: `0 ${borderRadius}px ${borderRadius}px 0`,
             background: "#f4f3ef",
             backgroundImage: "repeating-linear-gradient(to right, #f4f3ef 0px, #f4f3ef 1px, #ddd7c6 2px, #ddd7c6 3px)",
             boxShadow: showShadow
-              ? "4px 3px 6px rgba(0,0,0,0.55), 9px 9px 18px rgba(0,0,0,0.4), 14px 18px 32px rgba(0,0,0,0.22)"
+              ? "3px 2px 5px rgba(0,0,0,0.5), 7px 7px 14px rgba(0,0,0,0.32), 11px 14px 24px rgba(0,0,0,0.18)"
               : undefined,
           }}
         />
 
-        {/* front cover — the real image, narrower/shorter than the
-            container so the pages layer shows on the right and bottom */}
+        {/* front cover — the real image, JUST slightly narrower/shorter
+            than the container so only a thin sliver of pages shows */}
         <div
           className="absolute overflow-hidden"
           style={{
-            top: 0, left: 0, width: "92%", height: "96%",
+            top: 0, left: 0, width: "97%", height: "98.5%",
             zIndex: 2,
             borderRadius: `${spineRadius}px ${borderRadius}px ${borderRadius}px ${spineRadius}px`,
-            boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.18), 3px 2px 7px rgba(0,0,0,0.5)",
+            boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.18), 2px 1px 5px rgba(0,0,0,0.45)",
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
