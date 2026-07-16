@@ -486,7 +486,7 @@ function EditChildModal({
 
         <div className="flex flex-col gap-3">
           <div>
-            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">{t("name")}</label>
+            <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(79,195,247,0.8)" }}>{t("name")}</label>
             <input
               type="text"
               value={name}
@@ -502,7 +502,7 @@ function EditChildModal({
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">{t("age")}</label>
+              <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(79,195,247,0.8)" }}>{t("age")}</label>
               <input
                 type="number"
                 value={age}
@@ -517,7 +517,7 @@ function EditChildModal({
               />
             </div>
             <div className="flex-1">
-              <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">Gender</label>
+              <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(167,139,250,0.85)" }}>Gender</label>
               <div className="flex gap-1.5">
                 {(["boy", "girl", "other"] as const).map((g) => (
                   <button
@@ -536,7 +536,7 @@ function EditChildModal({
           </div>
 
           <div>
-            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-2 block">Favourite story themes</label>
+            <label className="text-fs-body uppercase tracking-widest font-bold mb-2 block" style={{ color: "rgba(167,139,250,0.85)" }}>Favourite story themes</label>
             <div className="flex flex-wrap gap-1.5">
               {THEME_OPTIONS.map((th) => {
                 const active = themes.includes(th.id);
@@ -548,7 +548,7 @@ function EditChildModal({
                     style={{
                       background: active ? "rgba(139,92,246,0.18)" : "rgba(255,255,255,0.04)",
                       border: active ? "1.5px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                      color: active ? "#a78bfa" : "rgba(255,255,255,0.4)",
+                      color: active ? "#a78bfa" : "rgba(255,255,255,0.65)",
                     }}
                   >
                     <span>{th.emoji}</span> {th.label}
@@ -559,13 +559,13 @@ function EditChildModal({
           </div>
 
           <div>
-            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">Interests <span className="normal-case opacity-60">(optional)</span></label>
+            <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(79,195,247,0.8)" }}>Interests <span className="normal-case opacity-60">(optional)</span></label>
             <input
               type="text"
               value={interests}
               onChange={(e) => setInterests(e.target.value)}
               placeholder="e.g. dinosaurs, robots, soccer, unicorns"
-              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all"
+              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all placeholder-white/45"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
               onFocus={(e) => { e.target.style.borderColor = "rgba(79,195,247,0.4)"; }}
               onBlur={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
@@ -573,7 +573,7 @@ function EditChildModal({
           </div>
 
           <div>
-            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">
+            <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(236,72,153,0.85)" }}>
               Things to avoid <span className="normal-case opacity-60">(fears, sensitivities)</span>
             </label>
             <input
@@ -581,16 +581,16 @@ function EditChildModal({
               value={avoid}
               onChange={(e) => setAvoid(e.target.value)}
               placeholder="e.g. spiders, loud monsters, darkness, being lost"
-              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all"
+              className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all placeholder-white/45"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(236,72,153,0.2)" }}
             />
           </div>
 
           <div>
-            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">
+            <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(79,195,247,0.8)" }}>
               Default moral lessons <span className="normal-case opacity-60">(optional)</span>
             </label>
-            <p className="text-white/35 text-fs-body mb-2 leading-relaxed">
+            <p className="text-white/55 text-fs-body mb-2 leading-relaxed">
               Pre-applied to every new story for {name || "this child"} — woven in naturally, never stated out loud.
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -604,7 +604,7 @@ function EditChildModal({
                     style={{
                       background: active ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
                       border: active ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                      color: active ? "#4fc3f7" : "rgba(255,255,255,0.4)",
+                      color: active ? "#4fc3f7" : "rgba(255,255,255,0.65)",
                     }}
                   >
                     <Icon name={l.icon} size={13} />
