@@ -2457,6 +2457,13 @@ export default function Studio2Page() {
               // having audio.
               setStoryHasAudio(false);
               loadedFromExistingDraftRef.current = false;
+              // Also clear editingStoryId — otherwise the "persist a freshly-
+              // generated script" effect (which only saves once editingStoryId
+              // is null) stays permanently blocked by whatever story was open
+              // before, so a second story generated in the same session (Chat
+              // or Step-by-step) never got its own draft row / production_
+              // metrics 'script_done' row at all.
+              setEditingStoryId(null);
             }}
             onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
@@ -2595,6 +2602,18 @@ export default function Studio2Page() {
               onGenerating={() => {
                 setScriptBlocks([]);
                 setMoralLessons([]);
+                // Same fix as Chat mode's onGenerating (see below) — a fresh
+                // Step-by-step script must be produceable immediately, not
+                // left disabled by a stale storyHasAudio=true/
+                // loadedFromExistingDraftRef=true carried over from whatever
+                // story was open before.
+                setStoryHasAudio(false);
+                loadedFromExistingDraftRef.current = false;
+                // Also clear editingStoryId — otherwise a second story
+                // generated in the same session never gets its own draft
+                // row / production_metrics 'script_done' row (see the
+                // matching comment in Chat mode's onGenerating below).
+                setEditingStoryId(null);
               }}
               onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle }) => {
                 setActiveTab("script");
