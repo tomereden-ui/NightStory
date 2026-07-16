@@ -28,7 +28,6 @@ import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
-import { useAuth } from "@/context/AuthContext";
 import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 
 // ─── Draft key — kept as its original storage-key name; only the route/URL
@@ -45,9 +44,6 @@ const STORY_LANG_OVERRIDE_KEY = "nightstory_story_lang_override";
 // on, so a plain nav tap into Studio returns to that instead of always
 // resetting to Chat.
 const CREATE_MODE_KEY = "nightstory_studio_create_mode";
-
-// Same admin gate used by /admin — see src/app/admin/page.tsx
-const ADMIN_EMAIL = "tomereden@gmail.com";
 
 // ─── Script saves browser ─────────────────────────────────────────────────────
 
@@ -1075,8 +1071,6 @@ function scriptSnapshot(blocks: ScriptBlock[]): string {
 
 export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
-  const { user } = useAuth();
-  const isAdmin = user?.email === ADMIN_EMAIL;
   const router = useRouter();
 
   // ─── Active child profile ────────────────────────────────────────────────────
@@ -2120,7 +2114,7 @@ export default function Studio2Page() {
     markScriptDirty();
   }, []);
 
-  // ─── Admin-only: title/summary editing ───────────────────────────────────────
+  // ─── Story title editing ───────────────────────────────────────────────────
 
   const handleTitleChange = useCallback((next: string) => {
     setStoryTitle(next);
@@ -2592,12 +2586,12 @@ export default function Studio2Page() {
                 setScriptBlocks([]);
                 setMoralLessons([]);
               }}
-              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes }) => {
+              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle }) => {
                 setActiveTab("script");
                 setSummary(sm);
                 setCoverPrompt(cp);
                 setCoverUrl("");
-                setStoryTitle("");
+                setStoryTitle(fqTitle ?? "");
                 // storyLang deliberately left as-is — it already reflects
                 // whatever language was chosen in this flow's own picker,
                 // not necessarily the app's global UI language.
@@ -2630,7 +2624,7 @@ export default function Studio2Page() {
                           setIsValidating(false);
                           setValidatingPhase("");
                           setTotalExpectedBlocks(undefined);
-                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang }, DRAFT_KEY);
+                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang, storyTitle: fqTitle }, DRAFT_KEY);
                           void analyzeLessons(blocks, null);
                         }
                       }, i * 65);
@@ -2731,7 +2725,6 @@ export default function Studio2Page() {
               isProducing={isProducing}
               summary={summary}
               title={storyTitle}
-              isAdmin={isAdmin}
               onTitleChange={handleTitleChange}
               coverUrl={coverUrl}
               coverFocusX={coverFocusX}

@@ -48,8 +48,7 @@ interface ScriptTabProps {
   onSaveBlock?: (blockId: string) => void;
   /** The story's actual content language — falls back to UI language if not provided. */
   storyLanguage?: string;
-  /** When true (and onTitleChange is supplied), the title renders as an editable field. Summary is always read-only. */
-  isAdmin?: boolean;
+  /** When supplied, the title renders as an editable field. Summary is always read-only. */
   onTitleChange?: (title: string) => void;
   /** Disables raw per-line text editing, block deletion, and manual/AI block
    *  insertion — voice/cast changes and AI-assisted revise tools stay available. */
@@ -416,7 +415,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, coverFocusX, coverFocusY, onSetCoverFocus, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, totalDurationSeconds, storyId, onSaveBlock, storyLanguage, isAdmin = false, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, coverFocusX, coverFocusY, onSetCoverFocus, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, totalDurationSeconds, storyId, onSaveBlock, storyLanguage, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
   const [settingFocus, setSettingFocus] = useState(false);
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
@@ -897,7 +896,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             {/* Story title */}
             {title && (
               <div className="px-4 pt-4 pb-0" style={{ background: "rgba(10,12,20,1)" }}>
-                {isAdmin && onTitleChange ? (
+                {onTitleChange ? (
                   <input
                     value={title}
                     onChange={(e) => onTitleChange(e.target.value)}

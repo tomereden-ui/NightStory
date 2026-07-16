@@ -10,7 +10,7 @@ import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, resolveTitleConflict, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
 import { generateScenes } from "@/lib/services/sceneGenerator";
 
 export const maxDuration = 120;
@@ -59,6 +59,7 @@ interface RawScene {
 }
 
 interface RawResponse {
+  title?: string;
   summary: string;
   coverPrompt: string;
   characters?: Record<string, RawCharacter>;
@@ -224,6 +225,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Gemini returned non-JSON output after retries." }, { status: 502 });
     }
 
+    // Fix title conflict if needed (small Gemini call, not a full regeneration)
+    // — same as generate-story/route.ts's own resolveTitleConflict call.
+    if (raw.title && existingTitles.length > 0) {
+      raw.title = await resolveTitleConflict(genAI, raw.title, raw.summary ?? "", existingTitles);
+    }
+
     const characterVoiceMap = await assignVoicesToCharacters(raw.blocks ?? [], seeds.q1_hero, undefined, raw.characters ?? {}, apiKey);
     // The user's default narrator voice always wins for the narrator — nature-
     // based casting would otherwise assign it something else from the moment
@@ -289,7 +296,7 @@ export async function POST(req: NextRequest) {
       ? remappedScenes
       : await generateScenes(finalBlocks, apiKey);
 
-    return NextResponse.json({ blocks: finalBlocks, summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: finalScenes, language: detectedLanguage });
+    return NextResponse.json({ blocks: finalBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", characters: raw.characters ?? {}, scenes: finalScenes, language: detectedLanguage });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -1365,7 +1365,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
     favoriteThemes?: string[]; favoriteAnimals?: string[]; preferredFigures?: string[];
     interests?: string; notes?: string;
   };
-  onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => void;
+  onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[], title?: string) => void;
   onError: (msg: string) => void;
   luna: LunaCopy;
 }) {
@@ -1391,7 +1391,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Generation failed");
-        onDoneRef.current(data.blocks as ScriptBlock[], data.summary ?? "", data.coverPrompt ?? "", data.characters as Record<string, StoryCharacterInfo> | undefined, data.scenes as import("@/types").StoryScene[] | undefined);
+        onDoneRef.current(data.blocks as ScriptBlock[], data.summary ?? "", data.coverPrompt ?? "", data.characters as Record<string, StoryCharacterInfo> | undefined, data.scenes as import("@/types").StoryScene[] | undefined, data.title ?? "");
       })
       .catch((err) => {
         if ((err as { name?: string }).name === "AbortError") return;
@@ -1427,7 +1427,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
 const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", q4_engine: "", q5_mood: null };
 
 export interface StoryCharacterInfo { type: "child" | "adult" | "animal" | "narrator"; visualDescription: string; }
-export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo>; scenes?: import("@/types").StoryScene[] };
+export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo>; scenes?: import("@/types").StoryScene[]; storyTitle?: string };
 
 export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl, childId, contentLanguage, showInternalReset = true, onFirstAnswer }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string; /** Active child's profile id — used to look up real siblings (other children in the same family) for Q3's "family member" chips. */ childId?: string; /** Story content language — independent of the app's global UI language. Falls back to it when not provided. */ contentLanguage?: string; /** Set false when an outer page already renders its own reset+language bar (e.g. Studio), to avoid duplicating the "Start over" button on every question and the summary screen. */ showInternalReset?: boolean; /** Fires once, the first time the user makes real progress (leaves q1 with no answers) — lets an outer page lock its own language selector for the rest of the journey. */ onFirstAnswer?: () => void } = {}) {
   const router = useRouter();
@@ -1690,14 +1690,14 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
 
   const handleLaunch = useCallback(() => { onGenerating?.(); setStep("generating"); setError(null); }, [onGenerating]);
 
-  const handleDone = useCallback((blocks: ScriptBlock[], incomingSummary: string, incomingCoverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => {
+  const handleDone = useCallback((blocks: ScriptBlock[], incomingSummary: string, incomingCoverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[], incomingTitle?: string) => {
     setScriptBlocks(blocks);
     setSummary(incomingSummary);
     setCoverPrompt(incomingCoverPrompt);
     setCoverUrl("");
     if (onComplete) {
-      writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes });
-      onComplete({ blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, characters, scenes });
+      writeDraft({ promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes, storyTitle: incomingTitle });
+      onComplete({ blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, characters, scenes, storyTitle: incomingTitle });
     } else {
       // Standalone (no onComplete) means this flow was reached directly at
       // /create/five-question rather than embedded inside Studio — hand off
@@ -1705,7 +1705,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       // never read by /studio), including characterProfiles so nature-based
       // voice casting works immediately instead of only after a later save.
       writeDraft(
-        { promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes, characterProfiles: characters },
+        { promptText: "", scriptBlocks: blocks, summary: incomingSummary, coverPrompt: incomingCoverPrompt, coverUrl: "", scenes, characterProfiles: characters, storyTitle: incomingTitle },
         "nightstory_studio2_draft_v1",
       );
       if (incomingCoverPrompt) fetchCover(incomingCoverPrompt, incomingSummary);
