@@ -28,6 +28,7 @@ import VoicePicker from "@/components/studio/VoicePicker";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
+import BookCover from "@/components/ui/BookCover";
 import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 
 // ─── Draft key — kept as its original storage-key name; only the route/URL
@@ -1067,6 +1068,43 @@ function scriptSnapshot(blocks: ScriptBlock[]): string {
     v: b.assignedVoiceId,
     o: b.blockOrder,
   })));
+}
+
+// Shown above the Chat/step-by-step UI before either has any real progress —
+// a blank BookCover (no coverUrl yet, since nothing's been written) plus the
+// active child's own avatar, so the empty screen reads as "about to become
+// your child's book" instead of a bare form. Disappears the moment there's
+// real progress (chatLocked / wizardStarted in Studio2Page) since it would
+// otherwise just be dead space once the chat/wizard content fills the screen.
+function StoryStartingPlaceholder({ child, language }: { child: DBChildProfile | null; language: Language }) {
+  const avatarUrl = child?.avatar_emoji?.startsWith("http") ? child.avatar_emoji : undefined;
+  const text = i18nT(language, "storyBeingWritten" as Parameters<typeof i18nT>[1]).replace("{name}", child?.name ?? "");
+
+  return (
+    <div className="flex items-center gap-4 mb-6 px-1">
+      <div style={{ width: 72, height: 104, flexShrink: 0 }}>
+        <BookCover alt="" showShadow />
+      </div>
+      <div className="flex-1 flex items-center gap-3 min-w-0">
+        {child && (
+          <div
+            className="rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden"
+            style={{ width: 44, height: 44, background: "#07091a", border: "2px solid rgba(167,139,250,0.5)", boxShadow: "0 0 16px rgba(167,139,250,0.3)" }}
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt={child.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <span style={{ fontSize: "var(--fs-title)" }}>{child.avatar_emoji || "⭐"}</span>
+            )}
+          </div>
+        )}
+        <p className="text-fs-body font-semibold leading-snug" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {text}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function Studio2Page() {
@@ -2478,7 +2516,9 @@ export default function Studio2Page() {
 
         {/* Chat tab */}
         {activeTab === "chat" && (
-          <LunaChatPanel
+          <>
+            {!chatLocked && <StoryStartingPlaceholder child={activeChild} language={language} />}
+            <LunaChatPanel
             activeChild={activeChild}
             storyLanguage={storyLang}
             onStoryLanguageChange={setStoryLangOverride}
@@ -2563,7 +2603,8 @@ export default function Studio2Page() {
                   });
                 });
             }}
-          />
+            />
+          </>
         )}
 
         {/* Lesson step — interstitial between step-by-step and generation */}
@@ -2630,6 +2671,11 @@ export default function Studio2Page() {
                 />
               )}
             </div>
+            {!wizardStarted && (
+              <div className="px-5">
+                <StoryStartingPlaceholder child={activeChild} language={language} />
+              </div>
+            )}
             <FiveQuestionFlow
               key={wizardResetKey}
               contentLanguage={storyLang}

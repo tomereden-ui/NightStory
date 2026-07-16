@@ -53,6 +53,11 @@ import type { ReactNode } from "react";
 // chips, avatar seal) goes through the `overlay` prop, rendered inside the
 // cover box. Titles and metadata belong below the book in normal page
 // flow, not overlaid here.
+//
+// coverUrl is optional — omit it for a "not written yet" book (e.g. the
+// placeholder shown before a story exists in Studio): a soft cosmic
+// gradient renders in place of the <img>, everything else (spine, page
+// stack, tilt, shadow) stays identical.
 export default function BookCover({
   coverUrl,
   alt,
@@ -61,7 +66,7 @@ export default function BookCover({
   onImgError,
   overlay,
 }: {
-  coverUrl: string;
+  coverUrl?: string;
   alt: string;
   /** Retained for call-site compatibility; corner radii are now fixed
    *  per the design spec (4px 5px 5px 4px on the cover, 0 4px 4px 0 on
@@ -136,8 +141,17 @@ export default function BookCover({
             boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.2)",
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={coverUrl} alt={alt} className="absolute inset-0 w-full h-full object-cover" onError={onImgError} />
+          {coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={coverUrl} alt={alt} className="absolute inset-0 w-full h-full object-cover" onError={onImgError} />
+          ) : (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ background: "linear-gradient(150deg,#1a1040 0%,#0d1230 45%,#040612 100%)" }}
+            >
+              <span style={{ fontSize: "34%", filter: "drop-shadow(0 0 12px rgba(167,139,250,0.5))" }}>✨</span>
+            </div>
+          )}
           {/* .spine-crease — the highlight used to start at full brightness
               exactly at x=0, a hard jump from "nothing" to "bright" right at
               the box's own edge that read as a flat cut line rather than a
