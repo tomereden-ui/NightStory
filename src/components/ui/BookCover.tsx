@@ -5,14 +5,27 @@ import type { ReactNode } from "react";
 // CSS book-cover treatment for existing flat cover art — no new images, no
 // server work. Uses a 2D skew & scale technique rather than perspective +
 // rotateY: the scrolling rails this renders inside (overflow-x-auto rows)
-// were flattening real 3D transforms in some browser engines, and standard
-// 2D transforms (skew/scale) can't be flattened by an ancestor's overflow
-// the way 3D ones can, so this is the reliable fallback. The whole
-// book-wrapper is skewed (.book-wrapper in globals.css, which also holds
-// the hover lift — inline styles can't express :hover); cover and pages
-// are plain absolutely-positioned siblings underneath that skew, with the
-// pages' left edge tucked at 3% so nothing peeks out past the cover's
-// spine on the left.
+// were suspected of flattening real 3D transforms in some browser engines,
+// and standard 2D transforms (skew/scale) can't be flattened by an
+// ancestor's overflow the way 3D ones can. The whole book-wrapper is
+// skewed (.book-wrapper in globals.css, which also holds the hover lift —
+// inline styles can't express :hover); cover and pages are plain
+// absolutely-positioned siblings underneath that skew, with the pages'
+// left edge tucked at 3px so nothing peeks out past the cover's spine on
+// the left.
+//
+// Do NOT append " !important" inside a React inline style value (e.g.
+// width: "95% !important") to try to force-win a cascade fight — React
+// assigns inline styles via direct DOM property setters (element.style.
+// width = value), and browsers reject a value containing "!important"
+// there as invalid syntax, silently dropping the whole declaration rather
+// than applying it with elevated priority. That happened here once: it
+// collapsed .book-cover and .book-pages to zero size (no explicit width/
+// height at all) and every cover art image vanished, since the <img>
+// inside sizes itself as 100% of a now-sizeless parent. If a real
+// specificity conflict ever needs solving, use an !important rule in an
+// actual stylesheet (globals.css), the same way .book-wrapper's hover
+// transform does it correctly.
 //
 // Usage: swap an existing `<img className="absolute inset-0 w-full h-full
 // object-cover" src={coverUrl} />` for `<BookCover coverUrl={coverUrl}
@@ -49,17 +62,14 @@ export default function BookCover({
     <div className={`relative w-full h-full ${className ?? ""}`}>
       {/* .book-wrapper — skewY(-3deg) scaleX(0.95); hover straightens + lifts via globals.css */}
       <div className="book-wrapper relative w-full h-full">
-        {/* .book-pages — sits behind the cover. Values carry !important
-            (per the design spec) as a belt-and-suspenders guard; nothing
-            else in this file targets these elements so it's not fixing a
-            known conflict. */}
+        {/* .book-pages — sits behind the cover. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "95% !important",
-            height: "96.5% !important",
-            top: "1.5% !important",
-            left: "3px !important",
+            width: "95%",
+            height: "96.5%",
+            top: "1.5%",
+            left: "3px",
             zIndex: 1,
             backgroundColor: "#f4f2eb",
             backgroundImage:
@@ -75,8 +85,8 @@ export default function BookCover({
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
-            width: "95% !important",
-            height: "96% !important",
+            width: "95%",
+            height: "96%",
             zIndex: 2,
             borderRadius: "4px 6px 6px 4px",
             boxShadow:
