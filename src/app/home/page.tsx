@@ -12,6 +12,7 @@ import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { MOCK_JOURNEY } from "@/components/profile/StoryJourney";
 import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
 import BookCover from "@/components/ui/BookCover";
+import { dedupeBySeries } from "@/lib/dedupeBySeries";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -35,37 +36,6 @@ function durationLabel(seconds: number): string {
   return m <= 1 ? "1 min" : `${m} min`;
 }
 
-// Collapses a list to one card per multi-chapter series (recommendation/
-// browse surfaces should recommend the whole story, not each chapter
-// separately) — keeps the earliest chapter as the representative card and
-// preserves standalone (non-series) entries untouched.
-function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber?: number; durationSeconds?: number }>(entries: T[]): T[] {
-  // A series card should show how long the whole story takes to listen to,
-  // not just its first chapter — sum every chapter's duration up front.
-  const totalDurationBySeries = new Map<string, number>();
-  for (const entry of entries) {
-    if (!entry.seriesId) continue;
-    totalDurationBySeries.set(entry.seriesId, (totalDurationBySeries.get(entry.seriesId) ?? 0) + (entry.durationSeconds ?? 0));
-  }
-
-  const bestBySeries = new Map<string, T>();
-  const order: string[] = [];
-  for (const entry of entries) {
-    const key = entry.seriesId ?? entry.id;
-    const existing = bestBySeries.get(key);
-    if (!existing) {
-      bestBySeries.set(key, entry);
-      order.push(key);
-    } else if ((entry.chapterNumber ?? Infinity) < (existing.chapterNumber ?? Infinity)) {
-      bestBySeries.set(key, entry);
-    }
-  }
-  return order.map((key) => {
-    const rep = bestBySeries.get(key)!;
-    const totalDuration = rep.seriesId ? totalDurationBySeries.get(rep.seriesId) : undefined;
-    return totalDuration !== undefined ? { ...rep, durationSeconds: totalDuration } : rep;
-  });
-}
 
 function greeting(hour: number, tFn: (key: string) => string): string {
   if (hour < 5) return tFn("sweetDreams");

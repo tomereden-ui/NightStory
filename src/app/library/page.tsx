@@ -9,6 +9,7 @@ import type { ClassicMeta } from "@/lib/classicStories";
 import Icon from "@/components/ui/Icon";
 import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
 import BookCover from "@/components/ui/BookCover";
+import { dedupeBySeries } from "@/lib/dedupeBySeries";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { getLessonsCatalog } from "@/constants/lessonsUi";
 import { LANGUAGE_META } from "@/lib/i18n";
@@ -70,37 +71,6 @@ function dominantMood(entry: { scenes?: { primaryMood?: string }[] }): string | 
     if (c > bestCount) { best = m; bestCount = c; }
   }
   return best;
-}
-
-// Collapses a list to one card per multi-chapter series — a browse grid
-// should show the whole story once, not one card per chapter. Keeps the
-// earliest chapter as the representative card; standalone entries pass through.
-function dedupeBySeries<T extends { id: string; seriesId?: string; chapterNumber?: number; durationSeconds?: number }>(entries: T[]): T[] {
-  // A series card should show how long the whole story takes to listen to,
-  // not just its first chapter — sum every chapter's duration up front.
-  const totalDurationBySeries = new Map<string, number>();
-  for (const entry of entries) {
-    if (!entry.seriesId) continue;
-    totalDurationBySeries.set(entry.seriesId, (totalDurationBySeries.get(entry.seriesId) ?? 0) + (entry.durationSeconds ?? 0));
-  }
-
-  const bestBySeries = new Map<string, T>();
-  const order: string[] = [];
-  for (const entry of entries) {
-    const key = entry.seriesId ?? entry.id;
-    const existing = bestBySeries.get(key);
-    if (!existing) {
-      bestBySeries.set(key, entry);
-      order.push(key);
-    } else if ((entry.chapterNumber ?? Infinity) < (existing.chapterNumber ?? Infinity)) {
-      bestBySeries.set(key, entry);
-    }
-  }
-  return order.map((key) => {
-    const rep = bestBySeries.get(key)!;
-    const totalDuration = rep.seriesId ? totalDurationBySeries.get(rep.seriesId) : undefined;
-    return totalDuration !== undefined ? { ...rep, durationSeconds: totalDuration } : rep;
-  });
 }
 
 // ── Classics tab ─────────────────────────────────────────────────────────────
