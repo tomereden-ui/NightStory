@@ -105,7 +105,7 @@ function localizeHeroForDisplay(hero: string, ui: WizardUiCopy, animalTypes: Ani
 
 // ─── FairyFigure: animated Luna fairy portrait ────────────────────────────────────
 
-function FairyFigure({ size = 80 }: { size?: number }) {
+function FairyFigure({ size = 80, roll = false }: { size?: number; roll?: boolean }) {
   return (
     <div style={{ position: "relative", display: "inline-block", width: size, height: size }}>
       <style>{`
@@ -113,6 +113,17 @@ function FairyFigure({ size = 80 }: { size?: number }) {
           0%,100% { transform: translateY(0px) rotate(0deg); }
           30% { transform: translateY(-7px) rotate(-2deg); }
           70% { transform: translateY(-4px) rotate(1.5deg); }
+        }
+        @keyframes _owlRoll {
+          0%   { transform: rotate(0deg)   translateY(0px)  scale(1); }
+          12%  { transform: rotate(80deg)  translateY(-9px) scale(0.94, 1.08); }
+          25%  { transform: rotate(180deg) translateY(0px)  scale(1); }
+          37%  { transform: rotate(280deg) translateY(-9px) scale(0.94, 1.08); }
+          50%  { transform: rotate(360deg) translateY(0px)  scale(1); }
+          62%  { transform: rotate(440deg) translateY(-9px) scale(0.94, 1.08); }
+          75%  { transform: rotate(540deg) translateY(0px)  scale(1); }
+          87%  { transform: rotate(640deg) translateY(-9px) scale(0.94, 1.08); }
+          100% { transform: rotate(720deg) translateY(0px)  scale(1); }
         }
         @keyframes _owlGlow {
           0%,100% { opacity: 0.5; transform: scale(1); }
@@ -142,7 +153,10 @@ function FairyFigure({ size = 80 }: { size?: number }) {
           position: "relative",
           zIndex: 1,
           borderRadius: "50%",
-          animation: "_owlFloat 4s ease-in-out infinite",
+          // Gentle, slightly bouncy full tumble while waiting on something
+          // long-running (script generation) — a playful "rolling" motion
+          // rather than the everyday idle float used everywhere else.
+          animation: roll ? "_owlRoll 6s ease-in-out infinite" : "_owlFloat 4s ease-in-out infinite",
           filter: "drop-shadow(0 0 10px rgba(79,195,247,0.5)) drop-shadow(0 2px 8px rgba(167,139,250,0.4))",
         }}
       />
@@ -1406,7 +1420,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
       <div className="relative w-36 h-36 flex items-center justify-center">
         <div className="absolute inset-0 rounded-full animate-ping opacity-10" style={{ background: "radial-gradient(circle, rgba(236,72,153,0.6), rgba(79,195,247,0.3))" }} />
         <div className="absolute inset-4 rounded-full opacity-25 animate-pulse" style={{ background: "radial-gradient(circle, rgba(167,139,250,0.6), rgba(236,72,153,0.3))" }} />
-        <div className="relative z-10"><FairyFigure size={100} /></div>
+        <div className="relative z-10"><FairyFigure size={100} roll /></div>
       </div>
       <div className="flex flex-col gap-2">
         <p className="text-white text-fs-heading font-medium">{messages[msgIdx]}</p>
