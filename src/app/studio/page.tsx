@@ -2159,8 +2159,13 @@ export default function Studio2Page() {
     setCompletedJob(null);
     cleanLessonsRef.current = [];
     setScriptResetConfirm(false);
-    setActiveTab(startOnPrompt ? "step-by-step" : "chat");
-  }, [startOnPrompt]);
+    // Land back on whichever Create sub-tab the segmented toggle (createMode)
+    // already shows, not a hardcoded "chat" — otherwise "Start over" could
+    // leave the toggle highlighting Step-by-step while Chat's content
+    // rendered underneath it (createMode persists across sessions via
+    // localStorage; this reset previously ignored it entirely).
+    setActiveTab(startOnPrompt ? "step-by-step" : createMode);
+  }, [startOnPrompt, createMode]);
 
   // ─── Fetch cover ─────────────────────────────────────────────────────────────
 
