@@ -3,33 +3,32 @@
 import type { ReactNode } from "react";
 
 // Pure-CSS 3D book-cover treatment for existing flat cover art — no new
-// images, no server work. High-fidelity hardcover per the design spec:
-//   1. Perspective + angle: perspective 1200px on the container, the book
-//      leans rotateY(-4deg); on hover it lifts and straightens (the .book-3d
-//      class in globals.css — inline styles can't express :hover).
-//   2. Spine: a multi-stop gradient overlay on the cover's left edge
-//      simulates the rounded spine ridge and the adjacent hinge crease.
-//   3. Pages: a warm paper block (#f4f3ef with a high-density 1px line
-//      texture that reads as hundreds of finely stacked pages) peeks out on
-//      the right AND slightly at the bottom, aligned with the 3D angle.
-//   4. Rim + shadows: an inset rim light catches the cardboard cover's
-//      physical edge, and the pages block carries a three-layer ambient-
-//      occlusion shadow stack (anchor / mid-soft / ambient blur) that seats
-//      the book on the dark background.
-// The pages' left edge stays well inside the cover (10%) so paper can't
-// peek through the notches left by the cover's rounded left corners.
-// Percentages keep every dimension proportional to the card size.
+// images, no server work. Geometry per the design spec:
+//   - The container carries perspective: 1500px AND transform-style:
+//     preserve-3d so the child rotation renders with true depth instead of
+//     being flattened by the parent rendering context.
+//   - The book leans rotateY(-7deg) rotateX(1deg) (.book-3d in globals.css,
+//     which also holds the hover lift — inline styles can't express :hover).
+//   - The cover is the baseline front face: 96% wide / 96% tall, leaving 4%
+//     on the right and bottom for the page edges. Crisp book corners
+//     (4px spine side / 2px page side).
+//   - The page block spans the FULL width behind the cover (left: 2%,
+//     width: 96% → right edge 98%), offset slightly down + right. Its left
+//     corners are square — border-radius: 0 4px 4px 0 — so nothing peeks
+//     out of the cover's rounded left corners; the cover simply overlaps
+//     it cleanly. (Never hide the left side by shrinking the block — that
+//     makes the book read as a hollow flap.)
+//   - Fine stacked-page texture runs in both directions (vertical lines
+//     for the right edge, horizontal for the bottom), multiply-blended,
+//     plus the three-layer ambient-occlusion shadow stack.
 //
-// Layout guidance for callers (spec point 5): keep the artwork clean —
-// titles, chapter info, and progress live BELOW the book in normal flow,
-// not overlaid on the cover. The `overlay` prop remains for the few things
-// that belong physically ON the jacket (small badge chips, the creator-
-// avatar "seal"); it renders inside the front-cover box so it can never
-// drift out of alignment with the tilted image.
+// Layout guidance for callers: keep the artwork clean — titles, chapter
+// info, and progress live BELOW the book in normal flow. The `overlay`
+// prop is only for things that belong physically ON the jacket (small
+// badge chips, the creator-avatar "seal").
 export default function BookCover({
   coverUrl,
   alt,
-  borderRadius = 6,
   showShadow = true,
   className,
   onImgError,
@@ -37,8 +36,8 @@ export default function BookCover({
 }: {
   coverUrl: string;
   alt: string;
-  /** Outer-corner radius of the cover; the spine-side corners are kept
-   *  tighter (a hardcover hinges at its spine). */
+  /** Retained for call-site compatibility; corner radii are now fixed
+   *  crisp book corners (4px spine / 2px page edge) per the design spec. */
   borderRadius?: number;
   showShadow?: boolean;
   className?: string;
@@ -50,53 +49,47 @@ export default function BookCover({
    *  with the tilted image. Titles/metadata belong below the book instead. */
   overlay?: ReactNode;
 }) {
-  const spineRadius = Math.max(2, borderRadius - 3);
-  const pageRadius = Math.max(2, borderRadius - 2);
-
   return (
-    // .book-container — establishes the 3D perspective
-    <div className={`relative w-full h-full ${className ?? ""}`} style={{ perspective: 1200 }}>
-      {/* .book — leans rotateY(-4deg); lifts/straightens on hover (globals.css) */}
+    // .book-container — explicit depth + preserve-3d so the rotation isn't flattened
+    <div
+      className={`relative w-full h-full ${className ?? ""}`}
+      style={{ perspective: 1500, transformStyle: "preserve-3d" }}
+    >
+      {/* .book — rotateY(-7deg) rotateX(1deg); hover lift via globals.css */}
       <div className="book-3d relative w-full h-full">
-        {/* .book-pages — a single cohesive page block sitting BEHIND the
-            cover, offset diagonally (down + right) so it peeks out naturally
-            on the right and bottom edges — never a flat bar under the image.
-            Fine stacked-page texture runs in BOTH directions (vertical lines
-            for the right edge, horizontal lines for the bottom edge),
-            blended with multiply. The left edge stays well inside the cover
-            (10%, not the spec's 2%) so paper can't peek through the notches
-            of the cover's rounded left corners; the right edge lands at 98%
-            exactly as specified. */}
+        {/* .book-pages — solid continuous block behind the entire cover,
+            offset slightly down + right; square left corners keep it
+            cleanly hidden under the cover's spine */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "88%",
-            height: "97%",
-            top: "1.5%",
-            left: "10%",
+            width: "96%",
+            height: "96%",
+            top: "2%",
+            left: "2%",
             zIndex: 1,
-            backgroundColor: "#f2efe9",
+            backgroundColor: "#f5f2eb",
             backgroundImage:
-              "repeating-linear-gradient(to right, #f2efe9 0px, #f2efe9 1px, #e3dfd5 2px, #e3dfd5 3px)," +
-              "repeating-linear-gradient(to bottom, #f2efe9 0px, #f2efe9 1px, #e3dfd5 2px, #e3dfd5 3px)",
+              "repeating-linear-gradient(to right, #f5f2eb 0px, #f5f2eb 1px, #e3dfd5 2px, #e3dfd5 3px)," +
+              "repeating-linear-gradient(to bottom, #f5f2eb 0px, #f5f2eb 1px, #e3dfd5 2px, #e3dfd5 3px)",
             backgroundBlendMode: "multiply",
-            borderRadius: `0 ${pageRadius}px ${pageRadius}px 0`,
+            borderRadius: "0 4px 4px 0",
             boxShadow: showShadow
               ? "3px 2px 5px rgba(0,0,0,0.5), 8px 8px 16px rgba(0,0,0,0.35), 12px 16px 28px rgba(0,0,0,0.2)"
               : undefined,
           }}
         />
-        {/* .book-cover — the hardcover front board; narrower and shorter
-            than the book so the offset page block peeks right + bottom */}
+        {/* .book-cover — the full front face of the book; leaves 4% on the
+            right and bottom for the page edges */}
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
             width: "96%",
-            height: "97%",
+            height: "96%",
             zIndex: 2,
-            borderRadius: `${spineRadius}px ${borderRadius}px ${borderRadius}px ${spineRadius}px`,
+            borderRadius: "4px 2px 2px 4px",
             boxShadow:
-              "inset 1px 1px 1px rgba(255,255,255,0.15), 2px 2px 6px rgba(0,0,0,0.45)",
+              "inset 1px 1px 1px rgba(255,255,255,0.15), 2px 2px 5px rgba(0,0,0,0.3)",
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
