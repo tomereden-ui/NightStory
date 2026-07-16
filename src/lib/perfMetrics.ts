@@ -62,6 +62,9 @@ export class ProductionTimer {
       cacheDialogueHits?: number;
       cacheSfxHits?: number;
       skippedLines?: number;
+      // final produced audio's length — undefined on an error outcome, since
+      // no audio was ever produced
+      durationSeconds?: number;
       outcome: "done" | "error";
       errorMessage?: string;
     },
@@ -77,6 +80,7 @@ export class ProductionTimer {
         cache_dialogue_hits: meta.cacheDialogueHits ?? null,
         cache_sfx_hits: meta.cacheSfxHits ?? null,
         skipped_lines: meta.skippedLines ?? null,
+        duration_seconds: meta.durationSeconds ?? null,
         outcome: meta.outcome,
         error_message: meta.errorMessage ?? null,
         total_ms: this.totalMs(),

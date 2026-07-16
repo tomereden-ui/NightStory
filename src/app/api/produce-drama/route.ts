@@ -382,7 +382,7 @@ async function runProduction(
   const perf = new ProductionTimer();
   const perfMeta: {
     storyTitle?: string; language?: string; dialogueCount?: number; sfxCount?: number;
-    cacheDialogueHits?: number; cacheSfxHits?: number; skippedLines?: number;
+    cacheDialogueHits?: number; cacheSfxHits?: number; skippedLines?: number; durationSeconds?: number;
   } = {};
 
   // Wrap EVERYTHING including dynamic imports so job always gets an error state
@@ -1051,6 +1051,7 @@ async function runProduction(
       characterProfiles: characterProfilesWithAvatars && Object.keys(characterProfilesWithAvatars).length ? characterProfilesWithAvatars : undefined,
       moralLessons: moralLessons?.length ? moralLessons : undefined,
     };
+    perfMeta.durationSeconds = entry.durationSeconds;
 
     perf.start("library_save");
     if (skipLibrarySave) {
