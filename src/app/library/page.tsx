@@ -8,6 +8,7 @@ import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import Icon from "@/components/ui/Icon";
 import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
+import BookCover from "@/components/ui/BookCover";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { getLessonsCatalog } from "@/constants/lessonsUi";
 import { LANGUAGE_META } from "@/lib/i18n";
@@ -184,13 +185,12 @@ function ClassicsTab({ classics, loading, onClassicUpdated, matchesFilter }: {
 
         const cardBody = (
           <>
-            {/* Image */}
-            <div className="relative w-full overflow-hidden" style={{ aspectRatio: "2/3" }}>
+            {/* Image — padded so the 3D book's spine/page slivers have room to peek */}
+            <div className="relative w-full p-1" style={{ aspectRatio: "2/3" }}>
               {meta.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={meta.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
+                <BookCover coverUrl={meta.coverUrl} alt={displayTitle} borderRadius={8} />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
                   style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
                   <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>
                     {isGenerating ? "✨" : meta.emoji}
@@ -198,7 +198,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated, matchesFilter }: {
                 </div>
               )}
               {isGenerating && (
-                <div className="absolute inset-0 flex items-center justify-center"
+                <div className="absolute inset-1 flex items-center justify-center rounded-lg overflow-hidden"
                   style={{ background: "rgba(5,8,20,0.55)", backdropFilter: "blur(4px)" }}>
                   <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
                     style={{ borderColor: `${c1} transparent transparent transparent` }} />
@@ -329,25 +329,25 @@ function FamilyStoriesGrid({
           <div key={entry.id} className="relative" style={{ aspectRatio: "2/3" }}>
             <Link
               href={`/library/${entry.id}`}
-              className="absolute inset-0 rounded-xl overflow-hidden transition-all active:scale-[0.97] select-none block"
-              style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.45)" }}
+              className="absolute inset-1 transition-all active:scale-[0.97] select-none block"
             >
               {entry.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={entry.coverUrl} alt={entry.title} className="absolute inset-0 w-full h-full object-cover" />
+                <BookCover coverUrl={entry.coverUrl} alt={entry.title} borderRadius={8} />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center"
+                <div className="absolute inset-0 flex items-center justify-center rounded-lg overflow-hidden"
                   style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
                   <span className="text-fs-display" style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                 </div>
               )}
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
-              <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
-                <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {(entry.viewCount ?? 0) > 0 && (
-                    <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
-                  )}
+              <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
+                <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
+                <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
+                  <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {(entry.viewCount ?? 0) > 0 && (
+                      <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </Link>
@@ -752,21 +752,22 @@ export default function LibraryPage() {
                   <Link
                     key={item.key}
                     href={item.href}
-                    className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97] relative select-none"
-                    style={{ width: 110, height: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}
+                    className="flex-shrink-0 transition-all active:scale-[0.97] relative select-none"
+                    style={{ width: 110, height: 160, flexShrink: 0 }}
                   >
                     {item.coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.coverUrl} alt={item.title} className="absolute inset-0 w-full h-full object-cover" />
+                      <BookCover coverUrl={item.coverUrl} alt={item.title} borderRadius={12} />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-fs-display"
-                        style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
+                      <div className="absolute inset-0 flex items-center justify-center text-fs-display rounded-2xl overflow-hidden"
+                        style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)`, border: "1px solid rgba(255,255,255,0.07)" }}>
                         <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                       </div>
                     )}
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
-                    <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
-                      <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
+                    <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
+                      <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
+                        <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
+                      </div>
                     </div>
                   </Link>
                 );
@@ -956,14 +957,13 @@ export default function LibraryPage() {
                 const langCode = entry.language?.slice(0, 2).toUpperCase();
 
                 return (
-                  <div key={entry.id} className="flex flex-col rounded-xl overflow-hidden transition-all select-none"
+                  <div key={entry.id} className="flex flex-col rounded-xl transition-all select-none"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
+                    <Link href={`/library/${entry.id}`} className="relative w-full active:opacity-80 transition-opacity p-1" style={{ aspectRatio: "2/3" }}>
                       {entry.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
+                        <BookCover coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                        <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
                           style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
                           <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>{entry.isClassic ? "✨" : "🌙"}</span>
                         </div>
@@ -1072,12 +1072,12 @@ export default function LibraryPage() {
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
                 {filteredCommunity.map((s) => (
                   <a key={s.id} href={`/library/${s.id}`}
-                    className="flex flex-col rounded-2xl overflow-hidden transition-all active:scale-[0.97]"
+                    className="flex flex-col rounded-2xl transition-all active:scale-[0.97]"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                     <div style={{ position: "relative", paddingBottom: "100%", background: "rgba(167,139,250,0.08)" }}>
                       {s.coverUrl
-                        ? <img src={s.coverUrl} alt={s.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                        : <div className="absolute inset-0 flex items-center justify-center text-3xl">{s.emoji ?? "🌙"}</div>
+                        ? <div style={{ position: "absolute", inset: 4 }}><BookCover coverUrl={s.coverUrl} alt={s.title} borderRadius={8} /></div>
+                        : <div className="absolute inset-0 flex items-center justify-center text-3xl rounded-lg overflow-hidden">{s.emoji ?? "🌙"}</div>
                       }
                     </div>
                     <div className="p-2">
@@ -1163,16 +1163,17 @@ export default function LibraryPage() {
                 return (
                   <div
                     key={entry.id}
-                    className="flex flex-col rounded-xl overflow-hidden transition-all select-none"
+                    className="flex flex-col rounded-xl transition-all select-none"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", opacity: isDeleting ? 0.4 : 1, transition: "opacity 0.2s" }}
                   >
-                    {/* Image */}
-                    <Link href={`/library/${entry.id}`} className="relative w-full overflow-hidden active:opacity-80 transition-opacity" style={{ aspectRatio: "2/3" }}>
+                    {/* Image — a couple px of padding gives the 3D book's
+                        spine/page slivers room to peek without hitting this
+                        card's own rounded corners. */}
+                    <Link href={`/library/${entry.id}`} className="relative w-full active:opacity-80 transition-opacity p-1" style={{ aspectRatio: "2/3" }}>
                       {entry.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={entry.coverUrl} alt={displayTitle} className="absolute inset-0 w-full h-full object-cover" />
+                        <BookCover coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-fs-display"
+                        <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
                           style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
                           <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                         </div>

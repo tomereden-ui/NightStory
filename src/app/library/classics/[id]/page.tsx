@@ -8,6 +8,7 @@ import type { ClassicMeta } from "@/lib/classicStories";
 import { CLASSIC_STORIES } from "@/lib/classicStories";
 import type { ScriptBlock, StoryScene, Voice, MoralLesson } from "@/types";
 import Icon from "@/components/ui/Icon";
+import BookCover from "@/components/ui/BookCover";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
 import ReadOnlyLessonsPanel from "@/components/story/ReadOnlyLessonsPanel";
 import ScriptTab from "@/components/studio/ScriptTab";
@@ -446,28 +447,27 @@ export default function ClassicDetailPage() {
       )}
 
       <div className="pb-64">
-        {/* Cover area */}
-        <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
-          {showCoverImg ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={meta.coverUrl}
-              alt=""
-              className="w-full h-full object-cover ken-burns"
-              style={{ objectPosition: "50% 30%" }}
-              onError={() => setImgFailed(true)}
-            />
-          ) : (
-            <div
-              className="w-full h-full flex items-center justify-center"
-              style={{
-                background: `radial-gradient(ellipse 70% 60% at 50% 35%, ${c1}28 0%, transparent 65%),
-                  linear-gradient(180deg,#060a18 0%,#0d1a3a 50%,#05080f 100%)`,
-              }}
-            >
+        {/* Cover area — the book floats on this same atmospheric backdrop,
+            matching the "casting onto a dark background" look used
+            everywhere else this treatment appears. */}
+        <div className="relative overflow-hidden" style={{ flexShrink: 0, height: 260 }}>
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              background: `radial-gradient(ellipse 70% 60% at 50% 35%, ${c1}28 0%, transparent 65%),
+                linear-gradient(180deg,#060a18 0%,#0d1a3a 50%,#05080f 100%)`,
+            }}
+          >
+            {!showCoverImg && (
               <span className="text-8xl" style={{ filter: `drop-shadow(0 0 32px ${c1}66)` }}>
                 {meta.emoji}
               </span>
+            )}
+          </div>
+
+          {showCoverImg && (
+            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 34, width: 148, height: 210 }}>
+              <BookCover coverUrl={meta.coverUrl!} alt="" borderRadius={10} onImgError={() => setImgFailed(true)} />
             </div>
           )}
 

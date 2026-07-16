@@ -11,6 +11,7 @@ import type { ClassicMeta } from "@/lib/classicStories";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { MOCK_JOURNEY } from "@/components/profile/StoryJourney";
 import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
+import BookCover from "@/components/ui/BookCover";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -98,71 +99,71 @@ function StoryCard({
   return (
     <Link
       href={href}
-      className="flex-shrink-0 rounded-2xl overflow-hidden transition-all active:scale-[0.97] select-none relative"
-      style={{
-        width: 130,
-        height: 195,
-        boxShadow: "0 8px 28px rgba(0,0,0,0.55)",
-        border: "1px solid rgba(255,255,255,0.07)",
-      }}
+      className="flex-shrink-0 transition-all active:scale-[0.97] select-none relative"
+      style={{ width: 130, height: 195 }}
     >
-      {/* Full-bleed image */}
+      {/* Full-bleed image — 3D book treatment when there's real cover art; the
+          spine/page slivers extend a few px past this box on purpose, so the
+          overlay chrome below is clipped separately rather than clipping
+          this whole container. */}
       {coverUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={coverUrl} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+        <BookCover coverUrl={coverUrl} alt={title} borderRadius={12} />
       ) : (
         <div
-          className="absolute inset-0 flex items-center justify-center text-5xl"
-          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)` }}
+          className="absolute inset-0 flex items-center justify-center text-5xl rounded-2xl overflow-hidden"
+          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)`, border: "1px solid rgba(255,255,255,0.07)" }}
         >
           <span style={{ filter: `drop-shadow(0 0 16px ${c1}aa)` }}>🌙</span>
         </div>
       )}
 
-      {/* Bottom gradient overlay */}
-      <div
-        className="absolute inset-0"
-        style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.98) 100%)" }}
-      />
+      {/* Flat overlay chrome — title/badges/progress never tilt with the book */}
+      <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+        {/* Bottom gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.98) 100%)" }}
+        />
 
-      {/* Chapter badge — top left, shown only for multi-part stories */}
-      {chapterLabel && (
-        <span
-          className="absolute top-2 left-2 text-fs-body font-bold px-2 py-0.5 rounded-full"
-          style={{
-            background: "rgba(79,195,247,0.22)",
-            border: "1px solid rgba(79,195,247,0.45)",
-            color: "#4fc3f7",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          {chapterLabel}
-        </span>
-      )}
-      {!chapterLabel && !!chapterCount && chapterCount > 1 && (
-        <span className="absolute top-2 left-2">
-          <SeriesCountBadge count={chapterCount} size="sm" />
-        </span>
-      )}
-
-      {/* Title — bottom overlay */}
-      <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
-        <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{title}</p>
-      </div>
-
-      {/* Progress bar — bottom edge (Continue Listening) */}
-      {progressPercent !== undefined && (
-        <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "rgba(255,255,255,0.12)" }}>
-          <div
-            className="h-full"
+        {/* Chapter badge — top left, shown only for multi-part stories */}
+        {chapterLabel && (
+          <span
+            className="absolute top-2 left-2 text-fs-body font-bold px-2 py-0.5 rounded-full"
             style={{
-              width: `${Math.max(4, Math.min(100, progressPercent))}%`,
-              background: `linear-gradient(90deg, ${c1}, ${c2})`,
-              borderRadius: "0 2px 2px 0",
+              background: "rgba(79,195,247,0.22)",
+              border: "1px solid rgba(79,195,247,0.45)",
+              color: "#4fc3f7",
+              backdropFilter: "blur(8px)",
             }}
-          />
+          >
+            {chapterLabel}
+          </span>
+        )}
+        {!chapterLabel && !!chapterCount && chapterCount > 1 && (
+          <span className="absolute top-2 left-2">
+            <SeriesCountBadge count={chapterCount} size="sm" />
+          </span>
+        )}
+
+        {/* Title — bottom overlay */}
+        <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
+          <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{title}</p>
         </div>
-      )}
+
+        {/* Progress bar — bottom edge (Continue Listening) */}
+        {progressPercent !== undefined && (
+          <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "rgba(255,255,255,0.12)" }}>
+            <div
+              className="h-full"
+              style={{
+                width: `${Math.max(4, Math.min(100, progressPercent))}%`,
+                background: `linear-gradient(90deg, ${c1}, ${c2})`,
+                borderRadius: "0 2px 2px 0",
+              }}
+            />
+          </div>
+        )}
+      </div>
     </Link>
   );
 }
@@ -354,22 +355,16 @@ function TonightsPickCard({ item }: { item: PickItem }) {
   return (
     <Link
       href={item.href}
-      className="flex-shrink-0 rounded-3xl overflow-hidden transition-all active:scale-[0.97] select-none relative"
-      style={{
-        width: 200,
-        height: 290,
-        boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 32px ${c1}18`,
-        border: `1px solid ${c1}28`,
-      }}
+      className="flex-shrink-0 transition-all active:scale-[0.97] select-none relative"
+      style={{ width: 200, height: 290 }}
     >
-      {/* Full-bleed image */}
+      {/* Full-bleed image — 3D book treatment when there's real cover art */}
       {item.coverUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.coverUrl} alt={item.title} className="absolute inset-0 w-full h-full object-cover" />
+        <BookCover coverUrl={item.coverUrl} alt={item.title} borderRadius={16} />
       ) : (
         <div
-          className="absolute inset-0 flex items-center justify-center text-6xl"
-          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)` }}
+          className="absolute inset-0 flex items-center justify-center text-6xl rounded-3xl overflow-hidden"
+          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)`, border: `1px solid ${c1}28` }}
         >
           <span style={{ filter: `drop-shadow(0 0 20px ${c1}aa)` }}>
             {item.emoji ?? "🌙"}
@@ -377,38 +372,41 @@ function TonightsPickCard({ item }: { item: PickItem }) {
         </div>
       )}
 
-      {/* Bottom gradient overlay */}
-      <div
-        className="absolute inset-0"
-        style={{ background: "linear-gradient(to bottom, transparent 38%, rgba(4,6,18,0.96) 100%)" }}
-      />
+      {/* Flat overlay chrome — tags/title never tilt with the book */}
+      <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+        {/* Bottom gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, transparent 38%, rgba(4,6,18,0.96) 100%)" }}
+        />
 
-      {/* Type tag — top left (Classics only) */}
-      {!isOwn && (
-        <span
-          className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-          style={{
-            background: "rgba(251,191,36,0.22)",
-            border: "1px solid rgba(251,191,36,0.45)",
-            color: "#fbbf24",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          {item.tag}
-        </span>
-      )}
+        {/* Type tag — top left (Classics only) */}
+        {!isOwn && (
+          <span
+            className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+            style={{
+              background: "rgba(251,191,36,0.22)",
+              border: "1px solid rgba(251,191,36,0.45)",
+              color: "#fbbf24",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            {item.tag}
+          </span>
+        )}
 
-      {/* Chapter count — top right, shown only for multi-part stories */}
-      {!!item.chapterCount && item.chapterCount > 1 && (
-        <span className="absolute top-3 right-3">
-          <SeriesCountBadge count={item.chapterCount} />
-        </span>
-      )}
+        {/* Chapter count — top right, shown only for multi-part stories */}
+        {!!item.chapterCount && item.chapterCount > 1 && (
+          <span className="absolute top-3 right-3">
+            <SeriesCountBadge count={item.chapterCount} />
+          </span>
+        )}
 
-      {/* Title + accent — bottom overlay */}
-      <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-4 pt-8">
-        <div className="w-7 h-[2px] rounded-full mb-2" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
-        <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
+        {/* Title + accent — bottom overlay */}
+        <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-4 pt-8">
+          <div className="w-7 h-[2px] rounded-full mb-2" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
+          <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
+        </div>
       </div>
     </Link>
   );

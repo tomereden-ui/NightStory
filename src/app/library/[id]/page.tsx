@@ -6,6 +6,7 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import Icon from "@/components/ui/Icon";
+import BookCover from "@/components/ui/BookCover";
 import type { ScriptBlock, Voice } from "@/types";
 import ShareSheet from "@/components/ShareSheet";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
@@ -399,47 +400,48 @@ export default function StoryDetailPage() {
       />
 
       <div className="pb-64">
-        {/* Atmospheric cover area */}
-        <div className="relative h-52 overflow-hidden" style={{ flexShrink: 0 }}>
+        {/* Atmospheric cover area — the book (when there's real cover art)
+            floats on this same starfield backdrop, matching the "casting
+            onto a dark background" 3D-book look everywhere else it's used. */}
+        <div className="relative overflow-hidden" style={{ flexShrink: 0, height: 260 }}>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse 70% 60% at 50% 25%, rgba(79,195,247,0.2) 0%, transparent 60%)," +
+                "radial-gradient(ellipse 50% 50% at 80% 80%, rgba(45,27,78,0.5) 0%, transparent 55%)," +
+                "radial-gradient(ellipse 60% 70% at 10% 80%, rgba(10,61,74,0.4) 0%, transparent 55%)," +
+                "linear-gradient(180deg,#060a18 0%,#0d1a3a 40%,#1a0a38 80%,#05080f 100%)",
+            }}
+          >
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 260" fill="none">
+              <circle cx="30" cy="25" r="1" fill="rgba(255,255,255,.6)"/>
+              <circle cx="80" cy="15" r="1.2" fill="rgba(255,255,255,.7)"/>
+              <circle cx="140" cy="30" r=".8" fill="rgba(200,220,255,.8)"/>
+              <circle cx="200" cy="18" r="1" fill="rgba(255,255,255,.6)"/>
+              <circle cx="260" cy="28" r="1.1" fill="rgba(255,255,255,.7)"/>
+              <circle cx="290" cy="12" r=".8" fill="rgba(200,220,255,.5)"/>
+              <circle cx="50" cy="55" r=".9" fill="rgba(255,255,255,.5)"/>
+              <circle cx="170" cy="45" r="1" fill="rgba(200,220,255,.6)"/>
+              <circle cx="240" cy="60" r=".8" fill="rgba(255,255,255,.7)"/>
+              <circle cx="80" cy="45" r="1" fill="rgba(180,210,255,.7)"/>
+              <circle cx="100" cy="38" r="1" fill="rgba(180,210,255,.7)"/>
+              <circle cx="120" cy="48" r="1" fill="rgba(180,210,255,.7)"/>
+              <line x1="80" y1="45" x2="100" y2="38" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
+              <line x1="100" y1="38" x2="120" y2="48" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
+              <circle cx="160" cy="120" r="40" fill="rgba(79,195,247,0.06)"/>
+              <circle cx="160" cy="120" r="20" fill="rgba(79,195,247,0.1)"/>
+              <circle cx="160" cy="120" r="8"  fill="rgba(150,220,255,0.2)"/>
+            </svg>
+          </div>
+
           {entry.coverUrl ? (
-            // Generated covers are square with the main character's face
-            // consistently in the top ~15-45%, not centered — a plain
-            // center crop into this short wide banner cuts the head off.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={entry.coverUrl} alt={entry.title} className="w-full h-full object-cover ken-burns" style={{ objectPosition: `${entry.coverFocusX ?? 50}% ${entry.coverFocusY ?? 30}%` }} />
+            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 34, width: 148, height: 210 }}>
+              <BookCover coverUrl={entry.coverUrl} alt={entry.title} borderRadius={10} />
+            </div>
           ) : (
-            <div
-              className="w-full h-full"
-              style={{
-                background:
-                  "radial-gradient(ellipse 70% 60% at 50% 25%, rgba(79,195,247,0.2) 0%, transparent 60%)," +
-                  "radial-gradient(ellipse 50% 50% at 80% 80%, rgba(45,27,78,0.5) 0%, transparent 55%)," +
-                  "radial-gradient(ellipse 60% 70% at 10% 80%, rgba(10,61,74,0.4) 0%, transparent 55%)," +
-                  "linear-gradient(180deg,#060a18 0%,#0d1a3a 40%,#1a0a38 80%,#05080f 100%)",
-              }}
-            >
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 208" fill="none">
-                <circle cx="30" cy="25" r="1" fill="rgba(255,255,255,.6)"/>
-                <circle cx="80" cy="15" r="1.2" fill="rgba(255,255,255,.7)"/>
-                <circle cx="140" cy="30" r=".8" fill="rgba(200,220,255,.8)"/>
-                <circle cx="200" cy="18" r="1" fill="rgba(255,255,255,.6)"/>
-                <circle cx="260" cy="28" r="1.1" fill="rgba(255,255,255,.7)"/>
-                <circle cx="290" cy="12" r=".8" fill="rgba(200,220,255,.5)"/>
-                <circle cx="50" cy="55" r=".9" fill="rgba(255,255,255,.5)"/>
-                <circle cx="170" cy="45" r="1" fill="rgba(200,220,255,.6)"/>
-                <circle cx="240" cy="60" r=".8" fill="rgba(255,255,255,.7)"/>
-                <circle cx="80" cy="45" r="1" fill="rgba(180,210,255,.7)"/>
-                <circle cx="100" cy="38" r="1" fill="rgba(180,210,255,.7)"/>
-                <circle cx="120" cy="48" r="1" fill="rgba(180,210,255,.7)"/>
-                <line x1="80" y1="45" x2="100" y2="38" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
-                <line x1="100" y1="38" x2="120" y2="48" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
-                <circle cx="160" cy="100" r="40" fill="rgba(79,195,247,0.06)"/>
-                <circle cx="160" cy="100" r="20" fill="rgba(79,195,247,0.1)"/>
-                <circle cx="160" cy="100" r="8"  fill="rgba(150,220,255,0.2)"/>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-7xl" style={{ filter: "drop-shadow(0 0 24px rgba(79,195,247,0.5))" }}>🌙</span>
-              </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-7xl" style={{ filter: "drop-shadow(0 0 24px rgba(79,195,247,0.5))" }}>🌙</span>
             </div>
           )}
 
