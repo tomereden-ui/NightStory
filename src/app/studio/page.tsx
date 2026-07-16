@@ -2440,6 +2440,14 @@ export default function Studio2Page() {
               setScriptBlocks([]);
               setMoralLessons([]);
               setScenes([]);
+              // A brand-new script from Chat must be produceable immediately —
+              // without this, a stale storyHasAudio=true left over from a
+              // previously produced story (never cleared by this path, unlike
+              // Step-by-step's handleGenerate/resetScript) kept "Produce Audio"
+              // disabled since needsProduce read the fresh script as already
+              // having audio.
+              setStoryHasAudio(false);
+              loadedFromExistingDraftRef.current = false;
             }}
             onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
