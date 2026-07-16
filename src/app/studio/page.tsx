@@ -41,6 +41,11 @@ const DRAFT_KEY = "nightstory_studio2_draft_v1";
 // the app's own UI language currently is.
 const STORY_LANG_OVERRIDE_KEY = "nightstory_story_lang_override";
 
+// Remembers which Create sub-tab (Chat vs Step-by-step) the user was last
+// on, so a plain nav tap into Studio returns to that instead of always
+// resetting to Chat.
+const CREATE_MODE_KEY = "nightstory_studio_create_mode";
+
 // Same admin gate used by /admin — see src/app/admin/page.tsx
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -1198,8 +1203,23 @@ export default function Studio2Page() {
   // ─── Tab / view state ───────────────────────────────────────────────────────
   const searchParams = useSearchParams();
   const startOnPrompt = searchParams.get("start") === "prompt";
-  const [activeTab, setActiveTab]           = useState<StudioTab>(startOnPrompt ? "step-by-step" : "chat");
-  const [createMode, setCreateMode]         = useState<"chat" | "step-by-step">(startOnPrompt ? "step-by-step" : "chat");
+  // Explicit deep-link used by "continue editing this story" flows (library,
+  // classics, the five-question wizard's hand-off) — they write a full
+  // script draft immediately before navigating here and expect to land on
+  // it. A plain nav tap into Studio carries no such param, so it falls
+  // through to the remembered Create sub-tab instead.
+  const requestedTab = searchParams.get("tab");
+  const lastCreateMode = (): "chat" | "step-by-step" => {
+    if (typeof window === "undefined") return "chat";
+    const stored = localStorage.getItem(CREATE_MODE_KEY);
+    return stored === "step-by-step" ? "step-by-step" : "chat";
+  };
+  const [activeTab, setActiveTab]           = useState<StudioTab>(startOnPrompt ? "step-by-step" : lastCreateMode());
+  const [createMode, setCreateModeState]    = useState<"chat" | "step-by-step">(startOnPrompt ? "step-by-step" : lastCreateMode());
+  const setCreateMode = useCallback((mode: "chat" | "step-by-step") => {
+    setCreateModeState(mode);
+    if (typeof window !== "undefined") localStorage.setItem(CREATE_MODE_KEY, mode);
+  }, []);
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob]     = useState<Job | null>(null);
   const [isProducing, setIsProducing]       = useState(false);
@@ -1506,9 +1526,12 @@ export default function Studio2Page() {
         // this once the real language resolves instead.
         void analyzeLessons(draft.scriptBlocks, draft.editingStoryId ?? null, draft.language);
       }
-      if (!startOnPrompt) setActiveTab("script");
-    } else {
-      setActiveTab(startOnPrompt ? "step-by-step" : "chat");
+      // Only jump straight to the script when explicitly asked to (the
+      // "continue editing this story" links) — a plain nav tap into Studio
+      // should land on Create even if a script draft happens to be sitting
+      // in storage from a previous session, per the initial-state default
+      // above (lastCreateMode()).
+      if (!startOnPrompt && requestedTab === "script") setActiveTab("script");
     }
     setLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps

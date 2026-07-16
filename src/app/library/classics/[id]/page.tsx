@@ -360,7 +360,7 @@ export default function ClassicDetailPage() {
       audioUrl: storyAudioUrl ?? undefined,
       durationSeconds: meta.durationSeconds,
     }, "nightstory_studio2_draft_v1");
-    router.push("/studio");
+    router.push("/studio?tab=script");
   }, [meta, blocks, router, storyLanguage, characterProfiles, isHardcoded, id, storyAudioUrl]);
 
   const toggleSummaryPlay = useCallback(async () => {

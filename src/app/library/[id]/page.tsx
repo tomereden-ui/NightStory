@@ -342,7 +342,7 @@ export default function StoryDetailPage() {
       characterProfiles: entry.characterProfiles,
       scenes: entry.scenes,
     }, "nightstory_studio2_draft_v1");
-    router.push("/studio");
+    router.push("/studio?tab=script");
   }, [entry, router]);
 
   const handleDeleteConfirm = useCallback(async () => {
