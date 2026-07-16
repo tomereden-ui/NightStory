@@ -42,33 +42,34 @@ export default function BookCover({
     <div className={`relative w-full h-full ${className ?? ""}`} style={{ perspective: 1200 }}>
       <div
         className="relative w-full h-full transition-transform duration-300 ease-out"
-        style={{ transformStyle: "preserve-3d", transform: "rotateY(-6deg)" }}
+        style={{ transformStyle: "preserve-3d", transform: "rotateY(-9deg) rotateX(1.5deg)" }}
       >
-        {/* pages — flat, slightly larger, sits behind the cover so it peeks
-            out on the right (and a sliver at the bottom) */}
+        {/* pages — flat, slightly larger on the right AND bottom edges (a
+            book's fore-edge and tail — the two edges that actually show
+            stacked paper; the spine/left and head/top stay flush) */}
         <div
           className="absolute pointer-events-none"
           style={{
-            top: "1%", left: "1%", width: "98%", height: "98%",
+            top: "1%", left: "1%", width: "99%", height: "99%",
             zIndex: 1,
             borderRadius: `0 ${borderRadius}px ${borderRadius}px 0`,
             background: "#f4f3ef",
-            backgroundImage: "repeating-linear-gradient(to right, #f4f3ef 0px, #f4f3ef 1px, #e3dfd5 2px, #e3dfd5 3px)",
+            backgroundImage: "repeating-linear-gradient(to right, #f4f3ef 0px, #f4f3ef 1px, #ddd7c6 2px, #ddd7c6 3px)",
             boxShadow: showShadow
-              ? "3px 2px 5px rgba(0,0,0,0.5), 8px 8px 16px rgba(0,0,0,0.35), 12px 16px 28px rgba(0,0,0,0.2)"
+              ? "4px 3px 6px rgba(0,0,0,0.55), 9px 9px 18px rgba(0,0,0,0.4), 14px 18px 32px rgba(0,0,0,0.22)"
               : undefined,
           }}
         />
 
-        {/* front cover — the real image, narrower than the container so
-            the pages layer shows on the right */}
+        {/* front cover — the real image, narrower/shorter than the
+            container so the pages layer shows on the right and bottom */}
         <div
           className="absolute overflow-hidden"
           style={{
-            top: 0, left: 0, width: "96%", height: "100%",
+            top: 0, left: 0, width: "92%", height: "96%",
             zIndex: 2,
             borderRadius: `${spineRadius}px ${borderRadius}px ${borderRadius}px ${spineRadius}px`,
-            boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.15), 2px 0px 5px rgba(0,0,0,0.4)",
+            boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.18), 3px 2px 7px rgba(0,0,0,0.5)",
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -80,7 +81,7 @@ export default function BookCover({
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "linear-gradient(to right, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.15) 1.5%, rgba(0,0,0,0.08) 3%, rgba(0,0,0,0.25) 4.5%, rgba(0,0,0,0) 7%)",
+                "linear-gradient(to right, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.3) 2%, rgba(0,0,0,0.16) 4%, rgba(0,0,0,0.42) 6%, rgba(0,0,0,0) 10%)",
             }}
           />
         </div>
