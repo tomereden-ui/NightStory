@@ -19,6 +19,7 @@ import { type IconName } from "@/lib/icons";
 import { supabaseAuth } from "@/lib/supabaseAuth";
 import { THEME_OPTIONS } from "@/components/studio/ChildProfilePicker";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
+import { getLessonsCatalog } from "@/constants/lessonsUi";
 
 // Shown until /api/app-version resolves (or if it fails) — kept in sync with
 // the DB seed in supabase/app-settings-migration.sql.
@@ -365,6 +366,7 @@ function EditChildModal({
   const [themes, setThemes] = useState<string[]>([]);
   const [interests, setInterests] = useState("");
   const [avoid, setAvoid] = useState("");
+  const [defaultLessons, setDefaultLessons] = useState<string[]>([]);
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -381,6 +383,7 @@ function EditChildModal({
           setThemes(found.favorite_themes ?? []);
           setInterests(found.interests ?? "");
           setAvoid(found.avoid ?? "");
+          setDefaultLessons(found.default_moral_lessons ?? []);
         }
         setLoading(false);
       })
@@ -389,6 +392,10 @@ function EditChildModal({
 
   function toggleTheme(id: string) {
     setThemes((prev) => prev.includes(id) ? prev.filter((tId) => tId !== id) : [...prev, id]);
+  }
+
+  function toggleLesson(id: string) {
+    setDefaultLessons((prev) => prev.includes(id) ? prev.filter((lId) => lId !== id) : [...prev, id]);
   }
 
   async function handleSave() {
@@ -408,6 +415,7 @@ function EditChildModal({
           favorite_themes: themes,
           interests,
           avoid,
+          default_moral_lessons: defaultLessons,
         }),
       });
       if (res.ok) {
@@ -576,6 +584,35 @@ function EditChildModal({
               className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(236,72,153,0.2)" }}
             />
+          </div>
+
+          <div>
+            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">
+              Default moral lessons <span className="normal-case opacity-60">(optional)</span>
+            </label>
+            <p className="text-white/35 text-fs-body mb-2 leading-relaxed">
+              Pre-applied to every new story for {name || "this child"} — woven in naturally, never stated out loud.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {getLessonsCatalog().map((l) => {
+                const active = defaultLessons.includes(l.id);
+                return (
+                  <button
+                    key={l.id}
+                    onClick={() => toggleLesson(l.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-medium transition-all"
+                    style={{
+                      background: active ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
+                      border: active ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                      color: active ? "#4fc3f7" : "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    <Icon name={l.icon} size={13} />
+                    {l.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

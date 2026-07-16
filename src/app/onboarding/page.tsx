@@ -6,12 +6,13 @@ import Image from "next/image";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { AVATAR_OPTIONS, THEME_OPTIONS } from "@/components/studio/ChildProfilePicker";
 import { fetchBankAvatars, type BankAvatar } from "@/lib/services/characterAvatars";
+import { getLessonsCatalog } from "@/constants/lessonsUi";
 import Icon from "@/components/ui/Icon";
 
 const ONBOARDING_DONE_KEY = "ns-onboarding-done";
 
-type Step = "intro" | "name" | "age" | "gender" | "avatar" | "themes" | "figures" | "review";
-const STEP_ORDER: Step[] = ["name", "age", "gender", "avatar", "themes", "figures"];
+type Step = "intro" | "name" | "age" | "gender" | "avatar" | "themes" | "figures" | "lessons" | "review";
+const STEP_ORDER: Step[] = ["name", "age", "gender", "avatar", "themes", "figures", "lessons"];
 
 interface ChildDraft {
   name: string;
@@ -20,9 +21,10 @@ interface ChildDraft {
   avatar: string;
   themes: string[];
   figures: string[];
+  lessons: string[];
 }
 
-const EMPTY_DRAFT: ChildDraft = { name: "", age: null, gender: null, avatar: "⭐", themes: [], figures: [] };
+const EMPTY_DRAFT: ChildDraft = { name: "", age: null, gender: null, avatar: "⭐", themes: [], figures: [], lessons: [] };
 
 // Matches the ids in FIGURE_IMAGE_PROMPTS (src/config/createFlowImages.ts) —
 // emoji here are only the instant-paint placeholder shown before that
@@ -142,6 +144,7 @@ export default function OnboardingPage() {
           avatar_emoji: draft.avatar || "⭐",
           favorite_themes: draft.themes,
           preferred_figures: draft.figures,
+          default_moral_lessons: draft.lessons,
         }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -180,6 +183,13 @@ export default function OnboardingPage() {
     setDraft((prev) => ({
       ...prev,
       figures: prev.figures.includes(id) ? prev.figures.filter((f) => f !== id) : [...prev.figures, id],
+    }));
+  };
+
+  const toggleLesson = (id: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      lessons: prev.lessons.includes(id) ? prev.lessons.filter((l) => l !== id) : [...prev.lessons, id],
     }));
   };
 
@@ -440,6 +450,31 @@ export default function OnboardingPage() {
             {imagesGenerating && (
               <p className="text-center text-fs-body mt-3" style={{ color: "rgba(148,163,184,0.5)" }}>✨ Painting the rest of the artwork…</p>
             )}
+          </StepShell>
+        )}
+
+        {step === "lessons" && (
+          <StepShell title="Want stories to teach something?" subtitle="Pick any values to weave into every story — optional, and you can change these later.">
+            <div className="flex flex-wrap justify-center gap-2">
+              {getLessonsCatalog().map((l) => {
+                const active = draft.lessons.includes(l.id);
+                return (
+                  <button
+                    key={l.id}
+                    onClick={() => toggleLesson(l.id)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-full font-medium transition-all"
+                    style={{
+                      background: active ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
+                      border: active ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                      color: active ? "#4fc3f7" : "rgba(255,255,255,0.55)",
+                      fontSize: 15,
+                    }}
+                  >
+                    <Icon name={l.icon} size={14} /> {l.label}
+                  </button>
+                );
+              })}
+            </div>
           </StepShell>
         )}
 

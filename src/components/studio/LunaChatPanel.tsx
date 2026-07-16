@@ -494,7 +494,7 @@ export default function LunaChatPanel({
         const res = await fetch("/api/generate-story", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language, narratorVoiceId: getNarratorVoiceId() }),
+          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language, narratorVoiceId: getNarratorVoiceId(), lessons: activeChild?.default_moral_lessons ?? [] }),
         });
         const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; scenes?: StoryScene[]; error?: string };
         if (!res.ok) throw new Error(data.error || "Generation failed");
@@ -631,6 +631,7 @@ export default function LunaChatPanel({
           childAgeGroup: getChildAgeGroup(),
           language,
           narratorVoiceId: getNarratorVoiceId(),
+          lessons: activeChild?.default_moral_lessons ?? [],
         }),
       });
       const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; scenes?: StoryScene[]; error?: string; blocked?: boolean; suggestedRewrite?: Record<string, string> };

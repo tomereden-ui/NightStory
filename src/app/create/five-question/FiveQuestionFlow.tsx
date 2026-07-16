@@ -69,16 +69,38 @@ async function validateWizardText(text: string, field: WizardTextField, language
 // safe to show directly in the wizard's own UI once the language isn't
 // English. This reconstructs the same {type, name} the string was built
 // from and re-renders it with the localized label + ui.companionDisplay.
-function localizeCompanionForDisplay(companion: string, companionTypes: CompanionTypeMeta[], ui: WizardUiCopy): string {
+function localizeCompanionForDisplay(companion: string, companionTypes: CompanionTypeMeta[], ui: WizardUiCopy, animalTypes: AnimalTypeMeta[]): string {
   if (!companion) return companion;
+  // A pet with a chosen species is built as "a brave dolphin named Marina"
+  // (buildCompanionString's species-aware phrasing), not the generic
+  // "a pet named X" the geminiLabel loop below matches — check this pattern
+  // first so it doesn't fall through to the raw English string.
+  for (const at of animalTypes) {
+    const withName = `a brave ${at.id} named `;
+    if (companion.startsWith(withName)) return ui.companionDisplay(at.label, companion.slice(withName.length));
+    if (companion === `a brave ${at.id}`) return ui.companionDisplay(at.label);
+  }
   for (const ct of companionTypes) {
     const withName = `a ${ct.geminiLabel} named `;
     if (companion.startsWith(withName)) return ui.companionDisplay(ct.label, companion.slice(withName.length));
     if (companion === `a ${ct.geminiLabel}`) return ui.companionDisplay(ct.label);
   }
-  // Surprise picks / legacy values don't match the geminiLabel pattern —
-  // pass through unchanged rather than guessing.
+  // Surprise picks / legacy values / custom animals don't match either
+  // pattern — pass through unchanged rather than guessing.
   return companion;
+}
+
+// Q1's animal hero uses the identical "a brave {species} named {name}"
+// phrasing (see Q1View.handleConfirm) — same re-localization, just without
+// the companion-type fallback since a hero is never a "pet"/"friend"/etc.
+function localizeHeroForDisplay(hero: string, ui: WizardUiCopy, animalTypes: AnimalTypeMeta[]): string {
+  if (!hero) return hero;
+  for (const at of animalTypes) {
+    const withName = `a brave ${at.id} named `;
+    if (hero.startsWith(withName)) return ui.companionDisplay(at.label, hero.slice(withName.length));
+    if (hero === `a brave ${at.id}`) return ui.companionDisplay(at.label);
+  }
+  return hero;
 }
 
 // ─── FairyFigure: animated Luna fairy portrait ────────────────────────────────────
@@ -602,7 +624,10 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
   const familyFriendChips = (() => {
     const familyWords = companionTypes.find((t) => t.id === "family")?.surpriseNames ?? [];
     const friendNames = companionTypes.find((t) => t.id === "friend")?.surpriseNames ?? [];
-    return [...siblingNames, ...familyWords.slice(0, 2), ...friendNames.slice(0, 2)].slice(0, 4);
+    const ownName = childName?.trim().toLowerCase();
+    return [...siblingNames, ...familyWords.slice(0, 2), ...friendNames.slice(0, 2)]
+      .filter((n) => n.trim().toLowerCase() !== ownName)
+      .slice(0, 4);
   })();
 
   if (transitioning) return (
@@ -752,7 +777,7 @@ function Q1View({ initialHero, onNext, onBack, onSkip, onReset, optionImages, au
         )}
 
         <ConfirmRow
-          confirmLabel={validating ? ui.checkingAnswer : (selectedCard === "own" && childName ? ui.yesImName(childName) : ui.thisIsMyHero)}
+          confirmLabel={validating ? ui.checkingAnswer : ui.thisIsMyHero}
           onConfirm={handleConfirm}
           disabled={!canConfirm || !selectedCard || validating || !!validationError}
           onSkip={onSkip}
@@ -839,7 +864,7 @@ function Q2View({ initialWorld, onNext, onBack, onSkip, onReset, optionImages, a
 
 // ─── Q3 — Companion ──────────────────────────────────────────────────────────────────────────────
 
-function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, onReset, optionImages, audioUrl, luna, ui, companionTypes, language, siblingNames, animalTypes }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; luna: LunaCopy; ui: WizardUiCopy; companionTypes: CompanionTypeMeta[]; language: string; siblingNames: string[]; animalTypes: AnimalTypeMeta[] }) {
+function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip, onReset, optionImages, audioUrl, luna, ui, companionTypes, language, siblingNames, animalTypes, childName }: { heroName: string; worldName: string; initialCompanion: string; onNext: (c: string) => void; onBack: () => void; onSkip?: () => void; onReset?: () => void; optionImages: Record<string, string>; audioUrl?: string; luna: LunaCopy; ui: WizardUiCopy; companionTypes: CompanionTypeMeta[]; language: string; siblingNames: string[]; animalTypes: AnimalTypeMeta[]; childName?: string }) {
   const [selectedType, setSelectedType] = useState<Q3CompanionTypeId | null>(null);
   const [nameVal, setNameVal]           = useState("");
   const [animalType, setAnimalType]     = useState<AnimalTypeId | null>(null);
@@ -915,7 +940,10 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
     // call below is tuned for invented character names and was surfacing
     // whimsical/pet-sounding names for this category, not relations.
     if (selectedType === "family") {
-      setSuggestedNames([...siblingNames, ...ct.surpriseNames].slice(0, 4));
+      const ownName = childName?.trim().toLowerCase();
+      setSuggestedNames(
+        [...siblingNames, ...ct.surpriseNames].filter((n) => n.trim().toLowerCase() !== ownName).slice(0, 4)
+      );
       return;
     }
 
@@ -942,7 +970,7 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [selectedType, heroName, worldName, companionTypes, siblingNames, animalType, animalTypes]);
+  }, [selectedType, heroName, worldName, companionTypes, siblingNames, animalType, animalTypes, childName]);
 
   if (transitioning) return (
     <div className="flex flex-col min-h-full items-center justify-center px-5">
@@ -1191,7 +1219,7 @@ function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, opti
 
 type SummaryPhase = "table" | "script" | "countdown" | "herewego";
 
-function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, luna, ui, moodLabels, companionTypes }: {
+function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, luna, ui, moodLabels, companionTypes, animalTypes }: {
   answers: Answers;
   durationMinutes: number;
   onDurationChange: (v: number) => void;
@@ -1202,18 +1230,21 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   ui: WizardUiCopy;
   moodLabels: Record<string, string>;
   companionTypes: CompanionTypeMeta[];
+  animalTypes: AnimalTypeMeta[];
 }) {
   const [phase, setPhase] = useState<SummaryPhase>("table");
   const [showReady, setShowReady] = useState(false);
 
   const moodLabel = answers.q5_mood ? moodLabels[answers.q5_mood] : "";
-  // answers.q3_companion is built from the English geminiLabel (for the
-  // story-generation prompt) — re-localize it for anything the user sees.
-  const displayCompanion = localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui);
+  // answers.q1_hero / q3_companion can be built from English proper-noun
+  // patterns (an animal species, a companion's geminiLabel) meant for the
+  // story-generation prompt — re-localize them for anything the user sees.
+  const displayHero = localizeHeroForDisplay(answers.q1_hero, ui, animalTypes);
+  const displayCompanion = localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui, animalTypes);
   const launchScript = luna.launch(moodLabel, displayCompanion, answers.q2_world, answers.q4_engine);
 
   const ROWS: { label: string; value: string; step: Step }[] = [
-    { label: ui.hero,      value: answers.q1_hero,   step: "q1" },
+    { label: ui.hero,      value: displayHero,       step: "q1" },
     { label: ui.world,     value: answers.q2_world,  step: "q2" },
     { label: ui.companion, value: displayCompanion,  step: "q3" },
     { label: ui.challenge, value: answers.q4_engine, step: "q4" },
@@ -1324,10 +1355,11 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 
 // ─── Generating screen ────────────────────────────────────────────────────────────────────────
 
-function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, onDone, onError, luna }: {
+function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, lessons, onDone, onError, luna }: {
   worldName: string;
   seeds: StorySeeds; durationMinutes: number;
   contentLanguage?: string;
+  lessons?: string[];
   onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[]) => void;
   onError: (msg: string) => void;
   luna: LunaCopy;
@@ -1348,7 +1380,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, on
     fetch("/api/five-question-story", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seeds, durationMinutes, language: contentLanguage, narratorVoiceId: getNarratorVoiceId() }),
+      body: JSON.stringify({ seeds, durationMinutes, language: contentLanguage, narratorVoiceId: getNarratorVoiceId(), lessons }),
       signal: controller.signal,
     })
       .then(async (res) => {
@@ -1412,14 +1444,19 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   // profile (or none at all), which is the common case and handled fine by
   // Q3View's relation-word fallback chips (Mom/Dad/Grandpa/Grandma/...).
   const [siblingNames, setSiblingNames] = useState<string[]>([]);
+  // The active child's own default moral lessons (Profile > Edit / onboarding)
+  // — pre-applied to the generated story so the wizard never has to ask.
+  const [defaultLessons, setDefaultLessons] = useState<string[]>([]);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/child-profiles", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : []))
-      .then((profiles: { id: string; name: string }[]) => {
+      .then((profiles: { id: string; name: string; default_moral_lessons?: string[] }[]) => {
         if (cancelled) return;
         const siblings = (profiles ?? []).filter((p) => p.id !== childId && p.name?.trim()).map((p) => p.name.trim());
         setSiblingNames(siblings);
+        const self = (profiles ?? []).find((p) => p.id === childId);
+        setDefaultLessons(self?.default_moral_lessons ?? []);
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -1641,7 +1678,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         "nightstory_studio2_draft_v1",
       );
       if (incomingCoverPrompt) fetchCover(incomingCoverPrompt, incomingSummary);
-      router.push("/studio");
+      router.push("/studio?tab=script");
     }
   }, [fetchCover, router, onComplete]);
 
@@ -1733,19 +1770,19 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
 
   if (step === "q1") return <>{GeneratingBadge}<Q1View key={resetToken} initialHero={answers.q1_hero} onNext={(h) => { setAnswer("q1_hero", h); nextOrSummary("q2"); }} onBack={editingFromSummary ? backToSummary : (onComplete ? undefined : () => router.push("/create"))} onSkip={() => skipOrSummary("q2", () => { if (!answers.q1_hero) setAnswer("q1_hero", pickRandom(SURPRISE_HERO_NAMES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q1} childName={childName} childAvatarUrl={childAvatarUrl} luna={luna} ui={ui} language={effectiveLanguage} companionTypes={companionTypes} siblingNames={siblingNames} animalTypes={animalTypes} /></>;
   if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} luna={luna} ui={ui} worldOptions={worldOptions} language={effectiveLanguage} /></>;
-  if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} luna={luna} ui={ui} companionTypes={companionTypes} language={effectiveLanguage} siblingNames={siblingNames} animalTypes={animalTypes} /></>;
-  if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui)} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} luna={luna} ui={ui} q4Categories={q4Categories} language={effectiveLanguage} /></>;
+  if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} luna={luna} ui={ui} companionTypes={companionTypes} language={effectiveLanguage} siblingNames={siblingNames} animalTypes={animalTypes} childName={childName} /></>;
+  if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui, animalTypes)} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} luna={luna} ui={ui} q4Categories={q4Categories} language={effectiveLanguage} /></>;
   if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} luna={luna} ui={ui} moodLabels={moodLabels} /></>;
 
   if (step === "summary") return (
     <>
       {ErrorBanner}
-      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={showInternalReset ? handleReset : undefined} luna={luna} ui={ui} moodLabels={moodLabels} companionTypes={companionTypes} />
+      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={showInternalReset ? handleReset : undefined} luna={luna} ui={ui} moodLabels={moodLabels} companionTypes={companionTypes} animalTypes={animalTypes} />
     </>
   );
 
   if (step === "generating" && seeds) return (
-    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} onDone={handleDone} onError={handleGenError} luna={luna} />
+    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} lessons={defaultLessons} onDone={handleDone} onError={handleGenError} luna={luna} />
   );
 
   if (step === "done") {

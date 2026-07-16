@@ -13,6 +13,10 @@ export interface DBChildProfile {
   favorite_animals: string[];
   favorite_themes: string[];
   preferred_figures?: string[];
+  // Values picked once (onboarding or Profile > Edit) that get pre-applied
+  // whenever a new story is created for this child — see lessonsUi.ts for
+  // the catalog these ids/custom text come from.
+  default_moral_lessons?: string[];
   interests?: string;
   avoid?: string;
   notes?: string;
@@ -59,6 +63,7 @@ export async function POST(req: NextRequest) {
       favorite_animals: Array.isArray(body.favorite_animals) ? body.favorite_animals : [],
       favorite_themes: Array.isArray(body.favorite_themes) ? body.favorite_themes : [],
       preferred_figures: Array.isArray(body.preferred_figures) ? body.preferred_figures : [],
+      default_moral_lessons: Array.isArray(body.default_moral_lessons) ? body.default_moral_lessons : [],
       interests: body.interests ?? "",
       notes: body.notes ?? "",
       created_at: now,
