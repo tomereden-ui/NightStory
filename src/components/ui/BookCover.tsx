@@ -81,7 +81,13 @@ export default function BookCover({
         {/* .book-pages — sits behind the cover. Sized visibly larger than
             the cover (not the same width) so a real margin of paper shows
             on the right and bottom — at equal widths the "peek" was just a
-            few px, too thin to read as a page block at all. */}
+            few px, too thin to read as a page block at all. Carries the
+            book's ONE outer shadow — see the note on .book-cover below for
+            why the cover doesn't have its own competing shadow. Softened
+            and pushed further to the bottom-right (light from the top-left,
+            matching the spine highlight) versus the previous tighter/more
+            symmetric stack that read as a flat box-shadow rather than an
+            object catching light from one direction. */}
         <div
           className="absolute pointer-events-none"
           style={{
@@ -96,41 +102,45 @@ export default function BookCover({
               "repeating-linear-gradient(to bottom, transparent 0px, transparent 1px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px)",
             borderRadius: "0 4px 4px 0",
             boxShadow: showShadow
-              ? "2px 2px 5px rgba(0,0,0,0.5), 8px 10px 18px rgba(0,0,0,0.35), 12px 18px 25px rgba(0,0,0,0.2)"
+              ? "3px 4px 8px rgba(0,0,0,0.45), 10px 14px 24px rgba(0,0,0,0.3), 16px 24px 40px rgba(0,0,0,0.15)"
               : undefined,
           }}
         />
         {/* .book-cover — the front hardcover. Narrower than the pages
             behind it (92% vs 97%) so a genuine, visible strip of paper
             shows on the right and bottom instead of a hairline. Corners are
-            asymmetric on purpose: the left (spine) side gets a slight 3px
-            round to soften it into a curve; the right side is perfectly
-            sharp (0) since that's a clean seam against the page stack, not
-            an outer corner. */}
+            asymmetric on purpose: the left (spine) side gets a 5px round to
+            soften it into a curve; the right side is perfectly sharp (0)
+            since that's a clean seam against the page stack, not an outer
+            corner. Only carries an INSET rim-light now, not its own outer
+            shadow — a second outer shadow here duplicated/fought the
+            .book-pages shadow below it and read as a muddy, flat box
+            outline instead of one coherent cast shadow. */}
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
             width: "92%",
             height: "95%",
             zIndex: 2,
-            borderRadius: "3px 0 0 3px",
-            boxShadow:
-              "inset 1px 1px 1px rgba(255,255,255,0.2), 3px 2px 6px rgba(0,0,0,0.45)",
+            borderRadius: "5px 0 0 5px",
+            boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.2)",
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={coverUrl} alt={alt} className="absolute inset-0 w-full h-full object-cover" onError={onImgError} />
-          {/* .spine-crease — the left edge read as "just cropped, no book"
-              until this was strengthened: a bright ridge highlight right at
-              the edge, then a real dark crease, spanning the left 8% (was
-              7% at much lower opacity — 0.12/0.25 peak — nowhere near
-              visible enough against a busy illustration). */}
+          {/* .spine-crease — the highlight used to start at full brightness
+              exactly at x=0, a hard jump from "nothing" to "bright" right at
+              the box's own edge that read as a flat cut line rather than a
+              curve. A real rounded spine's outermost edge curves AWAY from
+              the light before the ridge — so this now dips dark first (the
+              curve receding), rises to the highlight ridge a little inward,
+              then falls into the hinge crease before fading out. */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               zIndex: 3,
               background:
-                "linear-gradient(to right, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.45) 1%, rgba(0,0,0,0.15) 2.5%, rgba(0,0,0,0.5) 5%, rgba(0,0,0,0.18) 6.5%, rgba(0,0,0,0) 8%)",
+                "linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(255,255,255,0.08) 0.8%, rgba(255,255,255,0.42) 2%, rgba(0,0,0,0.15) 3.5%, rgba(0,0,0,0.5) 6%, rgba(0,0,0,0.16) 7.5%, rgba(0,0,0,0) 9%)",
             }}
           />
           {/* Right-edge blend — a soft shadow fading in from the right so
