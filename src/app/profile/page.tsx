@@ -57,27 +57,22 @@ function childHash(name: string) {
 
 function ChildCard({
   child,
-  onChangeAvatar,
   onEdit,
-  onDelete,
 }: {
   child: ChildProfile;
-  onChangeAvatar: () => void;
   onEdit: () => void;
-  onDelete: () => void;
 }) {
-  const { t } = useLanguage();
   const [c1, c2] = CHILD_PALETTES[childHash(child.name) % CHILD_PALETTES.length];
 
   return (
     <div className="flex flex-col items-center gap-2.5 flex-shrink-0 transition-all active:scale-[0.97]" style={{ width: 84 }}>
-      {/* Avatar circle + delete badge */}
+      {/* Avatar circle — taps into the full profile sheet */}
       <div className="relative">
         {/* Glowing gradient ring */}
         <button
-          onClick={onChangeAvatar}
+          onClick={onEdit}
           className="group block"
-          title={t("changeAvatar" as never)}
+          title="Edit profile"
         >
           <div style={{
             width: 80, height: 80, borderRadius: "50%",
@@ -114,16 +109,6 @@ function ChildCard({
       }}>
         {child.name}
       </p>
-
-      {/* Edit / delete */}
-      <div className="flex items-center gap-3">
-        <button onClick={onEdit} title="Edit profile" className="transition-opacity hover:opacity-70" style={{ color: "rgba(255,255,255,0.52)" }}>
-          <Icon name="edit" size={12} />
-        </button>
-        <button onClick={onDelete} title="Delete profile" className="transition-opacity hover:opacity-70" style={{ color: "rgba(255,255,255,0.52)" }}>
-          <Icon name="delete" size={12} />
-        </button>
-      </div>
     </div>
   );
 }
@@ -351,11 +336,13 @@ function EditChildModal({
   childId,
   onSaved,
   onClose,
+  onDelete,
   t,
 }: {
   childId: string;
   onSaved: (updated: { id: string; name: string; age: number; avatar_emoji: string }) => void;
   onClose: () => void;
+  onDelete: () => void;
   t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
 }) {
   const [loading, setLoading] = useState(true);
@@ -623,6 +610,19 @@ function EditChildModal({
           style={{ background: "linear-gradient(135deg, #4fc3f7, #7c3aed)", color: "#fff" }}
         >
           {saving ? "Saving…" : t("save")}
+        </button>
+
+        <button
+          onClick={onDelete}
+          className="w-full mt-2.5 flex items-center justify-center py-2.5 rounded-xl font-medium transition-all active:scale-[0.97]"
+          style={{
+            background: "rgba(239,68,68,0.04)",
+            border: "1px solid rgba(239,68,68,0.1)",
+            color: "rgba(239,68,68,0.55)",
+            fontSize: 12,
+          }}
+        >
+          Delete profile
         </button>
       </div>
     </div>
@@ -948,7 +948,6 @@ export default function ProfilePage() {
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
-  const [editAvatarFor, setEditAvatarFor] = useState<string | null>(null);
   const [editChildFor, setEditChildFor] = useState<string | null>(null);
   const [narratorOpen, setNarratorOpen] = useState(false);
   const [familyMembersOpen, setFamilyMembersOpen] = useState(false);
@@ -1086,19 +1085,6 @@ export default function ProfilePage() {
     } catch { /* ignore */ }
   }
 
-  async function handleChangeAvatar(childId: string, emoji: string) {
-    setChildren((prev) => prev.map((c) => c.id === childId ? { ...c, avatarEmoji: emoji } : c));
-    try {
-      await fetch(`/api/child-profiles/${childId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatar_emoji: emoji }),
-      });
-    } catch { /* ignore */ }
-  }
-
-  const editingChild = children.find((c) => c.id === editAvatarFor);
-
   const SETTINGS_ROWS = [
     { id: "notifications", label: t("notifications"), iconName: "bell"   as IconName, accent: "#4fc3f7", value: t("on")     },
     { id: "nightmode",     label: t("nightMode"),     iconName: "moon"   as IconName, accent: "#8B5CF6", value: t("always") },
@@ -1134,13 +1120,7 @@ export default function ProfilePage() {
                     <ChildCard
                       key={child.id}
                       child={child}
-                      onChangeAvatar={() => setEditAvatarFor(child.id)}
                       onEdit={() => setEditChildFor(child.id)}
-                      onDelete={() => {
-                        if (confirm(`Delete ${child.name}'s profile? Their stories stay in your library but will no longer be assigned to them. This can't be undone.`)) {
-                          handleDeleteChild(child.id);
-                        }
-                      }}
                     />
                   ))
               }
@@ -1397,15 +1377,6 @@ export default function ProfilePage() {
         />
       )}
 
-      {/* Avatar picker for existing child */}
-      {editAvatarFor && editingChild && (
-        <AvatarPicker
-          current={editingChild.avatarEmoji}
-          onSelect={(emoji) => handleChangeAvatar(editAvatarFor, emoji)}
-          onClose={() => setEditAvatarFor(null)}
-        />
-      )}
-
       {/* Full profile edit — name/age/gender/avatar/themes/interests/avoid */}
       {editChildFor && (
         <EditChildModal
@@ -1416,6 +1387,13 @@ export default function ProfilePage() {
               : c
           ))}
           onClose={() => setEditChildFor(null)}
+          onDelete={() => {
+            const child = children.find((c) => c.id === editChildFor);
+            if (child && confirm(`Delete ${child.name}'s profile? Their stories stay in your library but will no longer be assigned to them. This can't be undone.`)) {
+              handleDeleteChild(editChildFor);
+              setEditChildFor(null);
+            }
+          }}
           t={t}
         />
       )}
