@@ -326,50 +326,26 @@ function FamilyStoriesGrid({
         const pendingSelections = pickerSelections[entry.id] ?? assignedChildIds;
 
         return (
-          <div key={entry.id} className="relative" style={{ aspectRatio: "2/3" }}>
-            <Link
-              href={`/library/${entry.id}`}
-              className="absolute inset-1 transition-all active:scale-[0.97] select-none block"
-            >
-              {entry.coverUrl ? (
-                <BookCover
-                  coverUrl={entry.coverUrl}
-                  alt={entry.title}
-                  borderRadius={8}
-                  overlay={
-                    <>
-                      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
-                      <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
-                        <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {(entry.viewCount ?? 0) > 0 && (
-                            <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  }
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center rounded-lg overflow-hidden"
-                  style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
-                  <span className="text-fs-display" style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.95) 100%)" }} />
-                  <div className="absolute bottom-0 left-0 right-0 px-2 pb-7 pt-4">
-                    <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {(entry.viewCount ?? 0) > 0 && (
-                        <p className="text-fs-body" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
-                      )}
-                    </div>
+          <div key={entry.id} className="flex flex-col">
+            <div className="relative" style={{ aspectRatio: "2/3" }}>
+              <Link
+                href={`/library/${entry.id}`}
+                className="absolute inset-1 transition-all active:scale-[0.97] select-none block"
+              >
+                {entry.coverUrl ? (
+                  <BookCover coverUrl={entry.coverUrl} alt={entry.title} borderRadius={8} />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-lg overflow-hidden"
+                    style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
+                    <span className="text-fs-display" style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                   </div>
-                </div>
-              )}
-            </Link>
+                )}
+              </Link>
 
-            {/* Bottom strip — avatars when assigned, "+Assign" button when not */}
+            {/* Avatar seal — sits over the bottom-middle of the jacket like a
+                sticker; "+Assign" pill takes its place when unassigned */}
             {children.length > 0 && (
-              <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1.5">
+              <div className="absolute left-0 right-0 px-1.5" style={{ bottom: 12, zIndex: 10 }}>
                 {assignedChildren.length > 0 ? (
                   /* Clickable avatar row replaces the button once assigned */
                   <button
@@ -420,7 +396,7 @@ function FamilyStoriesGrid({
                 ) : (
                   <button
                     onClick={(e) => { e.preventDefault(); isPickerOpen ? setPickerOpenId(null) : openPicker(entry.id, assignedChildIds); }}
-                    className="w-full py-1.5 rounded-lg font-medium truncate transition-all active:scale-95"
+                    className="block mx-auto px-3.5 py-1 rounded-full font-medium truncate transition-all active:scale-95"
                     style={{
                       background: "rgba(0,0,0,0.55)",
                       backdropFilter: "blur(6px)",
@@ -494,6 +470,15 @@ function FamilyStoriesGrid({
                 )}
               </div>
             )}
+            </div>
+
+            {/* Title + metadata — below the physical book */}
+            <div className="px-2 pt-1.5">
+              <p className="text-white text-fs-body font-bold leading-tight line-clamp-2">{entry.title}</p>
+              {(entry.viewCount ?? 0) > 0 && (
+                <p className="text-fs-body mt-0.5" style={{ color: "rgba(79,195,247,0.55)" }}>👁 {entry.viewCount}</p>
+              )}
+            </div>
           </div>
         );
       })}
@@ -767,33 +752,21 @@ export default function LibraryPage() {
                   <Link
                     key={item.key}
                     href={item.href}
-                    className="flex-shrink-0 transition-all active:scale-[0.97] relative select-none"
-                    style={{ width: 110, height: 160, flexShrink: 0 }}
+                    className="flex-shrink-0 flex flex-col transition-all active:scale-[0.97] select-none"
+                    style={{ width: 110, flexShrink: 0 }}
                   >
-                    {item.coverUrl ? (
-                      <BookCover
-                        coverUrl={item.coverUrl}
-                        alt={item.title}
-                        borderRadius={12}
-                        overlay={
-                          <>
-                            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
-                            <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
-                              <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
-                            </div>
-                          </>
-                        }
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-fs-display rounded-2xl overflow-hidden"
-                        style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)`, border: "1px solid rgba(255,255,255,0.07)" }}>
-                        <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
-                        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.97) 100%)" }} />
-                        <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-5">
-                          <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{item.title}</p>
+                    {/* Clean jacket — title lives below the book */}
+                    <div className="relative w-full" style={{ height: 150 }}>
+                      {item.coverUrl ? (
+                        <BookCover coverUrl={item.coverUrl} alt={item.title} borderRadius={10} />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-fs-display rounded-2xl overflow-hidden"
+                          style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)`, border: "1px solid rgba(255,255,255,0.07)" }}>
+                          <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                    <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide mt-1.5 pr-1">{item.title}</p>
                   </Link>
                 );
               })}

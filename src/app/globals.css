@@ -184,9 +184,18 @@ body::before {
   transform-origin: center center;
 }
 
-/* BookCover's own CSS now lives entirely as inline styles in
-   src/components/ui/BookCover.tsx — plain percentage-based layering, no
-   container queries or duplicate-declaration fallbacks needed. */
+/* BookCover's layout CSS lives as inline styles in
+   src/components/ui/BookCover.tsx (plain percentage-based layering). Only
+   the hover behaviour lives here, because inline styles can't express
+   :hover — the book gently lifts toward the viewer and straightens. */
+.book-3d {
+  transform-style: preserve-3d;
+  transform: rotateY(-4deg) rotateX(0deg);
+  transition: transform 0.4s ease;
+}
+.book-3d:hover {
+  transform: rotateY(-1deg) translateZ(8px);
+}
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
 /* 8-level scale. JS (FontSizeContext) overrides these via setProperty.       */

@@ -99,95 +99,57 @@ function StoryCard({
   return (
     <Link
       href={href}
-      className="flex-shrink-0 transition-all active:scale-[0.97] select-none relative"
-      style={{ width: 130, height: 195 }}
+      className="flex-shrink-0 flex flex-col transition-all active:scale-[0.97] select-none"
+      style={{ width: 130 }}
     >
-      {/* 3D book treatment when there's real cover art — title/badges/
-          progress render via BookCover's `overlay` prop so they stay
-          pixel-aligned with the actual (inset, tilted) cover image instead
-          of a separate flat sibling sized to the old full-bleed bounds. */}
-      {coverUrl ? (
-        <BookCover
-          coverUrl={coverUrl}
-          alt={title}
-          borderRadius={12}
-          overlay={
-            <>
-              {/* Bottom gradient overlay */}
-              <div
-                className="absolute inset-0"
-                style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.98) 100%)" }}
-              />
-
-              {/* Chapter badge — top left, shown only for multi-part stories */}
-              {chapterLabel && (
-                <span
-                  className="absolute top-2 left-2 text-fs-body font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "rgba(79,195,247,0.22)",
-                    border: "1px solid rgba(79,195,247,0.45)",
-                    color: "#4fc3f7",
-                    backdropFilter: "blur(8px)",
-                  }}
-                >
-                  {chapterLabel}
-                </span>
-              )}
-              {!chapterLabel && !!chapterCount && chapterCount > 1 && (
+      {/* The book itself stays clean — only small badge chips sit on the
+          jacket; title/chapter/progress live below it in normal flow. */}
+      <div className="relative w-full" style={{ height: 180 }}>
+        {coverUrl ? (
+          <BookCover
+            coverUrl={coverUrl}
+            alt={title}
+            borderRadius={10}
+            overlay={
+              !chapterLabel && !!chapterCount && chapterCount > 1 ? (
                 <span className="absolute top-2 left-2">
                   <SeriesCountBadge count={chapterCount} size="sm" />
                 </span>
-              )}
-
-              {/* Title — bottom overlay */}
-              <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
-                <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{title}</p>
-              </div>
-
-              {/* Progress bar — bottom edge (Continue Listening) */}
-              {progressPercent !== undefined && (
-                <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "rgba(255,255,255,0.12)" }}>
-                  <div
-                    className="h-full"
-                    style={{
-                      width: `${Math.max(4, Math.min(100, progressPercent))}%`,
-                      background: `linear-gradient(90deg, ${c1}, ${c2})`,
-                      borderRadius: "0 2px 2px 0",
-                    }}
-                  />
-                </div>
-              )}
-            </>
-          }
-        />
-      ) : (
-        <div
-          className="absolute inset-0 flex items-center justify-center text-5xl rounded-2xl overflow-hidden"
-          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)`, border: "1px solid rgba(255,255,255,0.07)" }}
-        >
-          <span style={{ filter: `drop-shadow(0 0 16px ${c1}aa)` }}>🌙</span>
-          {/* Same overlay chrome, since there's no BookCover to host it when there's no cover art */}
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(4,6,18,0.98) 100%)" }} />
-          {chapterLabel && (
-            <span
-              className="absolute top-2 left-2 text-fs-body font-bold px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(79,195,247,0.22)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7", backdropFilter: "blur(8px)" }}
-            >
-              {chapterLabel}
-            </span>
-          )}
-          {!chapterLabel && !!chapterCount && chapterCount > 1 && (
-            <span className="absolute top-2 left-2"><SeriesCountBadge count={chapterCount} size="sm" /></span>
-          )}
-          <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5 pt-6">
-            <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide">{title}</p>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div
+            className="absolute inset-0 flex items-center justify-center text-5xl rounded-2xl overflow-hidden"
+            style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)`, border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <span style={{ filter: `drop-shadow(0 0 16px ${c1}aa)` }}>🌙</span>
+            {!chapterLabel && !!chapterCount && chapterCount > 1 && (
+              <span className="absolute top-2 left-2"><SeriesCountBadge count={chapterCount} size="sm" /></span>
+            )}
           </div>
-          {progressPercent !== undefined && (
-            <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "rgba(255,255,255,0.12)" }}>
-              <div className="h-full" style={{ width: `${Math.max(4, Math.min(100, progressPercent))}%`, background: `linear-gradient(90deg, ${c1}, ${c2})`, borderRadius: "0 2px 2px 0" }} />
-            </div>
-          )}
+        )}
+      </div>
+
+      {/* Progress bar — directly under the book (Continue Listening).
+          Width matches the cover (96% of the box) so it doesn't overhang
+          the page edge. */}
+      {progressPercent !== undefined && (
+        <div className="h-[3px] rounded-full mt-2" style={{ width: "96%", background: "rgba(255,255,255,0.12)" }}>
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${Math.max(4, Math.min(100, progressPercent))}%`,
+              background: `linear-gradient(90deg, ${c1}, ${c2})`,
+            }}
+          />
         </div>
+      )}
+
+      {/* Title + chapter info — below the physical book */}
+      <p className="text-white text-fs-body font-bold leading-tight line-clamp-2 tracking-wide mt-2 pr-1">{title}</p>
+      {chapterLabel && (
+        <p className="text-fs-caption mt-0.5" style={{ color: "rgba(79,195,247,0.85)" }}>{chapterLabel}</p>
       )}
     </Link>
   );
@@ -380,63 +342,61 @@ function TonightsPickCard({ item }: { item: PickItem }) {
   return (
     <Link
       href={item.href}
-      className="flex-shrink-0 transition-all active:scale-[0.97] select-none relative"
-      style={{ width: 200, height: 290 }}
+      className="flex-shrink-0 flex flex-col transition-all active:scale-[0.97] select-none"
+      style={{ width: 200 }}
     >
-      {/* 3D book treatment when there's real cover art — chrome via the
-          `overlay` prop so it stays aligned with the inset/tilted cover. */}
-      {item.coverUrl ? (
-        <BookCover
-          coverUrl={item.coverUrl}
-          alt={item.title}
-          borderRadius={16}
-          overlay={
-            <>
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 38%, rgba(4,6,18,0.96) 100%)" }} />
-              {!isOwn && (
-                <span
-                  className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(251,191,36,0.22)", border: "1px solid rgba(251,191,36,0.45)", color: "#fbbf24", backdropFilter: "blur(8px)" }}
-                >
-                  {item.tag}
-                </span>
-              )}
-              {!!item.chapterCount && item.chapterCount > 1 && (
-                <span className="absolute top-3 right-3"><SeriesCountBadge count={item.chapterCount} /></span>
-              )}
-              <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-4 pt-8">
-                <div className="w-7 h-[2px] rounded-full mb-2" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
-                <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
-              </div>
-            </>
-          }
-        />
-      ) : (
-        <div
-          className="absolute inset-0 flex items-center justify-center text-6xl rounded-3xl overflow-hidden"
-          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)`, border: `1px solid ${c1}28` }}
-        >
-          <span style={{ filter: `drop-shadow(0 0 20px ${c1}aa)` }}>
-            {item.emoji ?? "🌙"}
-          </span>
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 38%, rgba(4,6,18,0.96) 100%)" }} />
-          {!isOwn && (
-            <span
-              className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(251,191,36,0.22)", border: "1px solid rgba(251,191,36,0.45)", color: "#fbbf24", backdropFilter: "blur(8px)" }}
-            >
-              {item.tag}
+      {/* Clean jacket — only the small Classic/series chips sit on the
+          cover; title lives below the book. */}
+      <div className="relative w-full" style={{ height: 275 }}>
+        {item.coverUrl ? (
+          <BookCover
+            coverUrl={item.coverUrl}
+            alt={item.title}
+            borderRadius={14}
+            overlay={
+              <>
+                {!isOwn && (
+                  <span
+                    className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(251,191,36,0.22)", border: "1px solid rgba(251,191,36,0.45)", color: "#fbbf24", backdropFilter: "blur(8px)" }}
+                  >
+                    {item.tag}
+                  </span>
+                )}
+                {!!item.chapterCount && item.chapterCount > 1 && (
+                  <span className="absolute top-3 right-3"><SeriesCountBadge count={item.chapterCount} /></span>
+                )}
+              </>
+            }
+          />
+        ) : (
+          <div
+            className="absolute inset-0 flex items-center justify-center text-6xl rounded-3xl overflow-hidden"
+            style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}66)`, border: `1px solid ${c1}28` }}
+          >
+            <span style={{ filter: `drop-shadow(0 0 20px ${c1}aa)` }}>
+              {item.emoji ?? "🌙"}
             </span>
-          )}
-          {!!item.chapterCount && item.chapterCount > 1 && (
-            <span className="absolute top-3 right-3"><SeriesCountBadge count={item.chapterCount} /></span>
-          )}
-          <div className="absolute bottom-0 left-0 right-0 px-3.5 pb-4 pt-8">
-            <div className="w-7 h-[2px] rounded-full mb-2" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
-            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
+            {!isOwn && (
+              <span
+                className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+                style={{ background: "rgba(251,191,36,0.22)", border: "1px solid rgba(251,191,36,0.45)", color: "#fbbf24", backdropFilter: "blur(8px)" }}
+              >
+                {item.tag}
+              </span>
+            )}
+            {!!item.chapterCount && item.chapterCount > 1 && (
+              <span className="absolute top-3 right-3"><SeriesCountBadge count={item.chapterCount} /></span>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Title — below the physical book */}
+      <div className="mt-2.5 pr-1">
+        <div className="w-7 h-[2px] rounded-full mb-1.5" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
+        <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{item.title}</p>
+      </div>
     </Link>
   );
 }
