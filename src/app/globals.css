@@ -192,13 +192,18 @@ body::before {
    scrolling rails' overflow-x-auto containers were flattening real 3D
    transforms in some browser engines, so the "3D book" look is simulated
    with a plain 2D skewY + scaleX instead — standard 2D transforms can't be
-   flattened by an ancestor's overflow the way 3D ones can. */
+   flattened by an ancestor's overflow the way 3D ones can.
+   !important on the transform: nothing else in this file (or Tailwind's
+   utility layer) sets transform on .book-wrapper, so this is belt-and-
+   suspenders, not a fix for a known conflict — if the skew still doesn't
+   render, the cause isn't CSS specificity. */
 .book-wrapper {
-  transform: skewY(-3deg) scaleX(0.95);
-  transition: transform 0.3s ease;
+  transform: skewY(-3.5deg) scaleX(0.94) !important;
+  transform-origin: left center !important;
+  transition: transform 0.3s ease !important;
 }
 .book-wrapper:hover {
-  transform: skewY(-0.5deg) scale(1.03) translateY(-4px);
+  transform: skewY(-0.5deg) scale(1.04) translateY(-5px) !important;
 }
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */

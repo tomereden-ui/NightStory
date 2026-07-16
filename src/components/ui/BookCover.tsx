@@ -49,14 +49,17 @@ export default function BookCover({
     <div className={`relative w-full h-full ${className ?? ""}`}>
       {/* .book-wrapper — skewY(-3deg) scaleX(0.95); hover straightens + lifts via globals.css */}
       <div className="book-wrapper relative w-full h-full">
-        {/* .book-pages — sits behind the cover */}
+        {/* .book-pages — sits behind the cover. Values carry !important
+            (per the design spec) as a belt-and-suspenders guard; nothing
+            else in this file targets these elements so it's not fixing a
+            known conflict. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "95%",
-            height: "96.5%",
-            top: "1.5%",
-            left: "3%",
+            width: "95% !important",
+            height: "96.5% !important",
+            top: "1.5% !important",
+            left: "3px !important",
             zIndex: 1,
             backgroundColor: "#f4f2eb",
             backgroundImage:
@@ -64,7 +67,7 @@ export default function BookCover({
               "repeating-linear-gradient(to bottom, transparent 0px, transparent 1px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px)",
             borderRadius: "0 4px 4px 0",
             boxShadow: showShadow
-              ? "3px 3px 5px rgba(0,0,0,0.55), 10px 12px 20px rgba(0,0,0,0.4), 15px 20px 30px rgba(0,0,0,0.25)"
+              ? "2px 2px 5px rgba(0,0,0,0.5), 8px 10px 18px rgba(0,0,0,0.35), 12px 18px 25px rgba(0,0,0,0.2)"
               : undefined,
           }}
         />
@@ -72,12 +75,12 @@ export default function BookCover({
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
-            width: "95%",
-            height: "96%",
+            width: "95% !important",
+            height: "96% !important",
             zIndex: 2,
-            borderRadius: "4px 5px 5px 4px",
+            borderRadius: "4px 6px 6px 4px",
             boxShadow:
-              "inset 1px 1px 1px rgba(255,255,255,0.15), 3px 2px 6px rgba(0,0,0,0.4)",
+              "inset 1px 1px 1px rgba(255,255,255,0.2), 3px 2px 6px rgba(0,0,0,0.45)",
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -86,6 +89,7 @@ export default function BookCover({
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
+              zIndex: 3,
               background:
                 "linear-gradient(to right, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.15) 1.5%, rgba(0,0,0,0.08) 3%, rgba(0,0,0,0.25) 4.5%, rgba(0,0,0,0) 7%)",
             }}
