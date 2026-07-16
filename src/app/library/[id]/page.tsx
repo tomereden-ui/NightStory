@@ -403,7 +403,7 @@ export default function StoryDetailPage() {
         {/* Atmospheric cover area — the book (when there's real cover art)
             floats on this same starfield backdrop, matching the "casting
             onto a dark background" 3D-book look everywhere else it's used. */}
-        <div className="relative overflow-hidden" style={{ flexShrink: 0, height: 260 }}>
+        <div className="relative overflow-hidden" style={{ flexShrink: 0, height: 340 }}>
           <div
             className="absolute inset-0"
             style={{
@@ -436,8 +436,8 @@ export default function StoryDetailPage() {
           </div>
 
           {entry.coverUrl ? (
-            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 34, width: 148, height: 210 }}>
-              <BookCover coverUrl={entry.coverUrl} alt={entry.title} borderRadius={10} />
+            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 32, width: 198, height: 282 }}>
+              <BookCover coverUrl={entry.coverUrl} alt={entry.title} borderRadius={12} />
             </div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

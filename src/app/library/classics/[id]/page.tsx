@@ -450,7 +450,7 @@ export default function ClassicDetailPage() {
         {/* Cover area — the book floats on this same atmospheric backdrop,
             matching the "casting onto a dark background" look used
             everywhere else this treatment appears. */}
-        <div className="relative overflow-hidden" style={{ flexShrink: 0, height: 260 }}>
+        <div className="relative overflow-hidden" style={{ flexShrink: 0, height: 340 }}>
           <div
             className="absolute inset-0 flex items-center justify-center"
             style={{
@@ -466,8 +466,8 @@ export default function ClassicDetailPage() {
           </div>
 
           {showCoverImg && (
-            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 34, width: 148, height: 210 }}>
-              <BookCover coverUrl={meta.coverUrl!} alt="" borderRadius={10} onImgError={() => setImgFailed(true)} />
+            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 32, width: 198, height: 282 }}>
+              <BookCover coverUrl={meta.coverUrl!} alt="" borderRadius={12} onImgError={() => setImgFailed(true)} />
             </div>
           )}
 
