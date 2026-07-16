@@ -184,78 +184,9 @@ body::before {
   transform-origin: center center;
 }
 
-/* ── 3D book-cover treatment (src/components/ui/BookCover.tsx) ───────────── */
-/* Container-query (cqw) units scale the whole scene proportionally to this
-   component's own rendered width, so the same "book" reads correctly
-   whether it's an 80px thumbnail or a 300px hero — a fixed-px spine looks
-   like a bold hardcover on a small card and an invisible sliver on a big
-   one. Each size-dependent property is declared twice: a px fallback
-   first, then the cqw version — a browser without container-query-unit
-   support treats the second (unrecognized-unit) declaration as invalid and
-   keeps the first; a capable browser applies the later one, per normal CSS
-   cascade rules. --book-radius is the one per-instance value (each surface
-   passes its own existing corner radius to match).                       */
-
-.book-cover-scene {
-  container-type: inline-size;
-}
-
-.book-cover-perspective {
-  perspective: 820px;
-  perspective: 820cqw;
-  perspective-origin: 50% 40%;
-}
-
-.book-cover-group {
-  transform: rotateY(-16deg) rotateX(2.5deg);
-  transform-style: preserve-3d;
-  transition: transform 0.3s ease-out;
-}
-
-.book-cover-spine {
-  width: 11px;
-  width: 11cqw;
-  transform: rotateY(90deg) translateZ(-5px);
-  transform: rotateY(90deg) translateZ(-5cqw);
-  border-radius: var(--book-radius, 8px) 0 0 var(--book-radius, 8px);
-  background: linear-gradient(180deg, #322a52 0%, #1c1836 55%, #100e20 100%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
-}
-
-.book-cover-spine-highlight {
-  left: 2px;
-  left: 1.8cqw;
-  width: 1.8px;
-  width: 1.8cqw;
-  border-radius: 2px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02) 65%);
-}
-
-.book-cover-pages-right {
-  width: 5.5px;
-  width: 5.5cqw;
-  transform: rotateY(-90deg) translateZ(2.7px);
-  transform: rotateY(-90deg) translateZ(2.7cqw);
-  border-radius: 0 3px 3px 0;
-  background: repeating-linear-gradient(180deg, #f3ead9 0px, #f3ead9 2px, #e2d5b8 2px, #e2d5b8 3px);
-}
-
-.book-cover-pages-bottom {
-  right: 5.5px;
-  right: 5.5cqw;
-  height: 5.5px;
-  height: 5.5cqw;
-  transform: rotateX(-90deg) translateZ(2.7px);
-  transform: rotateX(-90deg) translateZ(2.7cqw);
-  border-radius: 0 0 3px 3px;
-  background: repeating-linear-gradient(90deg, #f3ead9 0px, #f3ead9 2px, #e2d5b8 2px, #e2d5b8 3px);
-}
-
-.book-cover-front {
-  border-radius: var(--book-radius, 8px) calc(var(--book-radius, 8px) + 2px) calc(var(--book-radius, 8px) + 2px) var(--book-radius, 8px);
-  transform: translateZ(0);
-  overflow: hidden;
-}
+/* BookCover's own CSS now lives entirely as inline styles in
+   src/components/ui/BookCover.tsx — plain percentage-based layering, no
+   container queries or duplicate-declaration fallbacks needed. */
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
 /* 8-level scale. JS (FontSizeContext) overrides these via setProperty.       */
