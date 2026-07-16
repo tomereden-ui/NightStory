@@ -3,19 +3,16 @@
 import type { ReactNode } from "react";
 
 // Pure-CSS 3D book-cover treatment for existing flat cover art — no new
-// images, no server work. Three stacked layers create the "hardcover"
-// illusion: a thin colored strip standing in for the back cover, a thin
-// cream "pages" strip in front of that, and the actual front-cover image on
-// top — each slightly narrower than the last, so a sliver of each peeks out
-// on the right. Critically the peek is ONLY on the right, never the bottom:
-// earlier rounds let the pages layer peek out the bottom too, and across
-// several rounds of feedback that bottom sliver kept reading as a
-// distracting stripe rather than a paper hint, while the right-edge-only
-// peek is what actually reads as "hardcover depth" without it. A slight
-// whole-group tilt (rotateY, anchored at the left/spine edge) and a drop
-// shadow finish the illusion. Percentages mean every dimension is already
-// proportional to this component's own size, so it holds up at any card
-// size without a fixed px calibration.
+// images, no server work. Two stacked layers create the "hardcover"
+// illusion: a thin cream "pages" panel behind the actual front-cover image,
+// the image sized slightly smaller so a sliver of pages peeks out on the
+// right and bottom. Corners are uniformly rounded on both layers (matching
+// the reference photo this was calibrated against — a soft all-around
+// rounded edge, not a flat squared-off spine). A slight whole-group tilt
+// (rotateY, anchored at the left/spine edge) and a drop shadow finish the
+// illusion. Percentages mean every dimension is already proportional to
+// this component's own size, so it holds up at any card size without a
+// fixed px calibration.
 //
 // Usage: swap an existing `<img className="absolute inset-0 w-full h-full
 // object-cover" src={coverUrl} />` for `<BookCover coverUrl={coverUrl}
@@ -46,42 +43,28 @@ export default function BookCover({
    *  with the displayed cover. */
   overlay?: ReactNode;
 }) {
-  // Left corners stay near-square (that's the spine/hinge), right corners
-  // keep the full requested radius (that's the page edge).
-  const spineRadius = Math.max(2, borderRadius - 4);
-  const cornerRadii = `${spineRadius}px ${borderRadius}px ${borderRadius}px ${spineRadius}px`;
+  const cornerRadii = `${borderRadius}px`;
 
   return (
     <div className={`relative w-full h-full ${className ?? ""}`} style={{ perspective: 1200 }}>
       <div className="relative w-full h-full transition-transform duration-300 ease-out" style={{ transform: "rotateY(-6deg)", transformOrigin: "left center" }}>
-        {/* back cover — thin colored sliver, outermost/rightmost layer */}
+        {/* pages — thin cream panel behind the front cover, peeking out on the right and bottom */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             borderRadius: cornerRadii,
-            background: "linear-gradient(115deg, #9a7830 0%, #b8934a 55%, #8a6a28 100%)",
-            boxShadow: showShadow ? "3px 3px 8px rgba(0,0,0,0.4), 6px 10px 20px rgba(0,0,0,0.22)" : undefined,
-          }}
-        />
-        {/* pages — thin cream sliver, sits between the back cover and the front cover */}
-        <div
-          className="absolute top-0 left-0 pointer-events-none"
-          style={{
-            width: "98%",
-            height: "100%",
-            borderRadius: cornerRadii,
-            background: "#f4f3ef",
+            background: "#f6f4ef",
             backgroundImage:
-              "repeating-linear-gradient(to bottom, #f4f3ef 0px, #f4f3ef 1px, #ddd7c6 2px, #ddd7c6 3px)",
-            boxShadow: "2px 2px 5px rgba(0,0,0,0.3)",
+              "repeating-linear-gradient(to bottom, #f6f4ef 0px, #f6f4ef 1px, #ddd7c6 2px, #ddd7c6 3px)",
+            boxShadow: showShadow ? "2px 3px 8px rgba(0,0,0,0.35), 5px 8px 18px rgba(0,0,0,0.2)" : undefined,
           }}
         />
-        {/* front cover — the actual art, narrowest layer so the two slivers above peek out on the right */}
+        {/* front cover — the actual art, slightly smaller than the pages panel behind it */}
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
-            width: "95.5%",
-            height: "100%",
+            width: "95%",
+            height: "96%",
             borderRadius: cornerRadii,
             boxShadow: showShadow
               ? "1px 1px 0 rgba(255,255,255,0.1) inset, 4px 6px 14px rgba(0,0,0,0.45), 8px 14px 28px rgba(0,0,0,0.28)"
