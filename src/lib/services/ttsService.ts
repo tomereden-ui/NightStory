@@ -1,34 +1,50 @@
 import fs from "fs";
 import { trackELTts, trackGeminiTts } from "@/lib/usageTracker";
 import { supabase } from "@/lib/supabase";
-import { DEFAULT_ENGINE_SETTINGS, type EngineSettings } from "@/config/ttsEngines";
+import { DEFAULT_ENGINE_SETTINGS, DEFAULT_ENGINE_PRIORITY, type EngineSettings, type EnginePriority, type TtsEngine } from "@/config/ttsEngines";
 
 const ts = () => new Date().toTimeString().slice(0, 8);
 
 // ── Engine settings (admin-configurable via the Voice Manager screen) ──────
 // A story production run calls synthesizeLine() once per script line — cache
 // briefly so that doesn't turn into a Supabase read per line.
-let engineSettingsCache: { value: EngineSettings; fetchedAt: number } | null = null;
+let engineSettingsCache: { value: { settings: EngineSettings; priority: EnginePriority }; fetchedAt: number } | null = null;
 const ENGINE_SETTINGS_TTL_MS = 60_000;
 
-async function getEngineSettings(): Promise<EngineSettings> {
+async function getEngineSettings(): Promise<{ settings: EngineSettings; priority: EnginePriority }> {
   if (engineSettingsCache && Date.now() - engineSettingsCache.fetchedAt < ENGINE_SETTINGS_TTL_MS) {
     return engineSettingsCache.value;
   }
-  const value: EngineSettings = { ...DEFAULT_ENGINE_SETTINGS };
+  const settings: EngineSettings = { ...DEFAULT_ENGINE_SETTINGS };
+  const priority: EnginePriority = { ...DEFAULT_ENGINE_PRIORITY };
   try {
-    const { data, error } = await supabase.from("tts_engine_settings").select("engine, enabled");
+    const { data, error } = await supabase.from("tts_engine_settings").select("engine, enabled, priority");
     if (!error) {
       for (const row of data ?? []) {
-        if (row.engine in value) (value as Record<string, boolean>)[row.engine] = row.enabled;
+        if (!(row.engine in settings)) continue;
+        settings[row.engine as TtsEngine] = row.enabled;
+        if (row.priority === null || row.priority === undefined) delete priority[row.engine as TtsEngine];
+        else priority[row.engine as TtsEngine] = row.priority;
       }
     }
   } catch {
     // Table missing / Supabase not configured — defaults match current
     // production behavior exactly, so this never changes anything silently.
   }
+  const value = { settings, priority };
   engineSettingsCache = { value, fetchedAt: Date.now() };
   return value;
+}
+
+// Ordered list of engines actually usable in the automatic fallback chain —
+// enabled AND assigned a priority rank, sorted ascending (1 = tried first).
+// Falls back to DEFAULT_ENGINE_PRIORITY's order if priority data is missing
+// entirely (e.g. migration not run yet), so behavior never silently changes
+// until an admin has actually configured it.
+function orderedEngineChain(settings: EngineSettings, priority: EnginePriority): TtsEngine[] {
+  return (Object.keys(priority) as TtsEngine[])
+    .filter((engine) => settings[engine] && priority[engine] !== undefined)
+    .sort((a, b) => (priority[a] as number) - (priority[b] as number));
 }
 
 export function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
@@ -585,48 +601,55 @@ export async function synthesizeLine(
   }
 
   // Gemini is the primary engine for every language — confirmed Hebrew-capable
-  // per Google's own docs (no per-voice restriction). Model version (2.5 vs
-  // 3.1) is admin-configurable via the Voice Manager Engine Settings panel;
-  // 3.1 wins when both are enabled, 2.5 is the safety-net default.
-  const engineSettings = await getEngineSettings();
-  const geminiModel = engineSettings.gemini31 ? "gemini-3.1-flash-tts-preview" : "gemini-2.5-flash-preview-tts";
+  // per Google's own docs (no per-voice restriction). Which engines get
+  // tried, and in what order, is admin-configurable via the Voice Manager
+  // Engine Settings panel (default engine + 2 fallbacks) — see
+  // orderedEngineChain() above. Falls back to DEFAULT_ENGINE_PRIORITY's
+  // order (2.5 → Chirp3-HD → ElevenLabs) if nothing's configured yet.
+  const { settings: engineSettings, priority: enginePriority } = await getEngineSettings();
+  const chain = orderedEngineChain(engineSettings, enginePriority);
+  const geminiModelName: Record<string, string> = { gemini25: "gemini-2.5-flash-preview-tts", gemini31: "gemini-3.1-flash-tts-preview" };
 
+  const geminiEnginesInChain = chain.filter((e) => e === "gemini25" || e === "gemini31");
   if (!forceFallback) {
-    try {
-      console.log(`[${ts()}][Gemini TTS] text → (${geminiModel})`, JSON.stringify(line));
-      const result = await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, geminiModel);
-      return { ...result, provider: "gemini" };
-    } catch (primaryErr) {
-      console.warn(`[${ts()}][Gemini TTS] ${geminiModel} failed, falling back:`, primaryErr);
-
-      // 3.1 has a confirmed intermittent failure mode: HTTP 200, finishReason
-      // "OTHER", zero audio bytes, despite reporting real audio tokens spent.
-      // It's biased per (voice, text) pair rather than a clean transient
-      // error, so synthesizeGemini's own retry budget doesn't always clear it.
-      // Retry once on 2.5 with the SAME voice before falling through to the
-      // fallbacks below, which change voice identity (Hebrew EL remap / Chirp
-      // remap) — 2.5 shares the identical prebuilt voice catalog and has shown
-      // zero failures of this kind in testing, so the character still sounds
-      // like themselves and we avoid a voice swap for what's usually a
-      // one-model hiccup.
-      if (geminiModel !== "gemini-2.5-flash-preview-tts") {
-        try {
-          console.log(`[${ts()}][Gemini TTS] retrying on gemini-2.5-flash-preview-tts (same voice)`);
-          const result = await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, "gemini-2.5-flash-preview-tts");
-          return { ...result, provider: "gemini" };
-        } catch (sameVoiceFallbackErr) {
-          console.warn(`[${ts()}][Gemini TTS] 2.5 same-voice fallback also failed:`, sameVoiceFallbackErr);
-        }
+    for (const engine of geminiEnginesInChain) {
+      const geminiModel = geminiModelName[engine];
+      try {
+        console.log(`[${ts()}][Gemini TTS] text → (${geminiModel})`, JSON.stringify(line));
+        const result = await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, geminiModel);
+        return { ...result, provider: "gemini" };
+      } catch (err) {
+        // Both Gemini TTS models have a confirmed intermittent failure mode:
+        // HTTP 200, finishReason "OTHER", zero audio bytes, despite reporting
+        // real audio tokens spent — biased per (voice, text) pair rather than
+        // a clean transient error, so synthesizeGemini's own retry budget
+        // doesn't always clear it. If a second Gemini model is also in the
+        // chain, trying it (same voice, no voice-identity change) is cheaper
+        // than falling through to a fallback that DOES change voice identity
+        // (Hebrew EL remap / Chirp3 remap) — that's why both Gemini models
+        // are tried before any non-Gemini engine below, regardless of their
+        // relative priority rank against those.
+        console.warn(`[${ts()}][Gemini TTS] ${geminiModel} failed:`, err);
       }
     }
   } else {
     console.log(`[${ts()}][TTS] forceFallback set for voice "${voiceId}" — skipping Gemini, going straight to fallback`);
   }
 
-  // Fallback 1 — Hebrew: ElevenLabs' curated pool, hand-verified for Hebrew pronunciation
-  if (effectiveLang === "he") {
-    const elKey = process.env.ELEVENLABS_API_KEY;
-    if (elKey) {
+  for (const engine of chain) {
+    if (engine === "gemini25" || engine === "gemini31") continue; // already tried above
+
+    if (engine === "elevenlabs") {
+      // Curated ElevenLabs pool only exists for Hebrew (HE_EL_VOICE_MAP) —
+      // setting ElevenLabs as a fallback doesn't make it a general-purpose
+      // fallback for every language, same constraint as before this was
+      // made priority-configurable.
+      if (effectiveLang !== "he") continue;
+      const elKey = process.env.ELEVENLABS_API_KEY;
+      if (!elKey) {
+        console.warn(`[${ts()}][HE] ELEVENLABS_API_KEY not set — skipping ElevenLabs fallback for Hebrew`);
+        continue;
+      }
       const heVoiceId = HE_EL_VOICE_MAP[voiceId] ?? HE_EL_VOICE_MAP["Charon"]!;
       console.log(`[${ts()}][HE-EL fallback] ${voiceId} → ${heVoiceId}`);
       // Hebrew prosody tuning: lower stability allows natural intonation variance;
@@ -634,17 +657,18 @@ export async function synthesizeLine(
       await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.30, style ?? 0.60, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
       return { mimeType: "audio/mpeg", provider: "elevenlabs" };
     }
-    console.warn(`[${ts()}][HE] ELEVENLABS_API_KEY not set — using WaveNet fallback for Hebrew`);
+
+    if (engine === "chirp3hd") {
+      const gcTtsKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
+      if (!gcTtsKey) {
+        console.warn(`[${ts()}][TTS] GOOGLE_CLOUD_TTS_API_KEY not set — skipping Chirp3-HD fallback`);
+        continue;
+      }
+      // Pass raw line — synthesizeChirp3HD converts [tags] to SSML internally
+      await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, effectiveLang, geminiOpts);
+      return { mimeType: "audio/mpeg", provider: "chirp3hd" };
+    }
   }
 
-  // Fallback 2 — Google Cloud Chirp3-HD, if configured and not disabled via
-  // the Engine Settings panel
-  const gcTtsKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
-  if (gcTtsKey && engineSettings.chirp3hd) {
-    // Pass raw line — synthesizeChirp3HD converts [tags] to SSML internally
-    await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, effectiveLang, geminiOpts);
-    return { mimeType: "audio/mpeg", provider: "chirp3hd" };
-  }
-
-  throw new Error("Gemini TTS failed and no fallback provider (ElevenLabs/Google Cloud TTS) is configured.");
+  throw new Error("TTS failed on every engine in the configured chain (see Voice Manager → Engine Settings).");
 }

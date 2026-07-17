@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { HEBREW_VOICE_POOL } from "@/config/hebrewVoices";
-import { TTS_ENGINES, DEFAULT_ENGINE_SETTINGS, type TtsEngine, type EngineSettings } from "@/config/ttsEngines";
+import { TTS_ENGINES, DEFAULT_ENGINE_SETTINGS, DEFAULT_ENGINE_PRIORITY, type TtsEngine, type EngineSettings, type EnginePriority } from "@/config/ttsEngines";
 
 const HEBREW_VOICE_IDS = new Set(HEBREW_VOICE_POOL.map((v) => v.id));
 
@@ -85,8 +85,10 @@ export default function VoiceManagerPage() {
   // ── Engine Settings (production-affecting — separate from the audition
   // engine toggle above) ──────────────────────────────────────────────────
   const [engineSettings, setEngineSettings] = useState<EngineSettings>(DEFAULT_ENGINE_SETTINGS);
+  const [enginePriority, setEnginePriority] = useState<EnginePriority>(DEFAULT_ENGINE_PRIORITY);
   const [engineSettingsLoaded, setEngineSettingsLoaded] = useState(false);
   const [savingEngine, setSavingEngine] = useState<TtsEngine | null>(null);
+  const [savingPriority, setSavingPriority] = useState(false);
   const [engineSettingsError, setEngineSettingsError] = useState<string | null>(null);
   const [regenText, setRegenText] = useState("");
   const [regenerating, setRegenerating] = useState(false);
@@ -95,9 +97,15 @@ export default function VoiceManagerPage() {
 
   useEffect(() => {
     fetch("/api/admin/tts-engine-settings", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { settings: DEFAULT_ENGINE_SETTINGS }))
-      .then((data: { settings?: EngineSettings }) => setEngineSettings(data.settings ?? DEFAULT_ENGINE_SETTINGS))
-      .catch(() => setEngineSettings(DEFAULT_ENGINE_SETTINGS))
+      .then((r) => (r.ok ? r.json() : { settings: DEFAULT_ENGINE_SETTINGS, priority: DEFAULT_ENGINE_PRIORITY }))
+      .then((data: { settings?: EngineSettings; priority?: EnginePriority }) => {
+        setEngineSettings(data.settings ?? DEFAULT_ENGINE_SETTINGS);
+        setEnginePriority(data.priority ?? DEFAULT_ENGINE_PRIORITY);
+      })
+      .catch(() => {
+        setEngineSettings(DEFAULT_ENGINE_SETTINGS);
+        setEnginePriority(DEFAULT_ENGINE_PRIORITY);
+      })
       .finally(() => setEngineSettingsLoaded(true));
   }, []);
 
@@ -121,6 +129,46 @@ export default function VoiceManagerPage() {
       setEngineSettingsError(err instanceof Error ? err.message : String(err));
     } finally {
       setSavingEngine(null);
+    }
+  };
+
+  // rank 1 = default/primary engine, 2 = fallback 1, 3 = fallback 2. Each
+  // rank can only be held by one engine and each engine can only hold one
+  // rank, so assigning an engine to a rank clears BOTH whatever previously
+  // held that rank AND whatever rank that engine previously held.
+  const setEngineRank = async (rank: 1 | 2 | 3, engine: TtsEngine | "") => {
+    const prev = enginePriority;
+    const next: EnginePriority = { ...enginePriority };
+    const payload: Partial<Record<string, number | null>> = {};
+
+    const previousHolderOfRank = (Object.keys(next) as TtsEngine[]).find((k) => next[k] === rank);
+    if (previousHolderOfRank && previousHolderOfRank !== engine) {
+      delete next[previousHolderOfRank];
+      payload[previousHolderOfRank] = null;
+    }
+    if (engine) {
+      next[engine] = rank;
+      payload[engine] = rank;
+    }
+
+    setEnginePriority(next);
+    setSavingPriority(true);
+    setEngineSettingsError(null);
+    try {
+      const res = await fetch("/api/admin/tts-engine-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: payload }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Save failed: ${res.status}`);
+      }
+    } catch (err) {
+      setEnginePriority(prev); // revert on failure
+      setEngineSettingsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingPriority(false);
     }
   };
 
@@ -293,8 +341,8 @@ export default function VoiceManagerPage() {
         <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Engine Settings</p>
         <p style={{ color: "#666", fontSize: 12, marginBottom: 12 }}>
           Unchecking an engine removes its voices from new character assignments in Studio going forward
-          (existing assignments keep working). For Gemini, the checked model synthesizes real stories —
-          3.1 wins if both are checked. Chirp3-HD controls whether the automatic emergency fallback may run.
+          (existing assignments keep working) — independent from the synthesis order below, which controls
+          which engine actually produces the audio for a real story.
         </p>
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
           {TTS_ENGINES.map((e) => (
@@ -311,6 +359,39 @@ export default function VoiceManagerPage() {
           ))}
         </div>
         {engineSettingsError && <p style={{ color: "#f87171", fontSize: 12, marginBottom: 8 }}>{engineSettingsError}</p>}
+
+        <div style={{ borderTop: "1px solid #222", marginTop: 12, paddingTop: 12 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Synthesis Priority</p>
+          <p style={{ color: "#666", fontSize: 12, marginBottom: 10 }}>
+            Which engine actually produces real story audio, and in what order the next two are tried if it
+            fails. If both Gemini models are set (any two ranks), the second is tried on a failure before
+            falling through to ElevenLabs/Chirp3-HD, since that keeps the same voice identity instead of
+            swapping providers. ElevenLabs only has a curated fallback voice pool for Hebrew — setting it
+            here doesn&apos;t make it a fallback for every language, only for Hebrew text.
+          </p>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {([1, 2, 3] as const).map((rank) => {
+              const currentEngine = (Object.keys(enginePriority) as TtsEngine[]).find((e) => enginePriority[e] === rank) ?? "";
+              return (
+                <label key={rank} style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#999" }}>
+                  {rank === 1 ? "Default engine" : `Fallback ${rank - 1}`}
+                  <select
+                    value={currentEngine}
+                    disabled={!engineSettingsLoaded || savingPriority}
+                    onChange={(ev) => setEngineRank(rank, ev.target.value as TtsEngine | "")}
+                    style={{ background: "#12121a", border: "1px solid #333", borderRadius: 6, padding: "6px 8px", color: "#ddd", fontFamily: "monospace", fontSize: 13, minWidth: 180 }}
+                  >
+                    <option value="">— none —</option>
+                    {TTS_ENGINES.map((e) => (
+                      <option key={e.id} value={e.id}>{e.label}</option>
+                    ))}
+                  </select>
+                </label>
+              );
+            })}
+            {savingPriority && <span style={{ color: "#666", fontSize: 11, alignSelf: "flex-end", marginBottom: 8 }}>saving…</span>}
+          </div>
+        </div>
 
         <div style={{ borderTop: "1px solid #222", marginTop: 12, paddingTop: 12 }}>
           <p style={{ fontSize: 12, color: "#999", marginBottom: 6 }}>
