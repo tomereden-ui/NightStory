@@ -93,28 +93,29 @@ export default function BookCover({
     >
       {/* .book-wrapper — skewY(-3deg) scaleX(0.95); hover straightens + lifts via globals.css */}
       <div className="book-wrapper relative w-full h-full">
-        {/* .book-pages — sits behind the cover. Sized visibly larger than
-            the cover (not the same width) so a real margin of paper shows
-            on the right and bottom — at equal widths the "peek" was just a
-            few px, too thin to read as a page block at all. Carries the
-            book's ONE outer shadow — see the note on .book-cover below for
-            why the cover doesn't have its own competing shadow. Softened
-            and pushed further to the bottom-right (light from the top-left,
-            matching the spine highlight) versus the previous tighter/more
-            symmetric stack that read as a flat box-shadow rather than an
-            object catching light from one direction. */}
+        {/* .book-pages — sits behind the cover. This used to be a flat,
+            solid cream rectangle (#f4f2eb) — at any width that reads as a
+            pasted-on slab, not paper, because real page edges aren't a
+            uniform color: they're shadowed where they tuck under the cover
+            and catch light further out. A gradient now does that (darker/
+            muted near the seam → brighter cream outward), and the peek
+            itself is much thinner (98.5%/98.8% vs the cover's 95.5%/97% —
+            was 97%/97.5% vs 92%/95%, roughly double the gap) so it reads as
+            an edge, not a block. Carries the book's ONE outer shadow — see
+            the note on .book-cover below for why the cover doesn't have
+            its own competing shadow. */}
         <div
           className="absolute pointer-events-none"
           style={{
-            width: "97%",
-            height: "97.5%",
-            top: "1%",
+            width: "98.5%",
+            height: "98.8%",
+            top: "0.5%",
             left: "2px",
             zIndex: 1,
-            backgroundColor: "#f4f2eb",
             backgroundImage:
-              "repeating-linear-gradient(to right, transparent 0px, transparent 1px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px)," +
-              "repeating-linear-gradient(to bottom, transparent 0px, transparent 1px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px)",
+              "repeating-linear-gradient(to right, transparent 0px, transparent 1px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 3px)," +
+              "repeating-linear-gradient(to bottom, transparent 0px, transparent 1px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 3px)," +
+              "linear-gradient(to right, #cfc7ae 0%, #ece7d6 35%, #f6f3e9 100%)",
             borderRadius: "0 4px 4px 0",
             boxShadow: showShadow
               ? "3px 4px 8px rgba(0,0,0,0.45), 10px 14px 24px rgba(0,0,0,0.3), 16px 24px 40px rgba(0,0,0,0.15)"
@@ -122,20 +123,21 @@ export default function BookCover({
           }}
         />
         {/* .book-cover — the front hardcover. Narrower than the pages
-            behind it (92% vs 97%) so a genuine, visible strip of paper
-            shows on the right and bottom instead of a hairline. Corners are
-            asymmetric on purpose: the left (spine) side gets a 5px round to
-            soften it into a curve; the right side is perfectly sharp (0)
-            since that's a clean seam against the page stack, not an outer
-            corner. Only carries an INSET rim-light now, not its own outer
-            shadow — a second outer shadow here duplicated/fought the
-            .book-pages shadow below it and read as a muddy, flat box
-            outline instead of one coherent cast shadow. */}
+            behind it (95.5% vs 98.5% — was 92% vs 97%, a much wider gap
+            that read as a chunky slab rather than a page edge) so a thin,
+            believable strip of paper shows on the right and bottom.
+            Corners are asymmetric on purpose: the left (spine) side gets a
+            5px round to soften it into a curve; the right side is
+            perfectly sharp (0) since that's a clean seam against the page
+            stack, not an outer corner. Only carries an INSET rim-light
+            now, not its own outer shadow — a second outer shadow here
+            duplicated/fought the .book-pages shadow below it and read as a
+            muddy, flat box outline instead of one coherent cast shadow. */}
         <div
           className="absolute top-0 left-0 overflow-hidden"
           style={{
-            width: "92%",
-            height: "95%",
+            width: "95.5%",
+            height: "97%",
             zIndex: 2,
             borderRadius: "5px 0 0 5px",
             boxShadow: "inset 1px 1px 1px rgba(255,255,255,0.2)",
