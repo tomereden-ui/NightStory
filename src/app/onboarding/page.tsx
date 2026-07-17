@@ -126,23 +126,15 @@ export default function OnboardingPage() {
         }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
       // Gemini TTS has a known intermittent failure mode — HTTP 200,
-      // finishReason "OTHER", zero audio bytes. Turns out it's NOT specific
-      // to an invented respelling like "Yoh-nee": the plain name "yoni"
-      // failed identically, same voice, back to back — so this looks like
-      // a single bare word being too little input for that model, not a
-      // text-content problem. Three attempts, changing one variable each
-      // time, since it's not clear in advance which one clears it:
-      //   1. the respelling, preferred voice — as before
-      //   2. the respelling with trailing punctuation (reads as a complete
-      //      short sentence instead of one bare word, without adding any
-      //      audible extra words)
-      //   3. the raw name with punctuation, default voice (drops whatever
-      //      the parent's saved narrator voice is, in case it's specific
-      //      to that voice rather than the input length)
-      let speechRes = await synthesize(pronunciation, getNarratorVoiceId());
-      if (!speechRes?.audioData) {
-        speechRes = await synthesize(`${pronunciation}.`, getNarratorVoiceId());
-      }
+      // finishReason "OTHER", zero audio bytes — for a single bare word
+      // with no punctuation (confirmed: "yoni" and "Maya" both failed
+      // exactly that way, same voice, and both succeeded the instant a
+      // trailing period was added — same voice, same text otherwise). So
+      // that period is no longer a fallback attempt, it's just always
+      // there. One retry left for whatever's still voice-specific: the
+      // raw name, default voice, in case Leda (or whichever voice the
+      // parent has saved) is the problem rather than the input itself.
+      let speechRes = await synthesize(`${pronunciation}.`, getNarratorVoiceId());
       if (!speechRes?.audioData) {
         speechRes = await synthesize(`${name}.`);
       }
