@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
   const apiKey = useEL ? elKey! : gemKey;
   const ext = useEL ? "mp3" : "wav";
 
-  console.log(`[synthesize-speech] assignedVoiceId=${assignedVoiceId} → useEL=${useEL} voice=${voice} lang=${language} savedSettings=${JSON.stringify(savedVoiceSettings ?? null)}`);
+  const textPreview = text.trim().length > 80 ? `${text.trim().slice(0, 80)}…` : text.trim();
+  console.log(`[synthesize-speech] pronunciation = "${textPreview}" — assignedVoiceId=${assignedVoiceId} → useEL=${useEL} voice=${voice} lang=${language} savedSettings=${JSON.stringify(savedVoiceSettings ?? null)}`);
 
   // ── Element cache lookup (skip if forceRegenerate or no storyId) ─────────────
   const voiceKey = `${useEL ? "el" : "gm"}:${voice}`;

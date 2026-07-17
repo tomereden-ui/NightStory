@@ -51,9 +51,11 @@ export async function POST(req: NextRequest) {
     // Fall back to the raw name for anything degenerate — empty, way too
     // long for a name, or a refusal ("I cannot...") slipping through.
     const pronunciation = respelling && respelling.length <= 60 ? respelling : name.trim();
+    console.log(`[name-pronunciation] pronunciation = "${pronunciation}" (name="${name.trim()}", countryCode=${countryCode ?? "unknown"})`);
     return NextResponse.json({ pronunciation });
   } catch (err) {
     console.error("[name-pronunciation] error:", err);
+    console.log(`[name-pronunciation] pronunciation = "${name.trim()}" (fallback — Gemini call failed)`);
     return NextResponse.json({ pronunciation: name.trim() });
   }
 }
