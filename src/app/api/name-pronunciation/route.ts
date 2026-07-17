@@ -52,8 +52,11 @@ export async function POST(req: NextRequest) {
   if (!name?.trim()) return NextResponse.json({ error: "name is required" }, { status: 400 });
 
   try {
+    const prompt = buildPronunciationPrompt(name.trim(), countryCode);
+    console.log(`[name-pronunciation] prompt:\n${prompt}`);
+
     const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
-      contents: [{ role: "user", parts: [{ text: buildPronunciationPrompt(name.trim(), countryCode) }] }],
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.3, maxOutputTokens: 40, thinkingConfig: { thinkingBudget: 0 } },
     });
     if (!ok) return NextResponse.json({ error: "Gemini request failed" }, { status: 502 });
