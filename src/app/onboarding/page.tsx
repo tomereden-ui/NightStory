@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
@@ -8,6 +8,7 @@ import { AVATAR_OPTIONS, THEME_OPTIONS } from "@/components/studio/ChildProfileP
 import { fetchBankAvatars, type BankAvatar } from "@/lib/services/characterAvatars";
 import { getLessonsCatalog } from "@/constants/lessonsUi";
 import Icon from "@/components/ui/Icon";
+import { getNarratorVoiceId } from "@/lib/narratorPreference";
 
 const ONBOARDING_DONE_KEY = "ns-onboarding-done";
 
@@ -60,6 +61,70 @@ export default function OnboardingPage() {
 
   const [figureImages, setFigureImages] = useState<Record<string, string>>({});
   const [imagesGenerating, setImagesGenerating] = useState(false);
+
+  // ─── Name pronunciation preview ────────────────────────────────────────────
+  // "Hear it" on the name step: ask Gemini for a phonetic respelling biased
+  // toward the parent's country (from IP geolocation, already resolved into
+  // user_profiles.country_code the moment they logged in — see AuthContext),
+  // then synthesize THAT respelling so the child's name comes back sounding
+  // the way it's actually meant to, not however a generic TTS voice would
+  // guess it cold.
+  const [pronunciationAudio, setPronunciationAudio] = useState<{ name: string; data: string; mimeType: string } | null>(null);
+  const [pronunciationLoading, setPronunciationLoading] = useState(false);
+  const pronunciationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [pronunciationPlaying, setPronunciationPlaying] = useState(false);
+
+  useEffect(() => {
+    const name = draft.name.trim();
+    // Stale audio for a name the parent has since edited would silently play
+    // the wrong pronunciation if left around.
+    if (pronunciationAudio && pronunciationAudio.name !== name) setPronunciationAudio(null);
+    if (name.length < 2) return;
+
+    const timer = setTimeout(async () => {
+      setPronunciationLoading(true);
+      try {
+        // Best-effort — the account-level lookup already ran once per
+        // session (AuthContext) and is idempotent server-side, so this just
+        // reads back whatever's already resolved without re-hitting ipapi.
+        const countryRes = await fetch("/api/account/detect-country", { method: "POST" }).then((r) => r.json()).catch(() => null);
+        const countryCode: string | undefined = countryRes?.countryCode ?? undefined;
+
+        const pronRes = await fetch("/api/name-pronunciation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, countryCode }),
+        }).then((r) => r.json()).catch(() => null);
+        const pronunciation: string = pronRes?.pronunciation || name;
+
+        const speechRes = await fetch("/api/synthesize-speech", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: pronunciation, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId() }),
+        }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+        if (speechRes?.audioData) {
+          setPronunciationAudio({ name, data: speechRes.audioData, mimeType: speechRes.mimeType ?? "audio/wav" });
+        }
+      } finally {
+        setPronunciationLoading(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.name]);
+
+  const playPronunciation = useCallback(() => {
+    if (!pronunciationAudio) return;
+    pronunciationAudioRef.current?.pause();
+    const audio = new Audio(`data:${pronunciationAudio.mimeType};base64,${pronunciationAudio.data}`);
+    pronunciationAudioRef.current = audio;
+    audio.onended = () => setPronunciationPlaying(false);
+    audio.onerror = () => setPronunciationPlaying(false);
+    setPronunciationPlaying(true);
+    audio.play().catch(() => setPronunciationPlaying(false));
+  }, [pronunciationAudio]);
 
   const [bankAvatars, setBankAvatars] = useState<BankAvatar[]>([]);
   useEffect(() => {
@@ -286,6 +351,31 @@ export default function OnboardingPage() {
               className="w-full px-4 py-3.5 rounded-2xl text-white outline-none text-center font-semibold"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.25)", fontSize: 18 }}
             />
+            {draft.name.trim().length >= 2 && (
+              <button
+                onClick={playPronunciation}
+                disabled={pronunciationLoading || !pronunciationAudio}
+                className="mx-auto mt-3 flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all active:scale-95 disabled:opacity-50"
+                style={{
+                  background: "rgba(79,195,247,0.1)",
+                  border: "1px solid rgba(79,195,247,0.3)",
+                  color: "#4fc3f7",
+                  fontSize: 13,
+                }}
+              >
+                {pronunciationLoading ? (
+                  <>
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#4fc3f7 transparent transparent transparent" }} />
+                    <span>Listening for the right sound…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{pronunciationPlaying ? "🔊" : "▶"}</span>
+                    <span>Hear &quot;{draft.name.trim()}&quot;</span>
+                  </>
+                )}
+              </button>
+            )}
           </StepShell>
         )}
 
