@@ -198,12 +198,16 @@ body::before {
    suspenders, not a fix for a known conflict — if the skew still doesn't
    render, the cause isn't CSS specificity. */
 .book-wrapper {
-  transform: skewY(-3.5deg) scaleX(0.94) !important;
+  /* Angles flipped from the original: resting state is now the shallower
+     tilt that used to only show on hover, and hover now shows the deeper
+     tilt that used to be the resting state — same two angles, swapped
+     roles. Only the angle swapped; each state keeps its own scale/lift. */
+  transform: skewY(-0.5deg) scaleX(0.94) !important;
   transform-origin: left center !important;
   transition: transform 0.3s ease !important;
 }
 .book-wrapper:hover {
-  transform: skewY(-0.5deg) scale(1.04) translateY(-5px) !important;
+  transform: skewY(-3.5deg) scale(1.04) translateY(-5px) !important;
 }
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */

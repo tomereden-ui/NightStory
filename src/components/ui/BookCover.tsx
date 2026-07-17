@@ -89,9 +89,15 @@ export default function BookCover({
     // size, with zero per-caller tuning needed.
     <div
       className={`relative w-full h-full ${className ?? ""}`}
-      style={{ boxSizing: "border-box", paddingTop: "8%", paddingRight: "10%" }}
+      style={{ boxSizing: "border-box", paddingTop: "14%", paddingRight: "18%" }}
     >
-      {/* .book-wrapper — skewY(-3deg) scaleX(0.95); hover straightens + lifts via globals.css */}
+      {/* .book-wrapper — skewY(-0.5deg) at rest, hover flips to the deeper
+          skewY(-3.5deg) tilt PLUS scale(1.04)/translateY(-5px) (globals.css)
+          — the resting/hover angles used to be the other way around. Padding
+          above was sized for the deep tilt alone (8%/10%); now that same
+          tilt only shows on hover stacked with the scale-up and lift, which
+          reach further still, so it's bumped to 14%/18% to keep hover from
+          clipping the way earlier rounds of the resting tilt did. */}
       <div className="book-wrapper relative w-full h-full">
         {/* .book-pages — sits behind the cover. This used to be a flat,
             solid cream rectangle (#f4f2eb) — at any width that reads as a
