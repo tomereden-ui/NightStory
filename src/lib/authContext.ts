@@ -78,18 +78,33 @@ export async function getFamilyIdForUser(userId: string): Promise<string | null>
     return cached.familyId;
   }
 
-  const { data, error } = await supabase
-    .from("family_members")
-    .select("family_id")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(`getFamilyIdForUser: ${error.message}`);
-
-  const familyId = (data?.family_id as string | undefined) ?? null;
-  console.log(`[authContext] getFamilyIdForUser(${userId}) — DB lookup: familyId=${familyId}`);
-  familyCache.set(userId, { familyId, at: Date.now() });
-  return familyId;
+  // This runs on essentially every authenticated request, so a momentary
+  // network blip reaching Supabase's REST API (Node's fetch throwing
+  // "TypeError: fetch failed" — a transport-level failure, not a query
+  // error) would otherwise surface as a hard 500 across the whole app. Two
+  // quick retries ride out that kind of transient hiccup; a genuine query
+  // error (bad RLS policy, etc.) has a real Postgrest error message instead
+  // and still throws immediately on the first attempt.
+  let lastError: { message: string } | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 200 * attempt));
+    const { data, error } = await supabase
+      .from("family_members")
+      .select("family_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    if (!error) {
+      const familyId = (data?.family_id as string | undefined) ?? null;
+      console.log(`[authContext] getFamilyIdForUser(${userId}) — DB lookup: familyId=${familyId}${attempt > 0 ? ` (succeeded on retry ${attempt})` : ""}`);
+      familyCache.set(userId, { familyId, at: Date.now() });
+      return familyId;
+    }
+    lastError = error;
+    if (!error.message.includes("fetch failed")) break;
+    console.warn(`[authContext] getFamilyIdForUser(${userId}) — transient fetch failure, attempt ${attempt + 1}/3:`, error.message);
+  }
+  throw new Error(`getFamilyIdForUser: ${lastError!.message}`);
 }
 
 export interface FamilyContext {
