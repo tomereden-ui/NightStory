@@ -118,24 +118,33 @@ export default function OnboardingPage() {
       }).then((r) => r.json()).catch(() => null);
       const pronunciation: string = pronRes?.pronunciation || name;
 
-      const synthesize = (text: string) =>
+      const synthesize = (text: string, assignedVoiceId?: string) =>
         fetch("/api/synthesize-speech", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), language: appLanguage }),
+          body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId, language: appLanguage }),
         }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
-      let speechRes = await synthesize(pronunciation);
       // Gemini TTS has a known intermittent failure mode — HTTP 200,
-      // finishReason "OTHER", zero audio — that's biased per (voice, text)
-      // pair rather than a clean transient error, and it shows up more on
-      // an invented phonetic respelling (e.g. "Yo-nee") than on an
-      // ordinary word, since that's unusual input for a TTS model. One
-      // retry on the plain typed name (not the respelling) rides out
-      // exactly that case; synthesize-speech's own server-side retry
-      // already covers genuinely transient failures.
-      if (!speechRes?.audioData && pronunciation !== name) {
-        speechRes = await synthesize(name);
+      // finishReason "OTHER", zero audio bytes. Turns out it's NOT specific
+      // to an invented respelling like "Yoh-nee": the plain name "yoni"
+      // failed identically, same voice, back to back — so this looks like
+      // a single bare word being too little input for that model, not a
+      // text-content problem. Three attempts, changing one variable each
+      // time, since it's not clear in advance which one clears it:
+      //   1. the respelling, preferred voice — as before
+      //   2. the respelling with trailing punctuation (reads as a complete
+      //      short sentence instead of one bare word, without adding any
+      //      audible extra words)
+      //   3. the raw name with punctuation, default voice (drops whatever
+      //      the parent's saved narrator voice is, in case it's specific
+      //      to that voice rather than the input length)
+      let speechRes = await synthesize(pronunciation, getNarratorVoiceId());
+      if (!speechRes?.audioData) {
+        speechRes = await synthesize(`${pronunciation}.`, getNarratorVoiceId());
+      }
+      if (!speechRes?.audioData) {
+        speechRes = await synthesize(`${name}.`);
       }
 
       if (speechRes?.audioData) {
