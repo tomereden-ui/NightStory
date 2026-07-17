@@ -534,8 +534,44 @@ async function runProduction(
     const DIALOGUE_CONCURRENCY =
       Number(process.env.TTS_DIALOGUE_CONCURRENCY) || Number(process.env.TTS_DIALOGUE_BATCH) || 8;
 
+    // Child name → confirmed TTS pronunciation override (see onboarding's
+    // "Does this sound right?" flow). The script/DB/UI keep showing the
+    // real name always — this ONLY substitutes the text actually sent to
+    // TTS, wherever that name appears in dialogue/narration, so mispronounced
+    // names don't make it into the finished audio the family listens to.
+    const namePronunciationMap = new Map<string, string>();
+    if (childIds && childIds.length > 0) {
+      const { data: childRows } = await supabase
+        .from("child_profiles")
+        .select("name, pronunciation_override")
+        .in("id", childIds);
+      for (const row of childRows ?? []) {
+        const name = (row.name as string | null)?.trim();
+        const override = (row.pronunciation_override as string | null)?.trim();
+        if (name && override) namePronunciationMap.set(name.toLowerCase(), override);
+      }
+      if (namePronunciationMap.size > 0) {
+        console.log(`[${ts()}][produce-drama] pronunciation overrides active: ${JSON.stringify(Object.fromEntries(namePronunciationMap))}`);
+      }
+    }
+
+    // Whole-word, case-insensitive substitution. Plain \b doesn't work here
+    // — it only recognizes ASCII word characters, so it silently fails to
+    // bound Hebrew/Arabic/etc. names — this uses Unicode letter/number
+    // classes instead so it works for any script the story is written in.
+    const applyPronunciationOverrides = (text: string): string => {
+      if (namePronunciationMap.size === 0) return text;
+      let result = text;
+      namePronunciationMap.forEach((override, realName) => {
+        const escaped = realName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(`(^|[^\\p{L}\\p{N}])(${escaped})(?![\\p{L}\\p{N}])`, "giu");
+        result = result.replace(re, (_m, before: string) => `${before}${override}`);
+      });
+      return result;
+    };
+
     const synthesizeBlock = async (block: ScriptBlock, i: number): Promise<void> => {
-      const line = block.textPayload.trim();
+      const line = applyPronunciationOverrides(block.textPayload.trim());
       const charName = block.characterName;
       const profile = voiceProfiles[charName];
       const override = voiceOverrides[charName];

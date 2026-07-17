@@ -20,6 +20,11 @@ export interface DBChildProfile {
   interests?: string;
   avoid?: string;
   notes?: string;
+  // TTS-only respelling of the name, confirmed by the parent during
+  // onboarding's "Does this sound right?" flow — never shown in the UI or
+  // script, only substituted into the text sent to TTS when this child's
+  // real name appears in story narration.
+  pronunciation_override?: string;
   created_at: number;
   updated_at: number;
 }
@@ -67,6 +72,7 @@ export async function POST(req: NextRequest) {
       interests: body.interests ?? "",
       avoid: body.avoid ?? "",
       notes: body.notes ?? "",
+      pronunciation_override: body.pronunciation_override || undefined,
       created_at: now,
       updated_at: now,
     };

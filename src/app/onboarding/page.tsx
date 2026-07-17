@@ -24,6 +24,10 @@ interface ChildDraft {
   themes: string[];
   figures: string[];
   lessons: string[];
+  // TTS-only respelling the parent confirmed via "Does this sound right?" —
+  // never shown anywhere, only used to correct pronunciation when this
+  // child's real name is spoken in story audio. Unset until confirmed.
+  pronunciationOverride?: string;
 }
 
 const EMPTY_DRAFT: ChildDraft = { name: "", age: null, gender: null, avatar: "⭐", themes: [], figures: [], lessons: [] };
@@ -76,11 +80,29 @@ export default function OnboardingPage() {
   // runs when the parent explicitly clicks the button — it used to fire on
   // a debounce while typing, which burned a Gemini + TTS call for every
   // half-finished name and played audio the parent never asked to hear.
-  const [pronunciationAudio, setPronunciationAudio] = useState<{ name: string; data: string; mimeType: string } | null>(null);
+  const [pronunciationAudio, setPronunciationAudio] = useState<{ name: string; text: string; data: string; mimeType: string } | null>(null);
   const [pronunciationLoading, setPronunciationLoading] = useState(false);
   const [pronunciationError, setPronunciationError] = useState(false);
   const pronunciationAudioRef = useRef<HTMLAudioElement | null>(null);
   const [pronunciationPlaying, setPronunciationPlaying] = useState(false);
+
+  // "Does this sound right?" confirm step, shown once audio for the current
+  // name has played. null = not yet answered; true = confirmed correct
+  // (saved as the override); false = rejected, showing the 5-alternative
+  // picker below.
+  const [pronunciationConfirmed, setPronunciationConfirmed] = useState<boolean | null>(null);
+  const [alternatives, setAlternatives] = useState<{ text: string; data: string; mimeType: string }[]>([]);
+  const [alternativesLoading, setAlternativesLoading] = useState(false);
+  const [selectedAlternative, setSelectedAlternative] = useState<number | null>(null);
+
+  // A fresh name (the parent kept typing after already hearing/confirming
+  // one) restarts the whole confirm cycle — stale audio/confirmation for a
+  // name they've since changed would otherwise silently linger.
+  useEffect(() => {
+    setPronunciationConfirmed(null);
+    setAlternatives([]);
+    setSelectedAlternative(null);
+  }, [draft.name]);
 
   const playAudioData = useCallback((data: string, mimeType: string) => {
     pronunciationAudioRef.current?.pause();
@@ -134,14 +156,16 @@ export default function OnboardingPage() {
       // there. One retry left for whatever's still voice-specific: the
       // raw name, default voice, in case Leda (or whichever voice the
       // parent has saved) is the problem rather than the input itself.
-      let speechRes = await synthesize(`${pronunciation}.`, getNarratorVoiceId());
+      let usedText = `${pronunciation}.`;
+      let speechRes = await synthesize(usedText, getNarratorVoiceId());
       if (!speechRes?.audioData) {
-        speechRes = await synthesize(`${name}.`);
+        usedText = `${name}.`;
+        speechRes = await synthesize(usedText);
       }
 
       if (speechRes?.audioData) {
         const mimeType = speechRes.mimeType ?? "audio/wav";
-        setPronunciationAudio({ name, data: speechRes.audioData, mimeType });
+        setPronunciationAudio({ name, text: usedText.replace(/\.$/, ""), data: speechRes.audioData, mimeType });
         playAudioData(speechRes.audioData, mimeType);
       } else {
         setPronunciationError(true);
@@ -237,6 +261,7 @@ export default function OnboardingPage() {
           favorite_themes: draft.themes,
           preferred_figures: draft.figures,
           default_moral_lessons: draft.lessons,
+          pronunciation_override: draft.pronunciationOverride || undefined,
         }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -258,10 +283,90 @@ export default function OnboardingPage() {
     setStep(STEP_ORDER[stepIndex + 1]);
   }, [stepIndex, saveChild]);
 
+  // "Yes, that's right" — whatever text was actually spoken (the respelling,
+  // or the raw name if that's what succeeded) becomes the confirmed
+  // pronunciation override, and onboarding advances automatically.
+  const confirmPronunciationYes = useCallback(() => {
+    if (!pronunciationAudio) return;
+    setDraft((p) => ({ ...p, pronunciationOverride: pronunciationAudio.text }));
+    setPronunciationConfirmed(true);
+    goNext();
+  }, [pronunciationAudio, goNext]);
+
+  // "No, that's not right" — ask Gemini for 5 distinct alternatives, then
+  // synthesize all 5 in parallel so the parent can listen to each and pick
+  // the closest one.
+  const rejectPronunciation = useCallback(async () => {
+    if (!pronunciationAudio) return;
+    setPronunciationConfirmed(false);
+    setAlternativesLoading(true);
+    setAlternatives([]);
+    setSelectedAlternative(null);
+    try {
+      const countryRes = await fetch("/api/account/detect-country", { method: "POST" }).then((r) => r.json()).catch(() => null);
+      const countryCode: string | undefined = countryRes?.countryCode ?? undefined;
+
+      const altRes = await fetch("/api/name-pronunciation-alternatives", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: pronunciationAudio.name, countryCode, rejected: pronunciationAudio.text }),
+      }).then((r) => r.json()).catch(() => null);
+      const texts: string[] = Array.isArray(altRes?.alternatives) ? altRes.alternatives : [];
+
+      // Synthesize all 5 in parallel — same trailing-period fix as the main
+      // pronunciation attempt (a bare single word reliably fails Gemini TTS).
+      const results = await Promise.all(texts.map((text) =>
+        fetch("/api/synthesize-speech", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: `${text}.`, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), language: appLanguage }),
+        }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      ));
+
+      const built = texts
+        .map((text, i) => ({ text, data: results[i]?.audioData as string | undefined, mimeType: results[i]?.mimeType as string | undefined ?? "audio/wav" }))
+        .filter((a): a is { text: string; data: string; mimeType: string } => !!a.data);
+
+      setAlternatives(built);
+    } finally {
+      setAlternativesLoading(false);
+    }
+  }, [pronunciationAudio, appLanguage]);
+
+  // Play just previews — it doesn't select. Selecting is a separate action
+  // (a distinct "closest one" pick) so the parent can listen to a few before
+  // committing, rather than the act of listening also being the commit.
+  const playAlternative = useCallback((index: number) => {
+    const alt = alternatives[index];
+    if (alt) playAudioData(alt.data, alt.mimeType);
+  }, [alternatives, playAudioData]);
+
+  const selectAlternative = useCallback((index: number) => {
+    setSelectedAlternative(index);
+  }, []);
+
+  // Confirms whichever alternative is currently selected and advances —
+  // same "confirmed, move on" shape as answering "yes" to the first
+  // suggestion, just one extra step for picking which one.
+  const confirmSelectedAlternative = useCallback(() => {
+    if (selectedAlternative === null) return;
+    const alt = alternatives[selectedAlternative];
+    if (!alt) return;
+    setDraft((p) => ({ ...p, pronunciationOverride: alt.text }));
+    setPronunciationConfirmed(true);
+    goNext();
+  }, [selectedAlternative, alternatives, goNext]);
+
   const startAnotherChild = () => {
     setDraft(EMPTY_DRAFT);
     setSaveError(null);
     setStep("name");
+    // A new child needs a fresh pronunciation cycle — otherwise the
+    // previous child's audio/confirmation would carry over.
+    setPronunciationAudio(null);
+    setPronunciationConfirmed(null);
+    setAlternatives([]);
+    setSelectedAlternative(null);
   };
 
   const toggleTheme = (id: string) => {
@@ -407,6 +512,86 @@ export default function OnboardingPage() {
                   <p className="text-center mt-2" style={{ color: "rgba(248,113,113,0.85)", fontSize: 12 }}>
                     Couldn&apos;t generate the pronunciation — tap to try again
                   </p>
+                )}
+
+                {/* "Does this sound right?" — shown once audio for the
+                    CURRENT name has played and hasn't been answered yet. */}
+                {pronunciationAudio && pronunciationAudio.name === draft.name.trim() && pronunciationConfirmed === null && !pronunciationLoading && (
+                  <div className="mt-4 text-center">
+                    <p className="text-fs-body mb-2" style={{ color: "rgba(148,163,184,0.9)" }}>Does that sound right?</p>
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={confirmPronunciationYes}
+                        className="px-4 py-2 rounded-full font-semibold transition-all active:scale-95"
+                        style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.35)", color: "#34d399", fontSize: 13 }}
+                      >
+                        ✓ Yes, that&apos;s right
+                      </button>
+                      <button
+                        onClick={rejectPronunciation}
+                        className="px-4 py-2 rounded-full font-semibold transition-all active:scale-95"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)", fontSize: 13 }}
+                      >
+                        ✕ Not quite
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rejected — 5 alternatives, each with its own play button;
+                    picking one just selects/highlights it (so the parent can
+                    preview a few before committing) — a separate confirm
+                    button actually saves the choice and moves on. Options
+                    are deliberately unlabeled beyond "Option N": the
+                    respelling text is TTS-only and never meant to be read
+                    by the parent. */}
+                {pronunciationConfirmed === false && (
+                  <div className="mt-4">
+                    <p className="text-fs-body text-center mb-2" style={{ color: "rgba(148,163,184,0.9)" }}>
+                      {alternativesLoading ? "Finding some alternatives…" : "Pick whichever sounds closest:"}
+                    </p>
+                    {alternativesLoading ? (
+                      <div className="flex justify-center py-3">
+                        <span className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#4fc3f7 transparent transparent transparent" }} />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {alternatives.map((alt, i) => (
+                          <div
+                            key={i}
+                            onClick={() => selectAlternative(i)}
+                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all cursor-pointer"
+                            style={{
+                              background: selectedAlternative === i ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)",
+                              border: selectedAlternative === i ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                            }}
+                          >
+                            <button
+                              onClick={(e) => { e.stopPropagation(); playAlternative(i); }}
+                              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+                              style={{ background: "rgba(79,195,247,0.15)", color: "#4fc3f7" }}
+                            >
+                              ▶
+                            </button>
+                            <span className="flex-1 text-fs-body font-medium text-left" style={{ color: selectedAlternative === i ? "#4fc3f7" : "rgba(255,255,255,0.75)" }}>
+                              Option {i + 1}
+                            </span>
+                            {selectedAlternative === i && <span style={{ color: "#4fc3f7" }}>✓</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {!alternativesLoading && alternatives.length > 0 && (
+                      <button
+                        onClick={confirmSelectedAlternative}
+                        disabled={selectedAlternative === null}
+                        className="w-full mt-3 py-2.5 rounded-xl font-semibold transition-all active:scale-[0.98] disabled:opacity-40"
+                        style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)", color: "#fff", fontSize: 13 }}
+                      >
+                        Use this pronunciation
+                      </button>
+                    )}
+                  </div>
                 )}
               </>
             )}
