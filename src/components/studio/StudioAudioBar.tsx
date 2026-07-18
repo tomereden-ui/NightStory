@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Icon from "@/components/ui/Icon";
+import { useListeningProgress } from "@/hooks/useListeningProgress";
 
 function formatTime(sec: number) {
   if (!Number.isFinite(sec)) return "0:00";
@@ -14,19 +15,33 @@ function formatTime(sec: number) {
 // bar style used on the story (listener) page -- shown in place of Studio's
 // old separate "Drama Ready" screen, so producing a story no longer navigates
 // away from whatever you were doing; the finished audio just appears here.
+//
+// Listening here used to be entirely untracked -- this <audio> element made
+// zero API calls, so a parent who produced a story and listened to the
+// whole thing right here never generated a listening_progress row (only
+// opening the story again later from the Library did). Wired into the same
+// useListeningProgress hook the Library detail pages use, keyed off the
+// storyId Studio already resolves the moment production completes
+// (Studio2Page.editingStoryId — see handleProductionDone) and the same
+// "active child" localStorage key produce-drama itself reads, so a first
+// listen right after generation now counts the same way a later Library
+// listen does.
 export default function StudioAudioBar({
   audioUrl,
   title,
   durationSeconds,
+  storyId,
 }: {
   audioUrl: string;
   title: string;
   durationSeconds: number;
+  storyId?: string;
 }) {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { markTick, markPause, markEnded } = useListeningProgress({ storyId, audioRef });
 
   const handlePlayPause = () => {
     const audio = audioRef.current;
@@ -34,6 +49,7 @@ export default function StudioAudioBar({
     if (playing) {
       audio.pause();
       setPlaying(false);
+      markPause();
     } else {
       audio.play().catch(() => {});
       setPlaying(true);
@@ -54,9 +70,9 @@ export default function StudioAudioBar({
       <audio
         ref={audioRef}
         src={audioUrl}
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onTimeUpdate={() => { setCurrentTime(audioRef.current?.currentTime ?? 0); markTick(); }}
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
-        onEnded={() => { setPlaying(false); setCurrentTime(0); }}
+        onEnded={() => { setPlaying(false); setCurrentTime(0); markEnded(); }}
       />
       <div className="mx-auto px-4 pb-20" style={{ maxWidth: 448 }}>
         <div
