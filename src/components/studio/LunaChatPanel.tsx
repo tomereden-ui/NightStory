@@ -209,6 +209,17 @@ export default function LunaChatPanel({
   };
   const errorReplyLabel = ERROR_REPLY_LABELS[language] ?? "Hmm, something went sideways. ✨\nCan you say that again?";
 
+  const PROMPT_PLACEHOLDER_LABELS: Record<string, string> = {
+    he: "ספרו ללונה על רעיון הסיפור שלכם… 🌟",
+    ar: "أخبر لونا بفكرة قصتك… 🌟",
+    fr: "Dis à Luna ton idée d'histoire… 🌟",
+    es: "Cuéntale a Luna tu idea de historia… 🌟",
+    de: "Erzähl Luna deine Geschichtsidee… 🌟",
+    it: "Racconta a Luna la tua idea di storia… 🌟",
+    pt: "Conte à Luna sua ideia de história… 🌟",
+  };
+  const promptPlaceholder = PROMPT_PLACEHOLDER_LABELS[language] ?? "Tell Luna your story idea… 🌟";
+
   const [messages, setMessages]             = useState<Message[]>([]);
   const [input, setInput]                   = useState("");
   const [loading, setLoading]               = useState(false);
@@ -265,10 +276,14 @@ export default function LunaChatPanel({
     const ctrl = new AbortController();
     speakAbortRef.current = ctrl;
     try {
+      // Resolves the child's confirmed pronunciation override server-side —
+      // never changes the message text rendered in this chat, only what's
+      // sent to the TTS engine.
+      const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
       const res = await fetch("/api/synthesize-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId() }),
+        body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), childIds: activeChildId ? [activeChildId] : undefined }),
         signal: ctrl.signal,
       });
       if (!res.ok || ctrl.signal.aborted) return;
@@ -997,7 +1012,7 @@ export default function LunaChatPanel({
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder={listening ? "Listening… 🎤" : hasUserMessages ? "" : "Tell Luna your story idea… 🌟"}
+            placeholder={listening ? "Listening… 🎤" : hasUserMessages ? "" : promptPlaceholder}
             rows={1}
             className="flex-1 bg-transparent outline-none resize-none leading-relaxed"
             style={{ fontSize: "var(--fs-body)", color: "rgba(255,255,255,0.9)", caretColor: "#a78bfa", maxHeight: 120 }}

@@ -64,7 +64,7 @@ function allPresetsAsVersions(): VoiceVersion[] {
 }
 
 const SAMPLE_TEXTS: Record<string, string> = {
-  en: "This is me and I will be happy to join your story",
+  en: "This is me and I will be happy to join the most amazing stories you will create",
   he: "זה אני, ואשמח להצטרף לסיפור שלך",
   ar: "هذا أنا وسأكون سعيداً بالانضمام إلى قصتك",
   fr: "C'est moi et je serai heureux de rejoindre ton histoire",
@@ -304,7 +304,7 @@ function VoiceCard({
         )}
         {/* Expand/collapse toggle — shown for all EL voices */}
         {isELVoice && (
-          <button onClick={() => setEditOpen((o) => !o)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: editOpen ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)", color: editOpen ? "#4fc3f7" : "rgba(255,255,255,0.35)", border: editOpen ? "1px solid rgba(79,195,247,0.35)" : "1px solid rgba(255,255,255,0.07)", fontSize: 11, transform: editOpen ? "rotate(180deg)" : "none" }}>
+          <button onClick={() => setEditOpen((o) => !o)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-95" style={{ background: editOpen ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)", color: editOpen ? "#4fc3f7" : "rgba(255,255,255,0.35)", border: editOpen ? "1px solid rgba(79,195,247,0.35)" : "1px solid rgba(255,255,255,0.07)", fontSize: 16, transform: editOpen ? "rotate(180deg)" : "none" }}>
             ▾
           </button>
         )}
@@ -421,6 +421,7 @@ function AddVoiceSheet({
 
   const [addStep, setAddStep] = useState<AddStep>("setup");
   const [selectedPresetKey, setSelectedPresetKey] = useState<string>(editVoice?.preset_key ?? "calm_narrator");
+  const [hasPickedStyle, setHasPickedStyle] = useState(false);
   const [presetAudios, setPresetAudios] = useState<Record<string, PresetAudioState>>({});
   const [playingPreset, setPlayingPreset] = useState<string | null>(null);
   const presetAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
@@ -708,21 +709,27 @@ function AddVoiceSheet({
 
           {/* Record */}
           <div className="mb-4">
-            <div className="rounded-2xl px-4 pt-3 pb-2 mb-3" style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
-              <p className="text-fs-body mb-1.5" style={{ color: "rgba(255,255,255,0.45)" }}>Read this aloud — or write your own:</p>
+            {/* Instructional label, with the suggested line right below it as
+                plain quoted italic text (no border/background) — it's a
+                suggestion to read aloud, not a form field, even though it
+                stays tap-to-edit for "or read your own text". */}
+            <p className="text-fs-body mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>Read this aloud (or read your own text):</p>
+            <div className="flex items-start gap-1 mb-3">
+              <span className="text-fs-heading italic flex-shrink-0" style={{ color: "#a78bfa" }}>“</span>
               <textarea
                 value={sampleText}
                 onChange={(e) => setSampleText(e.target.value)}
                 rows={2}
-                className="w-full bg-transparent text-white/90 italic text-fs-body resize-none outline-none leading-snug"
-                style={{ caretColor: "#4fc3f7" }}
+                className="flex-1 bg-transparent italic text-fs-body resize-none outline-none leading-snug"
+                style={{ color: "#a78bfa", caretColor: "#4fc3f7" }}
               />
-              {detectedLang !== language && (
-                <p className="text-fs-body mt-1" style={{ color: "#4fc3f7", opacity: 0.7 }}>
-                  Detected: {detectedLang.toUpperCase()}
-                </p>
-              )}
+              <span className="text-fs-heading italic flex-shrink-0" style={{ color: "#a78bfa" }}>”</span>
             </div>
+            {detectedLang !== language && (
+              <p className="text-fs-body mb-3 -mt-2" style={{ color: "#4fc3f7", opacity: 0.7 }}>
+                Detected: {detectedLang.toUpperCase()}
+              </p>
+            )}
             {recordState === "idle" && (
               <button onClick={handleStartRecording} className="w-full py-3 rounded-2xl text-fs-body font-semibold" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>🎙 Start Recording</button>
             )}
@@ -733,7 +740,8 @@ function AddVoiceSheet({
               <div className="flex items-center gap-3 px-4 py-3 rounded-2xl" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
                 <span style={{ color: "#10B981" }}>✓</span>
                 <p className="text-white/60 text-fs-body flex-1">Recording captured</p>
-                <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setPreviewState("idle"); }} className="text-fs-body px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>Redo</button>
+                <button onClick={onClose} className="text-fs-body px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>Cancel</button>
+                <button onClick={() => { setRecordState("idle"); setRecordedAudioBase64(null); setPreviewState("idle"); setAddStep("setup"); setHasPickedStyle(false); stopAllPresetAudio(); setPresetAudios({}); }} className="text-fs-body px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>Redo</button>
               </div>
             )}
           </div>
@@ -741,10 +749,6 @@ function AddVoiceSheet({
           {/* Style picker step */}
           {addStep === "style-picker" ? (
             <>
-              <button onClick={() => { setAddStep("setup"); stopAllPresetAudio(); setPreviewState("idle"); }} className="flex items-center gap-1.5 mb-4 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>
-                ← Back
-              </button>
-
               <div className="mb-4">
                 <p className="text-white font-semibold text-fs-heading">{name.trim() ? `Choose how ${name.trim()} sounds in stories` : "Choose a voice style"}</p>
                 <p className="text-white/40 text-fs-body mt-0.5">Play each style and pick the one that feels right</p>
@@ -762,7 +766,7 @@ function AddVoiceSheet({
                   return (
                     <button
                       key={preset.key}
-                      onClick={() => setSelectedPresetKey(preset.key)}
+                      onClick={() => { setSelectedPresetKey(preset.key); setHasPickedStyle(true); }}
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all active:scale-[0.99]"
                       style={{
                         background: isSelected ? "rgba(79,195,247,0.08)" : "rgba(255,255,255,0.03)",
@@ -783,7 +787,7 @@ function AddVoiceSheet({
                         className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
                         style={{
                           background: isPlaying ? "rgba(79,195,247,0.2)" : isStale ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.06)",
-                          color: isLoading ? "rgba(255,255,255,0.2)" : isError ? "rgba(255,255,255,0.2)" : isPlaying ? "#4fc3f7" : isStale ? "#a78bfa" : "rgba(255,255,255,0.5)",
+                          color: isLoading ? "rgba(255,255,255,0.2)" : isError ? "rgba(255,255,255,0.2)" : isPlaying ? "#4fc3f7" : isStale ? "#a78bfa" : "rgba(255,255,255,0.85)",
                           border: isPlaying ? "1px solid rgba(79,195,247,0.4)" : isStale ? "1px solid rgba(167,139,250,0.3)" : "1px solid rgba(255,255,255,0.08)",
                           cursor: isLoading || isError ? "not-allowed" : "pointer",
                         }}
@@ -806,33 +810,36 @@ function AddVoiceSheet({
               </div>
 
             </>
-          ) : (
+          ) : canPreview ? (
             <>
-              <button onClick={handleGeneratePreview} disabled={!canPreview || previewState === "loading"} className="w-full py-3 rounded-2xl text-fs-body font-semibold mb-3 transition-all" style={{ background: canPreview ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.04)", color: canPreview ? "#a78bfa" : "rgba(255,255,255,0.2)", border: canPreview ? "1px solid rgba(139,92,246,0.3)" : "1px solid rgba(255,255,255,0.07)", cursor: canPreview ? "pointer" : "not-allowed" }}>
+              <button onClick={handleGeneratePreview} disabled={previewState === "loading"} className="w-full py-3 rounded-2xl text-fs-body font-semibold mb-3 transition-all" style={{ background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)", cursor: previewState === "loading" ? "not-allowed" : "pointer" }}>
                 {previewState === "loading" ? "Cloning voice…" : "🎨 Generate Style Options"}
               </button>
 
               {previewError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.08)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.2)" }}>⚠ {previewError}</p>}
             </>
-          )}
+          ) : null}
         </div>
 
-        {/* Sticky Save footer */}
-        <div className="flex-shrink-0 px-5 pb-6 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0D1120" }}>
-          {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
-          <button
-            onClick={handleSave}
-            disabled={saving || !name.trim() || addStep !== "style-picker"}
-            className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]"
-            style={{
-              background: !saving && name.trim() && addStep === "style-picker" ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)",
-              color: !saving && name.trim() && addStep === "style-picker" ? "#fff" : "rgba(255,255,255,0.2)",
-              cursor: !saving && name.trim() && addStep === "style-picker" ? "pointer" : "not-allowed",
-            }}
-          >
-            {saving ? "Saving…" : addStep !== "style-picker" ? "Record & choose a style to save" : isEditMode ? `Update as ${selectedPreset?.label ?? "Voice"}` : `Save as ${selectedPreset?.label ?? "Voice"}`}
-          </button>
-        </div>
+        {/* Sticky Save footer — only appears once a style has actually been
+            picked; before that there's nothing useful it could do yet. */}
+        {addStep === "style-picker" && hasPickedStyle && (
+          <div className="flex-shrink-0 px-5 pb-6 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0D1120" }}>
+            {saveError && <p className="text-fs-body mb-3 px-4 py-2.5 rounded-2xl" style={{ background: "rgba(236,72,153,0.1)", color: "#EC4899", border: "1px solid rgba(236,72,153,0.25)" }}>⚠ {saveError}</p>}
+            <button
+              onClick={handleSave}
+              disabled={saving || !name.trim()}
+              className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]"
+              style={{
+                background: !saving && name.trim() ? "linear-gradient(90deg,#8B5CF6,#6D28D9)" : "rgba(255,255,255,0.07)",
+                color: !saving && name.trim() ? "#fff" : "rgba(255,255,255,0.2)",
+                cursor: !saving && name.trim() ? "pointer" : "not-allowed",
+              }}
+            >
+              {saving ? "Saving…" : isEditMode ? `Update as ${selectedPreset?.label ?? "Voice"}` : `Save as ${selectedPreset?.label ?? "Voice"}`}
+            </button>
+          </div>
+        )}
 
         {avatarPickerOpen && (
           <AvatarGallerySheet currentValue={avatarValue} onSelect={(v) => { setAvatarValue(v); setAvatarPickerOpen(false); }} onClose={() => setAvatarPickerOpen(false)} />
@@ -992,8 +999,8 @@ export default function FamilyVoicesPanel() {
         </div>
 
         <span
-          className="text-white/55 text-fs-body transition-transform flex-shrink-0"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+          className="text-white/55 transition-transform flex-shrink-0"
+          style={{ fontSize: 22, transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
         </span>

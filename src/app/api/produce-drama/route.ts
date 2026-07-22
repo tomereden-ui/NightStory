@@ -15,6 +15,7 @@ import { geminiPost, geminiText } from "@/lib/geminiClient";
 import { generateScenes } from "@/lib/services/sceneGenerator";
 import { ProductionTimer } from "@/lib/perfMetrics";
 import { findBestAvatarForCharacter } from "@/lib/services/avatarBankService";
+import { buildNamePronunciationMap, applyPronunciationOverrides } from "@/lib/services/pronunciationOverride";
 
 // Match every character's persisted profile (type/gender/visualDescription)
 // to a real avatar-bank portrait — same profile data already driving
@@ -539,39 +540,13 @@ async function runProduction(
     // real name always — this ONLY substitutes the text actually sent to
     // TTS, wherever that name appears in dialogue/narration, so mispronounced
     // names don't make it into the finished audio the family listens to.
-    const namePronunciationMap = new Map<string, string>();
-    if (childIds && childIds.length > 0) {
-      const { data: childRows } = await supabase
-        .from("child_profiles")
-        .select("name, pronunciation_override")
-        .in("id", childIds);
-      for (const row of childRows ?? []) {
-        const name = (row.name as string | null)?.trim();
-        const override = (row.pronunciation_override as string | null)?.trim();
-        if (name && override) namePronunciationMap.set(name.toLowerCase(), override);
-      }
-      if (namePronunciationMap.size > 0) {
-        console.log(`[${ts()}][produce-drama] pronunciation overrides active: ${JSON.stringify(Object.fromEntries(namePronunciationMap))}`);
-      }
+    const namePronunciationMap = await buildNamePronunciationMap(childIds);
+    if (namePronunciationMap.size > 0) {
+      console.log(`[${ts()}][produce-drama] pronunciation overrides active: ${JSON.stringify(Object.fromEntries(namePronunciationMap))}`);
     }
 
-    // Whole-word, case-insensitive substitution. Plain \b doesn't work here
-    // — it only recognizes ASCII word characters, so it silently fails to
-    // bound Hebrew/Arabic/etc. names — this uses Unicode letter/number
-    // classes instead so it works for any script the story is written in.
-    const applyPronunciationOverrides = (text: string): string => {
-      if (namePronunciationMap.size === 0) return text;
-      let result = text;
-      namePronunciationMap.forEach((override, realName) => {
-        const escaped = realName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const re = new RegExp(`(^|[^\\p{L}\\p{N}])(${escaped})(?![\\p{L}\\p{N}])`, "giu");
-        result = result.replace(re, (_m, before: string) => `${before}${override}`);
-      });
-      return result;
-    };
-
     const synthesizeBlock = async (block: ScriptBlock, i: number): Promise<void> => {
-      const line = applyPronunciationOverrides(block.textPayload.trim());
+      const line = applyPronunciationOverrides(block.textPayload.trim(), namePronunciationMap);
       const charName = block.characterName;
       const profile = voiceProfiles[charName];
       const override = voiceOverrides[charName];
@@ -1011,6 +986,17 @@ async function runProduction(
     // the story to be saved with a dead audio URL).
     perf.start("audio_upload");
     let audioUrl = "";
+    // adjustedTotal is the PLANNED length going into the mix — amix's default
+    // duration=longest (and both the ffmpeg-concat and pure-JS fallbacks) can
+    // land on a real file shorter or longer than that plan, e.g. when there's
+    // no ambient track long enough to reach the tail, or the fallback just
+    // concatenates dialogue with none of the planned gaps/tail. Storing the
+    // unprobed plan here as durationSeconds is exactly what made Home's
+    // progress bar/remaining-time disagree with the real player: Home divides
+    // by this stored value, the player divides by the actual file's
+    // audio.duration. Probing the real output keeps both denominators equal.
+    const realDurationMs = fs.existsSync(localAudioPath) ? audioDurationMs(localAudioPath) : 0;
+    const finalDurationMs = realDurationMs > 0 ? realDurationMs : adjustedTotal;
     if (fs.existsSync(localAudioPath)) {
       const audioBuf = fs.readFileSync(localAudioPath);
       const storageKey = `${storyId}.${audioExt}`;
@@ -1076,7 +1062,7 @@ async function runProduction(
       summary: summaryOverride || generateSummary(blocks),
       audioUrl,
       coverUrl,
-      durationSeconds: Math.round(adjustedTotal / 1000),
+      durationSeconds: Math.round(finalDurationMs / 1000),
       createdAt: Date.now(),
       blocks,
       language: scriptLanguage,
@@ -1092,7 +1078,7 @@ async function runProduction(
     perf.start("library_save");
     if (skipLibrarySave) {
       // Admin "preview before save" flow: store entry in job so /api/admin/save-story can persist it later
-      updateJob(jobId, { pendingEntry: entry, durationSeconds: Math.round(adjustedTotal / 1000) });
+      updateJob(jobId, { pendingEntry: entry, durationSeconds: Math.round(finalDurationMs / 1000) });
     } else {
       try {
         await addEntry(entry, familyId);

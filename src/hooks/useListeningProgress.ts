@@ -92,6 +92,18 @@ export function useListeningProgress({ storyId, audioRef }: Options) {
     }
   }, [audioRef, resumeFrom]);
 
+  // The page's onLoadedMetadata handler is the primary call site above, but
+  // that DOM event only fires once — if the audio's metadata loads faster
+  // than this hook's own saved-position fetch (very possible for a cached/
+  // short mp3 vs a network round-trip), resumeFrom is still null when it
+  // fires, the seek is skipped, and nothing ever calls applyResumeSeek again
+  // — the story silently opens at 0:00 instead of resuming. This retries the
+  // seek as soon as resumeFrom itself resolves, by which point audio.duration
+  // is normally already set if metadata won that race instead.
+  useEffect(() => {
+    if (resumeFrom != null) applyResumeSeek();
+  }, [resumeFrom, applyResumeSeek]);
+
   // Throttled — call from onTimeUpdate (fires several times/sec); cheap no-op
   // between writes.
   const markTick = useCallback(() => {

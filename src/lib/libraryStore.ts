@@ -421,7 +421,13 @@ export async function getContinueListening(childId: string, familyId?: string, l
     .filter((p) => byId.has(p.story_id as string))
     .map((p) => {
       const row = byId.get(p.story_id as string)!;
-      const duration = (p.duration_seconds as number) || (row.duration_seconds as number) || 0;
+      // Prefer the story's CURRENT duration (row) over the snapshot taken
+      // when this listening session was recorded (p.duration_seconds) — if
+      // the story's audio was re-produced since the last listen, the old
+      // snapshot no longer matches durationSeconds below (from toEntry),
+      // which threw the progress bar and "X min left" text out of sync
+      // with each other since they'd be computed against different totals.
+      const duration = (row.duration_seconds as number) || (p.duration_seconds as number) || 0;
       const position = p.position_seconds as number;
       return {
         ...toEntry(row),

@@ -6,7 +6,6 @@ import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import Icon from "@/components/ui/Icon";
-import BookCover from "@/components/ui/BookCover";
 import type { ScriptBlock, Voice } from "@/types";
 import ShareSheet from "@/components/ShareSheet";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
@@ -16,9 +15,6 @@ import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType } from "@/lib/services/characterAvatars";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { useListeningProgress } from "@/hooks/useListeningProgress";
-import { useAuth } from "@/context/AuthContext";
-
-const ADMIN_EMAIL = "tomereden@gmail.com";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -52,14 +48,17 @@ function seriesDisplayTitle(title: string): string {
 export default function StoryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
-  const isAdmin = user?.email === ADMIN_EMAIL;
   const { effective } = useViewMode();
   const stickyMaxWidth = effective === "desktop" ? 896 : effective === "tablet" ? 672 : 448;
 
   const [entry, setEntry] = useState<LibraryEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
+  // Shares the series' first chapter's link (its landing page picks up every
+  // sibling chapter from there) rather than whichever chapter is currently
+  // open — a distinct flow from shareOpen, which always shares the chapter
+  // on screen.
+  const [shareAllOpen, setShareAllOpen] = useState(false);
   const [allChildren, setAllChildren] = useState<DBChildProfile[]>([]);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
@@ -82,6 +81,12 @@ export default function StoryDetailPage() {
   const [scriptBlocks, setScriptBlocks] = useState<ScriptBlock[]>([]);
   const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
+  // Gates the Cast panel below — without this, it painted with an empty
+  // characterAvatars map on first render (before fetchBankAvatars resolves),
+  // which ReadOnlyCastPanel fills in with a DiceBear placeholder per
+  // character. That's a real-looking but WRONG avatar, not an obvious
+  // loading state, so it read as "starts with the old set, then swaps."
+  const [avatarsResolved, setAvatarsResolved] = useState(false);
 
   useEffect(() => {
     if (entry) setScriptBlocks(entry.blocks);
@@ -95,11 +100,12 @@ export default function StoryDetailPage() {
   // — this is a read view, not an active creation session, so it should
   // look the same on every visit rather than regenerating art each time.
   useEffect(() => {
+    setAvatarsResolved(false);
     if (!entry?.blocks?.length) return;
     let cancelled = false;
     (async () => {
       const uniqueChars = Array.from(new Set(entry.blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
-      if (!uniqueChars.length) return;
+      if (!uniqueChars.length) { setAvatarsResolved(true); return; }
       const bank = await fetchBankAvatars();
       if (cancelled) return;
       const avatars: Record<string, string> = {};
@@ -108,6 +114,7 @@ export default function StoryDetailPage() {
         avatars[name] = resolveCharacterAvatar(name, type, bank, voicePool, entry.characterProfiles?.[name]?.avatarUrl);
       }
       setCharacterAvatars(avatars);
+      setAvatarsResolved(true);
     })();
     return () => { cancelled = true; };
   }, [entry, voicePool]);
@@ -162,7 +169,7 @@ export default function StoryDetailPage() {
       const res = await fetch("/api/summary-audio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: entry.summary, cacheKey: `story-${entry.id}` }),
+        body: JSON.stringify({ text: entry.summary, cacheKey: `story-${entry.id}`, childIds: entry.childIds }),
       });
       const { audioUrl } = await res.json() as { audioUrl: string };
       if (entry?.id) summaryAudioCache.set(entry.id, audioUrl);
@@ -285,6 +292,15 @@ export default function StoryDetailPage() {
     setShareOpen(true);
   }, [allChildren.length]);
 
+  const handleOpenShareAll = useCallback(() => {
+    if (allChildren.length === 0) {
+      fetch("/api/child-profiles").then((r) => r.json()).then((d) => {
+        if (Array.isArray(d)) setAllChildren(d as DBChildProfile[]);
+      }).catch(() => {});
+    }
+    setShareAllOpen(true);
+  }, [allChildren.length]);
+
   const handlePlayPause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -400,48 +416,52 @@ export default function StoryDetailPage() {
       />
 
       <div className="pb-64">
-        {/* Atmospheric cover area — the book (when there's real cover art)
-            floats on this same starfield backdrop, matching the "casting
-            onto a dark background" 3D-book look everywhere else it's used. */}
-        <div className="relative overflow-hidden" style={{ flexShrink: 0, height: 340 }}>
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(ellipse 70% 60% at 50% 25%, rgba(79,195,247,0.2) 0%, transparent 60%)," +
-                "radial-gradient(ellipse 50% 50% at 80% 80%, rgba(45,27,78,0.5) 0%, transparent 55%)," +
-                "radial-gradient(ellipse 60% 70% at 10% 80%, rgba(10,61,74,0.4) 0%, transparent 55%)," +
-                "linear-gradient(180deg,#060a18 0%,#0d1a3a 40%,#1a0a38 80%,#05080f 100%)",
-            }}
-          >
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 260" fill="none">
-              <circle cx="30" cy="25" r="1" fill="rgba(255,255,255,.6)"/>
-              <circle cx="80" cy="15" r="1.2" fill="rgba(255,255,255,.7)"/>
-              <circle cx="140" cy="30" r=".8" fill="rgba(200,220,255,.8)"/>
-              <circle cx="200" cy="18" r="1" fill="rgba(255,255,255,.6)"/>
-              <circle cx="260" cy="28" r="1.1" fill="rgba(255,255,255,.7)"/>
-              <circle cx="290" cy="12" r=".8" fill="rgba(200,220,255,.5)"/>
-              <circle cx="50" cy="55" r=".9" fill="rgba(255,255,255,.5)"/>
-              <circle cx="170" cy="45" r="1" fill="rgba(200,220,255,.6)"/>
-              <circle cx="240" cy="60" r=".8" fill="rgba(255,255,255,.7)"/>
-              <circle cx="80" cy="45" r="1" fill="rgba(180,210,255,.7)"/>
-              <circle cx="100" cy="38" r="1" fill="rgba(180,210,255,.7)"/>
-              <circle cx="120" cy="48" r="1" fill="rgba(180,210,255,.7)"/>
-              <line x1="80" y1="45" x2="100" y2="38" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
-              <line x1="100" y1="38" x2="120" y2="48" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
-              <circle cx="160" cy="120" r="40" fill="rgba(79,195,247,0.06)"/>
-              <circle cx="160" cy="120" r="20" fill="rgba(79,195,247,0.1)"/>
-              <circle cx="160" cy="120" r="8"  fill="rgba(150,220,255,0.2)"/>
-            </svg>
-          </div>
-
+        {/* Cover area — same 16:9 crop + focus point as Studio's own cover
+            header (ScriptTab), so a story reads identically here as it does
+            there instead of a differently-shaped box. The starfield backdrop
+            only shows through when there's no cover art yet. */}
+        <div className="relative overflow-hidden" style={{ flexShrink: 0, aspectRatio: "16/9" }}>
           {entry.coverUrl ? (
-            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 32, width: 198, height: 282 }}>
-              <BookCover coverUrl={entry.coverUrl} alt={entry.title} borderRadius={12} />
-            </div>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={entry.coverUrl}
+              alt={entry.title}
+              className="absolute inset-0 w-full h-full object-cover ken-burns"
+              style={{ objectPosition: `${entry.coverFocusX ?? 50}% ${entry.coverFocusY ?? 30}%` }}
+            />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-7xl" style={{ filter: "drop-shadow(0 0 24px rgba(79,195,247,0.5))" }}>🌙</span>
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse 70% 60% at 50% 25%, rgba(79,195,247,0.2) 0%, transparent 60%)," +
+                  "radial-gradient(ellipse 50% 50% at 80% 80%, rgba(45,27,78,0.5) 0%, transparent 55%)," +
+                  "radial-gradient(ellipse 60% 70% at 10% 80%, rgba(10,61,74,0.4) 0%, transparent 55%)," +
+                  "linear-gradient(180deg,#060a18 0%,#0d1a3a 40%,#1a0a38 80%,#05080f 100%)",
+              }}
+            >
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 260" fill="none">
+                <circle cx="30" cy="25" r="1" fill="rgba(255,255,255,.6)"/>
+                <circle cx="80" cy="15" r="1.2" fill="rgba(255,255,255,.7)"/>
+                <circle cx="140" cy="30" r=".8" fill="rgba(200,220,255,.8)"/>
+                <circle cx="200" cy="18" r="1" fill="rgba(255,255,255,.6)"/>
+                <circle cx="260" cy="28" r="1.1" fill="rgba(255,255,255,.7)"/>
+                <circle cx="290" cy="12" r=".8" fill="rgba(200,220,255,.5)"/>
+                <circle cx="50" cy="55" r=".9" fill="rgba(255,255,255,.5)"/>
+                <circle cx="170" cy="45" r="1" fill="rgba(200,220,255,.6)"/>
+                <circle cx="240" cy="60" r=".8" fill="rgba(255,255,255,.7)"/>
+                <circle cx="80" cy="45" r="1" fill="rgba(180,210,255,.7)"/>
+                <circle cx="100" cy="38" r="1" fill="rgba(180,210,255,.7)"/>
+                <circle cx="120" cy="48" r="1" fill="rgba(180,210,255,.7)"/>
+                <line x1="80" y1="45" x2="100" y2="38" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
+                <line x1="100" y1="38" x2="120" y2="48" stroke="rgba(180,210,255,.2)" strokeWidth=".6"/>
+                <circle cx="160" cy="120" r="40" fill="rgba(79,195,247,0.06)"/>
+                <circle cx="160" cy="120" r="20" fill="rgba(79,195,247,0.1)"/>
+                <circle cx="160" cy="120" r="8"  fill="rgba(150,220,255,0.2)"/>
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-7xl" style={{ filter: "drop-shadow(0 0 24px rgba(79,195,247,0.5))" }}>🌙</span>
+              </div>
             </div>
           )}
 
@@ -486,9 +506,19 @@ export default function StoryDetailPage() {
             instead of relying on title text alone. */}
         {chapters.length > 1 && (
           <div className="mt-3 mb-1">
-            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5 px-5" style={{ color: "rgba(79,195,247,0.45)" }}>
-              Chapters
-            </p>
+            <div className="flex items-center justify-between mb-2.5 px-5">
+              <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>
+                Chapters
+              </p>
+              <button
+                onClick={handleOpenShareAll}
+                className="flex items-center gap-1 text-fs-body font-semibold transition-all active:scale-95"
+                style={{ color: "#a78bfa" }}
+              >
+                <Icon name="share" size={12} />
+                <span>Share whole story</span>
+              </button>
+            </div>
             <div className="flex gap-3 overflow-x-auto px-5 pb-1" style={{ scrollbarWidth: "none" }}>
               {chapters.map((c) => {
                 const isCurrent = c.id === entry.id;
@@ -599,8 +629,10 @@ export default function StoryDetailPage() {
           </button>
         </div>
 
-        {/* Cast panel — read-only */}
-        {entry.blocks.length > 0 && (
+        {/* Cast panel — read-only. Waits for avatarsResolved so it never
+            paints a character with the wrong (but real-looking) DiceBear
+            fallback before the real bank avatar swaps in. */}
+        {entry.blocks.length > 0 && avatarsResolved && (
           <div className="mt-4 mb-1">
             <ReadOnlyCastPanel blocks={entry.blocks} characterAvatars={characterAvatars} />
           </div>
@@ -666,7 +698,7 @@ export default function StoryDetailPage() {
           </div>
         ) : (
           <div className="px-5 mt-8 mb-4 flex gap-3">
-            {(isOwned || isAdmin) && (
+            {isOwned && (
               <button
                 onClick={handleEdit}
                 className="flex-1 py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
@@ -695,6 +727,19 @@ export default function StoryDetailPage() {
             children={allChildren}
             onClose={() => setShareOpen(false)}
             onMessageSaved={(msg) => setEntry((e) => e ? { ...e, shareMessage: msg } : e)}
+          />
+        )}
+
+        {shareAllOpen && chapters[0] && (
+          <ShareSheet
+            story={chapters[0]}
+            titleOverride={seriesDisplayTitle(chapters[0].title)}
+            children={allChildren}
+            onClose={() => setShareAllOpen(false)}
+            onMessageSaved={(msg) => {
+              setChapters((cs) => cs.map((c) => (c.id === chapters[0].id ? { ...c, shareMessage: msg } : c)));
+              setEntry((e) => (e && e.id === chapters[0].id ? { ...e, shareMessage: msg } : e));
+            }}
           />
         )}
       </div>

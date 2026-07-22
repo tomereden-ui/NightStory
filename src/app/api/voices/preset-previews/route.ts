@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
   const preset = VOICE_PRESETS.find((p) => p.key === presetKey);
   if (!preset) return NextResponse.json({ error: "Unknown presetKey." }, { status: 400 });
 
-  const text = clientText?.trim() || (SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en);
+  const baseText = clientText?.trim() || (SAMPLE_TEXTS[language] ?? SAMPLE_TEXTS.en);
+  const text = preset.previewTag ? `${preset.previewTag} ${baseText}` : baseText;
   const langCode = detectLangFromText(text, language);
 
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elVoiceId}`, {

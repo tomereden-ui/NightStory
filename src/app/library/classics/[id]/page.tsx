@@ -2,13 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { writeDraft } from "@/lib/draftStore";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { ClassicMeta } from "@/lib/classicStories";
-import { CLASSIC_STORIES } from "@/lib/classicStories";
 import type { ScriptBlock, StoryScene, Voice, MoralLesson } from "@/types";
 import Icon from "@/components/ui/Icon";
-import BookCover from "@/components/ui/BookCover";
 import ReadOnlyCastPanel from "@/components/story/ReadOnlyCastPanel";
 import ReadOnlyLessonsPanel from "@/components/story/ReadOnlyLessonsPanel";
 import ScriptTab from "@/components/studio/ScriptTab";
@@ -18,9 +15,6 @@ import ShareSheet from "@/components/ShareSheet";
 import type { LibraryEntry, CharacterProfile } from "@/lib/libraryStore";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { useListeningProgress } from "@/hooks/useListeningProgress";
-import { useAuth } from "@/context/AuthContext";
-
-const ADMIN_EMAIL = "tomereden@gmail.com";
 
 // Persists summary audio URLs across component mounts within a session
 const summaryAudioCache = new Map<string, string>();
@@ -94,8 +88,6 @@ export default function ClassicDetailPage() {
   const [id, setId] = useState(routeId);
   useEffect(() => { setId(routeId); }, [routeId]);
   const router = useRouter();
-  const { user } = useAuth();
-  const isAdmin = user?.email === ADMIN_EMAIL;
   const { effective } = useViewMode();
   const stickyMaxWidth = effective === "desktop" ? 896 : effective === "tablet" ? 672 : 448;
 
@@ -107,22 +99,24 @@ export default function ClassicDetailPage() {
   const [moralLessons, setMoralLessons] = useState<MoralLesson[] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
-  // Used only to decide Studio-open behavior (fork vs edit-in-place) — every
-  // hardcoded classic already has its own `stories` row (created the moment
-  // its script is generated), so favorite/share work for it regardless.
-  const isHardcoded = CLASSIC_STORIES.some((s) => s.id === id);
   const [favoritedBy, setFavoritedBy] = useState<string[]>([]);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [shareAllOpen, setShareAllOpen] = useState(false);
   const [allChildren, setAllChildren] = useState<DBChildProfile[]>([]);
-  const [openingInStudio, setOpeningInStudio] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   // ─── Script panel — same component/look as Studio's ScriptTab ─────────────
   const [voicePool, setVoicePool] = useState<Voice[]>(PRESET_VOICE_POOL);
   const [characterAvatars, setCharacterAvatars] = useState<Record<string, string>>({});
+  // Gates the Cast panel below — without this, it painted with an empty
+  // characterAvatars map on first render (before fetchBankAvatars resolves),
+  // which ReadOnlyCastPanel fills in with a DiceBear placeholder per
+  // character. That's a real-looking but WRONG avatar, not an obvious
+  // loading state, so it read as "starts with the old set, then swaps."
+  const [avatarsResolved, setAvatarsResolved] = useState(false);
 
   useEffect(() => {
     fetchVoicePool().then(setVoicePool);
@@ -131,11 +125,12 @@ export default function ClassicDetailPage() {
   // Deterministic bank-based avatars only (no live Gemini/Imagen generation)
   // — a classic's cast should look the same on every visit, not regenerate.
   useEffect(() => {
+    setAvatarsResolved(false);
     if (!blocks?.length) return;
     let cancelled = false;
     (async () => {
       const uniqueChars = Array.from(new Set(blocks.filter((b) => b.characterName !== "SFX").map((b) => b.characterName)));
-      if (!uniqueChars.length) return;
+      if (!uniqueChars.length) { setAvatarsResolved(true); return; }
       const bank = await fetchBankAvatars();
       if (cancelled) return;
       const avatars: Record<string, string> = {};
@@ -144,6 +139,7 @@ export default function ClassicDetailPage() {
         avatars[name] = resolveCharacterAvatar(name, type, bank, voicePool, characterProfiles?.[name]?.avatarUrl);
       }
       setCharacterAvatars(avatars);
+      setAvatarsResolved(true);
     })();
     return () => { cancelled = true; };
   }, [blocks, voicePool, characterProfiles]);
@@ -338,31 +334,14 @@ export default function ClassicDetailPage() {
     setShareOpen(true);
   }, [allChildren.length]);
 
-  const handleOpenInStudio = useCallback(async () => {
-    if (!meta || !blocks) return;
-    setOpeningInStudio(true);
-    const summary = getClassicSummary(meta.tagline, blocks);
-    // Admin-added classics (UUID IDs) are editable in-place; hardcoded classics fork.
-    // Either way, a classic can have real produced audio -- whether editing it
-    // touches the original row or forks a copy is a separate question from
-    // whether there's something worth hearing, so always carry the audio over
-    // (see the equivalent note in library/[id]/page.tsx's handleEdit).
-    writeDraft({
-      promptText: `${meta.title} — ${meta.tagline}`,
-      scriptBlocks: blocks,
-      summary,
-      coverPrompt: "",
-      coverUrl: meta.coverUrl ?? "",
-      editingStoryId: isHardcoded ? undefined : id,
-      characterAvatars: {},
-      storyTitle: meta.title,
-      language: storyLanguage,
-      characterProfiles,
-      audioUrl: storyAudioUrl ?? undefined,
-      durationSeconds: meta.durationSeconds,
-    }, "nightstory_studio2_draft_v1");
-    router.push("/studio?tab=script");
-  }, [meta, blocks, router, storyLanguage, characterProfiles, isHardcoded, id, storyAudioUrl]);
+  const handleOpenShareAll = useCallback(() => {
+    if (allChildren.length === 0) {
+      fetch("/api/child-profiles").then((r) => r.json()).then((d) => {
+        if (Array.isArray(d)) setAllChildren(d as DBChildProfile[]);
+      }).catch(() => {});
+    }
+    setShareAllOpen(true);
+  }, [allChildren.length]);
 
   const toggleSummaryPlay = useCallback(async () => {
     if (summaryPlaying) {
@@ -447,27 +426,30 @@ export default function ClassicDetailPage() {
       )}
 
       <div className="pb-64">
-        {/* Cover area — the book floats on this same atmospheric backdrop,
-            matching the "casting onto a dark background" look used
-            everywhere else this treatment appears. */}
-        <div className="relative overflow-hidden" style={{ flexShrink: 0, height: 340 }}>
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{
-              background: `radial-gradient(ellipse 70% 60% at 50% 35%, ${c1}28 0%, transparent 65%),
-                linear-gradient(180deg,#060a18 0%,#0d1a3a 50%,#05080f 100%)`,
-            }}
-          >
-            {!showCoverImg && (
+        {/* Cover area — same 16:9 crop + focus point as Studio's own cover
+            header (ScriptTab), so a story reads identically here as it does
+            there instead of a differently-shaped box. */}
+        <div className="relative overflow-hidden" style={{ flexShrink: 0, aspectRatio: "16/9" }}>
+          {showCoverImg ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={meta.coverUrl!}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover ken-burns"
+              style={{ objectPosition: "50% 30%" }}
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{
+                background: `radial-gradient(ellipse 70% 60% at 50% 35%, ${c1}28 0%, transparent 65%),
+                  linear-gradient(180deg,#060a18 0%,#0d1a3a 50%,#05080f 100%)`,
+              }}
+            >
               <span className="text-8xl" style={{ filter: `drop-shadow(0 0 32px ${c1}66)` }}>
                 {meta.emoji}
               </span>
-            )}
-          </div>
-
-          {showCoverImg && (
-            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 32, width: 198, height: 282 }}>
-              <BookCover coverUrl={meta.coverUrl!} alt="" borderRadius={12} onImgError={() => setImgFailed(true)} />
             </div>
           )}
 
@@ -539,9 +521,19 @@ export default function ClassicDetailPage() {
             which, instead of relying on title text alone. */}
         {chapters.length > 1 && (
           <div className="mb-5">
-            <p className="text-fs-body font-bold uppercase tracking-widest mb-2.5 px-5" style={{ color: `${c1}bb` }}>
-              Chapters
-            </p>
+            <div className="flex items-center justify-between mb-2.5 px-5">
+              <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: `${c1}bb` }}>
+                Chapters
+              </p>
+              <button
+                onClick={handleOpenShareAll}
+                className="flex items-center gap-1 text-fs-body font-semibold transition-all active:scale-95"
+                style={{ color: "#a78bfa" }}
+              >
+                <Icon name="share" size={12} />
+                <span>Share whole story</span>
+              </button>
+            </div>
             <div className="flex gap-3 overflow-x-auto px-5 pb-1" style={{ scrollbarWidth: "none" }}>
               {chapters.map((c) => {
                 const isCurrent = c.id === id;
@@ -693,8 +685,19 @@ export default function ClassicDetailPage() {
           />
         )}
 
-        {/* Cast panel — read-only */}
-        {isReady && blocks!.length > 0 && (
+        {shareAllOpen && chapters[0] && (
+          <ShareSheet
+            story={chapters[0]}
+            titleOverride={seriesDisplayTitle(chapters[0].title)}
+            children={allChildren}
+            onClose={() => setShareAllOpen(false)}
+          />
+        )}
+
+        {/* Cast panel — read-only. Waits for avatarsResolved so it never
+            paints a character with the wrong (but real-looking) DiceBear
+            fallback before the real bank avatar swaps in. */}
+        {isReady && blocks!.length > 0 && avatarsResolved && (
           <div className="mt-4 mb-1">
             <ReadOnlyCastPanel blocks={blocks!} characterAvatars={characterAvatars} />
           </div>
@@ -744,28 +747,6 @@ export default function ClassicDetailPage() {
           </div>
         )}
 
-        {/* Open in Studio button — admin only, since classics aren't the user's own story */}
-        {isAdmin && (
-          <div className="px-5 mt-8 mb-4">
-            <button
-              onClick={handleOpenInStudio}
-              disabled={!isReady || openingInStudio}
-              className="w-full py-3.5 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              style={isReady && !openingInStudio ? {
-                background: `linear-gradient(135deg, ${c1}18, ${c2}18)`,
-                border: `1px solid ${c1}44`,
-                color: c1,
-              } : {
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "rgba(255,255,255,0.40)",
-              }}
-            >
-              <span>🎬</span>
-              <span>{openingInStudio ? "Opening…" : "Open in Studio"}</span>
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Sticky audio player — constrained to app width */}

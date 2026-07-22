@@ -1,7 +1,7 @@
 import Icon from "./Icon";
 
 // Multi-chapter indicator shown on story/classic cards — the stacked-cards
-// + sound glyph plus the chapter count, no pill/background frame around it.
+// glyph plus the chapter count, no pill/background frame around it.
 export default function SeriesCountBadge({ count, size = "md" }: { count: number; size?: "sm" | "md" }) {
   const iconSize = size === "sm" ? 20 : 24;
   return (

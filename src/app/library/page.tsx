@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import Icon from "@/components/ui/Icon";
 import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
-import BookCover from "@/components/ui/BookCover";
+import StoryPoster from "@/components/ui/StoryPoster";
 import { dedupeBySeries } from "@/lib/dedupeBySeries";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { getLessonsCatalog } from "@/constants/lessonsUi";
@@ -155,14 +156,13 @@ function ClassicsTab({ classics, loading, onClassicUpdated, matchesFilter }: {
 
         const cardBody = (
           <>
-            {/* Image — BookCover now reserves its own top/right breathing
-                room internally (percentage padding on its outer container —
-                see BookCover.tsx's header comment), so this no longer needs
-                the asymmetric pt/pr padding two earlier attempts here
-                needed and still under-shot. */}
+            {/* Image — StoryPoster handles its own hover grow/tilt/shadow
+                bloom internally; the grid's own gap-3 plus this p-1 give it
+                enough room that a grown card doesn't visually collide with
+                its neighbors. */}
             <div className="relative w-full p-1" style={{ aspectRatio: "2/3" }}>
               {meta.coverUrl ? (
-                <BookCover coverUrl={meta.coverUrl} alt={displayTitle} borderRadius={8} />
+                <StoryPoster coverUrl={meta.coverUrl} alt={displayTitle} borderRadius={8} />
               ) : (
                 <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
                   style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
@@ -307,7 +307,7 @@ function FamilyStoriesGrid({
                 className="absolute inset-1 transition-all active:scale-[0.97] select-none block"
               >
                 {entry.coverUrl ? (
-                  <BookCover coverUrl={entry.coverUrl} alt={entry.title} borderRadius={8} />
+                  <StoryPoster coverUrl={entry.coverUrl} alt={entry.title} borderRadius={8} />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center rounded-lg overflow-hidden"
                     style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)` }}>
@@ -461,6 +461,66 @@ function FamilyStoriesGrid({
   );
 }
 
+// ─── FilterChipRow — labeled, horizontally-scrollable chip row with nav
+// arrows. Used for both the mood/story-type row and the moral-lesson row in
+// the advanced search panel below — previously just a bare overflow-x-auto
+// div with no label (so it wasn't obvious what a row of chips was filtering
+// by) and no way to tell or reach hidden content besides a raw touch-drag.
+// Arrows only render on whichever side still has more to scroll to.
+function FilterChipRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateArrows = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    updateArrows();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateArrows, { passive: true });
+    const ro = new ResizeObserver(updateArrows);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", updateArrows); ro.disconnect(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateArrows, children]);
+
+  const scrollBy = (dir: 1 | -1) => scrollRef.current?.scrollBy({ left: dir * 160, behavior: "smooth" });
+
+  const arrowStyle: React.CSSProperties = {
+    position: "absolute", top: "50%", transform: "translateY(-50%)", zIndex: 2,
+    width: 28, height: 28, borderRadius: "50%",
+    background: "rgba(5,8,20,0.9)", border: "1px solid rgba(255,255,255,0.16)",
+    color: "rgba(255,255,255,0.85)", display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 18, fontWeight: 700, lineHeight: 1,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+  };
+
+  return (
+    <div>
+      <p className="text-fs-label font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(148,163,184,0.5)" }}>
+        {label}
+      </p>
+      <div className="relative">
+        {canScrollLeft && (
+          <button onClick={() => scrollBy(-1)} aria-label="Scroll left" style={{ ...arrowStyle, left: -2 }}>‹</button>
+        )}
+        <div ref={scrollRef} className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+          {children}
+        </div>
+        {canScrollRight && (
+          <button onClick={() => scrollBy(1)} aria-label="Scroll right" style={{ ...arrowStyle, right: -2 }}>›</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LibraryPage() {
   const { t, language } = useLanguage();
   const { effective } = useViewMode();
@@ -468,13 +528,25 @@ export default function LibraryPage() {
 
   const [activeTab, setActiveTab] = useState<LibraryTab>("my-stories");
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("library-tab");
-    if (saved === "classics" || saved === "community" || saved === "family" || saved === "all") setActiveTab(saved as LibraryTab);
+    // An explicit ?tab= from a deep link (e.g. Home's "View all" on a
+    // specific rail) always wins over whatever tab this session last had
+    // open — the whole point of that link is "take me to Classics", not
+    // "take me wherever I happened to leave off".
+    const tabParam = searchParams.get("tab");
+    const validTabs: LibraryTab[] = ["all", "my-stories", "family", "classics", "community"];
+    if (tabParam && (validTabs as string[]).includes(tabParam)) {
+      setActiveTab(tabParam as LibraryTab);
+    } else {
+      const saved = sessionStorage.getItem("library-tab");
+      if (saved === "classics" || saved === "community" || saved === "family" || saved === "all") setActiveTab(saved as LibraryTab);
+    }
     const childId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
     setActiveChildId(childId);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const [children, setChildren] = useState<DBChildProfile[]>([]);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
@@ -732,7 +804,7 @@ export default function LibraryPage() {
                     {/* Clean jacket — title lives below the book */}
                     <div className="relative w-full" style={{ height: 150 }}>
                       {item.coverUrl ? (
-                        <BookCover coverUrl={item.coverUrl} alt={item.title} borderRadius={10} />
+                        <StoryPoster coverUrl={item.coverUrl} alt={item.title} borderRadius={10} />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-fs-display rounded-2xl overflow-hidden"
                           style={{ background: `linear-gradient(145deg,${c1}33,${c2}55)`, border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -817,7 +889,7 @@ export default function LibraryPage() {
             className="flex flex-col gap-2 mb-3"
             onMouseDown={(e) => e.preventDefault()}
           >
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+            <FilterChipRow label="Mood">
               {MOODS.map((m) => {
                 const active = selectedMoods.has(m.id);
                 return (
@@ -834,9 +906,9 @@ export default function LibraryPage() {
                   </button>
                 );
               })}
-            </div>
+            </FilterChipRow>
 
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+            <FilterChipRow label="Moral lesson">
               {lessonCatalog.map((l) => {
                 const active = selectedLessons.has(l.id);
                 return (
@@ -853,7 +925,7 @@ export default function LibraryPage() {
                   </button>
                 );
               })}
-            </div>
+            </FilterChipRow>
 
             <select
               value={selectedLanguage}
@@ -933,7 +1005,7 @@ export default function LibraryPage() {
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                     <Link href={`/library/${entry.id}`} className="relative w-full active:opacity-80 transition-opacity p-1" style={{ aspectRatio: "2/3" }}>
                       {entry.coverUrl ? (
-                        <BookCover coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
+                        <StoryPoster coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
                       ) : (
                         <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
                           style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
@@ -1048,7 +1120,7 @@ export default function LibraryPage() {
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                     <div style={{ position: "relative", paddingBottom: "100%", background: "rgba(167,139,250,0.08)" }}>
                       {s.coverUrl
-                        ? <div style={{ position: "absolute", inset: 4 }}><BookCover coverUrl={s.coverUrl} alt={s.title} borderRadius={8} /></div>
+                        ? <div style={{ position: "absolute", inset: 4 }}><StoryPoster coverUrl={s.coverUrl} alt={s.title} borderRadius={8} /></div>
                         : <div className="absolute inset-0 flex items-center justify-center text-3xl rounded-lg overflow-hidden">{s.emoji ?? "🌙"}</div>
                       }
                     </div>
@@ -1143,7 +1215,7 @@ export default function LibraryPage() {
                         card's own rounded corners. */}
                     <Link href={`/library/${entry.id}`} className="relative w-full active:opacity-80 transition-opacity p-1" style={{ aspectRatio: "2/3" }}>
                       {entry.coverUrl ? (
-                        <BookCover coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
+                        <StoryPoster coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
                       ) : (
                         <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
                           style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>

@@ -1,9 +1,9 @@
 export const VOICE_PRESETS = [
-  { key: "calm_narrator", label: "Calm Narrator",      emoji: "📖", description: "Comforting, warm, steady — the default bedtime voice",         stability: 0.65, similarity_boost: 0.80, style: 0.20, speed: 0.90, use_speaker_boost: true },
-  { key: "adventure",     label: "Adventure",           emoji: "⚔️", description: "Excited, dynamic — action, surprises, silly twists",          stability: 0.35, similarity_boost: 0.80, style: 0.70, speed: 1.05, use_speaker_boost: true },
-  { key: "whisper",       label: "Whisper",             emoji: "🌙", description: "Soft and slow — endings, secrets, falling asleep",             stability: 0.75, similarity_boost: 0.80, style: 0.05, speed: 0.78, use_speaker_boost: false },
-  { key: "warm_tender",   label: "Warm & Tender",       emoji: "🫶", description: "Comforting moments, reassurance, emotional beats",             stability: 0.68, similarity_boost: 0.88, style: 0.15, speed: 0.85, use_speaker_boost: true },
-  { key: "playful",       label: "Playful Character",   emoji: "🎭", description: "Mischievous side-character — comic relief, high energy",       stability: 0.30, similarity_boost: 0.75, style: 0.80, speed: 1.10, use_speaker_boost: true },
+  { key: "calm_narrator", label: "Option 1", emoji: "📖", description: "Steady and warm — a good all-purpose narration voice",   previewTag: "[warmly]",   stability: 0.50, similarity_boost: 0.85, style: 0.15, speed: 0.92, use_speaker_boost: true },
+  { key: "adventure",     label: "Option 2", emoji: "⚔️", description: "More energy and excitement in the delivery",             previewTag: "[excited]",  stability: 0.00, similarity_boost: 0.75, style: 0.75, speed: 1.15, use_speaker_boost: true },
+  { key: "whisper",       label: "Option 3", emoji: "🌙", description: "Soft and hushed — good for quiet, sleepy moments",       previewTag: "[whispers]", stability: 1.00, similarity_boost: 0.80, style: 0.00, speed: 0.75, use_speaker_boost: false },
+  { key: "warm_tender",   label: "Option 4", emoji: "🫶", description: "Gentle and tender, slower and reassuring",               previewTag: "[gently]",   stability: 0.50, similarity_boost: 0.90, style: 0.30, speed: 0.85, use_speaker_boost: true },
+  { key: "playful",       label: "Option 5", emoji: "🎭", description: "Lively and expressive, with more character",            previewTag: "[playfully]",stability: 0.00, similarity_boost: 0.70, style: 0.90, speed: 1.10, use_speaker_boost: true },
 ] as const;
 
 export type VoicePresetKey = typeof VOICE_PRESETS[number]["key"];
