@@ -128,6 +128,25 @@ function scoreVoice(v: PresetVoiceConfig, need: VoiceNeed): number {
 }
 
 /**
+ * Picks a single best-matching preset voice for a character profile — the
+ * same gender/style scoring assignVoicesToCharactersDeterministic uses for
+ * the rest of the cast, exposed standalone. Used when the hero represents
+ * the child themself: callers previously passed no primaryVoiceId at all in
+ * that case, silently defaulting to a fixed preset (PRESET_VOICES[0])
+ * regardless of the child's actual gender.
+ */
+export function pickVoiceForCharacterProfile(profile: CharacterProfile): string {
+  const need = deriveNeed(profile);
+  let best = PRESET_VOICES[0];
+  let bestScore = -Infinity;
+  PRESET_VOICES.forEach((c, idx) => {
+    const s = scoreVoice(c, need) - idx * 0.001;
+    if (s > bestScore) { bestScore = s; best = c; }
+  });
+  return best.id;
+}
+
+/**
  * Deterministic fallback: assigns a preset voice id to every distinct
  * speaking character by scoring gender (hard preference) and vocal style
  * (soft preference) against each candidate. This is the synchronous, free,

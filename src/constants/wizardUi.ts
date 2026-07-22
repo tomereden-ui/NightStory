@@ -4,7 +4,10 @@
 export interface WizardUiCopy {
   back: string;
   startOver: string;
-  skipThisStep: string;
+  /** Label for the button that auto-picks a random answer and advances —
+   *  used to read "Skip", but skipping never actually left the answer
+   *  blank (it always silently filled a random default), so the honest
+   *  label is the same "Surprise me" wording as the dice-pill action. */
   skip: string;
   yourOwnName: string;
   aMagicalName: string;
@@ -73,8 +76,7 @@ export interface WizardUiCopy {
 const EN: WizardUiCopy = {
   back: "Back",
   startOver: "Start over",
-  skipThisStep: "Skip this step →",
-  skip: "Skip →",
+  skip: "Surprise me!",
   yourOwnName: "Your own name",
   aMagicalName: "A magical name",
   aBraveStranger: "A brave stranger",
@@ -124,8 +126,7 @@ const EN: WizardUiCopy = {
 const HE: WizardUiCopy = {
   back: "חזרה",
   startOver: "התחל מחדש",
-  skipThisStep: "דלג על שלב זה →",
-  skip: "דלג →",
+  skip: "הפתיעו אותי!",
   yourOwnName: "השם שלך",
   aMagicalName: "שם קסום",
   aBraveStranger: "זר אמיץ",
@@ -175,8 +176,7 @@ const HE: WizardUiCopy = {
 const ES: WizardUiCopy = {
   back: "Atrás",
   startOver: "Empezar de nuevo",
-  skipThisStep: "Saltar este paso →",
-  skip: "Saltar →",
+  skip: "¡Sorpréndeme!",
   yourOwnName: "Tu propio nombre",
   aMagicalName: "Un nombre mágico",
   aBraveStranger: "Un desconocido valiente",
@@ -226,8 +226,7 @@ const ES: WizardUiCopy = {
 const FR: WizardUiCopy = {
   back: "Retour",
   startOver: "Recommencer",
-  skipThisStep: "Passer cette étape →",
-  skip: "Passer →",
+  skip: "Surprends-moi !",
   yourOwnName: "Ton propre nom",
   aMagicalName: "Un nom magique",
   aBraveStranger: "Un inconnu courageux",
@@ -277,8 +276,7 @@ const FR: WizardUiCopy = {
 const DE: WizardUiCopy = {
   back: "Zurück",
   startOver: "Neu starten",
-  skipThisStep: "Diesen Schritt überspringen →",
-  skip: "Überspringen →",
+  skip: "Überrasch mich!",
   yourOwnName: "Dein eigener Name",
   aMagicalName: "Ein magischer Name",
   aBraveStranger: "Ein mutiger Fremder",
@@ -328,8 +326,7 @@ const DE: WizardUiCopy = {
 const PT: WizardUiCopy = {
   back: "Voltar",
   startOver: "Recomeçar",
-  skipThisStep: "Pular esta etapa →",
-  skip: "Pular →",
+  skip: "Me surpreenda!",
   yourOwnName: "Seu próprio nome",
   aMagicalName: "Um nome mágico",
   aBraveStranger: "Um estranho corajoso",
@@ -379,8 +376,7 @@ const PT: WizardUiCopy = {
 const IT: WizardUiCopy = {
   back: "Indietro",
   startOver: "Ricomincia",
-  skipThisStep: "Salta questo passaggio →",
-  skip: "Salta →",
+  skip: "Sorprendimi!",
   yourOwnName: "Il tuo nome",
   aMagicalName: "Un nome magico",
   aBraveStranger: "Uno sconosciuto coraggioso",
@@ -430,8 +426,7 @@ const IT: WizardUiCopy = {
 const AR: WizardUiCopy = {
   back: "رجوع",
   startOver: "البدء من جديد",
-  skipThisStep: "تخطي هذه الخطوة →",
-  skip: "تخطي →",
+  skip: "فاجئني!",
   yourOwnName: "اسمك الخاص",
   aMagicalName: "اسم سحري",
   aBraveStranger: "غريب شجاع",
@@ -481,8 +476,7 @@ const AR: WizardUiCopy = {
 const JA: WizardUiCopy = {
   back: "戻る",
   startOver: "最初からやり直す",
-  skipThisStep: "このステップをスキップ →",
-  skip: "スキップ →",
+  skip: "サプライズして!",
   yourOwnName: "あなた自身の名前",
   aMagicalName: "魔法の名前",
   aBraveStranger: "勇敢な見知らぬ人",
@@ -532,8 +526,7 @@ const JA: WizardUiCopy = {
 const HI: WizardUiCopy = {
   back: "वापस",
   startOver: "फिर से शुरू करें",
-  skipThisStep: "यह चरण छोड़ें →",
-  skip: "छोड़ें →",
+  skip: "मुझे चौंका दो!",
   yourOwnName: "आपका अपना नाम",
   aMagicalName: "एक जादुई नाम",
   aBraveStranger: "एक बहादुर अजनबी",

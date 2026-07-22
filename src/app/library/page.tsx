@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { writeDraft } from "@/lib/draftStore";
 import { useLanguage } from "@/context/LanguageContext";
 import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
@@ -16,6 +17,9 @@ import { getLessonsCatalog } from "@/constants/lessonsUi";
 import { LANGUAGE_META } from "@/lib/i18n";
 import type { Language } from "@/types";
 
+
+// Results shown per "page" before the "Next stories" button reveals more.
+const PAGE_SIZE = 30;
 
 const CARD_PALETTES: [string, string][] = [
   ["#4fc3f7", "#7c3aed"],
@@ -461,6 +465,21 @@ function FamilyStoriesGrid({
   );
 }
 
+// ─── NextStoriesButton — reveals the next page of an already-fetched,
+// already-filtered list. Purely a client-side reveal (increases how many of
+// the existing array are sliced into view) — not a new network fetch.
+function NextStoriesButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="mt-3 w-full py-3 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]"
+      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }}
+    >
+      Next stories →
+    </button>
+  );
+}
+
 // ─── FilterChipRow — labeled, horizontally-scrollable chip row with nav
 // arrows. Used for both the mood/story-type row and the moral-lesson row in
 // the advanced search panel below — previously just a bare overflow-x-auto
@@ -503,7 +522,7 @@ function FilterChipRow({ label, children }: { label: string; children: React.Rea
 
   return (
     <div>
-      <p className="text-fs-label font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(148,163,184,0.5)" }}>
+      <p className="text-fs-label font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(79,195,247,0.75)" }}>
         {label}
       </p>
       <div className="relative">
@@ -529,6 +548,39 @@ export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState<LibraryTab>("my-stories");
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // A Draft card (unproduced-but-saved script, see includeDrafts) reopens
+  // Studio at that exact script instead of the read-only story page — which
+  // assumes real audio and a full script the lightweight list summary
+  // doesn't carry, so the full entry is fetched fresh here first. Mirrors
+  // library/[id]/page.tsx's own handleEdit "Open in Studio" mechanism.
+  const handleOpenDraft = useCallback(async (draftId: string) => {
+    try {
+      const res = await fetch(`/api/library/${draftId}`);
+      if (!res.ok) return;
+      const entry = await res.json() as LibraryEntry;
+      if (!("id" in entry)) return;
+      writeDraft({
+        promptText: "",
+        scriptBlocks: entry.blocks,
+        summary: entry.summary,
+        coverPrompt: "",
+        coverUrl: entry.coverUrl ?? "",
+        coverFocusX: entry.coverFocusX,
+        coverFocusY: entry.coverFocusY,
+        editingStoryId: entry.id,
+        storyTitle: entry.title,
+        language: entry.language,
+        audioUrl: entry.audioUrl,
+        durationSeconds: entry.durationSeconds,
+        moralLessons: entry.moralLessons,
+        characterProfiles: entry.characterProfiles,
+        scenes: entry.scenes,
+      }, "nightstory_studio2_draft_v1");
+      router.push("/studio?tab=script");
+    } catch { /* stay on the Library card if this fails */ }
+  }, [router]);
 
   useEffect(() => {
     // An explicit ?tab= from a deep link (e.g. Home's "View all" on a
@@ -562,7 +614,14 @@ export default function LibraryPage() {
   const [search, setSearch] = useState("");
   const [selectedMoods, setSelectedMoods] = useState<Set<string>>(new Set());
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
-  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [selectedLanguages, setSelectedLanguages] = useState<Set<Language>>(new Set());
+  // How many of the active tab's (already-filtered) results are shown before
+  // the "Next stories" button reveals another page — resets whenever the tab
+  // or any filter changes, so switching context always starts back at the top.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [activeTab, search, selectedMoods, selectedLessons, selectedLanguages]);
   // Filter chips/dropdown stay collapsed until the search bar is focused —
   // opened on focus, and kept open (rather than closing on blur) whenever
   // there's an active search/filter, so tapping a chip doesn't immediately
@@ -622,7 +681,10 @@ export default function LibraryPage() {
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) { setEntries(JSON.parse(cached) as LibraryEntry[]); }
     } catch {}
-    fetch(`/api/library?childId=${encodeURIComponent(activeChildId)}`, { cache: "no-store" })
+    // includeDrafts=1: My Stories is the one place an unproduced-but-saved
+    // script should surface (as a Draft card) so "Save for later" in Studio
+    // actually leads somewhere the user can find it again.
+    fetch(`/api/library?childId=${encodeURIComponent(activeChildId)}&includeDrafts=1`, { cache: "no-store" })
       .then((r) => r.json())
       .then((lib) => {
         const arr = Array.isArray(lib) ? lib as LibraryEntry[] : [];
@@ -662,7 +724,8 @@ export default function LibraryPage() {
   };
   const matchesLessons = (item: Searchable) =>
     selectedLessons.size === 0 || (item.moralLessons ?? []).some((l) => selectedLessons.has(l.lesson));
-  const matchesLanguage = (item: Searchable) => !selectedLanguage || item.language === selectedLanguage;
+  const matchesLanguage = (item: Searchable) =>
+    selectedLanguages.size === 0 || (!!item.language && selectedLanguages.has(item.language as Language));
   const matchesFilters = (item: Searchable) =>
     matchesQuery(item) && matchesMood(item) && matchesLessons(item) && matchesLanguage(item);
 
@@ -692,11 +755,16 @@ export default function LibraryPage() {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+  const toggleLanguage = (code: Language) => setSelectedLanguages((prev) => {
+    const next = new Set(prev);
+    if (next.has(code)) next.delete(code); else next.add(code);
+    return next;
+  });
   const clearAllFilters = () => {
     setSearch("");
     setSelectedMoods(new Set());
     setSelectedLessons(new Set());
-    setSelectedLanguage("");
+    setSelectedLanguages(new Set());
   };
 
   const handleDeleteConfirm = async (id: string) => {
@@ -884,7 +952,7 @@ export default function LibraryPage() {
           )}
         </div>
 
-        {(searchExpanded || search || selectedMoods.size > 0 || selectedLessons.size > 0 || selectedLanguage) && (
+        {(searchExpanded || search || selectedMoods.size > 0 || selectedLessons.size > 0 || selectedLanguages.size > 0) && (
           <div
             className="flex flex-col gap-2 mb-3"
             onMouseDown={(e) => e.preventDefault()}
@@ -927,24 +995,24 @@ export default function LibraryPage() {
               })}
             </FilterChipRow>
 
-            <select
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="self-start px-3 py-2 rounded-xl text-fs-body outline-none"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.09)",
-                color: selectedLanguage ? "#fff" : "rgba(255,255,255,0.55)",
-                appearance: "none",
-              }}
-            >
-              <option value="" style={{ background: "#0D1120" }}>🌐 All languages</option>
-              {allLanguages.map(([code, meta]) => (
-                <option key={code} value={code} style={{ background: "#0D1120" }}>
-                  {meta.flag} {meta.label}
-                </option>
-              ))}
-            </select>
+            <FilterChipRow label="Language">
+              {allLanguages.map(([code, meta]) => {
+                const active = selectedLanguages.has(code);
+                return (
+                  <button
+                    key={code}
+                    onClick={() => toggleLanguage(code)}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
+                    style={active
+                      ? { background: "rgba(79,195,247,0.16)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7" }
+                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+                  >
+                    <span>{meta.flag}</span>
+                    <span>{meta.label}</span>
+                  </button>
+                );
+              })}
+            </FilterChipRow>
           </div>
         )}
       </div>
@@ -989,11 +1057,12 @@ export default function LibraryPage() {
               </button>
             </div>
           ) : (
+            <>
             <div
               className="grid gap-3"
               style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}
             >
-              {filteredAll.map((entry) => {
+              {filteredAll.slice(0, visibleCount).map((entry) => {
                 const [c1, c2] = cardPalette(entry.title);
                 const isSeries = !!entry.chapterCount && entry.chapterCount > 1;
                 const displayTitle = isSeries ? seriesDisplayTitle(entry.title) : entry.title;
@@ -1003,7 +1072,7 @@ export default function LibraryPage() {
                 return (
                   <div key={entry.id} className="flex flex-col rounded-xl transition-all select-none"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    <Link href={`/library/${entry.id}`} className="relative w-full active:opacity-80 transition-opacity p-1" style={{ aspectRatio: "2/3" }}>
+                    <Link href={entry.isClassic ? `/library/classics/${entry.id}` : `/library/${entry.id}`} className="relative w-full active:opacity-80 transition-opacity p-1" style={{ aspectRatio: "2/3" }}>
                       {entry.coverUrl ? (
                         <StoryPoster coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
                       ) : (
@@ -1015,13 +1084,13 @@ export default function LibraryPage() {
                       {entry.isPublic && (
                         <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-fs-caption font-bold uppercase tracking-wide"
                           style={{ background: "rgba(4,6,18,0.75)", color: "rgba(255,255,255,0.6)", backdropFilter: "blur(4px)" }}>
-                          {entry.isClassic ? t("classicsTab") : t("communityTab")}
+                          {entry.isClassic ? t("classicBadge") : t("communityTab")}
                         </span>
                       )}
                     </Link>
                     <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
                       <div className="flex-1 min-w-0">
-                        <Link href={`/library/${entry.id}`}>
+                        <Link href={entry.isClassic ? `/library/classics/${entry.id}` : `/library/${entry.id}`}>
                           <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
                         </Link>
                         <div className="flex items-center gap-1 mt-1">
@@ -1045,6 +1114,10 @@ export default function LibraryPage() {
                 );
               })}
             </div>
+            {filteredAll.length > visibleCount && (
+              <NextStoriesButton onClick={() => setVisibleCount((v) => v + PAGE_SIZE)} />
+            )}
+            </>
           )
         )}
 
@@ -1075,8 +1148,9 @@ export default function LibraryPage() {
               </button>
             </div>
           ) : (
+            <>
             <FamilyStoriesGrid
-              entries={filteredFamily}
+              entries={filteredFamily.slice(0, visibleCount)}
               children={children}
               effective={effective}
               onAssigned={(storyId, childIds) =>
@@ -1085,6 +1159,10 @@ export default function LibraryPage() {
                 )
               }
             />
+            {filteredFamily.length > visibleCount && (
+              <NextStoriesButton onClick={() => setVisibleCount((v) => v + PAGE_SIZE)} />
+            )}
+            </>
           )
         )}
 
@@ -1114,7 +1192,7 @@ export default function LibraryPage() {
                 🌍 Stories made with NightStory
               </p>
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-                {filteredCommunity.map((s) => (
+                {filteredCommunity.slice(0, visibleCount).map((s) => (
                   <a key={s.id} href={`/library/${s.id}`}
                     className="flex flex-col rounded-2xl transition-all active:scale-[0.97]"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -1130,6 +1208,9 @@ export default function LibraryPage() {
                   </a>
                 ))}
               </div>
+              {filteredCommunity.length > visibleCount && (
+                <NextStoriesButton onClick={() => setVisibleCount((v) => v + PAGE_SIZE)} />
+              )}
             </div>
           )
         )}
@@ -1166,7 +1247,7 @@ export default function LibraryPage() {
               className="grid gap-3"
               style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : effective === "tablet" ? "repeat(3, 1fr)" : "repeat(3, 1fr)" }}
             >
-              {filtered.map((entry) => {
+              {filtered.slice(0, visibleCount).map((entry) => {
                 const isConfirming = confirmingId === entry.id;
                 const isDeleting = deletingId === entry.id;
                 const [c1, c2] = cardPalette(entry.title);
@@ -1212,24 +1293,55 @@ export default function LibraryPage() {
                   >
                     {/* Image — a couple px of padding gives the 3D book's
                         spine/page slivers room to peek without hitting this
-                        card's own rounded corners. */}
-                    <Link href={`/library/${entry.id}`} className="relative w-full active:opacity-80 transition-opacity p-1" style={{ aspectRatio: "2/3" }}>
-                      {entry.coverUrl ? (
-                        <StoryPoster coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
-                      ) : (
-                        <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
-                          style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
-                          <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
-                        </div>
-                      )}
-                    </Link>
+                        card's own rounded corners. A Draft (script saved,
+                        no audio yet) reopens Studio instead of the read-only
+                        story page, which assumes real audio to exist. */}
+                    {entry.isDraft ? (
+                      <div
+                        role="button" tabIndex={0}
+                        onClick={() => handleOpenDraft(entry.id)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleOpenDraft(entry.id); }}
+                        className="relative w-full active:opacity-80 transition-opacity p-1 cursor-pointer"
+                        style={{ aspectRatio: "2/3" }}
+                      >
+                        {entry.coverUrl ? (
+                          <StoryPoster coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
+                        ) : (
+                          <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
+                            style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                            <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>📝</span>
+                          </div>
+                        )}
+                        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-fs-caption font-bold uppercase tracking-wide"
+                          style={{ background: "rgba(251,191,36,0.18)", border: "1px solid rgba(251,191,36,0.4)", color: "#fbbf24", backdropFilter: "blur(4px)" }}>
+                          Draft
+                        </span>
+                      </div>
+                    ) : (
+                      <Link href={`/library/${entry.id}`} className="relative w-full active:opacity-80 transition-opacity p-1" style={{ aspectRatio: "2/3" }}>
+                        {entry.coverUrl ? (
+                          <StoryPoster coverUrl={entry.coverUrl} alt={displayTitle} borderRadius={8} />
+                        ) : (
+                          <div className="absolute inset-1 flex items-center justify-center text-fs-display rounded-lg overflow-hidden"
+                            style={{ background: `linear-gradient(145deg, ${c1}33, ${c2}55)` }}>
+                            <span style={{ filter: `drop-shadow(0 0 14px ${c1}aa)` }}>🌙</span>
+                          </div>
+                        )}
+                      </Link>
+                    )}
 
                     {/* Info row */}
                     <div className="flex items-start gap-1 px-2 pt-2 pb-2.5">
                       <div className="flex-1 min-w-0">
-                        <Link href={`/library/${entry.id}`}>
-                          <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
-                        </Link>
+                        {entry.isDraft ? (
+                          <button onClick={() => handleOpenDraft(entry.id)} className="text-left w-full">
+                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+                          </button>
+                        ) : (
+                          <Link href={`/library/${entry.id}`}>
+                            <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide">{displayTitle}</p>
+                          </Link>
+                        )}
                         <div className="flex items-center gap-1 mt-1">
                           {duration && (
                             <span className="text-fs-caption tracking-wide"
@@ -1256,6 +1368,9 @@ export default function LibraryPage() {
                 );
               })}
             </div>
+            {filtered.length > visibleCount && (
+              <NextStoriesButton onClick={() => setVisibleCount((v) => v + PAGE_SIZE)} />
+            )}
             </>
           )
         )}

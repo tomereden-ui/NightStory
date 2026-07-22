@@ -18,6 +18,10 @@ export async function GET(req: NextRequest) {
   const seriesId = req.nextUrl.searchParams.get("seriesId");
   const rawLimit = Number(req.nextUrl.searchParams.get("limit"));
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 100;
+  // Opt-in only — My Stories is the one view that wants an unproduced but
+  // saved script to show up as a Draft; every other caller of this route
+  // (Home rails, recently-played, etc.) still wants fully-saved stories only.
+  const includeDrafts = req.nextUrl.searchParams.get("includeDrafts") === "1";
   // Chapter list for a story detail page — all siblings sharing seriesId.
   if (seriesId) {
     return NextResponse.json(await getSeriesChapters(seriesId, ctx.familyId));
@@ -27,7 +31,7 @@ export async function GET(req: NextRequest) {
   if (scope === "all") {
     return NextResponse.json(await getAllVisibleEntries(ctx.familyId, { limit }));
   }
-  return NextResponse.json(await getEntrySummaries(ctx.familyId, { childId, limit }));
+  return NextResponse.json(await getEntrySummaries(ctx.familyId, { childId, limit, includeDrafts }));
 }
 
 // POST — create a draft story row the moment a script is generated in Studio,

@@ -57,13 +57,22 @@ function Label({ children }: { children: React.ReactNode }) {
   return <p className="text-fs-body mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>{children}</p>;
 }
 
-function TextInput({ value, onChange, placeholder, rows }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {
+function TextInput({ value, onChange, placeholder, rows, disabled }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number; disabled?: boolean }) {
   if (rows) {
-    return <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={rows}
+    return <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={rows} disabled={disabled}
       className={baseInput + " resize-none"} style={baseStyle} />;
   }
-  return <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-    className={baseInput} style={baseStyle} />;
+  return <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
+    className={baseInput} style={disabled ? { ...baseStyle, opacity: 0.6, cursor: "not-allowed" } : baseStyle} />;
+}
+
+// Strips a trailing "- Chapter N" / "- פרק N" suffix — same helper duplicated
+// per-file across the app (library/[id], library/classics/[id], home, share
+// page) since a chapter's OWN title already embeds the suffix and there's no
+// separately-stored "series base name". Used here to derive a new episode's
+// title from whichever existing chapter was picked as the series anchor.
+function seriesDisplayTitle(title: string): string {
+  return title.replace(/\s*-\s*(chapter|פרק)\s*\d+\s*$/i, "").trim();
 }
 
 function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
@@ -633,6 +642,9 @@ interface StoryCost {
   geminiChars: number; elChars: number;
   estimatedSfx: number; estimatedTokens: number; hasCover: boolean;
   costs: { geminiTextGen: number; geminiTts: number; geminiImage: number; elTts: number; elSfx: number; total: number };
+  /** Every distinct AI model actually used to produce this story — undefined
+   *  for stories produced before this was tracked. */
+  modelsUsed?: string[];
 }
 interface LibraryCostData {
   stories: StoryCost[];
@@ -836,6 +848,12 @@ function LibraryMode({ data, onRefresh }: { data: LibraryCostData; onRefresh: ()
                     <span className="text-fs-body font-bold" style={{ color: "#4fc3f7", minWidth: 60, textAlign: "right" }}>{fmtCost(cost as number)}</span>
                   </div>
                 ))}
+                <div className="flex items-start gap-2 pt-1 mt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <span className="flex-shrink-0 text-fs-body" style={{ color: "rgba(255,255,255,0.4)" }}>Models used</span>
+                  <span className="flex-1 text-fs-body text-right" style={{ color: "rgba(255,255,255,0.55)" }}>
+                    {s.modelsUsed?.length ? s.modelsUsed.join(", ") : "not tracked (produced before this was added)"}
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -1006,6 +1024,12 @@ export default function AdminPage() {
 
   // ── Add Story fields ──────────────────────────────────────────────────────
   const [addTitle, setAddTitle]           = useState(addStoryDraft.addTitle ?? "");
+  // Stable id for this add-story session, minted once at Process Script and
+  // reused for every Produce click after it (as editingStoryId) and for the
+  // final save — mirrors how Studio's flow keeps one id across an entire
+  // session instead of a fresh one per produce. Without this, production_metrics
+  // never had a stable story_id to update in place; see mark-script-done.
+  const [addStoryId, setAddStoryId]       = useState("");
   const [addScript, setAddScript]         = useState(addStoryDraft.addScript ?? "");
   const [addIsPublic, setAddIsPublic]     = useState(addStoryDraft.addIsPublic ?? true);
   const [addCategory, setAddCategory]     = useState<"classics" | "community">(addStoryDraft.addCategory ?? "classics");
@@ -1392,12 +1416,13 @@ export default function AdminPage() {
     // of its own, so detect it from the finished text first — reused below
     // for Auto Assign's voice matching too.
     setProcessPhase("Checking Hebrew lettering…");
+    let detectedLanguage = scriptLanguage;
     try {
       const langRes = await fetch("/api/detect-language", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: finalBlocks }),
       });
       const langData = await langRes.json() as { language?: string };
-      if (langData.language) setScriptLanguage(langData.language);
+      if (langData.language) { setScriptLanguage(langData.language); detectedLanguage = langData.language; }
       if (langData.language === "he") {
         const hebRes = await fetch("/api/fix-hebrew-mixup", {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: finalBlocks }),
@@ -1413,6 +1438,24 @@ export default function AdminPage() {
 
     setProcessPhase("");
     setProcessState("done");
+
+    // Seed the production_metrics `script_done` row once per add-story session,
+    // mirroring what /api/library's POST does for Studio's flow. Without this,
+    // ProductionTimer.flush (perfMetrics.ts) never finds an existing row to
+    // update in place, so every Produce click here inserted a fresh, orphaned
+    // row instead of updating one through the script_done → done lifecycle.
+    const scriptDoneId = addStoryId || crypto.randomUUID();
+    if (!addStoryId) setAddStoryId(scriptDoneId);
+    void fetch("/api/admin/mark-script-done", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        storyId: scriptDoneId,
+        title: addTitle,
+        language: detectedLanguage,
+        dialogueCount: finalBlocks.filter((b) => b.characterName !== "SFX").length,
+        sfxCount: finalBlocks.filter((b) => b.characterName === "SFX").length,
+      }),
+    }).catch((err) => console.warn("[Admin] mark-script-done failed:", err));
 
     // Fetch cover image in the background (non-blocking)
     setStoreCoverLoading(true);
@@ -1491,6 +1534,11 @@ export default function AdminPage() {
         characterProfiles,
         durationMinutes: 5,
         skipLibrarySave: true,
+        // Reuse the id seeded by mark-script-done at Process Script time so
+        // ProductionTimer.flush updates that same production_metrics row
+        // in place instead of inserting a fresh orphaned one on every
+        // Produce click (including re-produces after a director's note).
+        editingStoryId: addStoryId || crypto.randomUUID(),
       };
       if (coverMatch) {
         produceBody.coverImageMimeType = coverMatch[1];
@@ -1569,6 +1617,7 @@ export default function AdminPage() {
     setCharacterAvatars({}); setOpenDirectSheet(null); setCharacterTypes({});
     setCastProfiles({}); setScriptLanguage("en");
     setAddAsEpisode(false); setEpisodeSeriesAnchorId(""); setEpisodeChapterNumber(""); setEpisodeAssignLog(null);
+    setAddStoryId("");
     try { localStorage.removeItem(ADD_STORY_DRAFT_KEY); } catch { /* best-effort */ }
   };
 
@@ -1901,6 +1950,19 @@ export default function AdminPage() {
     ? seriesStoryList.filter((s) => s.seriesId && s.seriesId === episodeAnchorEntry.seriesId)
     : [];
 
+  // Once a series + chapter number are picked, the title isn't the admin's
+  // to type — it's always "{series base name} - Chapter {N}", so it can't
+  // drift from the naming convention every other chapter already follows
+  // (seriesDisplayTitle strips exactly this suffix everywhere else it's
+  // read back). Only derived once the chapter number is a real number —
+  // before that there's nothing valid to build a title from yet.
+  const derivedEpisodeTitle = addAsEpisode && episodeAnchorEntry && episodeChapterNumber.trim() && Number.isInteger(Number(episodeChapterNumber))
+    ? `${seriesDisplayTitle(episodeAnchorEntry.title)} - Chapter ${episodeChapterNumber.trim()}`
+    : null;
+  useEffect(() => {
+    if (derivedEpisodeTitle) setAddTitle(derivedEpisodeTitle);
+  }, [derivedEpisodeTitle]);
+
   // ── Admin Services: Feature a story on the home hero banner ───────────────
   const [promoteStoryId, setPromoteStoryId] = useState("");
   const [promoteRunning, setPromoteRunning] = useState(false);
@@ -2199,7 +2261,12 @@ export default function AdminPage() {
 
         {/* ── Title ── */}
         <Divider title="Story Title" />
-        <TextInput value={addTitle} onChange={setAddTitle} placeholder="Maya the Bee" />
+        <TextInput value={addTitle} onChange={setAddTitle} placeholder="Maya the Bee" disabled={!!derivedEpisodeTitle} />
+        {derivedEpisodeTitle && (
+          <p className="text-fs-body mt-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+            Derived from the series — chapters are always named "{"{series name}"} - Chapter {"{N}"}".
+          </p>
+        )}
 
         {processError && (
           <p className="text-fs-body mt-2" style={{ color: "#EC4899" }}>{processError}</p>

@@ -276,7 +276,7 @@ async function synthesizeChirp3HD(
   outputPath: string,
   language = "en",
   opts?: { maxAttempts?: number; perAttemptTimeoutMs?: number },
-): Promise<void> {
+): Promise<{ model: string }> {
   const maxAttempts = opts?.maxAttempts ?? 5;
   const timeoutMs   = opts?.perAttemptTimeoutMs ?? 25_000;
   const locale = LANG_TO_LOCALE[language] ?? "en-US";
@@ -337,7 +337,7 @@ async function synthesizeChirp3HD(
     const mp3 = Buffer.from(json.audioContent, "base64");
     console.log(`[${ts()}][Chirp3HD] received ${mp3.length} bytes`);
     fs.writeFileSync(outputPath.replace(/\.wav$/i, ".mp3"), mp3);
-    return;
+    return { model };
   }
   throw new Error(lastError || "Chirp3HD TTS failed");
 }
@@ -573,7 +573,7 @@ export async function synthesizeLine(
   // fallback keeps them consistent for the rest of the story instead of
   // drifting back and forth.
   forceFallback = false,
-): Promise<{ mimeType?: string; provider: TtsProvider }> {
+): Promise<{ mimeType?: string; provider: TtsProvider; model: string }> {
   // Strip performance tags [warmly] etc. for providers that don't interpret them
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
 
@@ -597,7 +597,7 @@ export async function synthesizeLine(
       useSpeakerBoost,
       speed,
     );
-    return { provider: "elevenlabs" };
+    return { provider: "elevenlabs", model: "eleven_v3" };
   }
 
   // Gemini is the primary engine for every language — confirmed Hebrew-capable
@@ -617,7 +617,7 @@ export async function synthesizeLine(
       try {
         console.log(`[${ts()}][Gemini TTS] text → (${geminiModel})`, JSON.stringify(line));
         const result = await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, geminiModel);
-        return { ...result, provider: "gemini" };
+        return { ...result, provider: "gemini", model: geminiModel };
       } catch (err) {
         // Both Gemini TTS models have a confirmed intermittent failure mode:
         // HTTP 200, finishReason "OTHER", zero audio bytes, despite reporting
@@ -655,7 +655,7 @@ export async function synthesizeLine(
       // Hebrew prosody tuning: lower stability allows natural intonation variance;
       // higher style exaggeration pushes the voice away from flat/robotic delivery.
       await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.30, style ?? 0.60, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
-      return { mimeType: "audio/mpeg", provider: "elevenlabs" };
+      return { mimeType: "audio/mpeg", provider: "elevenlabs", model: "eleven_v3" };
     }
 
     if (engine === "chirp3hd") {
@@ -665,8 +665,8 @@ export async function synthesizeLine(
         continue;
       }
       // Pass raw line — synthesizeChirp3HD converts [tags] to SSML internally
-      await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, effectiveLang, geminiOpts);
-      return { mimeType: "audio/mpeg", provider: "chirp3hd" };
+      const { model } = await synthesizeChirp3HD(line, voiceId, gcTtsKey, outputPath, effectiveLang, geminiOpts);
+      return { mimeType: "audio/mpeg", provider: "chirp3hd", model };
     }
   }
 

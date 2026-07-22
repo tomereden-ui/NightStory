@@ -28,13 +28,22 @@ import { buildNamePronunciationMap, applyPronunciationOverrides } from "@/lib/se
 async function matchAvatarsForProfiles(
   characterProfiles: Record<string, CharacterProfile> | undefined,
   geminiKey: string,
+  childName?: string,
+  childAvatarUrl?: string,
 ): Promise<Record<string, CharacterProfile> | undefined> {
   if (!characterProfiles || Object.keys(characterProfiles).length === 0) return characterProfiles;
+  const childNameLower = childName?.trim().toLowerCase();
   const entries = await Promise.all(
     Object.entries(characterProfiles).map(async ([name, profile]) => {
       // Narrator's displayed avatar comes from the selected narrator voice,
       // not the bank — skip the match call entirely.
       if (profile.type === "narrator") return [name, profile] as const;
+      // This character IS the child themself (Q1's "your own name" option
+      // names the hero exactly the child's own name) — use their real photo
+      // instead of a generic bank-matched illustration.
+      if (childAvatarUrl && childNameLower && name.trim().toLowerCase() === childNameLower) {
+        return [name, { ...profile, avatarUrl: childAvatarUrl }] as const;
+      }
       try {
         const avatarUrl = await findBestAvatarForCharacter(profile, geminiKey);
         return [name, avatarUrl ? { ...profile, avatarUrl } : profile] as const;
@@ -373,6 +382,8 @@ async function runProduction(
   moralLessons?: MoralLesson[],
   familyId?: string,
   existingTitle?: string,
+  childName?: string,
+  childAvatarUrl?: string,
 ) {
   const jobTmp = path.join(TMP_DIR, jobId);
   fs.mkdirSync(jobTmp, { recursive: true });
@@ -450,7 +461,7 @@ async function runProduction(
       console.warn(`[${ts()}][produce-drama] generateScenes failed:`, err);
       return [] as Awaited<ReturnType<typeof generateScenes>>;
     });
-    const avatarsPromise = matchAvatarsForProfiles(characterProfiles, geminiKey).catch((err) => {
+    const avatarsPromise = matchAvatarsForProfiles(characterProfiles, geminiKey, childName, childAvatarUrl).catch((err) => {
       console.warn(`[${ts()}][produce-drama] avatar matching failed:`, err);
       return characterProfiles;
     });
@@ -518,6 +529,16 @@ async function runProduction(
     // this check; the flag caps how far that drifts rather than eliminating
     // every case.
     const characterEngineState = new Map<string, TtsProvider>();
+
+    // Every distinct AI model actually used to produce THIS story, persisted
+    // onto the saved entry (see `entry.modelsUsed` below). Seeded with
+    // "gemini-3.5-flash" since it's the one model every text-side step in
+    // this route (planDrama, matchAvatarsForProfiles, language detection)
+    // unconditionally uses — and it's also the exact model the earlier
+    // generate-story/five-question-story call used to write the script in
+    // the first place, so this single constant legitimately covers both
+    // stages without needing to thread a value across that separate request.
+    const modelsUsed = new Set<string>(["gemini-3.5-flash"]);
 
     // Batch-production TTS gets a tighter retry budget than the default
     // (5 attempts × 25s): the fallback chain (2.5 same-voice → Hebrew EL /
@@ -589,7 +610,7 @@ async function runProduction(
         try {
           const vs = useELForChar ? override?.voiceSettings : undefined;
           const forceFallback = !useELForChar && characterEngineState.has(charName);
-          const { provider } = await synthesizeLine(
+          const { provider, model: ttsModel } = await synthesizeLine(
             line, voice, ttsKey, outPath, persona, useELForChar,
             vs?.stability ?? profile?.stability,
             vs?.style ?? profile?.style,
@@ -600,6 +621,7 @@ async function runProduction(
             vs?.speed,
             forceFallback,
           );
+          modelsUsed.add(ttsModel);
           if (!useELForChar && provider !== "gemini" && characterEngineState.get(charName) !== provider) {
             characterEngineState.set(charName, provider);
             console.warn(`[${ts()}][TTS] "${charName}" switched to ${provider} fallback for the rest of this production (Gemini TTS failed on a line)`);
@@ -769,6 +791,9 @@ async function runProduction(
             writeSilence(durationHint, outPath.replace(".mp3", ".wav"));
           } else {
             pendingUploads.push({ hash: sfxHash, localPath: outPath, type: "sfx", text: desc });
+            // ElevenLabs' sound-generation endpoint has no model_id to report —
+            // this label is descriptive, not a real API model identifier.
+            modelsUsed.add("elevenlabs-sound-generation");
           }
 
           sfxDone++;
@@ -1035,6 +1060,11 @@ async function runProduction(
     let coverUrl: string | undefined;
     const coverResult = await coverPromise;
     if (coverResult) {
+      // Slight over-count when an existing cover was successfully reused
+      // (coverPromise skips generateCoverImage in that case) — accepted:
+      // distinguishing "downloaded" from "freshly generated" here isn't
+      // worth the extra plumbing for a models-used list.
+      modelsUsed.add("gemini-3.1-flash-image");
       const ext = coverResult.mimeType.includes("png") ? "png" : "jpg";
       const storageKey = `${storyId}.${ext}`;
       const { error: coverErr } = await supabase.storage
@@ -1072,6 +1102,7 @@ async function runProduction(
       isClassic: isClassic ?? false,
       characterProfiles: characterProfilesWithAvatars && Object.keys(characterProfilesWithAvatars).length ? characterProfilesWithAvatars : undefined,
       moralLessons: moralLessons?.length ? moralLessons : undefined,
+      modelsUsed: Array.from(modelsUsed),
     };
     perfMeta.durationSeconds = entry.durationSeconds;
 
@@ -1094,21 +1125,18 @@ async function runProduction(
     }
     perf.end("library_save");
 
-    // Wait for the element-audio cache upload kicked off before mixing —
-    // it's had the entire mixing/cover/library-save duration to finish in
-    // the background, so this is normally an instant no-op by now.
-    await elementUploadPromise;
-
-    // ── Persist new element records to DB (non-fatal if it fails) ────────────
-    if (newElements.length > 0) {
-      try {
-        await saveStoryElements(newElements);
-        console.log(`[${ts()}][ElementStore] Saved ${newElements.length} new elements (dialogue hits: ${cacheDialogueHits}, SFX hits: ${cacheSfxHits}, library hits: ${sfxLibraryHits})`);
-      } catch (elErr) {
-        console.warn(`[${ts()}][ElementStore] saveStoryElements failed:`, elErr);
-      }
-    }
-
+    // Flush metrics AND mark the job done right here, immediately after the
+    // story itself is durably saved — deliberately BEFORE the element-cache
+    // upload/persist below. This whole function runs as an un-awaited
+    // background task (see POST handler) under a 300s maxDuration; the
+    // element-cache step is explicitly best-effort and, for a story with many
+    // cache-miss lines, can itself take long enough that the two together
+    // occasionally crossed the 300s cutoff — killing the process mid-flight
+    // during the *later* `perf.flush()` network call specifically (a plain
+    // synchronous updateJob() just before it would already have completed),
+    // leaving a fully-produced, fully-saved story's production_metrics row
+    // stuck at 'script_done' forever. Nothing below this point is needed for
+    // the metrics record or for the client's job-status poll to see "done".
     updateJob(jobId, {
       status: "done",
       step: libraryError ? "⚠️ Drama ready, but library save failed" : "✅ Drama ready!",
@@ -1128,6 +1156,28 @@ async function runProduction(
     perfMeta.skippedLines = skippedLines.length;
     console.log(`[${ts()}][perf] ${perf.summaryLine()}`);
     await perf.flush(supabase, { storyId, jobId, ...perfMeta, outcome: "done" });
+
+    // Wait for the element-audio cache upload kicked off before mixing —
+    // it's had the entire mixing/cover/library-save duration to finish in
+    // the background, so this is normally an instant no-op by now. Best-effort
+    // like saveStoryElements below: an unguarded rejection here would fall
+    // into the outer catch and incorrectly flip the "done" job/metrics this
+    // just recorded back to "error", even though the story itself is fine.
+    try {
+      await elementUploadPromise;
+    } catch (uploadErr) {
+      console.warn(`[${ts()}][produce-drama] elementUploadPromise failed:`, uploadErr);
+    }
+
+    // ── Persist new element records to DB (non-fatal if it fails) ────────────
+    if (newElements.length > 0) {
+      try {
+        await saveStoryElements(newElements);
+        console.log(`[${ts()}][ElementStore] Saved ${newElements.length} new elements (dialogue hits: ${cacheDialogueHits}, SFX hits: ${cacheSfxHits}, library hits: ${sfxLibraryHits})`);
+      } catch (elErr) {
+        console.warn(`[${ts()}][ElementStore] saveStoryElements failed:`, elErr);
+      }
+    }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown production error";
     console.error(`[${ts()}][produce-drama] Fatal error:`, msg);
@@ -1171,6 +1221,12 @@ export async function POST(req: NextRequest) {
       skipLibrarySave?: boolean;
       moralLessons?: MoralLesson[];
       title?: string;
+      // The active child's own name/photo — when a character's name matches
+      // this exactly (the hero, if Q1's "your own name" option was used),
+      // its avatar becomes the child's real photo instead of a generic
+      // avatar-bank match. See matchAvatarsForProfiles.
+      childName?: string;
+      childAvatarUrl?: string;
     };
     try {
       body = await req.json();
@@ -1216,7 +1272,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fire-and-forget background processing
-    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave, body.moralLessons, familyCtx.familyId, body.title);
+    runProduction(jobId, storyId, body.blocks, body.summary ?? "", geminiKey, elevenKey, durationMinutes, body.coverPrompt, existingCover, body.force, body.narratorVoiceId, body.existingCoverUrl, body.characterDescriptions, body.characterTypes, body.childIds, body.isPublic, body.isClassic, body.characterProfiles, body.skipLibrarySave, body.moralLessons, familyCtx.familyId, body.title, body.childName, body.childAvatarUrl);
 
     return NextResponse.json({ jobId });
   } catch (err: unknown) {

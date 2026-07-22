@@ -37,7 +37,7 @@ function estimateTokens(blockChars: number): number {
 export async function GET() {
   const { data: rows, error } = await supabase
     .from("stories")
-    .select("id, title, duration_seconds, blocks, cover_url, is_public");
+    .select("id, title, duration_seconds, blocks, cover_url, is_public, models_used");
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -78,6 +78,7 @@ export async function GET() {
       estimatedTokens,
       hasCover,
       costs: { ...costs, total: totalCost },
+      modelsUsed: Array.isArray(row.models_used) ? (row.models_used as string[]) : undefined,
     };
   });
 

@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
-import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import { assignVoicesToCharacters, pickVoiceForCharacterProfile } from "@/lib/services/voiceAssignment";
 import { trackGemini } from "@/lib/usageTracker";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, buildLengthTargetReminder, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
 import { generateScenes } from "@/lib/services/sceneGenerator";
 import type { ScriptBlock } from "@/types";
 
@@ -117,6 +117,12 @@ export interface GenerateStoryRequest {
   preferredFigures?: string[];
   interests?: string;
   notes?: string;
+  // The active child's own name — compared against the hero name to detect
+  // "the hero IS the child", so the hero's voice can be cast by the child's
+  // real gender instead of whatever primaryVoiceId the caller sent (which in
+  // practice was either a fixed default or, from the wizard-mode chat call,
+  // a vestigial hardcoded "v1" that isn't a real preset id at all).
+  childName?: string;
 }
 
 interface RawBlock {
@@ -230,7 +236,10 @@ export async function POST(req: NextRequest) {
 
   const durationMinutes = Math.min(15, Math.max(1, body.durationMinutes ?? 5));
   const guidance = readGuidance();
-  const prompt = buildUserPrompt(body);
+  // Reinforced here, not just in the system instruction — a numeric target
+  // stated once at the tail of a 500+ line system brief was apparently getting
+  // out-weighted by everything else in it (see buildLengthTargetReminder).
+  const prompt = buildUserPrompt(body) + buildLengthTargetReminder(durationMinutes);
 
   let existingTitles: string[] = [];
   try {
@@ -265,6 +274,7 @@ export async function POST(req: NextRequest) {
     // check the actual output and, if it's off by more than 20%, ask Gemini
     // to expand/shorten and regenerate rather than silently accepting it.
     const targetWords = Math.round(durationMinutes * 140);
+    const targetBlockRange = { min: Math.max(4, Math.round(durationMinutes * 2.5)), max: Math.max(8, Math.round(durationMinutes * 3.6)) };
     let raw: RawResponse | undefined;
     let currentPrompt = prompt;
     const maxLengthAttempts = 3;
@@ -332,7 +342,7 @@ export async function POST(req: NextRequest) {
       const actualWords = estimateWordCount(raw!.blocks ?? []);
       if (isWithinLengthTolerance(actualWords, targetWords) || attempt === maxLengthAttempts) break;
       console.warn(`[generate-story] Attempt ${attempt}: ${actualWords} words vs target ${targetWords} — retrying with a length correction.`);
-      currentPrompt = `${prompt}${buildLengthCorrectionNote(actualWords, targetWords)}`;
+      currentPrompt = `${prompt}${buildLengthCorrectionNote(actualWords, targetWords, raw!.blocks?.length, targetBlockRange)}`;
     }
 
     if (!raw) {
@@ -345,9 +355,19 @@ export async function POST(req: NextRequest) {
     }
 
     const heroName = body.hero ?? "";
+    // When the hero represents the child (wizard-mode "Main character" field
+    // set to exactly the child's own name), cast the hero's voice by the
+    // child's real gender rather than trusting body.primaryVoiceId — in
+    // practice that was either a fixed default (prompt mode, which never sent
+    // it) or a vestigial hardcoded "v1" from the chat UI that isn't a real
+    // preset id at all.
+    const heroIsChild = !!body.childName && heroName.trim().toLowerCase() === body.childName.trim().toLowerCase();
+    const heroVoiceId = heroIsChild && body.gender
+      ? pickVoiceForCharacterProfile({ type: "child", gender: body.gender === "boy" ? "male" : body.gender === "girl" ? "female" : "neutral", voicePersona: "playful" })
+      : body.primaryVoiceId;
     // Gemini's preset pool now voices every language, so casting no longer
     // needs a separate Hebrew EL-voice path.
-    const characterVoiceMap = await assignVoicesToCharacters(raw.blocks ?? [], heroName, body.primaryVoiceId, raw.characters ?? {}, apiKey);
+    const characterVoiceMap = await assignVoicesToCharacters(raw.blocks ?? [], heroName, heroVoiceId, raw.characters ?? {}, apiKey);
     // The user's default narrator voice always wins for the narrator — nature-
     // based casting would otherwise assign it something else from the moment
     // the story is generated, visible immediately in Studio's Cast section.

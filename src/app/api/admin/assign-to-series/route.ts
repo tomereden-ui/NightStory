@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEntry, getSeriesChapters, addEntry, type LibraryEntry } from "@/lib/libraryStore";
+import { getEntry, getSeriesChapters, addEntry, updateSeriesMeta, type LibraryEntry } from "@/lib/libraryStore";
 import { copyCastAssignments } from "@/lib/services/storyPolicies";
 
 export const dynamic = "force-dynamic";
@@ -60,13 +60,16 @@ export async function POST(req: NextRequest) {
   });
 
   // Keep every sibling chapter's chapter_count in sync, and — if the anchor
-  // was standalone — stamp its own series_id/chapter_number now too.
+  // was standalone — stamp its own series_id/chapter_number now too. A targeted
+  // column update, not addEntry(...c) — `c` comes from getSeriesChapters, which
+  // fetches a lightweight projection without blocks/character_profiles/scenes/
+  // moral_lessons, and running that through addEntry's full-row upsert used to
+  // blank those columns out on every sibling whenever a new chapter was linked.
   await Promise.all(
     existingChapters.map((c) => {
       const needsUpdate = c.chapterCount !== chapterCount || (anchorWasStandalone && c.id === anchor.id);
       if (!needsUpdate) return Promise.resolve();
-      return addEntry({
-        ...c,
+      return updateSeriesMeta(c.id, {
         seriesId,
         chapterNumber: anchorWasStandalone && c.id === anchor.id ? 1 : c.chapterNumber,
         chapterCount,

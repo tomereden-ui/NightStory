@@ -72,7 +72,16 @@ async function runReviewPass(
 
     const raw = result.response.text().trim();
     const jsonStr = raw.replace(/^```[^\n]*\n?/, "").replace(/\n?```$/, "").trim();
-    const validated = JSON.parse(jsonStr) as { index: number; text: string; status: "ok" | "fixed" }[];
+    let validated: { index: number; text: string; status: "ok" | "fixed" }[];
+    try {
+      validated = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      // The parse error alone (message + position) isn't enough to diagnose
+      // WHY Gemini's JSON was malformed next time this happens — log the
+      // actual text so a real occurrence can be inspected, not just guessed at.
+      console.warn(`[validate-blocks][${passLabel}] JSON.parse failed on response (${jsonStr.length} chars):`, jsonStr);
+      throw parseErr;
+    }
 
     for (const item of validated) {
       const original = passBlocks[item.index];

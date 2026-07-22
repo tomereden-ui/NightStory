@@ -145,29 +145,56 @@ export default function LessonEditor({
 
   // ─── Collapsed view — compact chips only ────────────────────────────────
 
-  if (!expanded) {
-    return (
-      <div
-        className="mb-4 rounded-2xl px-4 py-4"
-        style={{
-          background: "linear-gradient(160deg, rgba(139,92,246,0.09), rgba(79,195,247,0.05))",
-          border: "1px solid rgba(139,92,246,0.25)",
-          boxShadow: "0 0 28px rgba(139,92,246,0.06)",
-        }}
+  // Apply should only enable once the user has actually CHANGED something
+  // from what's already confirmed for this story -- previously this was
+  // just "at least one selected", so opening the editor on a story that
+  // already has lessons (which pre-selects them) enabled Apply immediately
+  // even though nothing had changed yet. A change means either the picker
+  // selection differs from what's confirmed, OR an existing lesson was
+  // erased (which may not touch pendingLabels at all if it wasn't a preset
+  // in the grid to begin with).
+  const selectionUnchanged = pendingLabels.length === currentPresets.length
+    && pendingLabels.every((l) => currentPresets.includes(l));
+  const canApply = !selectionUnchanged || pendingRemoved.length > 0;
+
+  // ─── Unified panel ──────────────────────────────────────────────────────────
+  // Same collapsible header (icon chip + title + rotating arrow) as Story
+  // Scenes / Script / Director's Note, replacing the standalone "Edit"
+  // button (collapsed) and the X-close icon (expanded) this used to have —
+  // one consistent way to open/close every panel on this screen.
+  return (
+    <div
+      className="mb-4 rounded-2xl p-4 flex flex-col gap-3"
+      style={{
+        background: expanded ? "rgba(139,92,246,0.06)" : "linear-gradient(160deg, rgba(139,92,246,0.09), rgba(79,195,247,0.05))",
+        border: expanded ? "1.5px solid rgba(139,92,246,0.3)" : "1px solid rgba(139,92,246,0.25)",
+        boxShadow: expanded ? "0 0 24px rgba(139,92,246,0.08)" : "0 0 28px rgba(139,92,246,0.06)",
+      }}
+    >
+      <button
+        onClick={() => (expanded ? cancelEditor() : openEditor())}
+        className="flex items-center justify-between w-full text-left"
       >
-        <div className="mb-1">
-          <span className="text-fs-heading font-bold tracking-tight flex items-center gap-1.5" style={{ color: "#E9D8FD" }}>
-            <Icon name="sparkles" size={16} />
-            {ui.panelTitle}
-          </span>
+        <span className="text-fs-heading font-bold tracking-tight flex items-center gap-1.5" style={{ color: "#E9D8FD" }}>
+          <Icon name="sparkles" size={16} />
+          {ui.panelTitle}
+        </span>
+        <span
+          className="transition-transform flex-shrink-0"
+          style={{ color: "rgba(196,181,253,0.6)", fontSize: 22, transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+        >
+          ▾
+        </span>
+      </button>
+
+      {!expanded && (
+        <>
           {hasDisplayedLessons && (
-            <p className="text-fs-body mt-0.5" style={{ color: "rgba(196,181,253,0.55)" }}>
+            <p className="text-fs-body -mt-2" style={{ color: "rgba(196,181,253,0.55)" }}>
               {ui.collapsedSubtitle}
             </p>
           )}
-        </div>
 
-        <div className="mt-3">
           {analyzing && (
             <div className="flex items-center gap-2 py-1.5">
               <span className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0"
@@ -212,68 +239,22 @@ export default function LessonEditor({
               {hasLessons ? ui.emptyNoConfirmed : ui.emptyNoLessons}
             </p>
           )}
-        </div>
 
-        {hasPendingChanges && onRewrite && (
-          <button
-            onClick={() => onRewrite(buildRewriteInstruction())}
-            className="mt-3 w-full py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
-            style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.22)", color: "#C4B5FD" }}
-          >
-            <span>✦</span>
-            <span>{hasLessons ? (lessons.length === 1 ? ui.rewriteWithOne : ui.rewriteWithMany) : ui.rewriteGeneric}</span>
-          </button>
-        )}
+          {hasPendingChanges && onRewrite && (
+            <button
+              onClick={() => onRewrite(buildRewriteInstruction())}
+              className="w-full py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
+              style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.22)", color: "#C4B5FD" }}
+            >
+              <span>✦</span>
+              <span>{hasLessons ? (lessons.length === 1 ? ui.rewriteWithOne : ui.rewriteWithMany) : ui.rewriteGeneric}</span>
+            </button>
+          )}
+        </>
+      )}
 
-        <button
-          onClick={openEditor}
-          className="mt-3 w-full py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
-          style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.3)", color: "#C4B5FD" }}
-        >
-          {ui.editButton}
-        </button>
-      </div>
-    );
-  }
-
-  // ─── Expanded panel — full details (scrollable) + add/remove ───────────────
-
-  // Apply should only enable once the user has actually CHANGED something
-  // from what's already confirmed for this story -- previously this was
-  // just "at least one selected", so opening the editor on a story that
-  // already has lessons (which pre-selects them) enabled Apply immediately
-  // even though nothing had changed yet. A change means either the picker
-  // selection differs from what's confirmed, OR an existing lesson was
-  // erased (which may not touch pendingLabels at all if it wasn't a preset
-  // in the grid to begin with).
-  const selectionUnchanged = pendingLabels.length === currentPresets.length
-    && pendingLabels.every((l) => currentPresets.includes(l));
-  const canApply = !selectionUnchanged || pendingRemoved.length > 0;
-
-  return (
-    <div
-      className="mb-4 rounded-2xl p-4 flex flex-col gap-4"
-      style={{ background: "rgba(139,92,246,0.06)", border: "1.5px solid rgba(139,92,246,0.3)", boxShadow: "0 0 24px rgba(139,92,246,0.08)" }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="text-fs-body font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "rgba(139,92,246,0.6)" }}>
-            <Icon name="sparkles" size={14} />
-            {ui.panelTitle}
-          </span>
-          <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
-            {ui.expandedSubtitle}
-          </p>
-        </div>
-        <button
-          onClick={cancelEditor}
-          className="text-white/48"
-        >
-          <Icon name="close" size={16} />
-        </button>
-      </div>
-
+      {expanded && (
+        <>
       {/* Scrollable body: current lessons (with remove) + the picker grid */}
       <div className="flex flex-col gap-4 overflow-y-auto" style={{ maxHeight: "60vh" }}>
         {hasDisplayedLessons && (
@@ -406,6 +387,8 @@ export default function LessonEditor({
         >
           {ui.removeAll}
         </button>
+      )}
+        </>
       )}
     </div>
   );

@@ -6,11 +6,11 @@ import path from "path";
 import { inferCompanionAbility } from "@/utils/inferCompanionAbility";
 import { MOOD_LABELS } from "@/constants/lunaScripts";
 import type { StorySeeds } from "@/utils/buildStoryPrompt";
-import { assignVoicesToCharacters } from "@/lib/services/voiceAssignment";
+import { assignVoicesToCharacters, pickVoiceForCharacterProfile } from "@/lib/services/voiceAssignment";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
-import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, resolveTitleConflict, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
+import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, buildLengthTargetReminder, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, resolveTitleConflict, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
 import { generateScenes } from "@/lib/services/sceneGenerator";
 
 export const maxDuration = 120;
@@ -35,6 +35,12 @@ export interface FiveQuestionStoryRequest {
   preferredFigures?: string[];
   interests?: string;
   notes?: string;
+  // The active child's own name — compared against seeds.q1_hero to detect
+  // "the hero IS the child" (Q1's "your own name" option defaults the hero
+  // name to exactly this). Used to cast the hero's voice by the child's real
+  // gender instead of a fixed default, and to use the child's own photo as
+  // the hero's avatar instead of a generic bank match.
+  childName?: string;
 }
 
 interface RawBlock {
@@ -155,7 +161,10 @@ export async function POST(req: NextRequest) {
     interests: body.interests,
     notes: body.notes,
   });
-  const userPrompt = buildUserPrompt(seeds);
+  // Reinforced here, not just in the system instruction — a numeric target
+  // stated once at the tail of a 500+ line system brief was apparently getting
+  // out-weighted by everything else in it (see buildLengthTargetReminder).
+  const userPrompt = buildUserPrompt(seeds) + buildLengthTargetReminder(clampedDuration);
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -182,6 +191,7 @@ export async function POST(req: NextRequest) {
     // check the actual output and, if it's off by more than 20%, ask Gemini
     // to expand/shorten and regenerate rather than silently accepting it.
     const targetWords = Math.round(clampedDuration * 140);
+    const targetBlockRange = { min: Math.max(4, Math.round(clampedDuration * 2.5)), max: Math.max(8, Math.round(clampedDuration * 3.6)) };
     let raw: RawResponse | undefined;
     let currentPrompt = userPrompt;
     const maxLengthAttempts = 3;
@@ -218,7 +228,7 @@ export async function POST(req: NextRequest) {
       const actualWords = estimateWordCount(raw!.blocks ?? []);
       if (isWithinLengthTolerance(actualWords, targetWords) || attempt === maxLengthAttempts) break;
       console.warn(`[five-question-story] Attempt ${attempt}: ${actualWords} words vs target ${targetWords} — retrying with a length correction.`);
-      currentPrompt = `${userPrompt}${buildLengthCorrectionNote(actualWords, targetWords)}`;
+      currentPrompt = `${userPrompt}${buildLengthCorrectionNote(actualWords, targetWords, raw!.blocks?.length, targetBlockRange)}`;
     }
 
     if (!raw) {
@@ -231,7 +241,16 @@ export async function POST(req: NextRequest) {
       raw.title = await resolveTitleConflict(genAI, raw.title, raw.summary ?? "", existingTitles);
     }
 
-    const characterVoiceMap = await assignVoicesToCharacters(raw.blocks ?? [], seeds.q1_hero, undefined, raw.characters ?? {}, apiKey);
+    // When the hero represents the child (Q1's "your own name" option defaults
+    // the hero name to exactly the child's own name), cast the hero's voice by
+    // the child's real gender instead of leaving primaryVoiceId undefined —
+    // which silently fell back to a fixed preset (PRESET_VOICES[0]) regardless
+    // of who the child actually is.
+    const heroIsChild = !!body.childName && seeds.q1_hero.trim().toLowerCase() === body.childName.trim().toLowerCase();
+    const heroVoiceId = heroIsChild && body.gender
+      ? pickVoiceForCharacterProfile({ type: "child", gender: body.gender === "boy" ? "male" : body.gender === "girl" ? "female" : "neutral", voicePersona: "playful" })
+      : undefined;
+    const characterVoiceMap = await assignVoicesToCharacters(raw.blocks ?? [], seeds.q1_hero, heroVoiceId, raw.characters ?? {}, apiKey);
     // The user's default narrator voice always wins for the narrator — nature-
     // based casting would otherwise assign it something else from the moment
     // the story is generated, visible immediately in Studio's Cast section.

@@ -35,8 +35,14 @@ function computeSceneDurations(scenes: StoryScene[], blocks: ScriptBlock[], tota
   const rawSum = raw.reduce((a, b) => a + b, 0);
   if (rawSum <= 0) return raw;
 
-  const scaled = raw.map((d) => Math.round((d / rawSum) * totalDurationSeconds));
-  const drift = totalDurationSeconds - scaled.reduce((a, b) => a + b, 0);
+  // Round once, up front — totalDurationSeconds may be a live <audio>
+  // element's fractional .duration (e.g. 471.8s), and every step below
+  // assumes whole seconds. Without this, drift (computed against the
+  // un-rounded float) lands as a fractional remainder on the last scene
+  // (e.g. "0:48.80000000000001") instead of a clean integer.
+  const total = Math.round(totalDurationSeconds);
+  const scaled = raw.map((d) => Math.round((d / rawSum) * total));
+  const drift = total - scaled.reduce((a, b) => a + b, 0);
   scaled[scaled.length - 1] = Math.max(0, scaled[scaled.length - 1] + drift);
   return scaled;
 }

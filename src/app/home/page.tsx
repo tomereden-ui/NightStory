@@ -142,7 +142,7 @@ function HeroBanner({ story, progressPercent = 42, isPromoted = false, tFn }: { 
 
   return (
     <Link
-      href={`/library/${story.id}`}
+      href={story.isClassic ? `/library/classics/${story.id}` : `/library/${story.id}`}
       className="relative block overflow-hidden mx-5 mb-6 rounded-3xl select-none transition-all active:scale-[0.98]"
       style={{
         height: 260,
@@ -413,8 +413,8 @@ function TonightsPickCard({ item, tFn }: { item: PickItem; tFn: (key: string) =>
             overlay={
               !isOwn ? (
                 <span
-                  className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(251,191,36,0.22)", border: "1px solid rgba(251,191,36,0.45)", color: "#fbbf24", backdropFilter: "blur(8px)" }}
+                  className="absolute top-3 right-3 text-fs-caption font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+                  style={{ background: "rgba(4,6,18,0.75)", color: "rgba(255,255,255,0.6)", backdropFilter: "blur(8px)" }}
                 >
                   {tFn("classicBadge")}
                 </span>
@@ -431,8 +431,8 @@ function TonightsPickCard({ item, tFn }: { item: PickItem; tFn: (key: string) =>
             </span>
             {!isOwn && (
               <span
-                className="absolute top-3 left-3 text-fs-body font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-                style={{ background: "rgba(251,191,36,0.22)", border: "1px solid rgba(251,191,36,0.45)", color: "#fbbf24", backdropFilter: "blur(8px)" }}
+                className="absolute top-3 right-3 text-fs-caption font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+                style={{ background: "rgba(4,6,18,0.75)", color: "rgba(255,255,255,0.6)", backdropFilter: "blur(8px)" }}
               >
                 {tFn("classicBadge")}
               </span>
@@ -441,9 +441,11 @@ function TonightsPickCard({ item, tFn }: { item: PickItem; tFn: (key: string) =>
         )}
       </div>
 
-      {/* Title — below the physical book */}
+      {/* Title — below the physical book. No progress bar here at all —
+          Tonight's Picks isn't playback-position data, so a decorative
+          accent stripe in the exact same spot/style as StoryCard's REAL
+          progress bar read as "this has been started" when it hadn't. */}
       <div className="mt-2.5 pr-1">
-        <div className="w-7 h-[2px] rounded-full mb-1.5" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
         <div className="flex items-start gap-2">
           <p className="text-white text-fs-body font-bold leading-snug line-clamp-2 tracking-wide flex-1">{item.title}</p>
           {!!item.chapterCount && item.chapterCount > 1 && (
@@ -957,7 +959,7 @@ export default function HomePage() {
                   coverUrl={s.coverUrl}
                   coverFocusX={s.coverFocusX}
                   coverFocusY={s.coverFocusY}
-                  href={`/library/${s.id}`}
+                  href={s.isClassic ? `/library/classics/${s.id}` : `/library/${s.id}`}
                   progressPercent={s.progressPercent}
                   chapterLabel={s.chapterNumber && s.chapterCount ? t("chapterOfLabel").replace("{n}", String(s.chapterNumber)).replace("{count}", String(s.chapterCount)) : undefined}
                 />

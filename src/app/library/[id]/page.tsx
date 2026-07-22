@@ -223,6 +223,14 @@ export default function StoryDetailPage() {
 
   const switchChapter = useCallback(async (newId: string) => {
     if (newId === entry?.id || switchingChapter) return;
+    // Flush the outgoing chapter's position BEFORE setEntry swaps in the new
+    // chapter's audioUrl — the <audio> element stays mounted across a switch
+    // (only its src changes), and changing src resets currentTime to 0
+    // immediately, so anything that tried to read it afterward would save 0
+    // (or, below the 5s persist floor, nothing at all) instead of the real
+    // last position, silently losing whatever the last periodic tick hadn't
+    // caught yet.
+    markPause();
     setSwitchingChapter(true);
     try {
       const res = await fetch(`/api/library/${newId}`);
@@ -240,7 +248,7 @@ export default function StoryDetailPage() {
     } finally {
       setSwitchingChapter(false);
     }
-  }, [entry?.id, switchingChapter]);
+  }, [entry?.id, switchingChapter, markPause]);
 
   // Same key the home page uses to track which child profile is active —
   // favorites are scoped per-child, matching how child_ids scopes stories.
@@ -413,6 +421,7 @@ export default function StoryDetailPage() {
         onEnded={() => { setPlaying(false); setCurrentTime(0); markEnded(); }}
         onTimeUpdate={() => { setCurrentTime(audioRef.current?.currentTime ?? 0); markTick(); }}
         onLoadedMetadata={() => { setDuration(audioRef.current?.duration ?? 0); applyResumeSeek(); }}
+        onDurationChange={() => { setDuration(audioRef.current?.duration ?? 0); applyResumeSeek(); }}
       />
 
       <div className="pb-64">
@@ -645,10 +654,16 @@ export default function StoryDetailPage() {
           </div>
         )}
 
-        {/* Divider */}
+        {/* Divider + script panel — only when there's actually a script to show.
+            A story can end up with an empty blocks array despite having real
+            audio (e.g. an older data issue), and ScriptTab's own empty state
+            ("Generate a story first…") reads as broken/confusing on a story
+            page that's clearly already produced — so hide the whole section
+            instead of showing that message here. */}
+        {scriptBlocks.length > 0 && (
+        <>
         <div className="mx-5 my-4 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
 
-        {/* Script panel — same component, look, and functionality as Studio's */}
         <div className="px-5">
           <ScriptTab
             blocks={scriptBlocks}
@@ -659,13 +674,21 @@ export default function StoryDetailPage() {
             characterAvatars={characterAvatars}
             storyId={entry.id}
             scenes={entry.scenes}
-            totalDurationSeconds={entry.durationSeconds}
+            // Prefer the live <audio> element's real, exact duration — same
+            // precedence the sticky player's own total uses just below — over
+            // entry.durationSeconds (a rounded DB snapshot). Scene durations
+            // are scaled to sum to whichever number this is (see SceneMap),
+            // so passing a different source than what the player displays is
+            // exactly what made the two totals visibly disagree.
+            totalDurationSeconds={duration || entry.durationSeconds}
             readOnlyScript
             hideDurationPicker
             hideProduceButton
             hideDirectorsNote
           />
         </div>
+        </>
+        )}
 
         {/* Actions row */}
         {confirmingDelete ? (

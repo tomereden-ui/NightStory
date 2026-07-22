@@ -194,6 +194,16 @@ export async function reassignAvatarsForStory(
 // separately by the caller (a plain coverUrl assignment, no per-character
 // logic needed there).
 
+// Strips a leading article and collapses whitespace/casing so two chapters'
+// independently-generated names for the same character still match — Gemini
+// has no memory between separate chapter-generation calls, so e.g. "Tree" in
+// chapter 1 becoming "The Tree" in chapter 2 (or stray casing/whitespace
+// differences) silently missed the exact-name lookup below and left that
+// character re-cast with a different voice instead of carried over.
+function normalizeCharacterName(name: string): string {
+  return name.trim().toLowerCase().replace(/^(the|a|an)\s+/i, "").replace(/\s+/g, " ");
+}
+
 export function copyCastAssignments(
   source: LibraryEntry,
   target: LibraryEntry,
@@ -203,11 +213,28 @@ export function copyCastAssignments(
     const voiceId = source.blocks.find((b) => b.characterName === name && b.assignedVoiceId)?.assignedVoiceId;
     castMap[name] = { avatarUrl: profile.avatarUrl, voiceId };
   }
+  const normalizedCastMap: Record<string, { avatarUrl?: string; voiceId?: string }> = {};
+  for (const [name, cast] of Object.entries(castMap)) {
+    normalizedCastMap[normalizeCharacterName(name)] = cast;
+  }
+
+  // The narrator is nearly always present and is the most-heard voice in the
+  // story — match it by ROLE (via findNarratorName, which already resolves
+  // cross-language narrator names like "קריין") rather than relying on
+  // exact/normalized name matching, since the narrator's literal name can
+  // differ from the source's for reasons name-normalization can't fix.
+  const sourceNarratorMatch = castMap[findNarratorName(source)];
+  const targetNarratorName = findNarratorName(target);
+
+  const lookupCast = (name: string): { avatarUrl?: string; voiceId?: string } | undefined =>
+    castMap[name]
+    ?? normalizedCastMap[normalizeCharacterName(name)]
+    ?? (name === targetNarratorName ? sourceNarratorMatch : undefined);
 
   let matchedCount = 0;
   const characterProfiles: Record<string, CharacterProfile> = { ...(target.characterProfiles ?? {}) };
   for (const name of Object.keys(characterProfiles)) {
-    const match = castMap[name];
+    const match = lookupCast(name);
     if (match?.avatarUrl && match.avatarUrl !== characterProfiles[name].avatarUrl) {
       characterProfiles[name] = { ...characterProfiles[name], avatarUrl: match.avatarUrl };
       matchedCount++;
@@ -215,7 +242,7 @@ export function copyCastAssignments(
   }
 
   const blocks = target.blocks.map((b) => {
-    const match = castMap[b.characterName];
+    const match = lookupCast(b.characterName);
     if (match?.voiceId && match.voiceId !== b.assignedVoiceId) return { ...b, assignedVoiceId: match.voiceId };
     return b;
   });

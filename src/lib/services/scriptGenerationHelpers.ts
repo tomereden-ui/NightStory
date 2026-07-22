@@ -135,16 +135,47 @@ export function isWithinLengthTolerance(actual: number, target: number, toleranc
   return actual >= target * (1 - tolerance) && actual <= target * (1 + tolerance);
 }
 
-export function buildLengthCorrectionNote(actual: number, target: number): string {
+// Stated once, at the very end of a 500+ line system instruction, the numeric
+// length target apparently doesn't carry enough weight against everything
+// else in that brief (format rules, worked examples, tag conventions) — in
+// practice this has produced stories at ~25% of target length even on the
+// FIRST attempt, before any correction. Call this from each route's user-turn
+// prompt (not just the system instruction) so the target is reinforced right
+// where generation actually happens.
+export function buildLengthTargetReminder(durationMinutes: number): string {
+  const targetWords = Math.round(durationMinutes * 140);
+  const minBlocks = Math.max(4, Math.round(durationMinutes * 2.5));
+  const maxBlocks = Math.max(8, Math.round(durationMinutes * 3.6));
+  return `\n\nBefore you write: this story has two hard numeric requirements — ` +
+    `${targetWords - 60}–${targetWords + 60} spoken words across ${minBlocks}–${maxBlocks} total blocks. ` +
+    `These are not soft guidelines. A short, complete-feeling story that undershoots them is still wrong — ` +
+    `if you find yourself wrapping up early, add another scene or beat rather than ending short.`;
+}
+
+export function buildLengthCorrectionNote(
+  actual: number,
+  target: number,
+  actualBlockCount?: number,
+  targetBlockRange?: { min: number; max: number },
+): string {
   const min = Math.round(target * 0.8);
   const max = Math.round(target * 1.2);
   const tooShort = actual < target;
+  // A gap this large won't close with a few extra sentences — the model needs
+  // to be told explicitly that a small nudge isn't the fix, or it tends to
+  // make only a token adjustment (seen in practice: 160 words -> 174 words
+  // after being asked to reach 700).
+  const severelyShort = tooShort && actual < target * 0.5;
+  const blockNote = actualBlockCount !== undefined && targetBlockRange
+    ? ` Your last attempt had only ${actualBlockCount} blocks; this story needs ${targetBlockRange.min}–${targetBlockRange.max} blocks total — that's the main lever for reaching the word count, not longer individual lines.`
+    : "";
   return `\n\n[LENGTH CORRECTION — read carefully]\n` +
     `Your previous attempt produced approximately ${actual} spoken words, but this story needs approximately ${target} words ` +
-    `(between ${min} and ${max}) to match the requested audio duration.\n` +
+    `(between ${min} and ${max}) to match the requested audio duration.${blockNote}\n` +
     (tooShort
-      ? `EXPAND this story: add more scene detail, dialogue exchanges, sensory description, and character moments while ` +
-        `keeping the same characters, plot, and tone. Do not rush the pacing to pad word count — genuinely develop the scenes.`
+      ? `EXPAND this story${severelyShort ? " substantially" : ""}: add more scene detail, dialogue exchanges, sensory description, and character moments while ` +
+        `keeping the same characters, plot, and tone. Do not rush the pacing to pad word count — genuinely develop the scenes.` +
+        (severelyShort ? ` Your last attempt was less than half the target length — a small addition will not fix this. Add entirely new scenes or story beats, not just extra sentences within the existing ones.` : "")
       : `SHORTEN this story: tighten dialogue, trim redundant description, and cut minor asides while keeping the same ` +
         `characters, plot, and tone. Preserve the beginning and the ending.`) +
     `\nRegenerate the FULL response in the exact same JSON format as before.`;

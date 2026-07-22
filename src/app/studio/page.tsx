@@ -332,7 +332,7 @@ function CharacterCards({
     <div className="mb-5">
       <div className="flex items-center justify-between mb-3">
         <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>
-          {i18nT(language, "castSection")}
+          {i18nT(language, "castLabel")} <span style={{ fontStyle: "italic", fontWeight: 400, textTransform: "none" }}>({i18nT(language, "tapToEdit")})</span>
         </p>
       </div>
       <div className="flex gap-3 pb-2 -mx-5 px-5" style={{ overflowX: "scroll", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
@@ -2252,7 +2252,17 @@ export default function Studio2Page() {
         await draftSaveInFlightRef.current;
       }
       const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
-      const body: Record<string, unknown> = { blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes, characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined, moralLessons: moralLessons.length ? moralLessons : undefined, ...(activeChildId ? { childIds: [activeChildId] } : {}) };
+      const body: Record<string, unknown> = {
+        blocks, durationMinutes: duration, narratorVoiceId: getNarratorVoiceId(), characterDescriptions, characterTypes,
+        characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined,
+        moralLessons: moralLessons.length ? moralLessons : undefined,
+        ...(activeChildId ? { childIds: [activeChildId] } : {}),
+        // Lets the server use the child's real photo for the hero's avatar
+        // when the hero represents the child (name match), instead of a
+        // generic avatar-bank illustration.
+        ...(activeChild?.name ? { childName: activeChild.name } : {}),
+        ...(activeChild?.avatar_emoji?.startsWith("http") ? { childAvatarUrl: activeChild.avatar_emoji } : {}),
+      };
       if (editingStoryIdRef.current) {
         body.editingStoryId = editingStoryIdRef.current;
         // Always force re-production when editing an existing story — the server-side
@@ -2286,7 +2296,7 @@ export default function Studio2Page() {
       setIsProducing(false);
       setActiveTab("script");
     }
-  }, [summary, coverPrompt, coverUrl, moralLessons, characterProfiles, characterDescriptions, characterTypes]);
+  }, [summary, coverPrompt, coverUrl, moralLessons, characterProfiles, characterDescriptions, characterTypes, activeChild]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job);
@@ -2401,37 +2411,17 @@ export default function Studio2Page() {
           <ChildProfilePicker selected={activeChild} onChange={(p) => { setActiveChild(p); setChatLocked(false); }} disabled={chatLocked} />
         )}
 
-        {/* Tab bar — hidden during lesson step */}
-        {showTabBar && (
-          <div className="flex mb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            {/* CREATE tab */}
-            <button
-              onClick={() => setActiveTab(createMode)}
-              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${isOnCreateTab ? "text-white" : "text-white/50"}`}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                <span>✨</span>
-                <span>{i18nT(language, "createTab" as never)}</span>
-              </span>
-              {isOnCreateTab && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />}
-            </button>
-            {/* SCRIPT tab */}
-            <button
-              onClick={() => { if (hasScript) setActiveTab("script"); }}
-              disabled={!hasScript}
-              className={`relative flex-1 pb-3 text-fs-body font-bold tracking-wider uppercase transition-colors ${activeTab === "script" ? "text-white" : !hasScript ? "text-white/48 cursor-not-allowed" : "text-white/50"}`}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                <span>📜</span>
-                <span>{i18nT(language, "scriptTab")}</span>
-                {hasScript && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#4fc3f7" }} />}
-              </span>
-              {activeTab === "script" && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#4fc3f7" }} />}
-            </button>
-          </div>
-        )}
-
-        {/* Segmented toggle — chat vs step-by-step, visible only on CREATE tab */}
+        {/* Segmented toggle — chat vs step-by-step. Create and Script used to be
+            peer tabs (with Script disabled until a script existed), but that
+            framed Script as a destination you'd choose instead of one you
+            arrive at — the app already auto-advances to it the moment
+            generation finishes, and editing afterward happens in place
+            (director's notes, moral lessons, regenerate), never by flipping
+            back to this toggle. So there's no tab bar at all now: this
+            segmented toggle IS the whole "Create" phase's header, and the
+            screen simply becomes Script once one exists. The only way back
+            to a blank Create is the explicit "Start over" inside Script
+            (resetScript below), not a tab click. */}
         {showTabBar && isOnCreateTab && (
           <div className="flex gap-1.5 mb-6 p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <button
@@ -2724,13 +2714,14 @@ export default function Studio2Page() {
         {activeTab === "script" && hasScript && (
           <>
 
-            {/* Reset — same idea as "Start over" on the Chat/Step-by-step tabs,
-                just erasing an already-generated script instead of an
-                in-progress draft. */}
+            {/* Discard this script and go back to a blank Create — same "Start
+                over" idea as the Chat/Step-by-step tabs, just applied to an
+                already-generated script. With no tab bar to fall back to,
+                this button is the only way back to creation from here. */}
             <div className="flex items-center gap-2 mb-4">
               {scriptResetConfirm ? (
                 <div className="flex items-center gap-2 flex-1">
-                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>Start over?</span>
+                  <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>Discard this script and start over?</span>
                   <button
                     onClick={resetScript}
                     className="text-fs-body px-3 py-1.5 rounded-xl font-semibold transition-all active:scale-95"
@@ -2753,7 +2744,7 @@ export default function Studio2Page() {
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
                 >
                   <Icon name="submit" size={12} />
-                  <span>Clear</span>
+                  <span>Discard &amp; start over</span>
                 </button>
               )}
             </div>
@@ -2786,6 +2777,28 @@ export default function Studio2Page() {
             {/* ── Actual script once generation is done ────────────────────── */}
             {!generating && (<>
               {isValidating && validatingPhase && <LunaWorkingBanner label={validatingPhase} />}
+
+              {/* Result — everything below is what was generated: cover,
+                  title, summary, Cast (quick-fix editable), scenes, and the
+                  script itself. Heavier editing tools (moral lessons,
+                  director's note) live further down under their own "Make
+                  Changes" heading, so it's never ambiguous which part is the
+                  finished result and which part is a control for changing
+                  it. */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center justify-center rounded-xl flex-shrink-0"
+                  style={{ width: 40, height: 40, background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.3)" }}>
+                  <span style={{ fontSize: 20 }}>📖</span>
+                </div>
+                <p className="font-bold tracking-wide" style={{
+                  fontSize: "var(--fs-subtitle)",
+                  background: "linear-gradient(90deg, #4fc3f7, #a78bfa)",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                }}>
+                  Your Story
+                </p>
+              </div>
+
               <ScriptTab
               blocks={scriptBlocks}
               voices={voicePool}
@@ -2842,17 +2855,43 @@ export default function Studio2Page() {
               onSaveBlock={editingStoryId ? handleSaveBlock : undefined}
               readOnlyScript
               belowCover={
+                // Cast lives right next to the story's identity, not grouped
+                // with the heavier editing tools below — it's a quick fix
+                // (swap a voice/avatar), not "make changes to the story"
+                // the way lessons/director's note are. Stays fully editable
+                // here despite the script above it being read-only.
+                <CharacterCards
+                  blocks={scriptBlocks}
+                  voicePool={voicePool}
+                  storyLanguage={storyLang}
+                  avatars={characterAvatars}
+                  characterTypes={characterTypes}
+                  characterProfiles={characterProfiles}
+                  onAvatarChange={handleAvatarChange}
+                  onVoiceChange={handleCharacterVoiceChange}
+                />
+              }
+              belowScript={
                 <>
-                  <CharacterCards
-                    blocks={scriptBlocks}
-                    voicePool={voicePool}
-                    storyLanguage={storyLang}
-                    avatars={characterAvatars}
-                    characterTypes={characterTypes}
-                    characterProfiles={characterProfiles}
-                    onAvatarChange={handleAvatarChange}
-                    onVoiceChange={handleCharacterVoiceChange}
-                  />
+                  {/* Edit — everything from here down changes the story
+                      above rather than being part of it: moral lessons and
+                      (right after this component closes) Director's Note.
+                      Grouped under one heading instead of being scattered
+                      before and after the actual result. */}
+                  <div className="flex items-center gap-3 mt-2 mb-4">
+                    <div className="flex items-center justify-center rounded-xl flex-shrink-0"
+                      style={{ width: 40, height: 40, background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)" }}>
+                      <span style={{ fontSize: 20 }}>🛠️</span>
+                    </div>
+                    <p className="font-bold tracking-wide" style={{
+                      fontSize: "var(--fs-subtitle)",
+                      background: "linear-gradient(90deg, #a78bfa, #fbbf24)",
+                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                    }}>
+                      Make Changes
+                    </p>
+                  </div>
+
                   <LessonEditor
                     lessons={lessons}
                     onChange={(next) => setLessons(next)}
@@ -3049,71 +3088,97 @@ export default function Studio2Page() {
             {/* Produce Audio — enabled when there's no audio yet, or once the
                 script/voices genuinely differ from what's currently produced
                 (editing text back to exactly its produced form disables it
-                again — see scriptChangedFromProduced above). */}
+                again — see scriptChangedFromProduced above). Also blocked
+                while there's an unsaved change pending (needsSave) — audio
+                should never be produced from a script the user hasn't
+                actually committed to yet. Getting unblocked means either
+                saving (Update version) or discarding the change (Discard &
+                start over); a hint below the button says so explicitly
+                rather than leaving it looking disabled for no visible
+                reason. */}
             {(() => {
-              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover;
+              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover || needsSave;
+              // Only worth calling out when unsaved changes are specifically
+              // why it's blocked — every other blocking reason already shows
+              // its own state inside the button itself (mixing/checking/etc.).
+              const blockedByUnsavedChanges = needsSave && !isProducing && !isValidating && !generating && !isFetchingCover;
               return (
-                <button
-                  onClick={() => !blocked && handleProduce(scriptBlocks, durationMinutes)}
-                  disabled={blocked}
-                  className="w-full py-4 rounded-full font-bold text-fs-body transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-2.5"
-                  style={!blocked ? {
-                    background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 55%, #0284c7 100%)",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    color: "#fff",
-                    boxShadow: "0 6px 36px rgba(109,40,217,0.45), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
-                    letterSpacing: "0.02em",
-                  } : isProducing ? {
-                    background: "linear-gradient(135deg, rgba(124,58,237,0.5) 0%, rgba(79,70,229,0.5) 55%, rgba(2,132,199,0.5) 100%)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: "rgba(255,255,255,0.7)",
-                  } : {
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    color: "rgba(255,255,255,0.55)",
-                    cursor: "not-allowed",
-                  }}
-                >
-                  {isProducing ? (
-                    <>
-                      <span className="animate-pulse-slow text-fs-heading leading-none">🎙️</span>
-                      <span>{i18nT(language, "mixingAudio")}</span>
-                    </>
-                  ) : isValidating ? (
-                    <>
-                      <span className="w-4 h-4 rounded-full border-2 animate-spin flex-shrink-0"
-                        style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.4)" }} />
-                      <span>Checking content…</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-fs-heading leading-none">🎙️</span>
-                      <span>{i18nT(language, "produceAudio")}</span>
-                    </>
+                <>
+                  <button
+                    onClick={() => !blocked && handleProduce(scriptBlocks, durationMinutes)}
+                    disabled={blocked}
+                    className="w-full py-4 rounded-full font-bold text-fs-body transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-2.5"
+                    style={!blocked ? {
+                      background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 55%, #0284c7 100%)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "#fff",
+                      boxShadow: "0 6px 36px rgba(109,40,217,0.45), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+                      letterSpacing: "0.02em",
+                    } : isProducing ? {
+                      background: "linear-gradient(135deg, rgba(124,58,237,0.5) 0%, rgba(79,70,229,0.5) 55%, rgba(2,132,199,0.5) 100%)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      color: "rgba(255,255,255,0.7)",
+                    } : {
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.07)",
+                      color: "rgba(255,255,255,0.55)",
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    {isProducing ? (
+                      <>
+                        <span className="animate-pulse-slow text-fs-heading leading-none">🎙️</span>
+                        <span>{i18nT(language, "mixingAudio")}</span>
+                      </>
+                    ) : isValidating ? (
+                      <>
+                        <span className="w-4 h-4 rounded-full border-2 animate-spin flex-shrink-0"
+                          style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.4)" }} />
+                        <span>Checking content…</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-fs-heading leading-none">🎙️</span>
+                        <span>{i18nT(language, "produceAudio")}</span>
+                      </>
+                    )}
+                  </button>
+                  {blockedByUnsavedChanges && (
+                    <p className="text-fs-body text-center mt-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      Save or discard your changes to produce audio
+                    </p>
                   )}
-                </button>
+                </>
               );
             })()}
 
-            {/* Update version — enabled whenever anything about the story differs
-                from what's currently saved (title, cover, cast/voice, or a
-                speech/SFX block), and disabled again if it's edited back to
-                exactly that saved state. This is the ONLY place the live
-                story row or version history gets written to — see the note
-                above the (removed) autosave effect. */}
+            {/* Save for later / Update version — one adaptive button, not two.
+                Before this story has ever been saved once (savesCount === 0),
+                it's always visible as "Save for later" — an explicit, findable
+                way to stop here without producing audio; the story shows up
+                in Library > My Stories as a Draft from that point on (see
+                includeDrafts in libraryStore.ts). After the first save, this
+                button disappears entirely until something actually changes
+                (needsSave), then reappears labeled "Update version" — so its
+                mere presence is the signal that there's something to save,
+                rather than sitting there permanently disabled and easy to
+                ignore. Stays visible through the "saving"/"saved" confirmation
+                even though needsSave flips false the instant the save lands. */}
             {(() => {
+              const neverSaved = savesCount === 0;
               const canSave = needsSave && !isProducing;
+              if (!neverSaved && !needsSave && saveLabel === "idle") return null;
               return (
                 <button
                   onClick={handleManualSave}
-                  disabled={!canSave || isSaving || saveLabel === "saved"}
+                  disabled={!(neverSaved || canSave) || isSaving || saveLabel === "saved"}
                   className="w-full mt-2.5 py-3.5 rounded-full text-fs-body font-semibold transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-2"
                   style={saveLabel === "saved" ? {
                     background: "rgba(16,185,129,0.12)",
                     border: "1.5px solid rgba(52,211,153,0.4)",
                     color: "#6ee7b7",
                     boxShadow: "0 0 20px rgba(16,185,129,0.15)",
-                  } : canSave ? {
+                  } : (neverSaved || canSave) ? {
                     background: "linear-gradient(135deg, rgba(139,92,246,0.18) 0%, rgba(99,102,241,0.14) 100%)",
                     border: "1.5px solid rgba(167,139,250,0.45)",
                     color: "#d8b4fe",
@@ -3132,6 +3197,8 @@ export default function Studio2Page() {
                     </>
                   ) : saveLabel === "saved" ? (
                     <><span className="text-fs-heading leading-none">✓</span> {i18nT(language, "savedVersion")}</>
+                  ) : neverSaved ? (
+                    <><span className="text-fs-heading leading-none">💾</span> Save for later</>
                   ) : (
                     <><Icon name="save" size={14} /> Update version</>
                   )}

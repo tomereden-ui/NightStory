@@ -83,11 +83,22 @@ export function useListeningProgress({ storyId, audioRef }: Options) {
   }, [storyId]);
 
   // Call once metadata/duration is known — seeks to the saved position exactly once.
+  // Some streamed mp3s (depending on how they were encoded/muxed during
+  // production) report duration as NaN or Infinity right at loadedmetadata,
+  // before the browser has actually determined the real length — seeking
+  // against that silently no-ops instead of erroring. The old truthy check
+  // (`audio.duration && ...`) treated Infinity as "known" and still committed
+  // hasSeekedRef even when the seek couldn't actually land, so those specific
+  // files would permanently reset to 0:00 while others (with an accurate
+  // duration already available) resumed fine — a per-file, not random, split.
+  // Only commit hasSeekedRef once duration is a real finite number; the
+  // durationchange listener below re-fires this exactly when that resolves.
   const applyResumeSeek = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || hasSeekedRef.current || resumeFrom == null) return;
+    if (!Number.isFinite(audio.duration)) return;
     hasSeekedRef.current = true;
-    if (audio.duration && resumeFrom < audio.duration - 1) {
+    if (resumeFrom < audio.duration - 1) {
       audio.currentTime = resumeFrom;
     }
   }, [audioRef, resumeFrom]);

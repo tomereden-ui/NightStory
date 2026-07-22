@@ -69,6 +69,11 @@ export interface LibraryEntry {
   /** Total chapter count in the series — denormalized onto every chapter row so
    *  list views can show "Chapter 2 of 3" without a join or count query. */
   chapterCount?: number;
+  /** Every distinct AI model actually used to produce this story (script/
+   *  casting text model, TTS model(s) — a fallback chain means more than one
+   *  can appear for a single story, cover image model, SFX). See
+   *  produce-drama/route.ts's `modelsUsed` for how this gets built. */
+  modelsUsed?: string[];
 }
 
 export interface TrashEntry extends LibraryEntry {
@@ -112,6 +117,7 @@ function toEntry(row: any, viewCounts?: Record<string, number>, shareCounts?: Re
     seriesId: row.series_id ?? undefined,
     chapterNumber: typeof row.chapter_number === "number" ? row.chapter_number : undefined,
     chapterCount: typeof row.chapter_count === "number" ? row.chapter_count : undefined,
+    modelsUsed: Array.isArray(row.models_used) ? (row.models_used as string[]) : undefined,
   };
 }
 
@@ -152,6 +158,7 @@ export async function addEntry(entry: LibraryEntry, familyId?: string): Promise<
     series_id: entry.seriesId ?? null,
     chapter_number: entry.chapterNumber ?? null,
     chapter_count: entry.chapterCount ?? null,
+    models_used: entry.modelsUsed ?? null,
   });
   if (error) throw new Error(`addEntry: ${error.message}`);
 }
@@ -163,6 +170,25 @@ export async function addEntry(entry: LibraryEntry, familyId?: string): Promise<
 export async function updateMoralLessons(id: string, moralLessons: MoralLesson[]): Promise<void> {
   const { error } = await supabase.from("stories").update({ moral_lessons: moralLessons }).eq("id", id);
   if (error) throw new Error(`updateMoralLessons: ${error.message}`);
+}
+
+// Update just the series-membership columns for an already-saved story.
+// Deliberately a targeted column update, NOT addEntry(...spread) — callers here
+// (assign-to-series' sibling chapter_count sync) only have a LIGHTWEIGHT entry
+// on hand (from getSeriesChapters, which omits blocks/character_profiles/scenes/
+// moral_lessons to keep list queries cheap). Passing that lightweight entry
+// through addEntry's full-row upsert would silently blank out those columns —
+// exactly the bug that wiped previously-produced chapters' scripts.
+export async function updateSeriesMeta(
+  id: string,
+  meta: { seriesId: string; chapterNumber?: number; chapterCount: number },
+): Promise<void> {
+  const { error } = await supabase.from("stories").update({
+    series_id: meta.seriesId,
+    chapter_number: meta.chapterNumber ?? null,
+    chapter_count: meta.chapterCount,
+  }).eq("id", id);
+  if (error) throw new Error(`updateSeriesMeta: ${error.message}`);
 }
 
 // Columns needed to render list/grid views (Home rails, Library grid). Deliberately
@@ -194,7 +220,7 @@ const SEARCH_COLUMNS = ", character_profiles, scenes, moral_lessons";
 // renders a list; use getEntries only when full blocks are genuinely needed.
 export async function getEntrySummaries(
   familyId: string,
-  opts?: { childId?: string; limit?: number },
+  opts?: { childId?: string; limit?: number; includeDrafts?: boolean },
 ): Promise<LibraryEntry[]> {
   const run = async (columns: string) => {
     let q = supabase
@@ -204,8 +230,13 @@ export async function getEntrySummaries(
       // backfill; those were globally visible anyway, so including them here
       // is strictly no worse — and the branch matches nothing post-backfill.
       .or(`family_id.eq.${familyId},family_id.is.null`)
-      .eq("is_public", false)
-      .eq("is_draft", false);
+      .eq("is_public", false);
+    // Every other caller (Home rails, recently-played, etc.) wants only
+    // fully-saved stories, so drafts stay excluded by default — only "My
+    // Stories" explicitly opts in, so an unproduced-but-saved script has
+    // somewhere to actually be found later instead of only existing inside
+    // whichever Studio session created it.
+    if (!opts?.includeDrafts) q = q.eq("is_draft", false);
     if (opts?.childId) q = q.filter("child_ids", "cs", JSON.stringify([opts.childId]));
     return q.order("created_at", { ascending: false }).limit(opts?.limit ?? 100);
   };
@@ -352,11 +383,16 @@ export async function getEntry(id: string, familyId?: string): Promise<LibraryEn
 // (see /api/admin/promote-story), or null if none is currently promoted —
 // including before the promoted-story migration has run, since the column
 // won't exist yet.
+// Random pick among every promoted story, not just whichever one Postgres
+// happens to return first — re-rolled on every call (the route this backs
+// fetches with cache: "no-store"), so which one shows as the Home hero
+// varies across page loads instead of always being the same story.
 export async function getPromotedEntry(): Promise<LibraryEntry | undefined> {
-  const { data, error } = await supabase.from("stories").select("*").eq("promoted", true).limit(1).maybeSingle();
+  const { data, error } = await supabase.from("stories").select("*").eq("promoted", true);
   if (error) return undefined; // column doesn't exist pre-migration, or any other lookup failure
-  if (!data) return undefined;
-  return toEntry(data);
+  if (!data || data.length === 0) return undefined;
+  const pick = data[Math.floor(Math.random() * data.length)];
+  return toEntry(pick);
 }
 
 // All chapters in a series, ordered for display (siblings list on a story

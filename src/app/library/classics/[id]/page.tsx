@@ -277,6 +277,12 @@ export default function ClassicDetailPage() {
   // same across chapters, so the chapters-row effect below doesn't re-fetch.
   const switchChapter = useCallback((newId: string) => {
     if (newId === id) return;
+    // Flush the outgoing chapter's position BEFORE storyAudioUrl goes null —
+    // that null unmounts the <audio> element (conditional render below),
+    // so storyAudioRef.current would already be null by the time any later
+    // save attempt tried to read currentTime from it, silently losing
+    // whatever hadn't been caught by the last periodic tick yet.
+    markPause();
     setPlaying(false);
     setCurrentTime(0);
     setAudioDuration(0);
@@ -284,7 +290,7 @@ export default function ClassicDetailPage() {
     setId(newId);
     window.history.replaceState(null, "", `/library/classics/${newId}`);
     setUrlWasReplaced(true);
-  }, [id]);
+  }, [id, markPause]);
 
   // Sibling chapters — only fetched when this classic is part of a series.
   const [chapters, setChapters] = useState<LibraryEntry[]>([]);
@@ -422,6 +428,7 @@ export default function ClassicDetailPage() {
           onEnded={() => { setPlaying(false); setCurrentTime(0); markEnded(); }}
           onTimeUpdate={() => { setCurrentTime(storyAudioRef.current?.currentTime ?? 0); markTick(); }}
           onLoadedMetadata={() => { setAudioDuration(storyAudioRef.current?.duration ?? 0); applyResumeSeek(); }}
+          onDurationChange={() => { setAudioDuration(storyAudioRef.current?.duration ?? 0); applyResumeSeek(); }}
         />
       )}
 
@@ -710,8 +717,13 @@ export default function ClassicDetailPage() {
           </div>
         )}
 
-        {/* Script panel — same component, look, and functionality as Studio's */}
-        {isReady ? (
+        {/* Script panel — same component, look, and functionality as Studio's.
+            Only rendered once there's an actual script — a classic can end up
+            "ready" with an empty blocks array (e.g. an older data issue), and
+            ScriptTab's own empty state ("Generate a story first…") reads as
+            broken/confusing on a story that's clearly already produced, so the
+            whole section is hidden instead of showing that message here. */}
+        {isReady && blocks!.length > 0 ? (
           <div className="px-5">
             <ScriptTab
               blocks={blocks!}
@@ -722,30 +734,31 @@ export default function ClassicDetailPage() {
               characterAvatars={characterAvatars}
               storyId={meta.id}
               scenes={scenes}
-              totalDurationSeconds={meta.durationSeconds}
+              // Prefer the live <audio> element's real, exact duration —
+              // same precedence the sticky player's own total uses just
+              // below — over meta.durationSeconds (a rounded DB snapshot).
+              // Scene durations are scaled to sum to whichever number this
+              // is (see SceneMap), so passing a different source than what
+              // the player displays is exactly what made the two totals
+              // visibly disagree.
+              totalDurationSeconds={audioDuration || meta.durationSeconds}
               readOnlyScript
               hideDurationPicker
               hideProduceButton
               hideDirectorsNote
             />
           </div>
-        ) : (
+        ) : meta.status === "pending" || meta.status === "generating" ? (
           <div className="px-5 flex flex-col items-center gap-3 py-10">
-            {meta.status === "pending" || meta.status === "generating" ? (
-              <>
-                <div
-                  className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                  style={{ borderColor: `${c1} transparent transparent transparent` }}
-                />
-                <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>
-                  {meta.status === "generating" ? "Generating script…" : "Preparing this classic…"}
-                </p>
-              </>
-            ) : (
-              <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.52)" }}>Script unavailable.</p>
-            )}
+            <div
+              className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: `${c1} transparent transparent transparent` }}
+            />
+            <p className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>
+              {meta.status === "generating" ? "Generating script…" : "Preparing this classic…"}
+            </p>
           </div>
-        )}
+        ) : null}
 
       </div>
 

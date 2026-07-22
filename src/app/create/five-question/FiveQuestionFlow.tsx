@@ -430,18 +430,6 @@ function AnimalTypeChips({ animalTypes, selected, onSelect }: { animalTypes: Ani
   );
 }
 
-// ─── SkipLink: standalone skip (shown when no confirm is visible yet) ─────────────────
-
-function SkipLink({ onSkip, label }: { onSkip: () => void; label: string }) {
-  return (
-    <button onClick={onSkip}
-      className="text-center text-fs-body w-full py-3 rounded-2xl transition-all active:scale-[0.98]"
-      style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.55)", letterSpacing: "0.01em" }}>
-      {label}
-    </button>
-  );
-}
-
 // ─── ConfirmRow: confirm (left primary) + skip (right ghost) on same row ──────
 
 function ConfirmRow({ confirmLabel, onConfirm, disabled, onSkip, skipLabel }: {
@@ -1153,15 +1141,13 @@ function Q4View({ heroName, companionName, initialEngine, onNext, onBack, onSkip
           </>
         )}
 
-        {!selectedCat && (
-          <>
-            <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={() => {
-              const cat = pickRandom(q4Categories);
-              setSelectedCat(cat.id);
-              setTextVal(pickRandom(SURPRISE_ENGINES));
-            }} />
-            {onSkip && <SkipLink onSkip={onSkip} label={ui.skipThisStep} />}
-          </>
+        {/* Before a category is picked, "Surprise me" and "Skip" used to be two
+            separate buttons doing almost the same thing (fill something random,
+            one letting you preview it first) — merged into one that just
+            commits to a random pick and moves straight on, same as onSkip
+            already did under the hood. */}
+        {!selectedCat && onSkip && (
+          <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={onSkip} />
         )}
       </div>
     </QuestionShell>
@@ -1199,16 +1185,22 @@ function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, opti
             />
           ))}
         </div>
-        <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={() => setSelectedMood(pickRandom(MOODS).id)} />
         {selectedMood ? (
-          <ConfirmRow
-            confirmLabel={ui.thisIsTheEnding}
-            onConfirm={() => onNext(selectedMood)}
-            onSkip={onSkip}
-            skipLabel={ui.skip}
-          />
+          <>
+            <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={() => setSelectedMood(pickRandom(MOODS).id)} />
+            <ConfirmRow
+              confirmLabel={ui.thisIsTheEnding}
+              onConfirm={() => onNext(selectedMood)}
+              onSkip={onSkip}
+              skipLabel={ui.skip}
+            />
+          </>
         ) : (
-          onSkip && <SkipLink onSkip={onSkip} label={ui.skipThisStep} />
+          // Before a mood is picked, "Surprise me" and "Skip" used to be two
+          // separate buttons doing almost the same thing — merged into one
+          // that commits to a random mood AND (this being the last question)
+          // jumps straight into generation, same as onSkip already does.
+          onSkip && <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={onSkip} />
         )}
       </div>
     </QuestionShell>
@@ -1363,7 +1355,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
   childContext?: {
     childAgeGroup?: string; avoid?: string; gender?: "boy" | "girl" | "other";
     favoriteThemes?: string[]; favoriteAnimals?: string[]; preferredFigures?: string[];
-    interests?: string; notes?: string;
+    interests?: string; notes?: string; childName?: string;
   };
   onDone: (blocks: ScriptBlock[], summary: string, coverPrompt: string, characters?: Record<string, StoryCharacterInfo>, scenes?: import("@/types").StoryScene[], title?: string) => void;
   onError: (msg: string) => void;
@@ -1460,7 +1452,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const [childContext, setChildContext] = useState<{
     childAgeGroup?: string; avoid?: string; gender?: "boy" | "girl" | "other";
     favoriteThemes?: string[]; favoriteAnimals?: string[]; preferredFigures?: string[];
-    interests?: string; notes?: string;
+    interests?: string; notes?: string; childName?: string;
   }>({});
   useEffect(() => {
     let cancelled = false;
@@ -1487,6 +1479,11 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
           preferredFigures: self?.preferred_figures,
           interests: self?.interests,
           notes: self?.notes,
+          // Lets the server detect "the hero IS the child" (hero name
+          // matches this exactly, which Q1's "your own name" option does by
+          // default) to cast the hero's voice/avatar from the real child
+          // profile instead of a generic default.
+          childName: self?.name,
         });
       })
       .catch(() => {});
@@ -1729,6 +1726,11 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         produceBody.coverImageMimeType = coverMatch[1];
         produceBody.coverImageData = coverMatch[2];
       }
+      // Lets the server use the child's real photo for the hero's avatar
+      // when the hero represents the child (name match), instead of a
+      // generic avatar-bank illustration.
+      if (childContext.childName) produceBody.childName = childContext.childName;
+      if (childAvatarUrl) produceBody.childAvatarUrl = childAvatarUrl;
       const res  = await fetch("/api/produce-drama", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(produceBody) });
       const text = await res.text();
       let data: { jobId?: string; error?: string } = {};
@@ -1739,7 +1741,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       setError(err instanceof Error ? err.message : "Production failed");
       setIsProducing(false);
     }
-  }, [summary, coverPrompt, coverUrl]);
+  }, [summary, coverPrompt, coverUrl, childContext.childName, childAvatarUrl]);
 
   const handleProductionDone = useCallback((job: Job) => {
     setCompletedJob(job); setIsProducing(false);
@@ -1803,7 +1805,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} luna={luna} ui={ui} worldOptions={worldOptions} language={effectiveLanguage} /></>;
   if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} luna={luna} ui={ui} companionTypes={companionTypes} language={effectiveLanguage} siblingNames={siblingNames} animalTypes={animalTypes} childName={childName} /></>;
   if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui, animalTypes)} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} luna={luna} ui={ui} q4Categories={q4Categories} language={effectiveLanguage} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("summary", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} luna={luna} ui={ui} moodLabels={moodLabels} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("generating", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} luna={luna} ui={ui} moodLabels={moodLabels} /></>;
 
   if (step === "summary") return (
     <>

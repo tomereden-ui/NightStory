@@ -157,7 +157,6 @@ export function getLessonsCatalog(language?: string): LessonCatalogEntry[] {
 
 export interface LessonsChrome {
   panelTitle: string;
-  editButton: string;
   addLessonButton: string;
   collapsedSubtitle: string;
   analyzing: string;
@@ -167,7 +166,6 @@ export interface LessonsChrome {
   rewriteWithOne: string;
   rewriteWithMany: string;
   rewriteGeneric: string;
-  expandedSubtitle: string;
   currentlyInStory: string;
   addAValue: string;
   orDescribeOwn: string;
@@ -188,7 +186,6 @@ export interface LessonsChrome {
 const CHROME: Record<string, LessonsChrome> = {
   en: {
     panelTitle: "Moral Lessons",
-    editButton: "Edit",
     addLessonButton: "+ Add lesson",
     collapsedSubtitle: "The values this story brings to life",
     analyzing: "Reading the story for embedded values…",
@@ -198,7 +195,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "Rewrite story with this lesson",
     rewriteWithMany: "Rewrite story with these lessons",
     rewriteGeneric: "Rewrite story",
-    expandedSubtitle: "Pick one or more values to weave into the story",
     currentlyInStory: "Currently in this story",
     addAValue: "Add a value",
     orDescribeOwn: "Or describe your own",
@@ -216,7 +212,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   he: {
     panelTitle: "ערכים מוסריים",
-    editButton: "עריכה",
     addLessonButton: "+ הוסף ערך",
     collapsedSubtitle: "הערכים שהסיפור הזה מביא לחיים",
     analyzing: "קוראים את הסיפור לאיתור ערכים מוטמעים…",
@@ -226,7 +221,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "שכתבו את הסיפור עם הערך הזה",
     rewriteWithMany: "שכתבו את הסיפור עם הערכים האלה",
     rewriteGeneric: "שכתבו את הסיפור",
-    expandedSubtitle: "בחרו ערך אחד או יותר לשילוב בסיפור",
     currentlyInStory: "כרגע בסיפור זה",
     addAValue: "הוספת ערך",
     orDescribeOwn: "או תארו בעצמכם",
@@ -244,7 +238,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   es: {
     panelTitle: "Lecciones morales",
-    editButton: "Editar",
     addLessonButton: "+ Añadir valor",
     collapsedSubtitle: "Los valores que esta historia transmite",
     analyzing: "Leyendo la historia en busca de valores incorporados…",
@@ -254,7 +247,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "Reescribir historia con este valor",
     rewriteWithMany: "Reescribir historia con estos valores",
     rewriteGeneric: "Reescribir historia",
-    expandedSubtitle: "Elige uno o más valores para incorporar a la historia",
     currentlyInStory: "Actualmente en esta historia",
     addAValue: "Añadir un valor",
     orDescribeOwn: "O describe el tuyo",
@@ -272,7 +264,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   fr: {
     panelTitle: "Leçons morales",
-    editButton: "Modifier",
     addLessonButton: "+ Ajouter une valeur",
     collapsedSubtitle: "Les valeurs que cette histoire transmet",
     analyzing: "Lecture de l'histoire à la recherche de valeurs intégrées…",
@@ -282,7 +273,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "Réécrire l'histoire avec cette valeur",
     rewriteWithMany: "Réécrire l'histoire avec ces valeurs",
     rewriteGeneric: "Réécrire l'histoire",
-    expandedSubtitle: "Choisissez une ou plusieurs valeurs à intégrer à l'histoire",
     currentlyInStory: "Actuellement dans cette histoire",
     addAValue: "Ajouter une valeur",
     orDescribeOwn: "Ou décrivez la vôtre",
@@ -300,7 +290,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   de: {
     panelTitle: "Moralische Lektionen",
-    editButton: "Bearbeiten",
     addLessonButton: "+ Wert hinzufügen",
     collapsedSubtitle: "Die Werte, die diese Geschichte vermittelt",
     analyzing: "Die Geschichte wird nach eingebetteten Werten durchsucht…",
@@ -310,7 +299,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "Geschichte mit diesem Wert umschreiben",
     rewriteWithMany: "Geschichte mit diesen Werten umschreiben",
     rewriteGeneric: "Geschichte umschreiben",
-    expandedSubtitle: "Wähle einen oder mehrere Werte für die Geschichte aus",
     currentlyInStory: "Derzeit in dieser Geschichte",
     addAValue: "Wert hinzufügen",
     orDescribeOwn: "Oder beschreibe deinen eigenen",
@@ -328,7 +316,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   pt: {
     panelTitle: "Lições morais",
-    editButton: "Editar",
     addLessonButton: "+ Adicionar valor",
     collapsedSubtitle: "Os valores que esta história transmite",
     analyzing: "Lendo a história em busca de valores incorporados…",
@@ -338,7 +325,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "Reescrever história com este valor",
     rewriteWithMany: "Reescrever história com estes valores",
     rewriteGeneric: "Reescrever história",
-    expandedSubtitle: "Escolha um ou mais valores para incorporar à história",
     currentlyInStory: "Atualmente nesta história",
     addAValue: "Adicionar um valor",
     orDescribeOwn: "Ou descreva o seu",
@@ -356,7 +342,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   it: {
     panelTitle: "Lezioni morali",
-    editButton: "Modifica",
     addLessonButton: "+ Aggiungi valore",
     collapsedSubtitle: "I valori che questa storia trasmette",
     analyzing: "Lettura della storia alla ricerca di valori incorporati…",
@@ -366,7 +351,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "Riscrivi la storia con questo valore",
     rewriteWithMany: "Riscrivi la storia con questi valori",
     rewriteGeneric: "Riscrivi la storia",
-    expandedSubtitle: "Scegli uno o più valori da incorporare nella storia",
     currentlyInStory: "Attualmente in questa storia",
     addAValue: "Aggiungi un valore",
     orDescribeOwn: "O descrivi il tuo",
@@ -384,7 +368,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   ar: {
     panelTitle: "الدروس الأخلاقية",
-    editButton: "تعديل",
     addLessonButton: "+ إضافة قيمة",
     collapsedSubtitle: "القيم التي تجسدها هذه القصة",
     analyzing: "جارٍ قراءة القصة بحثاً عن القيم المتضمنة…",
@@ -394,7 +377,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "إعادة كتابة القصة بهذه القيمة",
     rewriteWithMany: "إعادة كتابة القصة بهذه القيم",
     rewriteGeneric: "إعادة كتابة القصة",
-    expandedSubtitle: "اختر قيمة واحدة أو أكثر لدمجها في القصة",
     currentlyInStory: "حالياً في هذه القصة",
     addAValue: "إضافة قيمة",
     orDescribeOwn: "أو صف قيمتك الخاصة",
@@ -412,7 +394,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   ja: {
     panelTitle: "道徳的な教訓",
-    editButton: "編集",
     addLessonButton: "+ 価値観を追加",
     collapsedSubtitle: "この物語が伝える価値観",
     analyzing: "物語から埋め込まれた価値観を読み取っています…",
@@ -422,7 +403,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "この価値観で物語を書き直す",
     rewriteWithMany: "これらの価値観で物語を書き直す",
     rewriteGeneric: "物語を書き直す",
-    expandedSubtitle: "物語に織り込む価値観を1つ以上選んでください",
     currentlyInStory: "現在この物語にあるもの",
     addAValue: "価値観を追加",
     orDescribeOwn: "または自分で説明する",
@@ -440,7 +420,6 @@ const CHROME: Record<string, LessonsChrome> = {
   },
   hi: {
     panelTitle: "नैतिक शिक्षाएँ",
-    editButton: "बदलें",
     addLessonButton: "+ मूल्य जोड़ें",
     collapsedSubtitle: "इस कहानी में उतारे गए मूल्य",
     analyzing: "कहानी में शामिल मूल्यों को पढ़ा जा रहा है…",
@@ -450,7 +429,6 @@ const CHROME: Record<string, LessonsChrome> = {
     rewriteWithOne: "इस मूल्य के साथ कहानी फिर से लिखें",
     rewriteWithMany: "इन मूल्यों के साथ कहानी फिर से लिखें",
     rewriteGeneric: "कहानी फिर से लिखें",
-    expandedSubtitle: "कहानी में शामिल करने के लिए एक या अधिक मूल्य चुनें",
     currentlyInStory: "फ़िलहाल इस कहानी में",
     addAValue: "एक मूल्य जोड़ें",
     orDescribeOwn: "या अपना खुद बताएं",

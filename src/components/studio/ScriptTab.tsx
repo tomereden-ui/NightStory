@@ -34,6 +34,10 @@ interface ScriptTabProps {
   hideProduceButton?: boolean;
   studioMode?: boolean;
   belowCover?: React.ReactNode;
+  /** Rendered after the script content — for heavier editing tools (e.g.
+   *  moral lessons) that belong grouped with Director's Note rather than
+   *  next to the story's identity like belowCover's Cast. */
+  belowScript?: React.ReactNode;
   characterAvatars?: Record<string, string>;
   /** Total block count including blocks still being validated (not yet in `blocks`) */
   totalExpectedBlocks?: number;
@@ -415,7 +419,7 @@ function TextInsertModal({
 
 // ─── ScriptTab ────────────────────────────────────────────────────────────────
 
-export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, coverFocusX, coverFocusY, onSetCoverFocus, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, characterAvatars, totalExpectedBlocks, scenes, totalDurationSeconds, storyId, onSaveBlock, storyLanguage, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
+export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, isProducing, summary, title, coverUrl, isFetchingCover = false, onRegenerateCover, onUploadCover, coverFocusX, coverFocusY, onSetCoverFocus, durationMinutes = 3, onDurationChange, hideDirectorsNote = false, hideDurationPicker = false, hideProduceButton = false, studioMode = false, belowCover, belowScript, characterAvatars, totalExpectedBlocks, scenes, totalDurationSeconds, storyId, onSaveBlock, storyLanguage, onTitleChange, readOnlyScript = false }: ScriptTabProps) {
   const [settingFocus, setSettingFocus] = useState(false);
   const { t, language } = useLanguage();
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
@@ -974,7 +978,11 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </div>
         )}
 
-        {/* Slot rendered between cover/summary and script blocks (e.g. CharacterCards) */}
+        {/* Slot rendered between cover/summary and the scene/script content —
+            Cast lives here: it's a lightweight, quick-fix kind of editing
+            (swap a voice/avatar) that belongs right next to the story's
+            identity, not grouped with the heavier editing tools (moral
+            lessons, director's note) that sit below the script instead. */}
         {belowCover}
 
         {/* Scene-by-scene outline */}
@@ -1144,6 +1152,12 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </>
         )}
 
+        {/* Slot rendered after the finished script (e.g. moral lessons) — the
+            result (cover/summary/scenes/script) plus quick Cast fixes are all
+            complete above this point; everything from here down is a
+            heavier editing tool, not part of the generated result itself. */}
+        {belowScript}
+
         {/* Regenerate / validation panel — hidden in Studio (revise handled by Director's Note outside ScriptTab) */}
         {isDirty && !studioMode && (
           <div className="mb-3 flex flex-col gap-2">
@@ -1232,7 +1246,10 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             )}
           </div>
 
-          {/* Quick chips */}
+          {/* Quick chips — stage their instruction into the note below rather
+              than applying it immediately, so a chip works the same as
+              typing: nothing rewrites the script until "Update Script" is
+              clicked. */}
           <div className="flex flex-wrap gap-1.5">
             {[
               { labelKey: "moreSleepy" as const, instruction: "Make the whole story more sleepy and calming, perfect for bedtime" },
@@ -1243,7 +1260,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
               <button
                 key={labelKey}
                 disabled={isRevising}
-                onClick={() => handleRevise(instruction)}
+                onClick={() => setDirectorNote(instruction)}
                 className="text-fs-body px-3 py-1.5 rounded-full font-medium transition-all active:scale-95"
                 style={{
                   background: isRevising ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.1)",
@@ -1256,35 +1273,39 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             ))}
           </div>
 
-          {/* Free-text note input */}
-          <div className="flex gap-2 items-end">
-            <textarea
-              value={directorNote}
-              onChange={(e) => setDirectorNote(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && directorNote.trim()) {
-                  e.preventDefault();
-                  handleRevise(directorNote);
-                }
-              }}
-              rows={2}
-              placeholder={t("directorsNotePlaceholder")}
-              disabled={isRevising}
-              className="flex-1 rounded-xl px-3 py-2 text-fs-body leading-relaxed outline-none resize-none text-white/80 placeholder-white/20 transition-colors"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)" }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.45)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.2)")}
-            />
+          {/* Free-text note input — Enter just inserts a newline like any
+              textarea; the only way to actually trigger the script rewrite
+              is the explicit "Update Script" button below. */}
+          <textarea
+            value={directorNote}
+            onChange={(e) => setDirectorNote(e.target.value)}
+            rows={2}
+            placeholder={t("directorsNotePlaceholder")}
+            disabled={isRevising}
+            className="w-full rounded-xl px-3 py-2 text-fs-body leading-relaxed outline-none resize-none text-white/80 placeholder-white/20 transition-colors"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.2)" }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.45)")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(139,92,246,0.2)")}
+          />
+          <div className="flex gap-2">
+            <button
+              disabled={!directorNote.trim() || isRevising}
+              onClick={() => setDirectorNote("")}
+              className="flex-1 py-2 rounded-xl text-fs-body font-medium transition-all active:scale-95 disabled:opacity-40"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+            >
+              {t("cancel")}
+            </button>
             <button
               disabled={!directorNote.trim() || isRevising}
               onClick={() => handleRevise(directorNote)}
-              className="flex-shrink-0 px-3 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
+              className="flex-1 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-95"
               style={directorNote.trim() && !isRevising
                 ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.45)", color: "#A78BFA" }
                 : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.40)" }
               }
             >
-              <Icon name="submit" size={14} />
+              {t("updateScript")}
             </button>
           </div>
 

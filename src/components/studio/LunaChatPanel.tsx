@@ -497,6 +497,10 @@ export default function LunaChatPanel({
       preferredFigures: activeChild?.preferred_figures,
       interests: activeChild?.interests,
       notes: activeChild?.notes,
+      // Lets the server detect "the hero IS the child" (hero name matches
+      // this exactly) to cast the hero's voice/avatar from the real child
+      // profile instead of a generic default.
+      childName: activeChild?.name,
     };
   }
 
@@ -656,7 +660,13 @@ export default function LunaChatPanel({
           hero: overrideFields?.hero ?? storyParams.hero ?? "",
           setting: overrideFields?.setting ?? storyParams.setting ?? "",
           plot: overrideFields?.plot ?? storyParams.plot ?? "",
-          primaryVoiceId: storyParams.primaryVoiceId ?? "v1",
+          // storyParams.primaryVoiceId is never actually set anywhere in this
+          // panel — this used to unconditionally fall back to the literal
+          // string "v1", which isn't a real preset voice id at all, silently
+          // corrupting the hero's assignedVoiceId whenever the server's own
+          // (now gender-aware) default didn't apply. Omit it entirely and let
+          // the server decide.
+          primaryVoiceId: storyParams.primaryVoiceId,
           durationMinutes,
           childAgeGroup: getChildAgeGroup(),
           language,
