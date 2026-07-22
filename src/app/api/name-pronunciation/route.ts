@@ -31,10 +31,15 @@ function buildPronunciationPrompt(name: string, countryCode?: string): string {
     "",
     "Task: write a respelling of this name that, when read aloud by that TTS voice using standard letter-sound rules, produces the name's most natural, likely pronunciation for a family from that country.",
     "",
+    "Output exactly one line in this format:",
+    "<TTS-RESPELLING>|||<READABLE-PHONETIC>",
+    "",
+    "Where:",
+    "- TTS-RESPELLING is the text actually sent to the TTS engine — script-flexible, whatever reads most accurately. If the country's dominant language uses a different script than the name was typed in (e.g. a Hebrew-origin name typed in Latin letters, for a parent in Israel), prefer respelling it in THAT script over trying to force the sound through Latin-letter tricks, which can't represent every sound. If the name is already spelled the way it's naturally pronounced in a script that will read correctly, return it completely unchanged.",
+    "- READABLE-PHONETIC is a plain-English phonetic spelling a parent can silently read and understand at a glance — always Latin letters, capitalize the stressed syllable, hyphenate syllables (e.g. \"NOH-ahm\", \"no-AHM\"). This is shown on screen, so it must always be readable even when TTS-RESPELLING uses a different script.",
+    "",
     "Rules:",
-    "- Output ONLY the respelling. No explanation, no quotes, no extra words.",
-    "- This text is spoken aloud only — the parent never sees it — so pick WHATEVER SCRIPT will make the TTS voice pronounce it most accurately. If the country's dominant language uses a different script than the name was typed in (e.g. a Hebrew-origin name typed in Latin letters, for a parent in Israel), prefer respelling it in THAT script over trying to force the sound through Latin-letter tricks, which can't represent every sound.",
-    "- If the name is already spelled the way it's naturally pronounced in a script that will read correctly, return it completely unchanged.",
+    "- Output ONLY that one pipe-separated line. No explanation, no quotes, no extra words.",
     "- Never invent a different name — only change spelling, spacing, hyphenation, or script to guide pronunciation.",
   ].join("\n");
 }
@@ -57,19 +62,21 @@ export async function POST(req: NextRequest) {
 
     const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 40, thinkingConfig: { thinkingBudget: 0 } },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 60, thinkingConfig: { thinkingBudget: 0 } },
     });
     if (!ok) return NextResponse.json({ error: "Gemini request failed" }, { status: 502 });
 
-    const respelling = geminiText(data);
+    const raw = geminiText(data);
+    const [respellingPart, readablePart] = raw.split("|||").map((p) => p?.trim());
     // Fall back to the raw name for anything degenerate — empty, way too
     // long for a name, or a refusal ("I cannot...") slipping through.
-    const pronunciation = respelling && respelling.length <= 60 ? respelling : name.trim();
-    console.log(`[name-pronunciation] pronunciation = "${pronunciation}" (name="${name.trim()}", countryCode=${countryCode ?? "unknown"})`);
-    return NextResponse.json({ pronunciation });
+    const pronunciation = respellingPart && respellingPart.length <= 60 ? respellingPart : name.trim();
+    const readable = readablePart && readablePart.length <= 60 ? readablePart : pronunciation;
+    console.log(`[name-pronunciation] pronunciation = "${pronunciation}" readable = "${readable}" (name="${name.trim()}", countryCode=${countryCode ?? "unknown"})`);
+    return NextResponse.json({ pronunciation, readable });
   } catch (err) {
     console.error("[name-pronunciation] error:", err);
     console.log(`[name-pronunciation] pronunciation = "${name.trim()}" (fallback — Gemini call failed)`);
-    return NextResponse.json({ pronunciation: name.trim() });
+    return NextResponse.json({ pronunciation: name.trim(), readable: name.trim() });
   }
 }

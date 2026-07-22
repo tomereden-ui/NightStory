@@ -24,7 +24,15 @@ export async function PATCH(
     if (error) throw error;
     return NextResponse.json(data);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    // Supabase/PostgREST errors are plain {message, details, hint, code}
+    // objects, not real Error instances — `err instanceof Error` was false
+    // for them, so the actual DB error (e.g. why .single() found 0 or 2+
+    // rows) was always getting replaced with a useless "Unknown error"
+    // instead of reaching the client.
+    const message = err instanceof Error
+      ? err.message
+      : (err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message) : "Unknown error");
+    console.error("[child-profiles PATCH] failed:", err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

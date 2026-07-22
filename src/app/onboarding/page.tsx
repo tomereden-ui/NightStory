@@ -80,7 +80,7 @@ export default function OnboardingPage() {
   // runs when the parent explicitly clicks the button — it used to fire on
   // a debounce while typing, which burned a Gemini + TTS call for every
   // half-finished name and played audio the parent never asked to hear.
-  const [pronunciationAudio, setPronunciationAudio] = useState<{ name: string; text: string; data: string; mimeType: string } | null>(null);
+  const [pronunciationAudio, setPronunciationAudio] = useState<{ name: string; text: string; readable: string; data: string; mimeType: string } | null>(null);
   const [pronunciationLoading, setPronunciationLoading] = useState(false);
   const [pronunciationError, setPronunciationError] = useState(false);
   const pronunciationAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -91,9 +91,22 @@ export default function OnboardingPage() {
   // (saved as the override); false = rejected, showing the 5-alternative
   // picker below.
   const [pronunciationConfirmed, setPronunciationConfirmed] = useState<boolean | null>(null);
-  const [alternatives, setAlternatives] = useState<{ text: string; data: string; mimeType: string }[]>([]);
+  const [alternatives, setAlternatives] = useState<{ text: string; readable: string; data: string; mimeType: string; isOriginal?: boolean }[]>([]);
   const [alternativesLoading, setAlternativesLoading] = useState(false);
   const [selectedAlternative, setSelectedAlternative] = useState<number | null>(null);
+  // "Get 5 more options" — one extra round only, offered once the parent has
+  // seen the original guess + first 5 alternatives and still isn't happy.
+  const [moreAlternativesLoading, setMoreAlternativesLoading] = useState(false);
+  const [moreAlternativesUsed, setMoreAlternativesUsed] = useState(false);
+
+  // While the parent has heard the name but hasn't said yes/no (or is
+  // reviewing alternatives after saying no), the step isn't complete —
+  // hide "Next" so they can't skip past an unanswered decision.
+  const pronunciationDecisionPending =
+    step === "name" &&
+    !!pronunciationAudio &&
+    pronunciationAudio.name === draft.name.trim() &&
+    (pronunciationConfirmed === null || pronunciationConfirmed === false);
 
   // A fresh name (the parent kept typing after already hearing/confirming
   // one) restarts the whole confirm cycle — stale audio/confirmation for a
@@ -102,6 +115,7 @@ export default function OnboardingPage() {
     setPronunciationConfirmed(null);
     setAlternatives([]);
     setSelectedAlternative(null);
+    setMoreAlternativesUsed(false);
   }, [draft.name]);
 
   const playAudioData = useCallback((data: string, mimeType: string) => {
@@ -127,11 +141,11 @@ export default function OnboardingPage() {
     setPronunciationLoading(true);
     setPronunciationError(false);
     try {
-      // Best-effort — the account-level lookup already ran once per session
-      // (AuthContext) and is idempotent server-side, so this just reads
-      // back whatever's already resolved without re-hitting ipapi.
-      const countryRes = await fetch("/api/account/detect-country", { method: "POST" }).then((r) => r.json()).catch(() => null);
-      const countryCode: string | undefined = countryRes?.countryCode ?? undefined;
+      // Hardcoded for now — onboarding is Israel-only at launch, and IP-based
+      // detect-country was coming back "unknown" in practice, which fell
+      // through to Gemini guessing the name's origin blind instead of
+      // biasing toward Hebrew.
+      const countryCode = "IL";
 
       const pronRes = await fetch("/api/name-pronunciation", {
         method: "POST",
@@ -139,6 +153,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({ name, countryCode }),
       }).then((r) => r.json()).catch(() => null);
       const pronunciation: string = pronRes?.pronunciation || name;
+      const readable: string = pronRes?.readable || pronunciation;
 
       const synthesize = (text: string, assignedVoiceId?: string) =>
         fetch("/api/synthesize-speech", {
@@ -165,7 +180,7 @@ export default function OnboardingPage() {
 
       if (speechRes?.audioData) {
         const mimeType = speechRes.mimeType ?? "audio/wav";
-        setPronunciationAudio({ name, text: usedText.replace(/\.$/, ""), data: speechRes.audioData, mimeType });
+        setPronunciationAudio({ name, text: usedText.replace(/\.$/, ""), readable, data: speechRes.audioData, mimeType });
         playAudioData(speechRes.audioData, mimeType);
       } else {
         setPronunciationError(true);
@@ -293,45 +308,69 @@ export default function OnboardingPage() {
     goNext();
   }, [pronunciationAudio, goNext]);
 
-  // "No, that's not right" — ask Gemini for 5 distinct alternatives, then
-  // synthesize all 5 in parallel so the parent can listen to each and pick
-  // the closest one.
+  // Shared by the initial 5-alternative fetch and the one-time "5 more" —
+  // asks Gemini for 5 respellings distinct from everything in `rejectedTexts`,
+  // then synthesizes all 5 in parallel.
+  const fetchAlternativeBatch = useCallback(async (rejectedTexts: string[]) => {
+    if (!pronunciationAudio) return [];
+    // Hardcoded for now — see handleHearName above.
+    const countryCode = "IL";
+
+    const altRes = await fetch("/api/name-pronunciation-alternatives", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: pronunciationAudio.name, countryCode, rejected: rejectedTexts }),
+    }).then((r) => r.json()).catch(() => null);
+    // { text: TTS-only respelling (may be a different script), readable:
+    // plain-Latin phonetic spelling shown to the parent } — see
+    // /api/name-pronunciation-alternatives for how these are generated.
+    const options: { text: string; readable: string }[] = Array.isArray(altRes?.alternatives) ? altRes.alternatives : [];
+
+    // Synthesize all 5 in parallel — same trailing-period fix as the main
+    // pronunciation attempt (a bare single word reliably fails Gemini TTS).
+    const results = await Promise.all(options.map(({ text }) =>
+      fetch("/api/synthesize-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: `${text}.`, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), language: appLanguage }),
+      }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+    ));
+
+    return options
+      .map(({ text, readable }, i) => ({ text, readable, data: results[i]?.audioData as string | undefined, mimeType: results[i]?.mimeType as string | undefined ?? "audio/wav" }))
+      .filter((a): a is { text: string; readable: string; data: string; mimeType: string } => !!a.data);
+  }, [pronunciationAudio, appLanguage]);
+
+  // "No, that's not right" — the option list opens with the original guess
+  // the parent just heard (so they can reconsider it alongside the rest,
+  // rather than losing it) followed by 5 fresh alternatives from Gemini.
   const rejectPronunciation = useCallback(async () => {
     if (!pronunciationAudio) return;
     setPronunciationConfirmed(false);
     setAlternativesLoading(true);
-    setAlternatives([]);
+    setAlternatives([{ text: pronunciationAudio.text, readable: pronunciationAudio.readable, data: pronunciationAudio.data, mimeType: pronunciationAudio.mimeType, isOriginal: true }]);
     setSelectedAlternative(null);
+    setMoreAlternativesUsed(false);
     try {
-      const countryRes = await fetch("/api/account/detect-country", { method: "POST" }).then((r) => r.json()).catch(() => null);
-      const countryCode: string | undefined = countryRes?.countryCode ?? undefined;
-
-      const altRes = await fetch("/api/name-pronunciation-alternatives", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: pronunciationAudio.name, countryCode, rejected: pronunciationAudio.text }),
-      }).then((r) => r.json()).catch(() => null);
-      const texts: string[] = Array.isArray(altRes?.alternatives) ? altRes.alternatives : [];
-
-      // Synthesize all 5 in parallel — same trailing-period fix as the main
-      // pronunciation attempt (a bare single word reliably fails Gemini TTS).
-      const results = await Promise.all(texts.map((text) =>
-        fetch("/api/synthesize-speech", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: `${text}.`, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), language: appLanguage }),
-        }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
-      ));
-
-      const built = texts
-        .map((text, i) => ({ text, data: results[i]?.audioData as string | undefined, mimeType: results[i]?.mimeType as string | undefined ?? "audio/wav" }))
-        .filter((a): a is { text: string; data: string; mimeType: string } => !!a.data);
-
-      setAlternatives(built);
+      const built = await fetchAlternativeBatch([pronunciationAudio.text]);
+      setAlternatives((prev) => [...prev, ...built]);
     } finally {
       setAlternativesLoading(false);
     }
-  }, [pronunciationAudio, appLanguage]);
+  }, [pronunciationAudio, fetchAlternativeBatch]);
+
+  // "None of these sound right?" — one extra, final round of 5 more options,
+  // excluding every respelling already shown (original + first 5).
+  const fetchMoreAlternatives = useCallback(async () => {
+    setMoreAlternativesLoading(true);
+    try {
+      const built = await fetchAlternativeBatch(alternatives.map((a) => a.text));
+      setAlternatives((prev) => [...prev, ...built]);
+      setMoreAlternativesUsed(true);
+    } finally {
+      setMoreAlternativesLoading(false);
+    }
+  }, [alternatives, fetchAlternativeBatch]);
 
   // Play just previews — it doesn't select. Selecting is a separate action
   // (a distinct "closest one" pick) so the parent can listen to a few before
@@ -427,18 +466,31 @@ export default function OnboardingPage() {
         </button>
 
         {stepIndex >= 0 && (
-          <div className="flex items-center gap-1.5">
-            {STEP_ORDER.map((s, i) => (
-              <div
-                key={s}
-                className="rounded-full transition-all"
-                style={{
-                  width: i === stepIndex ? 18 : 6,
-                  height: 6,
-                  background: i <= stepIndex ? "#4fc3f7" : "rgba(255,255,255,0.15)",
-                }}
-              />
-            ))}
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="flex items-center gap-1.5">
+              {STEP_ORDER.map((s, i) => (
+                <div
+                  key={s}
+                  className="rounded-full transition-all"
+                  style={{
+                    width: i === stepIndex ? 20 : 6,
+                    height: 6,
+                    background: i < stepIndex
+                      ? "linear-gradient(90deg,#4fc3f7,#a78bfa)"
+                      : i === stepIndex
+                        ? "linear-gradient(90deg,#4fc3f7,#a78bfa)"
+                        : "rgba(255,255,255,0.14)",
+                    boxShadow: i === stepIndex ? "0 0 10px rgba(79,195,247,0.55)" : "none",
+                  }}
+                />
+              ))}
+            </div>
+            <p
+              className="font-bold uppercase tracking-widest"
+              style={{ fontSize: 9, color: "rgba(148,163,184,0.55)" }}
+            >
+              Step {stepIndex + 1} of {STEP_ORDER.length}
+            </p>
           </div>
         )}
 
@@ -472,7 +524,7 @@ export default function OnboardingPage() {
         )}
 
         {step === "name" && (
-          <StepShell title="What's your child's name?" subtitle="This is how Luna and every story will greet them.">
+          <StepShell stepKey="name" icon="👋" title="What's your child's name?" subtitle="This is how Luna and every story will greet them.">
             <input
               type="text"
               autoFocus
@@ -515,22 +567,27 @@ export default function OnboardingPage() {
                 )}
 
                 {/* "Does this sound right?" — shown once audio for the
-                    CURRENT name has played and hasn't been answered yet. */}
+                    CURRENT name has played and hasn't been answered yet.
+                    Framed as a required checkpoint (not an aside) since the
+                    footer's Next button is hidden until this is answered. */}
                 {pronunciationAudio && pronunciationAudio.name === draft.name.trim() && pronunciationConfirmed === null && !pronunciationLoading && (
-                  <div className="mt-4 text-center">
-                    <p className="text-fs-body mb-2" style={{ color: "rgba(148,163,184,0.9)" }}>Does that sound right?</p>
-                    <div className="flex justify-center gap-2">
+                  <div
+                    className="mt-4 p-4 rounded-2xl text-center"
+                    style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.22)" }}
+                  >
+                    <p className="text-fs-body font-semibold mb-3" style={{ color: "#e2e8f0" }}>Does that sound right?</p>
+                    <div className="flex gap-2">
                       <button
                         onClick={confirmPronunciationYes}
-                        className="px-4 py-2 rounded-full font-semibold transition-all active:scale-95"
-                        style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.35)", color: "#34d399", fontSize: 13 }}
+                        className="flex-1 py-3 rounded-xl font-bold transition-all active:scale-95"
+                        style={{ background: "linear-gradient(135deg,#10b981,#34d399)", color: "#052e1f", fontSize: 13 }}
                       >
                         ✓ Yes, that&apos;s right
                       </button>
                       <button
                         onClick={rejectPronunciation}
-                        className="px-4 py-2 rounded-full font-semibold transition-all active:scale-95"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)", fontSize: 13 }}
+                        className="flex-1 py-3 rounded-xl font-semibold transition-all active:scale-95"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.7)", fontSize: 13 }}
                       >
                         ✕ Not quite
                       </button>
@@ -538,49 +595,59 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                {/* Rejected — 5 alternatives, each with its own play button;
+                {/* Rejected — the list opens with the original guess the
+                    parent just heard (isOriginal, tagged below) followed by
+                    5 fresh alternatives; each row has its own play button,
                     picking one just selects/highlights it (so the parent can
                     preview a few before committing) — a separate confirm
-                    button actually saves the choice and moves on. Options
-                    are deliberately unlabeled beyond "Option N": the
-                    respelling text is TTS-only and never meant to be read
-                    by the parent. */}
+                    button actually saves the choice and moves on. Each row's
+                    label is a plain-Latin phonetic respelling ("readable")
+                    Gemini generates alongside the actual TTS-only text
+                    ("text") so the parent has a hint of what they're about
+                    to tap play on, even when the TTS text itself uses a
+                    different script. "Get 5 more" offers exactly one further
+                    round if nothing in the first 6 is close enough. */}
                 {pronunciationConfirmed === false && (
-                  <div className="mt-4">
-                    <p className="text-fs-body text-center mb-2" style={{ color: "rgba(148,163,184,0.9)" }}>
-                      {alternativesLoading ? "Finding some alternatives…" : "Pick whichever sounds closest:"}
+                  <div
+                    className="mt-4 p-4 rounded-2xl"
+                    style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.22)" }}
+                  >
+                    <p className="text-fs-body font-semibold text-center mb-3" style={{ color: "#e2e8f0" }}>
+                      Pick whichever sounds closest:
                     </p>
-                    {alternativesLoading ? (
-                      <div className="flex justify-center py-3">
-                        <span className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#4fc3f7 transparent transparent transparent" }} />
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {alternatives.map((alt, i) => (
-                          <div
-                            key={i}
-                            onClick={() => selectAlternative(i)}
-                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all cursor-pointer"
-                            style={{
-                              background: selectedAlternative === i ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)",
-                              border: selectedAlternative === i ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                            }}
+                    <div className="flex flex-col gap-2">
+                      {alternatives.map((alt, i) => (
+                        <div
+                          key={i}
+                          onClick={() => selectAlternative(i)}
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all cursor-pointer"
+                          style={{
+                            background: selectedAlternative === i ? "rgba(79,195,247,0.14)" : "rgba(255,255,255,0.04)",
+                            border: selectedAlternative === i ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                          }}
+                        >
+                          <button
+                            onClick={(e) => { e.stopPropagation(); playAlternative(i); }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+                            style={{ background: "rgba(79,195,247,0.15)", color: "#4fc3f7" }}
                           >
-                            <button
-                              onClick={(e) => { e.stopPropagation(); playAlternative(i); }}
-                              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
-                              style={{ background: "rgba(79,195,247,0.15)", color: "#4fc3f7" }}
-                            >
-                              ▶
-                            </button>
-                            <span className="flex-1 text-fs-body font-medium text-left" style={{ color: selectedAlternative === i ? "#4fc3f7" : "rgba(255,255,255,0.75)" }}>
-                              Option {i + 1}
-                            </span>
-                            {selectedAlternative === i && <span style={{ color: "#4fc3f7" }}>✓</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                            ▶
+                          </button>
+                          <span className="flex-1 text-fs-body font-medium text-left" style={{ color: selectedAlternative === i ? "#4fc3f7" : "rgba(255,255,255,0.75)" }}>
+                            {alt.readable}
+                            {alt.isOriginal && (
+                              <span className="ml-1.5" style={{ fontSize: 11, color: "rgba(148,163,184,0.7)", fontWeight: 400 }}>(first suggestion)</span>
+                            )}
+                          </span>
+                          {selectedAlternative === i && <span style={{ color: "#4fc3f7" }}>✓</span>}
+                        </div>
+                      ))}
+                      {(alternativesLoading || moreAlternativesLoading) && (
+                        <div className="flex justify-center py-3">
+                          <span className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#4fc3f7 transparent transparent transparent" }} />
+                        </div>
+                      )}
+                    </div>
                     {!alternativesLoading && alternatives.length > 0 && (
                       <button
                         onClick={confirmSelectedAlternative}
@@ -591,6 +658,16 @@ export default function OnboardingPage() {
                         Use this pronunciation
                       </button>
                     )}
+                    {!alternativesLoading && !moreAlternativesUsed && alternatives.length > 0 && (
+                      <button
+                        onClick={fetchMoreAlternatives}
+                        disabled={moreAlternativesLoading}
+                        className="w-full mt-2 py-2 text-center font-medium disabled:opacity-50"
+                        style={{ color: "rgba(148,163,184,0.8)", fontSize: 12 }}
+                      >
+                        {moreAlternativesLoading ? "Finding a few more…" : "None of these? Get 5 more options"}
+                      </button>
+                    )}
                   </div>
                 )}
               </>
@@ -599,52 +676,68 @@ export default function OnboardingPage() {
         )}
 
         {step === "age" && (
-          <StepShell title="How old are they?" subtitle="Stories adjust their pacing and vocabulary to fit.">
-            <div className="flex flex-wrap justify-center gap-2">
-              {AGE_OPTIONS.map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setDraft((p) => ({ ...p, age: n }))}
-                  className="rounded-2xl font-bold transition-all"
-                  style={{
-                    width: 52, height: 52,
-                    background: draft.age === n ? "rgba(79,195,247,0.15)" : "rgba(255,255,255,0.04)",
-                    border: draft.age === n ? "1.5px solid rgba(79,195,247,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                    color: draft.age === n ? "#4fc3f7" : "rgba(255,255,255,0.6)",
-                    fontSize: 16,
-                  }}
-                >
-                  {n}
-                </button>
-              ))}
+          <StepShell stepKey="age" icon="🎂" title="How old are they?" subtitle="Stories adjust their pacing and vocabulary to fit.">
+            <div className="flex flex-wrap justify-center gap-2.5">
+              {AGE_OPTIONS.map((n) => {
+                const active = draft.age === n;
+                return (
+                  <button
+                    key={n}
+                    onClick={() => setDraft((p) => ({ ...p, age: n }))}
+                    className="rounded-full font-bold transition-all active:scale-90"
+                    style={{
+                      width: 52, height: 52,
+                      background: active
+                        ? "linear-gradient(150deg,#4fc3f7,#8B5CF6)"
+                        : "rgba(255,255,255,0.05)",
+                      border: active ? "none" : "1px solid rgba(255,255,255,0.1)",
+                      boxShadow: active
+                        ? "0 0 18px rgba(79,195,247,0.45), inset 0 1px 1px rgba(255,255,255,0.3)"
+                        : "inset 0 1px 1px rgba(255,255,255,0.05)",
+                      color: active ? "#fff" : "rgba(255,255,255,0.65)",
+                      fontSize: 17,
+                      transform: active ? "scale(1.08)" : "scale(1)",
+                    }}
+                  >
+                    {n}
+                  </button>
+                );
+              })}
             </div>
           </StepShell>
         )}
 
         {step === "gender" && (
-          <StepShell title="Boy, girl, or other?" subtitle="Helps us pick the right character voice.">
-            <div className="flex gap-2">
-              {(["boy", "girl", "other"] as const).map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setDraft((p) => ({ ...p, gender: g }))}
-                  className="flex-1 py-4 rounded-2xl font-semibold capitalize transition-all"
-                  style={{
-                    background: draft.gender === g ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)",
-                    border: draft.gender === g ? "1.5px solid rgba(79,195,247,0.45)" : "1px solid rgba(255,255,255,0.08)",
-                    color: draft.gender === g ? "#4fc3f7" : "rgba(255,255,255,0.5)",
-                    fontSize: 15,
-                  }}
-                >
-                  {g}
-                </button>
-              ))}
+          <StepShell stepKey="gender" icon="🌈" title="Boy, girl, or other?" subtitle="Helps us pick the right character voice.">
+            <div className="flex gap-2.5">
+              {(["boy", "girl", "other"] as const).map((g) => {
+                const active = draft.gender === g;
+                const emoji = g === "boy" ? "👦" : g === "girl" ? "👧" : "🌈";
+                return (
+                  <button
+                    key={g}
+                    onClick={() => setDraft((p) => ({ ...p, gender: g }))}
+                    className="flex-1 flex flex-col items-center gap-1.5 py-4 rounded-2xl font-semibold capitalize transition-all active:scale-95"
+                    style={{
+                      background: active ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)",
+                      border: active ? "1.5px solid rgba(79,195,247,0.45)" : "1px solid rgba(255,255,255,0.08)",
+                      boxShadow: active ? "0 0 16px rgba(79,195,247,0.15)" : "none",
+                      color: active ? "#4fc3f7" : "rgba(255,255,255,0.5)",
+                      fontSize: 14,
+                      transform: active ? "scale(1.03)" : "scale(1)",
+                    }}
+                  >
+                    <span style={{ fontSize: 26 }}>{emoji}</span>
+                    {g}
+                  </button>
+                );
+              })}
             </div>
           </StepShell>
         )}
 
         {step === "avatar" && (
-          <StepShell title="Pick an avatar" subtitle="Shown next to their name throughout the app.">
+          <StepShell stepKey="avatar" icon="🎭" title="Pick an avatar" subtitle="Shown next to their name throughout the app.">
             {sortedBankAvatars.length > 0 ? (
               <div className="grid grid-cols-4 gap-2.5 max-h-[340px] overflow-y-auto pr-0.5">
                 {sortedBankAvatars.map((a) => {
@@ -696,7 +789,13 @@ export default function OnboardingPage() {
         )}
 
         {step === "themes" && (
-          <StepShell title="What kind of stories do they love?" subtitle="Pick as many as you like — we'll lean into these.">
+          <StepShell
+            stepKey="themes"
+            icon="📚"
+            title="What kind of stories do they love?"
+            subtitle="Pick as many as you like — we'll lean into these."
+            counter={draft.themes.length > 0 ? `${draft.themes.length} selected` : undefined}
+          >
             <div className="flex flex-wrap justify-center gap-2">
               {THEME_OPTIONS.map((t) => {
                 const active = draft.themes.includes(t.id);
@@ -721,7 +820,13 @@ export default function OnboardingPage() {
         )}
 
         {step === "figures" && (
-          <StepShell title="Which figures do they love?" subtitle="Pick as many as you like — we'll feature them in stories.">
+          <StepShell
+            stepKey="figures"
+            icon="🦄"
+            title="Which figures do they love?"
+            subtitle="Pick as many as you like — we'll feature them in stories."
+            counter={draft.figures.length > 0 ? `${draft.figures.length} selected` : undefined}
+          >
             <div className="grid grid-cols-2 gap-2.5">
               {FIGURES.map((f) => {
                 const active = draft.figures.includes(f.id);
@@ -763,7 +868,13 @@ export default function OnboardingPage() {
         )}
 
         {step === "lessons" && (
-          <StepShell title="Want stories to teach something?" subtitle="Pick any values to weave into every story — optional, and you can change these later.">
+          <StepShell
+            stepKey="lessons"
+            icon="💫"
+            title="Want stories to teach something?"
+            subtitle="Pick any values to weave into every story — optional, and you can change these later."
+            counter={draft.lessons.length > 0 ? `${draft.lessons.length} selected` : undefined}
+          >
             <div className="flex flex-wrap justify-center gap-2">
               {getLessonsCatalog().map((l) => {
                 const active = draft.lessons.includes(l.id);
@@ -833,15 +944,17 @@ export default function OnboardingPage() {
             {saveError && (
               <p className="text-fs-body text-center" style={{ color: "#fca5a5" }}>{saveError}</p>
             )}
-            <button
-              onClick={goNext}
-              disabled={saving}
-              className="w-full py-3.5 rounded-2xl font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)", fontSize: 15 }}
-            >
-              {saving ? "Saving…" : stepIndex === STEP_ORDER.length - 1 ? "Finish" : "Next"}
-            </button>
-            {stepIndex < STEP_ORDER.length - 1 && (
+            {!pronunciationDecisionPending && (
+              <button
+                onClick={goNext}
+                disabled={saving}
+                className="w-full py-3.5 rounded-2xl font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,#4fc3f7,#8B5CF6)", fontSize: 15 }}
+              >
+                {saving ? "Saving…" : stepIndex === STEP_ORDER.length - 1 ? "Finish" : "Next"}
+              </button>
+            )}
+            {!pronunciationDecisionPending && stepIndex < STEP_ORDER.length - 1 && (
               <button
                 onClick={goNext}
                 className="text-fs-body font-medium mx-auto"
@@ -857,12 +970,65 @@ export default function OnboardingPage() {
   );
 }
 
-function StepShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+function StepShell({
+  title,
+  subtitle,
+  icon,
+  counter,
+  stepKey,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  /** Emoji shown in a glowing badge above the title — gives each step its
+   *  own visual anchor instead of every step reading as the same plain
+   *  title/subtitle/options template. */
+  icon?: string;
+  /** e.g. "3 selected" for multi-pick steps — shown as a small pill under
+   *  the subtitle, so picking something gives visible feedback beyond the
+   *  option itself lighting up. */
+  counter?: string;
+  /** Remounts this shell on step change so onboarding-step-in replays —
+   *  without a changing key, a CSS animation class that's already applied
+   *  doesn't restart on its own. */
+  stepKey: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex-1 flex flex-col justify-center gap-6">
+    <div key={stepKey} className="flex-1 flex flex-col justify-center gap-6 onboarding-step-in">
       <div className="text-center">
+        {icon && (
+          <div
+            className="mx-auto mb-3 flex items-center justify-center rounded-full"
+            style={{
+              width: 56,
+              height: 56,
+              background: "linear-gradient(135deg, rgba(79,195,247,0.16), rgba(167,139,250,0.16))",
+              border: "1px solid rgba(167,139,250,0.3)",
+              boxShadow: "0 0 24px rgba(79,195,247,0.18)",
+              fontSize: 26,
+            }}
+          >
+            {icon}
+          </div>
+        )}
         <h1 className="font-bold mb-1.5" style={{ fontSize: 22, color: "#e2e8f0" }}>{title}</h1>
         <p className="text-fs-body" style={{ color: "rgba(148,163,184,0.9)" }}>{subtitle}</p>
+        {counter && (
+          <span
+            className="inline-block mt-2 font-bold uppercase tracking-widest"
+            style={{
+              fontSize: 10,
+              color: "#4fc3f7",
+              background: "rgba(79,195,247,0.1)",
+              border: "1px solid rgba(79,195,247,0.25)",
+              borderRadius: 999,
+              padding: "3px 10px",
+            }}
+          >
+            {counter}
+          </span>
+        )}
       </div>
       {children}
     </div>

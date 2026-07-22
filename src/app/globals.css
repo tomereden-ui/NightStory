@@ -184,31 +184,21 @@ body::before {
   transform-origin: center center;
 }
 
-/* BookCover's layout CSS lives as inline styles in
-   src/components/ui/BookCover.tsx (plain percentage-based layering). Only
-   the hover behaviour lives here, because inline styles can't express
-   :hover.
-   2D skew & scale technique (not perspective/rotateY/preserve-3d): the
-   scrolling rails' overflow-x-auto containers were flattening real 3D
-   transforms in some browser engines, so the "3D book" look is simulated
-   with a plain 2D skewY + scaleX instead — standard 2D transforms can't be
-   flattened by an ancestor's overflow the way 3D ones can.
-   !important on the transform: nothing else in this file (or Tailwind's
-   utility layer) sets transform on .book-wrapper, so this is belt-and-
-   suspenders, not a fix for a known conflict — if the skew still doesn't
-   render, the cause isn't CSS specificity. */
-.book-wrapper {
-  /* Angles flipped from the original: resting state is now the shallower
-     tilt that used to only show on hover, and hover now shows the deeper
-     tilt that used to be the resting state — same two angles, swapped
-     roles. Only the angle swapped; each state keeps its own scale/lift. */
-  transform: skewY(-0.5deg) scaleX(0.94) !important;
-  transform-origin: left center !important;
-  transition: transform 0.3s ease !important;
+/* Onboarding step transitions — re-triggers on every step change via a
+   React `key={step}` on the wrapper, since remounting is what restarts a
+   CSS animation (changing a class name alone wouldn't, if it's already
+   applied). */
+@keyframes onboarding-step-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.book-wrapper:hover {
-  transform: skewY(-3.5deg) scale(1.04) translateY(-5px) !important;
+.onboarding-step-in {
+  animation: onboarding-step-in 0.35s cubic-bezier(0.22, 0.9, 0.3, 1) both;
 }
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-step-in { animation: none; }
+}
+
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
 /* 8-level scale. JS (FontSizeContext) overrides these via setProperty.       */

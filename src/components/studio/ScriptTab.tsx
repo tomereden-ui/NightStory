@@ -465,10 +465,11 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     summaryAbortRef.current = ctrl;
     setSummaryLoading(true);
     try {
+      const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
       const res = await fetch("/api/synthesize-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: summary, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), language }),
+        body: JSON.stringify({ text: summary, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), language, childIds: activeChildId ? [activeChildId] : undefined }),
         signal: ctrl.signal,
       });
       if (!res.ok || ctrl.signal.aborted) return;
@@ -504,6 +505,10 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     setSpeechError(null); setIsLoading(true); setIsPlaying(false); setIsPaused(false);
     try {
       const forceRegenerate = dirtyBlockIdsRef.current.has(block.id);
+      // Resolves the child's confirmed pronunciation override (onboarding's
+      // "Does this sound right?" flow) server-side — never changes the text
+      // shown here in the editor, only what's sent to the TTS engine.
+      const activeChildId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
       const res = await fetch("/api/synthesize-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -514,6 +519,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           language,
           storyId,
           forceRegenerate,
+          childIds: activeChildId ? [activeChildId] : undefined,
         }),
       });
       const data = await res.json() as { audioData?: string; mimeType?: string; voiceName?: string; cachedUrl?: string; error?: string };
@@ -1020,8 +1026,8 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
                   </span>
                 )}
                 <span
-                  className="text-fs-body transition-transform"
-                  style={{ color: "rgba(196,181,253,0.5)", marginLeft: isChecking ? 0 : "auto", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                  className="transition-transform"
+                  style={{ color: "rgba(196,181,253,0.6)", fontSize: 22, marginLeft: isChecking ? 0 : "auto", transform: scriptExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
                 >
                   ▾
                 </span>

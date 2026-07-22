@@ -12,6 +12,15 @@ function formatTime(s: number): string {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
+// Strips a trailing "- Chapter N" suffix so a series' shared page can show
+// the series name as the headline rather than one chapter's own title —
+// same convention as seriesDisplayTitle() in library/[id]/page.tsx (kept
+// local here rather than shared, since it's a one-line regex and this page
+// has no other reason to import from a private route's module).
+function seriesDisplayTitle(title: string): string {
+  return title.replace(/\s*-\s*(chapter|פרק)\s*\d+\s*$/i, "").trim();
+}
+
 // The visitor opening this link has no account and no language
 // preference we can read — the story's own `language` (set when the
 // family created it) is the strongest signal for who's on the other
@@ -227,10 +236,16 @@ function PromoBanner({ language }: { language: string }) {
 }
 
 export default function SharePageClient({ storyId }: { storyId: string }) {
+  // Which chapter is currently loaded — starts at whichever id the link
+  // pointed to (could be chapter 1 from "Share whole story", or any single
+  // chapter shared individually), and moves as the visitor browses the
+  // series or a chapter finishes and auto-advances.
+  const [currentId, setCurrentId] = useState(storyId);
   const [story, setStory]     = useState<PublicStoryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [coverError, setCoverError] = useState(false);
+  const [switchingChapter, setSwitchingChapter] = useState(false);
 
   const audioRef    = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying]         = useState(false);
@@ -246,7 +261,8 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
   const [savingMessage, setSavingMessage]   = useState(false);
 
   useEffect(() => {
-    fetch(`/api/story/${storyId}`)
+    setLoading(true);
+    fetch(`/api/story/${currentId}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((d) => {
         const data = d as PublicStoryData;
@@ -255,7 +271,37 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
-  }, [storyId]);
+  }, [currentId]);
+
+  // Swaps to a sibling chapter in place — same pattern as the private
+  // library page's switchChapter: refetch, reset the player, silently swap
+  // the URL so a refresh or re-share lands on the chapter actually being
+  // listened to. autoplay is used for the "chapter ended, play the next
+  // one" case; a manual tap into the chapters row doesn't force playback.
+  const switchChapter = useCallback((newId: string, autoplay = false) => {
+    if (newId === currentId || switchingChapter) return;
+    setSwitchingChapter(true);
+    setPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setCurrentId(newId);
+    window.history.replaceState(null, "", `/story/${newId}`);
+    setSwitchingChapter(false);
+    if (autoplay) {
+      // Audio element's src updates on the next render; give it a tick
+      // before asking it to play.
+      requestAnimationFrame(() => requestAnimationFrame(() => audioRef.current?.play().catch(() => {})));
+    }
+  }, [currentId, switchingChapter]);
+
+  const handleChapterEnded = useCallback(() => {
+    setPlaying(false);
+    setCurrentTime(0);
+    if (!story || story.chapters.length < 2) return;
+    const idx = story.chapters.findIndex((c) => c.id === story.id);
+    const next = idx >= 0 ? story.chapters[idx + 1] : undefined;
+    if (next) switchChapter(next.id, true);
+  }, [story, switchChapter]);
 
   const handleSaveMessage = useCallback(async () => {
     if (!story) return;
@@ -349,7 +395,7 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
         src={story.audioUrl}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => { setPlaying(false); setCurrentTime(0); }}
+        onEnded={handleChapterEnded}
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
       />
@@ -449,8 +495,61 @@ export default function SharePageClient({ storyId }: { storyId: string }) {
             filter: "drop-shadow(0 0 20px rgba(79,195,247,0.3))",
           }}
         >
-          {story.title}
+          {story.chapterCount && story.chapterCount > 1 ? seriesDisplayTitle(story.title) : story.title}
         </h1>
+        {story.chapterCount && story.chapterCount > 1 && (
+          <p className="text-center mb-6" style={{ color: "rgba(255,255,255,0.45)", fontSize: "var(--fs-body)" }}>
+            Chapter {story.chapterNumber} of {story.chapterCount}
+          </p>
+        )}
+
+        {/* Chapters row — only for a story that's part of a series (i.e. the
+            link came from either "Share whole story" or an individual
+            chapter share; either way every sibling with produced audio is
+            listed here, same as the private in-app chapters row). Tapping
+            one swaps the player in place, same as switchChapter above. */}
+        {story.chapters.length > 1 && (
+          <div className="w-full mb-8" style={{ maxWidth: 360 }}>
+            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {story.chapters.map((c) => {
+                const isCurrent = c.id === story.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => switchChapter(c.id)}
+                    disabled={switchingChapter}
+                    className="flex-shrink-0 rounded-2xl overflow-hidden text-left transition-all active:scale-[0.96] select-none relative"
+                    style={{
+                      width: 92, height: 130,
+                      border: isCurrent ? "2px solid #4fc3f7" : "1px solid rgba(255,255,255,0.12)",
+                      boxShadow: isCurrent ? "0 0 16px rgba(79,195,247,0.35)" : "0 4px 14px rgba(0,0,0,0.4)",
+                      opacity: switchingChapter && !isCurrent ? 0.5 : 1,
+                    }}
+                  >
+                    {c.coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.coverUrl} alt={c.title} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-2xl" style={{ background: "linear-gradient(150deg,#1a1040 0%,#0d1230 45%,#040612 100%)" }}>
+                        🌙
+                      </div>
+                    )}
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(4,6,18,0.95) 100%)" }} />
+                    <span
+                      className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center font-bold"
+                      style={{ fontSize: 10, background: isCurrent ? "#4fc3f7" : "rgba(5,8,20,0.75)", color: isCurrent ? "#04101a" : "rgba(255,255,255,0.75)", backdropFilter: "blur(4px)" }}
+                    >
+                      {c.chapterNumber}
+                    </span>
+                    {isCurrent && (
+                      <span className="absolute top-1.5 right-1.5" style={{ color: "#4fc3f7", fontSize: 11 }}>▶</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Personal message — the one editable text box on this page.
             Editable only by the family that owns this story (story.isOwner,

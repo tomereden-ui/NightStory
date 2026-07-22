@@ -8,7 +8,6 @@ import { useFontSize, type FontScale } from "@/context/FontSizeContext";
 import { useAuth } from "@/context/AuthContext";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import FamilyVoicesPanel from "@/components/profile/FamilyVoicesPanel";
-import StoryJourney from "@/components/profile/StoryJourney";
 import { MOCK_USER } from "@/lib/mockData";
 import { PRESET_VOICES } from "@/config/presetVoices";
 import { getNarratorVoiceId, setNarratorVoiceId } from "@/lib/narratorPreference";
@@ -330,6 +329,74 @@ function AddChildModal({
   );
 }
 
+// ─── Collapsible panel — same chrome as NarratorVoiceSection/familyMembersOpen
+// below (icon badge + colored title + one-line summary + rotating ▾), reused
+// here so EditChildModal's less-often-touched sections (themes, avoid,
+// lessons) stay tucked away instead of all showing at once. ─────────────────
+
+function CollapsiblePanel({
+  icon,
+  title,
+  summary,
+  accentText,
+  accentBg,
+  accentBorder,
+  open,
+  onToggle,
+  children,
+}: {
+  icon: string;
+  title: string;
+  summary: string;
+  accentText: string;
+  accentBg: string;
+  accentBorder: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all active:scale-[0.98]"
+        style={{
+          background: "rgba(255,255,255,0.04)",
+          border: open ? `1px solid ${accentBorder}` : "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <div
+          className="flex items-center justify-center rounded-xl flex-shrink-0"
+          style={{ width: 38, height: 38, background: accentBg, border: `1px solid ${accentBorder}` }}
+        >
+          <span style={{ fontSize: 18 }}>{icon}</span>
+        </div>
+        <div className="flex-1 text-left min-w-0">
+          <p className="font-bold" style={{ fontSize: "var(--fs-body)", color: accentText }}>{title}</p>
+          <p className="text-fs-body mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.4)" }}>{summary}</p>
+        </div>
+        <span
+          className="flex-shrink-0 transition-transform"
+          style={{ color: "rgba(255,255,255,0.5)", fontSize: 22, transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+        >
+          ▾
+        </span>
+      </button>
+      {open && <div className="mt-3 px-1">{children}</div>}
+    </div>
+  );
+}
+
+// One-line "what's set" preview shown on a panel's collapsed row, so a parent
+// can tell what's already configured without opening it.
+function summarizeChips(selectedIds: string[], catalog: { id: string; label: string }[], emptyText: string): string {
+  const labels = catalog.filter((c) => selectedIds.includes(c.id)).map((c) => c.label);
+  if (labels.length === 0) return emptyText;
+  if (labels.length <= 2) return labels.join(", ");
+  return `${labels.slice(0, 2).join(", ")} +${labels.length - 2} more`;
+}
+
 // ─── Edit child modal (full profile: name/age/gender/avatar/themes/interests/avoid) ──
 
 function EditChildModal({
@@ -356,6 +423,22 @@ function EditChildModal({
   const [defaultLessons, setDefaultLessons] = useState<string[]>([]);
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Which of the collapsible sections below Basics is expanded — collapsed
+  // by default so the modal opens showing just the essentials, not every
+  // field at once.
+  const [themesOpen, setThemesOpen] = useState(false);
+  const [avoidOpen, setAvoidOpen] = useState(false);
+  const [lessonsOpen, setLessonsOpen] = useState(false);
+
+  // Snapshot of the loaded values, used only to gate the Save button on
+  // whether anything actually changed — a ref rather than state since it's
+  // never itself displayed, just compared against on every render.
+  const originalRef = useRef<{
+    name: string; age: string; gender: "boy" | "girl" | "other"; avatar: string;
+    themes: string[]; interests: string; avoid: string; defaultLessons: string[];
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/child-profiles")
@@ -363,19 +446,49 @@ function EditChildModal({
       .then((list: DBChildProfile[]) => {
         const found = Array.isArray(list) ? list.find((c) => c.id === childId) : undefined;
         if (found) {
+          const loadedGender = found.gender ?? "other";
+          const loadedThemes = found.favorite_themes ?? [];
+          const loadedInterests = found.interests ?? "";
+          const loadedAvoid = found.avoid ?? "";
+          const loadedLessons = found.default_moral_lessons ?? [];
           setName(found.name);
           setAge(String(found.age));
-          setGender(found.gender ?? "other");
+          setGender(loadedGender);
           setAvatar(found.avatar_emoji ?? "");
-          setThemes(found.favorite_themes ?? []);
-          setInterests(found.interests ?? "");
-          setAvoid(found.avoid ?? "");
-          setDefaultLessons(found.default_moral_lessons ?? []);
+          setThemes(loadedThemes);
+          setInterests(loadedInterests);
+          setAvoid(loadedAvoid);
+          setDefaultLessons(loadedLessons);
+          originalRef.current = {
+            name: found.name, age: String(found.age), gender: loadedGender, avatar: found.avatar_emoji ?? "",
+            themes: loadedThemes, interests: loadedInterests, avoid: loadedAvoid, defaultLessons: loadedLessons,
+          };
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [childId]);
+
+  // Same length + every original entry still present covers add/remove/
+  // reorder for the two chip lists without caring about order.
+  function sameItems(a: string[], b: string[]): boolean {
+    return a.length === b.length && a.every((v) => b.includes(v));
+  }
+
+  const isDirty = (() => {
+    const o = originalRef.current;
+    if (!o) return false;
+    return (
+      name.trim() !== o.name ||
+      age !== o.age ||
+      gender !== o.gender ||
+      avatar !== o.avatar ||
+      interests !== o.interests ||
+      avoid !== o.avoid ||
+      !sameItems(themes, o.themes) ||
+      !sameItems(defaultLessons, o.defaultLessons)
+    );
+  })();
 
   function toggleTheme(id: string) {
     setThemes((prev) => prev.includes(id) ? prev.filter((tId) => tId !== id) : [...prev, id]);
@@ -390,6 +503,7 @@ function EditChildModal({
     const parsedAge = parseInt(age, 10);
     if (!trimmed || isNaN(parsedAge) || parsedAge < 1 || parsedAge > 16) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const res = await fetch(`/api/child-profiles/${childId}`, {
         method: "PATCH",
@@ -409,8 +523,16 @@ function EditChildModal({
         const saved = await res.json() as { id: string; name: string; age: number; avatar_emoji: string };
         onSaved(saved);
         onClose();
+      } else {
+        // Previously silent — a failed save (e.g. family_id mismatch, a
+        // dropped request) looked identical to a successful one from the
+        // parent's side: the modal just... stayed open with no explanation.
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.error ?? `Save failed (${res.status})`);
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Save failed — check your connection.");
+    }
     finally { setSaving(false); }
   }
 
@@ -522,9 +644,17 @@ function EditChildModal({
             </div>
           </div>
 
-          <div>
-            <label className="text-fs-body uppercase tracking-widest font-bold mb-2 block" style={{ color: "rgba(167,139,250,0.85)" }}>Favourite story themes</label>
-            <div className="flex flex-wrap gap-1.5">
+          <CollapsiblePanel
+            icon="📖"
+            title="Favourite story themes"
+            summary={summarizeChips(themes, THEME_OPTIONS, "No themes picked yet")}
+            accentText="#a78bfa"
+            accentBg="rgba(167,139,250,0.18)"
+            accentBorder="rgba(167,139,250,0.3)"
+            open={themesOpen}
+            onToggle={() => setThemesOpen((o) => !o)}
+          >
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {THEME_OPTIONS.map((th) => {
                 const active = themes.includes(th.id);
                 return (
@@ -543,9 +673,6 @@ function EditChildModal({
                 );
               })}
             </div>
-          </div>
-
-          <div>
             <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(79,195,247,0.8)" }}>Interests <span className="normal-case opacity-60">(optional)</span></label>
             <input
               type="text"
@@ -557,11 +684,20 @@ function EditChildModal({
               onFocus={(e) => { e.target.style.borderColor = "rgba(79,195,247,0.4)"; }}
               onBlur={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
             />
-          </div>
+          </CollapsiblePanel>
 
-          <div>
+          <CollapsiblePanel
+            icon="🛡️"
+            title="Things to avoid"
+            summary={avoid.trim() || "Nothing noted"}
+            accentText="#f472b6"
+            accentBg="rgba(236,72,153,0.15)"
+            accentBorder="rgba(236,72,153,0.3)"
+            open={avoidOpen}
+            onToggle={() => setAvoidOpen((o) => !o)}
+          >
             <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(236,72,153,0.85)" }}>
-              Things to avoid <span className="normal-case opacity-60">(fears, sensitivities)</span>
+              Fears, sensitivities <span className="normal-case opacity-60">(optional)</span>
             </label>
             <input
               type="text"
@@ -571,12 +707,21 @@ function EditChildModal({
               className="w-full px-4 py-3 rounded-2xl text-white text-fs-body outline-none transition-all placeholder-white/45"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(236,72,153,0.2)" }}
             />
-          </div>
+            <p className="text-white/40 text-fs-body mt-1.5 leading-snug">
+              Gemini will never include these in any story
+            </p>
+          </CollapsiblePanel>
 
-          <div>
-            <label className="text-fs-body uppercase tracking-widest font-bold mb-1.5 block" style={{ color: "rgba(79,195,247,0.8)" }}>
-              Default moral lessons <span className="normal-case opacity-60">(optional)</span>
-            </label>
+          <CollapsiblePanel
+            icon="💫"
+            title="Default moral lessons"
+            summary={summarizeChips(defaultLessons, getLessonsCatalog(), "None selected")}
+            accentText="#4fc3f7"
+            accentBg="rgba(79,195,247,0.15)"
+            accentBorder="rgba(79,195,247,0.3)"
+            open={lessonsOpen}
+            onToggle={() => setLessonsOpen((o) => !o)}
+          >
             <p className="text-white/55 text-fs-body mb-2 leading-relaxed">
               Pre-applied to every new story for {name || "this child"} — woven in naturally, never stated out loud.
             </p>
@@ -600,16 +745,28 @@ function EditChildModal({
                 );
               })}
             </div>
-          </div>
+          </CollapsiblePanel>
         </div>
+
+        {saveError && (
+          <p className="text-fs-body mt-3 text-center" style={{ color: "#f87171" }}>{saveError}</p>
+        )}
 
         <button
           onClick={handleSave}
-          disabled={!name.trim() || !age || saving}
-          className="w-full mt-5 py-3.5 rounded-2xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-30"
+          disabled={!name.trim() || !age || saving || !isDirty}
+          className="w-full mt-3 py-3.5 rounded-2xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-30"
           style={{ background: "linear-gradient(135deg, #4fc3f7, #7c3aed)", color: "#fff" }}
         >
           {saving ? "Saving…" : t("save")}
+        </button>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-2.5 py-3 rounded-2xl text-fs-body font-semibold transition-all active:scale-[0.98]"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+        >
+          Cancel
         </button>
 
         <button
@@ -753,8 +910,8 @@ function NarratorVoiceSection({ open, onToggle, label }: { open: boolean; onTogg
           <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>{selectedVoice.desc}</p>
         </div>
         <span
-          className="text-white/55 text-fs-body flex-shrink-0 transition-transform"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
+          className="text-white/55 flex-shrink-0 transition-transform"
+          style={{ fontSize: 22, transform: open ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}
         >
           ▾
         </span>
@@ -1140,11 +1297,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* ── Story Journey ────────────────────────────────────────── */}
-          <div id="story-journey">
-            <StoryJourney />
-          </div>
-
           {/* ── Family Voices ────────────────────────────────────────── */}
           <FamilyVoicesPanel />
 
@@ -1245,12 +1397,19 @@ export default function ProfilePage() {
                 </button>
 
                 {inviteLink && (
-                  <div className="mt-2 px-3 py-2 rounded-xl flex items-center gap-2"
-                    style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
-                    <p className="flex-1 text-fs-label truncate" style={{ color: "rgba(148,163,184,0.7)" }}>{inviteLink}</p>
-                    <button onClick={() => { navigator.clipboard.writeText(inviteLink); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); }}
-                      style={{ color: "#4fc3f7", fontSize: 12, whiteSpace: "nowrap" }}>{t("copyLink" as never)}</button>
-                  </div>
+                  <>
+                    <div className="mt-2 px-3 py-2 rounded-xl flex items-center gap-2"
+                      style={{ background: "rgba(79,195,247,0.06)", border: "1px solid rgba(79,195,247,0.15)" }}>
+                      <p className="flex-1 text-fs-label truncate" style={{ color: "rgba(148,163,184,0.7)" }}>{inviteLink}</p>
+                      <button onClick={() => { navigator.clipboard.writeText(inviteLink); setInviteCopied(true); setTimeout(() => setInviteCopied(false), 2000); }}
+                        style={{ color: "#4fc3f7", fontSize: 12, whiteSpace: "nowrap" }}>{t("copyLink" as never)}</button>
+                    </div>
+                    <p className="text-fs-body mt-2 px-1" style={{ color: "rgba(148,163,184,0.7)", lineHeight: 1.5 }}>
+                      Send this link to whoever you want to invite.
+                      <br />
+                      Opening it lets them join your family, so they can see and play the same stories and child profiles.
+                    </p>
+                  </>
                 )}
               </div>
             )}

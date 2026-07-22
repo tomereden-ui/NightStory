@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import { supabase, ensureBuckets } from "@/lib/supabase";
 import { synthesizeLine } from "@/lib/services/ttsService";
+import { buildNamePronunciationMap, applyPronunciationOverrides } from "@/lib/services/pronunciationOverride";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +26,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
   }
 
-  let body: { text: string; cacheKey: string };
+  let body: { text: string; cacheKey: string; childIds?: string[] };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { text, cacheKey } = body;
+  const { text, cacheKey, childIds } = body;
   if (!text?.trim()) return NextResponse.json({ error: "text is required." }, { status: 400 });
   if (!cacheKey?.trim()) return NextResponse.json({ error: "cacheKey is required." }, { status: 400 });
+
+  // Real summary text is what's cached/displayed — this substitution only
+  // ever touches speakText, the copy handed to TTS (see onboarding's "Does
+  // this sound right?" flow for where the override is confirmed/saved).
+  const namePronunciationMap = await buildNamePronunciationMap(childIds);
+  const speakText = applyPronunciationOverrides(text.trim(), namePronunciationMap);
 
   await ensureBuckets();
 
@@ -52,7 +59,7 @@ export async function POST(req: NextRequest) {
   const tmpPath = path.join(os.tmpdir(), `summary-${cacheKey}.wav`);
   try {
     await synthesizeLine(
-      text,
+      speakText,
       NARRATOR_VOICE,
       gemKey,
       tmpPath,

@@ -4,6 +4,14 @@ import { getFamilyContext } from "@/lib/authContext";
 
 export const dynamic = "force-dynamic";
 
+export interface PublicChapterSummary {
+  id: string;
+  title: string;
+  chapterNumber: number;
+  durationSeconds: number;
+  coverUrl: string | null;
+}
+
 export interface PublicStoryData {
   id: string;
   title: string;
@@ -21,9 +29,17 @@ export interface PublicStoryData {
    *  particular story is tagged for — used to build the suggested share
    *  message so it still reads naturally for untagged/library stories. */
   familyChildNames: string[];
+  seriesId: string | null;
+  chapterNumber: number | null;
+  chapterCount: number | null;
+  /** Every chapter in this story's series (including this one), ordered —
+   *  empty for a standalone story. Same "possession of the link = access"
+   *  model as the story itself: no is_public/family gate, since sharing any
+   *  one chapter's link is the family's own choice to expose the series. */
+  chapters: PublicChapterSummary[];
 }
 
-const BASE_COLUMNS = "id, title, summary, audio_url, cover_url, duration_seconds, share_message, child_ids, language, family_id";
+const BASE_COLUMNS = "id, title, summary, audio_url, cover_url, duration_seconds, share_message, child_ids, language, family_id, series_id, chapter_number, chapter_count";
 
 export async function GET(
   req: NextRequest,
@@ -75,6 +91,28 @@ export async function GET(
     familyChildNames = (familyProfiles ?? []).map((p) => p.name as string);
   }
 
+  // Sibling chapters — same "the link is the access control" model as the
+  // story itself (see PublicStoryData.chapters doc comment): whoever holds
+  // a link to any one chapter can browse the whole series from it, no
+  // is_public/family check. Only chapters with produced audio are listed,
+  // same rule the single-story lookup above already enforces.
+  let chapters: PublicChapterSummary[] = [];
+  if (story.series_id) {
+    const { data: siblings } = await supabase
+      .from("stories")
+      .select("id, title, chapter_number, duration_seconds, cover_url, audio_url")
+      .eq("series_id", story.series_id)
+      .not("audio_url", "is", null)
+      .order("chapter_number", { ascending: true });
+    chapters = (siblings ?? []).map((c) => ({
+      id: c.id as string,
+      title: c.title as string,
+      chapterNumber: (c.chapter_number as number) ?? 0,
+      durationSeconds: (c.duration_seconds as number) ?? 0,
+      coverUrl: (c.cover_url as string) ?? null,
+    }));
+  }
+
   const result: PublicStoryData = {
     id: story.id as string,
     title: story.title as string,
@@ -89,6 +127,10 @@ export async function GET(
     coverFocusY: typeof story.cover_focus_y === "number" ? story.cover_focus_y : null,
     children,
     familyChildNames,
+    seriesId: (story.series_id as string) ?? null,
+    chapterNumber: typeof story.chapter_number === "number" ? story.chapter_number : null,
+    chapterCount: typeof story.chapter_count === "number" ? story.chapter_count : null,
+    chapters,
   };
 
   // Log view (fire-and-forget, don't delay the response)

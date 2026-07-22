@@ -11,6 +11,12 @@ interface ShareSheetProps {
   children: DBChildProfile[];
   onClose: () => void;
   onMessageSaved?: (msg: string) => void;
+  /** Shown instead of story.title in the preview card and native-share
+   *  title — used when sharing a whole series via its first chapter's
+   *  LibraryEntry, so the sheet reads "Pinokyo" rather than "Pinokyo —
+   *  Chapter 1" (the link itself still points at that chapter's id, which
+   *  is what makes the landing page pick up the rest of the series). */
+  titleOverride?: string;
 }
 
 // Follows the story's own language, not the sender's current app-UI
@@ -121,8 +127,9 @@ function ChildAvatar({ child }: { child: DBChildProfile }) {
   );
 }
 
-function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareSheetProps) {
+function ShareSheetInner({ story, children, onClose, onMessageSaved, titleOverride }: ShareSheetProps) {
   const sl = sheetLabels(story.language);
+  const displayTitle = titleOverride ?? story.title;
   const assignedChildren = children.filter((c) => story.childIds?.includes(c.id));
   const childNames = assignedChildren.map((c) => c.name);
 
@@ -198,7 +205,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
     await saveMessage();
     if (navigator.share) {
       trackShare("native");
-      navigator.share({ title: story.title, text: shareText, url: storyUrl }).catch(() => {});
+      navigator.share({ title: displayTitle, text: shareText, url: storyUrl }).catch(() => {});
     }
   };
 
@@ -250,7 +257,7 @@ function ShareSheetInner({ story, children, onClose, onMessageSaved }: ShareShee
               <div style={{ width: 52, height: 52, borderRadius: 12, background: "rgba(79,195,247,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 26 }}>🌙</div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-bold truncate text-white" style={{ fontSize: "var(--fs-body)", marginBottom: 4 }}>{story.title}</p>
+              <p className="font-bold truncate text-white" style={{ fontSize: "var(--fs-body)", marginBottom: 4 }}>{displayTitle}</p>
               {forLabel && (
                 <div className="flex items-center gap-1.5">
                   <div className="flex" style={{ gap: -6 }}>

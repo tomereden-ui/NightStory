@@ -124,8 +124,8 @@ const EN: WizardUiCopy = {
 const HE: WizardUiCopy = {
   back: "חזרה",
   startOver: "התחל מחדש",
-  skipThisStep: "דלג על שלב זה ←",
-  skip: "דלג ←",
+  skipThisStep: "דלג על שלב זה →",
+  skip: "דלג →",
   yourOwnName: "השם שלך",
   aMagicalName: "שם קסום",
   aBraveStranger: "זר אמיץ",
@@ -430,8 +430,8 @@ const IT: WizardUiCopy = {
 const AR: WizardUiCopy = {
   back: "رجوع",
   startOver: "البدء من جديد",
-  skipThisStep: "تخطي هذه الخطوة ←",
-  skip: "تخطي ←",
+  skipThisStep: "تخطي هذه الخطوة →",
+  skip: "تخطي →",
   yourOwnName: "اسمك الخاص",
   aMagicalName: "اسم سحري",
   aBraveStranger: "غريب شجاع",

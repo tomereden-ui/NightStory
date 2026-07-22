@@ -1009,20 +1009,6 @@ function Q3View({ heroName, worldName, initialCompanion, onNext, onBack, onSkip,
           ))}
         </div>
 
-        <OptionPill label={ui.surpriseMe} emoji="🎲" onClick={() => {
-          const randomType = pickRandom(companionTypes);
-          setSelectedType(randomType.id);
-          setValidationError("");
-          if (randomType.id === "pet") {
-            const randomAnimal = pickRandom(animalTypes);
-            setAnimalType(randomAnimal.id);
-            setNameVal(pickRandom(randomAnimal.names));
-          } else {
-            setAnimalType(null);
-            setNameVal(pickRandom(randomType.surpriseNames));
-          }
-        }} />
-
         {selectedType === "pet" && (
           <div className="flex flex-wrap gap-2">
             <AnimalTypeChips

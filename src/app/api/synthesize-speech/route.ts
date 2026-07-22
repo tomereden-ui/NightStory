@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import { synthesizeLine } from "@/lib/services/ttsService";
 import { PRESET_VOICES } from "@/config/presetVoices";
+import { buildNamePronunciationMap, applyPronunciationOverrides } from "@/lib/services/pronunciationOverride";
 
 export interface SynthesizeRequest {
   text: string;
@@ -14,6 +15,10 @@ export interface SynthesizeRequest {
   storyId?: string;
   /** If true, bypass element cache (e.g. after the user edited the block text) */
   forceRegenerate?: boolean;
+  /** Children this text is spoken to/about — resolves confirmed pronunciation
+   *  overrides (see onboarding's "Does this sound right?" flow) so their name
+   *  is respelled for the TTS engine only, never in what's shown on screen. */
+  childIds?: string[];
 }
 
 const PRESET_VOICE_NAMES = new Set(PRESET_VOICES.map((p) => p.geminiVoiceName));
@@ -43,8 +48,13 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "Invalid request body." }, { status: 400 }); }
 
-  const { text, characterName, assignedVoiceId, language = "en", storyId, forceRegenerate } = body;
+  const { text, characterName, assignedVoiceId, language = "en", storyId, forceRegenerate, childIds } = body;
   if (!text?.trim()) return NextResponse.json({ error: "text is required." }, { status: 400 });
+
+  // The real name is what's displayed everywhere (script, chat, captions) —
+  // this substitution only ever touches speakText, the copy handed to TTS.
+  const namePronunciationMap = await buildNamePronunciationMap(childIds);
+  const speakText = applyPronunciationOverrides(text.trim(), namePronunciationMap);
 
   // Resolve voice: preset names go directly to Gemini; anything else
   // (DB voice IDs like "voice-1718…-abc123", UUIDs, or raw EL IDs) is
@@ -92,16 +102,19 @@ export async function POST(req: NextRequest) {
   const apiKey = useEL ? elKey! : gemKey;
   const ext = useEL ? "mp3" : "wav";
 
-  const textPreview = text.trim().length > 80 ? `${text.trim().slice(0, 80)}…` : text.trim();
+  const textPreview = speakText.length > 80 ? `${speakText.slice(0, 80)}…` : speakText;
   console.log(`[synthesize-speech] pronunciation = "${textPreview}" — assignedVoiceId=${assignedVoiceId} → useEL=${useEL} voice=${voice} lang=${language} savedSettings=${JSON.stringify(savedVoiceSettings ?? null)}`);
 
   // ── Element cache lookup (skip if forceRegenerate or no storyId) ─────────────
+  // Hashing on speakText (post-override) rather than the raw text means the
+  // cache naturally busts itself if a pronunciation override is added/changed
+  // later — no separate invalidation needed.
   const voiceKey = `${useEL ? "el" : "gm"}:${voice}`;
   let contentHash: string | null = null;
   if (storyId && !forceRegenerate) {
     try {
       const { hashDialogue, lookupElementByHash } = await import("@/lib/elementStore");
-      contentHash = hashDialogue(characterName, text.trim(), voiceKey);
+      contentHash = hashDialogue(characterName, speakText, voiceKey);
       const cachedUrl = await lookupElementByHash(storyId, contentHash);
       if (cachedUrl) {
         console.log(`[synthesize-speech] cache HIT for story=${storyId} hash=${contentHash.slice(0, 8)}`);
@@ -116,7 +129,7 @@ export async function POST(req: NextRequest) {
     // Still compute hash so we can overwrite the old element after synthesis
     try {
       const { hashDialogue } = await import("@/lib/elementStore");
-      contentHash = hashDialogue(characterName, text.trim(), voiceKey);
+      contentHash = hashDialogue(characterName, speakText, voiceKey);
     } catch { /* non-fatal */ }
   }
 
@@ -134,7 +147,7 @@ export async function POST(req: NextRequest) {
     // Interactive endpoint: fail fast rather than retrying for minutes.
     // 22 s per attempt covers long narrator blocks (short lines finish in ~6 s).
     const result = await synthesizeLine(
-      text, voice, apiKey, tmpPath, undefined, useEL,
+      speakText, voice, apiKey, tmpPath, undefined, useEL,
       savedVoiceSettings?.stability,
       savedVoiceSettings?.style,
       language,
@@ -165,7 +178,7 @@ export async function POST(req: NextRequest) {
     // ── Save to element store for future cache hits ──────────────────────────
     if (storyId && contentHash) {
       import("@/lib/elementStore").then(({ saveElementFromBuffer }) =>
-        saveElementFromBuffer(storyId!, contentHash!, Buffer.from(audio), mimeType, characterName, text.trim())
+        saveElementFromBuffer(storyId!, contentHash!, Buffer.from(audio), mimeType, characterName, speakText)
           .catch((e) => console.warn("[synthesize-speech] element cache save failed:", e))
       );
     }
