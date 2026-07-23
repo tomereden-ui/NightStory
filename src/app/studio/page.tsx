@@ -1862,6 +1862,11 @@ export default function Studio2Page() {
     setSummary("");
     setCoverUrl("");
     setStoryHasAudio(false);
+    // The sticky StudioAudioBar is gated on completedJob independently of
+    // storyHasAudio — without clearing it here too, a previous story's
+    // audio/title/duration keeps playing in the bar underneath this
+    // brand-new, not-yet-produced script.
+    setCompletedJob(null);
     setLastGenerationMs(undefined);
     setLastValidationStages(undefined);
     pendingVoiceOverridesRef.current = {};
@@ -2637,6 +2642,11 @@ export default function Studio2Page() {
               // disabled since needsProduce read the fresh script as already
               // having audio.
               setStoryHasAudio(false);
+              // The sticky StudioAudioBar is gated on completedJob
+              // independently of storyHasAudio — without clearing it here
+              // too, a previous story's audio/title/duration keeps playing
+              // in the bar underneath this brand-new, not-yet-produced script.
+              setCompletedJob(null);
               // Also clear editingStoryId — otherwise the "persist a freshly-
               // generated script" effect (which only saves once editingStoryId
               // is null) stays permanently blocked by whatever story was open
@@ -2842,6 +2852,10 @@ export default function Studio2Page() {
                 // left disabled by a stale storyHasAudio=true carried over
                 // from whatever story was open before.
                 setStoryHasAudio(false);
+                // The sticky StudioAudioBar is gated on completedJob
+                // independently of storyHasAudio — same fix as Chat mode's
+                // onGenerating.
+                setCompletedJob(null);
                 // Also clear editingStoryId — otherwise a second story
                 // generated in the same session never gets its own draft
                 // row / production_metrics 'script_done' row (see the
