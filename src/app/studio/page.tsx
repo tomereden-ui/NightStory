@@ -2328,6 +2328,17 @@ export default function Studio2Page() {
   // applied to an already-generated script instead of an in-progress draft.
   const resetScript = useCallback(() => {
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+    // Step-by-step's own state: without this, wizardStarted stays stuck true
+    // from whatever SBS session produced the story just discarded, which
+    // permanently hides the language toggle on every SBS attempt for the
+    // rest of this browser session (it's gated on !wizardStarted — see the
+    // Step-by-step tab below) — reads exactly like the toggle was removed.
+    // Also clears the wizard's own separately-persisted draft/answers and
+    // bumps wizardResetKey to force FiveQuestionFlow to remount fresh,
+    // matching what its own internal "Start over" button already does.
+    try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+    setWizardResetKey((k) => k + 1);
+    setWizardStarted(false);
     setScriptBlocks([]);
     setPromptText("");
     setSummary("");
