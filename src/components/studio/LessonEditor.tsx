@@ -34,13 +34,32 @@ export default function LessonEditor({
   lessons,
   onChange,
   onRewrite,
+  hasPendingChange,
+  onCancelPending,
+  resetSignal,
   moralLessons,
   analyzing,
   storyLanguage,
 }: {
   lessons: string[];
   onChange: (lessons: string[]) => void;
+  /** Called when the user applies a change in the expanded picker — the
+   *  parent stashes this as a pending instruction rather than sending it to
+   *  Gemini immediately; the actual rewrite happens only via the shared
+   *  Update Script action elsewhere on the page (see studio/page.tsx), not
+   *  from this panel. */
   onRewrite?: (instruction: string) => void;
+  /** Whether the parent is currently holding a pending (not-yet-applied)
+   *  lessons instruction — drives the collapsed-view Cancel/Ok row below. */
+  hasPendingChange?: boolean;
+  /** Reverts `lessons` to the last-applied set and clears the pending
+   *  instruction — this component still needs `resetSignal` (below) to
+   *  resync its own local displayedLessons/pendingRemoved state to match. */
+  onCancelPending?: () => void;
+  /** Bumped by the parent whenever onCancelPending fires — this component's
+   *  own resync effect otherwise only watches the moralLessons prop, which
+   *  doesn't change on a plain revert (no new analysis happened). */
+  resetSignal?: number;
   /** Gemini's confirmed analysis of what's actually embedded in the current script — may include values the user never explicitly picked. */
   moralLessons?: MoralLesson[];
   analyzing?: boolean;
@@ -64,7 +83,7 @@ export default function LessonEditor({
   useEffect(() => {
     setDisplayedLessons(moralLessons ?? []);
     setPendingRemoved([]);
-  }, [moralLessons]);
+  }, [moralLessons, resetSignal]);
 
   // The picker pre-selects from the CONFIRMED, DB-saved analysis
   // (displayedLessons, mirroring moralLessons) rather than `lessons` (the
@@ -118,16 +137,6 @@ export default function LessonEditor({
     );
   };
 
-  // Combines everything the user has queued up — lessons picked to add and
-  // lessons marked for removal — into a single instruction, sent only when
-  // "Rewrite story" is clicked (the collapsed-view fallback, for when
-  // changes were made without ever going through Apply).
-  const buildRewriteInstruction = (): string => {
-    const toAdd = lessons.filter((l) => !pendingRemoved.includes(l));
-    const toRemove = pendingRemoved.filter((l) => !lessons.includes(l));
-    return buildInstructionFor(toAdd, toRemove);
-  };
-
   // Removing a lesson updates what's shown locally AND deselects it from the
   // "Add a Value" picker below (it must not still look picked once erased),
   // and queues it for removal from the actual script text — sent to Gemini
@@ -140,7 +149,6 @@ export default function LessonEditor({
   };
 
   const hasLessons = lessons.length > 0;
-  const hasPendingChanges = hasLessons || pendingRemoved.length > 0;
   const hasDisplayedLessons = displayedLessons.length > 0;
 
   // ─── Collapsed view — compact chips only ────────────────────────────────
@@ -240,15 +248,29 @@ export default function LessonEditor({
             </p>
           )}
 
-          {hasPendingChanges && onRewrite && (
-            <button
-              onClick={() => onRewrite(buildRewriteInstruction())}
-              className="w-full py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
-              style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.22)", color: "#C4B5FD" }}
-            >
-              <span>✦</span>
-              <span>{hasLessons ? (lessons.length === 1 ? ui.rewriteWithOne : ui.rewriteWithMany) : ui.rewriteGeneric}</span>
-            </button>
+          {/* A pending lessons change (applied in the expanded picker below,
+              not yet sent to Gemini) — Cancel reverts it here directly; Ok
+              has nothing further to confirm (Apply already committed the
+              selection) but is kept for visual parity with Director's
+              Note's own Cancel/Ok pair. Either way, the actual rewrite only
+              ever happens through the shared Update Script action above
+              Produce Audio, never from this panel. */}
+          {hasPendingChange && (
+            <div className="flex gap-2">
+              <button
+                onClick={onCancelPending}
+                className="flex-1 py-2.5 rounded-xl text-fs-body font-medium transition-all active:scale-[0.98]"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+              >
+                {ui.cancel}
+              </button>
+              <button
+                className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98]"
+                style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.35)", color: "#C4B5FD" }}
+              >
+                Ok
+              </button>
+            </div>
           )}
         </>
       )}

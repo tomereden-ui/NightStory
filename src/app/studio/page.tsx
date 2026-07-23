@@ -1345,6 +1345,36 @@ export default function Studio2Page() {
     });
   };
 
+  // ─── Shared "pending edit" state for the general Update Script button ──────
+  // Director's Note's own pending state lives above (directorNote/
+  // selectedMoodChips/directionValid); these two cover the other kinds of
+  // pending edit the general button (placed just above Produce Audio,
+  // outside any one panel) needs to react to.
+  //
+  // Lessons: LessonEditor's own "Apply" (in its expanded picker) no longer
+  // fires the rewrite itself — it stashes the built instruction here instead,
+  // and the shared Update Script action sends it. null = no pending lessons
+  // change; a non-null string is both "there IS a pending change" and the
+  // exact instruction to send for it.
+  const [pendingLessonsInstruction, setPendingLessonsInstruction] = useState<string | null>(null);
+  // Bumped on Cancel so LessonEditor resyncs its own internal displayed-
+  // lessons/pending-removals state back from the last real analysis — it
+  // can't detect "the parent just reverted `lessons`" any other way, since
+  // its own resync effect only watches the moralLessons prop.
+  const [lessonsCancelSignal, setLessonsCancelSignal] = useState(0);
+  const handleCancelLessonsChange = useCallback(() => {
+    setLessons(cleanLessonsRef.current);
+    setPendingLessonsInstruction(null);
+    setLessonsCancelSignal((n) => n + 1);
+  }, []);
+
+  // Cast: an avatar/voice reassignment needs no Gemini call at all (it never
+  // touches script text), but per the same "review everything before
+  // producing" rule as Director's Note and Lessons, it still counts toward
+  // "there's a pending edit" and gets acknowledged (cleared) by the same
+  // Update Script click rather than silently slipping through ungated.
+  const [hasPendingCastChange, setHasPendingCastChange] = useState(false);
+
   // ─── Character avatars (AI-generated, optional) ─────────────────────────────
   const [characterAvatars, setCharacterAvatars]           = useState<Record<string, string>>({});
   const [characterTypes, setCharacterTypes]               = useState<Record<string, CharacterType>>({});
@@ -1968,8 +1998,13 @@ export default function Studio2Page() {
 
   // ─── Revise script ──────────────────────────────────────────────────────────
 
-  const handleRevise = useCallback(async (instruction: string, onSuccess?: () => void) => {
-    if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return;
+  // Returns whether the revision actually succeeded — handleRevise/
+  // handleLessonRewrite never throw (errors are caught and surfaced via
+  // reviseError), so callers that need to gate further state changes on
+  // success (the shared Update Script action below) can't rely on the
+  // promise rejecting; they need this explicit signal instead.
+  const handleRevise = useCallback(async (instruction: string, onSuccess?: () => void): Promise<boolean> => {
+    if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return false;
     setIsRevising(true);
     setReviseError(null);
     try {
@@ -1983,8 +2018,10 @@ export default function Studio2Page() {
       // The revision changed the script content, so it now differs from what's
       // saved/produced — mark dirty (not clean) so Save/Produce reflect that.
       markScriptDirty();
+      return true;
     } catch (err: unknown) {
       setReviseError(err instanceof Error ? err.message : "Revision failed");
+      return false;
     } finally {
       setIsRevising(false);
     }
@@ -1992,8 +2029,8 @@ export default function Studio2Page() {
 
   // ─── Rewrite with lessons (passes lessons so blocks get tagged) ─────────────
 
-  const handleLessonRewrite = useCallback(async (instruction: string) => {
-    if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return;
+  const handleLessonRewrite = useCallback(async (instruction: string): Promise<boolean> => {
+    if (!instruction.trim() || isRevising || scriptBlocks.length === 0) return false;
     setIsRevising(true);
     setReviseError(null);
     try {
@@ -2007,8 +2044,10 @@ export default function Studio2Page() {
       markScriptDirty();
       cleanLessonsRef.current = lessons;
       void analyzeLessons(cleaned, editingStoryId);
+      return true;
     } catch (err: unknown) {
       setReviseError(err instanceof Error ? err.message : "Revision failed");
+      return false;
     } finally {
       setIsRevising(false);
     }
@@ -2164,6 +2203,7 @@ export default function Studio2Page() {
   const handleAvatarChange = useCallback((characterName: string, url: string, type: CharacterType) => {
     setCharacterAvatars((prev) => ({ ...prev, [characterName]: url }));
     setCharacterTypes((prev) => ({ ...prev, [characterName]: type }));
+    setHasPendingCastChange(true);
   }, []);
 
   // User-initiated block edits (text, SFX) — marks script dirty
@@ -2191,6 +2231,7 @@ export default function Studio2Page() {
       prev.map((b) => b.characterName === characterName ? { ...b, assignedVoiceId: voiceId } : b)
     );
     markScriptDirty();
+    setHasPendingCastChange(true);
   }, []);
 
   // ─── Story title editing ───────────────────────────────────────────────────
@@ -2538,6 +2579,8 @@ export default function Studio2Page() {
               // metrics 'script_done' row at all.
               setEditingStoryId(null);
               setLastGenerationMs(undefined);
+              setPendingLessonsInstruction(null);
+              setHasPendingCastChange(false);
             }}
             onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
@@ -2693,6 +2736,8 @@ export default function Studio2Page() {
                 // matching comment in Chat mode's onGenerating below).
                 setEditingStoryId(null);
                 setLastGenerationMs(undefined);
+                setPendingLessonsInstruction(null);
+                setHasPendingCastChange(false);
               }}
               onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle, generationMs: fqGenerationMs }) => {
                 setActiveTab("script");
@@ -2947,7 +2992,10 @@ export default function Studio2Page() {
                   <LessonEditor
                     lessons={lessons}
                     onChange={(next) => setLessons(next)}
-                    onRewrite={(instruction) => handleLessonRewrite(instruction)}
+                    onRewrite={(instruction) => setPendingLessonsInstruction(instruction)}
+                    hasPendingChange={pendingLessonsInstruction !== null}
+                    onCancelPending={handleCancelLessonsChange}
+                    resetSignal={lessonsCancelSignal}
                     moralLessons={moralLessons}
                     analyzing={analyzingLessons}
                     storyLanguage={storyLang}
@@ -2998,14 +3046,6 @@ export default function Studio2Page() {
               // Chips alone are pre-vetted and ready immediately; any typed
               // free text still needs an explicit "Check Wording" pass.
               const readyToApply = hasFreeText ? directionValid : hasChips;
-              const buildCombinedInstruction = () => {
-                const chipInstructions = DIRECTOR_CHIPS
-                  .filter((c) => selectedMoodChips.has(c.labelKey))
-                  .map((c) => c.instruction);
-                const parts = [...chipInstructions];
-                if (hasFreeText) parts.push(directorNote.trim());
-                return parts.join(". ");
-              };
               return (
               <div
                 className="mb-4 rounded-2xl p-4 flex flex-col gap-3"
@@ -3089,6 +3129,15 @@ export default function Studio2Page() {
                   </ul>
                 )}
 
+                {/* Cancel discards the pending note/chips outright. For
+                    chips-only (pre-vetted, nothing to check) there's nothing
+                    left to click here — the row just shows Cancel plus a
+                    settled "ready" indicator. Typed free text still needs an
+                    explicit "Ok" wording check before it counts as ready.
+                    Either way, applying the change is no longer done from
+                    this panel — that's now the shared Update Script action
+                    just above Produce Audio, which reacts to readyToApply
+                    the same way this used to trigger handleRevise directly. */}
                 <div className="flex gap-2">
                   <button
                     disabled={!hasPending || isRevising}
@@ -3099,26 +3148,13 @@ export default function Studio2Page() {
                     {i18nT(language, "cancel")}
                   </button>
                   {!hasFreeText && readyToApply ? (
-                    // Chips-only — their instructions are pre-vetted, so there's
-                    // nothing to check; apply directly, same as before.
-                    <button
-                      disabled={!hasPending || isRevising}
-                      onClick={() => handleRevise(buildCombinedInstruction(), () => setSelectedMoodChips(new Set()))}
-                      className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40"
-                      style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
+                    <div
+                      className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold text-center"
+                      style={{ background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.25)", color: "#4fc3f7" }}
                     >
-                      {i18nT(language, "updateScript" as never)}
-                    </button>
+                      ✓ Ready
+                    </div>
                   ) : (
-                    // Free text present — "Ok" now ONLY runs the wording check;
-                    // it no longer chains straight into handleRevise once
-                    // valid. The separate "Update Script" button below only
-                    // appears after this passes, so applying the rewrite is
-                    // always its own explicit click, not folded into the
-                    // check. Disabled (and shown as "Checked") once valid —
-                    // editing the text again (handleDirectorNoteChange)
-                    // already resets directionValid, re-enabling this and
-                    // hiding Update Script until it's re-checked.
                     <button
                       disabled={!hasPending || isRevising || checkingDirection || directionValid}
                       onClick={async () => { await checkDirectorNote(); }}
@@ -3136,21 +3172,6 @@ export default function Studio2Page() {
                   )}
                 </div>
 
-                {/* Update Script — a separate, explicit third step for typed
-                    free text: only appears once "Ok" has actually validated
-                    the wording, so applying the rewrite is never bundled
-                    into the check itself. */}
-                {hasFreeText && directionValid && (
-                  <button
-                    disabled={isRevising}
-                    onClick={() => handleRevise(buildCombinedInstruction(), () => setSelectedMoodChips(new Set()))}
-                    className="w-full py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40"
-                    style={{ background: "linear-gradient(90deg, rgba(79,195,247,0.22), rgba(139,92,246,0.22))", border: "1.5px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}
-                  >
-                    {i18nT(language, "updateScript" as never)}
-                  </button>
-                )}
-
                 {reviseError && (
                   <p className="text-fs-body" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
                 )}
@@ -3160,29 +3181,97 @@ export default function Studio2Page() {
               );
             })()}
 
+            {/* Update Script — the single, general "apply everything
+                pending" action for the whole Make Changes area (Director's
+                Note, Lessons, and cast avatar/voice reassignment), placed
+                here rather than inside any one panel so it can react to all
+                three. Enabled once at least one of them has something
+                pending AND nothing is still mid-validation (a typed
+                Director's Note that hasn't passed its wording check yet
+                blocks this the same way it blocks Produce Audio below).
+                Clicking it applies Director's Note + Lessons in a SINGLE
+                combined /api/revise-script call when both are pending (that
+                route already supports instruction+lessons together), or
+                just whichever one is actually pending; a cast-only change
+                has no script text to rewrite, so it's simply acknowledged
+                (cleared) with no Gemini call at all. Only clears each
+                pending flag on a CONFIRMED success — handleRevise/
+                handleLessonRewrite never throw (they catch their own errors
+                into reviseError), so a failed attempt leaves everything
+                exactly as the user left it, ready to retry. */}
+            {(() => {
+              const hasFreeText = directorNote.trim().length > 0;
+              const hasChips = selectedMoodChips.size > 0;
+              const hasPendingDirectorNote = hasFreeText || hasChips;
+              const lessonsPending = pendingLessonsInstruction !== null;
+              const hasAnyPending = hasPendingDirectorNote || lessonsPending || hasPendingCastChange;
+              if (!hasAnyPending) return null;
+
+              // A typed-but-unchecked note blocks readiness even though
+              // hasAnyPending is already true — same rule the panel's own
+              // Ok button enforces.
+              const notReadyYet = hasFreeText && !directionValid;
+              const enabled = !notReadyYet && !isRevising;
+
+              const handleUpdateScript = async () => {
+                if (!enabled) return;
+                let ok = true;
+                if (hasPendingDirectorNote || lessonsPending) {
+                  const chipInstructions = DIRECTOR_CHIPS.filter((c) => selectedMoodChips.has(c.labelKey)).map((c) => c.instruction);
+                  const parts = [...chipInstructions];
+                  if (hasFreeText) parts.push(directorNote.trim());
+                  if (lessonsPending && pendingLessonsInstruction) parts.push(pendingLessonsInstruction);
+                  const combinedInstruction = parts.join(". ");
+                  ok = lessonsPending
+                    ? await handleLessonRewrite(combinedInstruction)
+                    : await handleRevise(combinedInstruction);
+                }
+                // Failed — reviseError is already showing; leave everything
+                // pending so the user can just retry instead of losing intent.
+                if (!ok) return;
+                setSelectedMoodChips(new Set());
+                setPendingLessonsInstruction(null);
+                setHasPendingCastChange(false);
+              };
+
+              return (
+                <button
+                  onClick={handleUpdateScript}
+                  disabled={!enabled}
+                  className="w-full py-3.5 rounded-full text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40 mb-2.5"
+                  style={enabled
+                    ? { background: "linear-gradient(90deg, rgba(79,195,247,0.22), rgba(139,92,246,0.22))", border: "1.5px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+                    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.4)" }}
+                >
+                  {isRevising ? i18nT(language, "revisingLabel" as never) : i18nT(language, "updateScript" as never)}
+                </button>
+              );
+            })()}
+
             {/* Produce Audio — enabled when there's no audio yet, or once the
                 script/voices genuinely differ from what's currently produced
                 (editing text back to exactly its produced form disables it
                 again — see scriptChangedFromProduced above). Also blocked
-                while there's an unsaved change pending (needsSave), OR a
-                Director's Note has been typed/chip-selected but not yet
-                applied — a pending note sits in local state
-                (directorNote/selectedMoodChips) until "Update Script" runs
-                handleRevise, so producing right now would silently ignore
-                it and use the script as it stood before the note, which
-                reads as the note having no effect at all. Getting
-                unblocked means either committing the pending thing (Update
-                version / Update Script) or discarding it (Discard & start
-                over / the note's own Cancel); a hint below the button says
-                so explicitly rather than leaving it looking disabled for
-                no visible reason. */}
+                while there's an unsaved change pending (needsSave), OR
+                anything the Update Script button above would apply is still
+                pending — a Director's Note, a lessons change, or a cast
+                avatar/voice reassignment. Producing right now would silently
+                ignore whichever of those is pending and use the script as it
+                stood before, which reads as the pending edit having no
+                effect at all. Getting unblocked means either committing the
+                pending thing (Update Script above) or discarding it
+                (Discard & start over / the note's own Cancel); a hint below
+                the button says so explicitly rather than leaving it looking
+                disabled for no visible reason. */}
             {(() => {
               const hasPendingDirectorNote = directorNote.trim().length > 0 || selectedMoodChips.size > 0;
-              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover || needsSave || hasPendingDirectorNote;
+              const lessonsPending = pendingLessonsInstruction !== null;
+              const hasAnyPendingEdit = hasPendingDirectorNote || lessonsPending || hasPendingCastChange;
+              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover || needsSave || hasAnyPendingEdit;
               // Only worth calling out when a pending edit is specifically
               // why it's blocked — every other blocking reason already shows
               // its own state inside the button itself (mixing/checking/etc.).
-              const blockedByPendingEdit = (needsSave || hasPendingDirectorNote) && !isProducing && !isValidating && !generating && !isFetchingCover;
+              const blockedByPendingEdit = (needsSave || hasAnyPendingEdit) && !isProducing && !isValidating && !generating && !isFetchingCover;
               return (
                 <>
                   <button
@@ -3226,8 +3315,8 @@ export default function Studio2Page() {
                   </button>
                   {blockedByPendingEdit && (
                     <p className="text-fs-body text-center mt-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      {hasPendingDirectorNote
-                        ? "Update or cancel your director's note to produce audio"
+                      {hasAnyPendingEdit
+                        ? "Update or cancel your pending changes to produce audio"
                         : "Save or discard your changes to produce audio"}
                     </p>
                   )}
