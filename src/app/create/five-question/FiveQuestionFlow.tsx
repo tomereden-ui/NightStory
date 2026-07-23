@@ -26,6 +26,7 @@ import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
 import { useLanguageMismatchGate } from "@/hooks/useLanguageMismatchGate";
+import { detectScriptLanguage } from "@/lib/scriptLanguageCheck";
 import type { ScriptBlock, Voice } from "@/types";
 import type { Job } from "@/lib/jobs";
 import type { ResolutionMood, StorySeeds } from "@/utils/buildStoryPrompt";
@@ -1366,10 +1367,14 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 
 // ─── Generating screen ────────────────────────────────────────────────────────────────────────
 
-function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, lessons, childContext, onDone, onError, luna }: {
+function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, languageExplicitlyChosen, lessons, childContext, onDone, onError, luna }: {
   worldName: string;
   seeds: StorySeeds; durationMinutes: number;
   contentLanguage?: string;
+  /** Whether the user actually pressed the language toggle for THIS story
+   *  attempt, as opposed to contentLanguage just holding its default/
+   *  carried-over value — see the matching prop on LunaChatPanel. */
+  languageExplicitlyChosen?: boolean;
   lessons?: string[];
   childContext?: {
     childAgeGroup?: string; avoid?: string; gender?: "boy" | "girl" | "other";
@@ -1396,11 +1401,16 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
 
     (async () => {
       // Quick, free, instant check of what the user actually typed across
-      // the 5 seed answers against the selected language — only surfaces a
-      // dialog (via languageMismatchModal below) when they genuinely
-      // disagree. See useLanguageMismatchGate / scriptLanguageCheck.ts.
+      // the 5 seed answers. Only surfaces a dialog (via languageMismatchModal
+      // below) when the user genuinely, explicitly picked a language THIS
+      // session AND the typed text disagrees with it — an inherited/default
+      // contentLanguage isn't a real choice worth defending, so the text's
+      // own script wins silently in that case instead. See
+      // useLanguageMismatchGate / scriptLanguageCheck.ts.
       const seedsText = [seeds.q1_hero, seeds.q2_world, seeds.q3_companion, seeds.q4_engine].filter(Boolean).join(" ");
-      const finalLanguage = await checkLanguage(seedsText, contentLanguage ?? "en");
+      const finalLanguage = languageExplicitlyChosen
+        ? await checkLanguage(seedsText, contentLanguage ?? "en")
+        : (detectScriptLanguage(seedsText) ?? contentLanguage ?? "en");
       if (controller.signal.aborted) return;
 
       const res = await fetch("/api/five-question-story", {
@@ -1449,7 +1459,7 @@ const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", 
 export interface StoryCharacterInfo { type: "child" | "adult" | "animal" | "narrator"; visualDescription: string; }
 export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo>; scenes?: import("@/types").StoryScene[]; storyTitle?: string; generationMs?: number };
 
-export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl, childId, contentLanguage, showInternalReset = true, onFirstAnswer }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string; /** Active child's profile id — used to look up real siblings (other children in the same family) for Q3's "family member" chips. */ childId?: string; /** Story content language — independent of the app's global UI language. Falls back to it when not provided. */ contentLanguage?: string; /** Set false when an outer page already renders its own reset+language bar (e.g. Studio), to avoid duplicating the "Start over" button on every question and the summary screen. */ showInternalReset?: boolean; /** Fires once, the first time the user makes real progress (leaves q1 with no answers) — lets an outer page lock its own language selector for the rest of the journey. */ onFirstAnswer?: () => void } = {}) {
+export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAvatarUrl, childId, contentLanguage, languageExplicitlyChosen, showInternalReset = true, onFirstAnswer }: { onComplete?: (data: FiveQuestionCompleteData) => void; onGenerating?: () => void; childName?: string; childAvatarUrl?: string; /** Active child's profile id — used to look up real siblings (other children in the same family) for Q3's "family member" chips. */ childId?: string; /** Story content language — independent of the app's global UI language. Falls back to it when not provided. */ contentLanguage?: string; /** Whether the user actually pressed the language toggle for THIS story attempt (vs. contentLanguage just holding its default/carried-over value) — see the matching prop on LunaChatPanel and GeneratingView. */ languageExplicitlyChosen?: boolean; /** Set false when an outer page already renders its own reset+language bar (e.g. Studio), to avoid duplicating the "Start over" button on every question and the summary screen. */ showInternalReset?: boolean; /** Fires once, the first time the user makes real progress (leaves q1 with no answers) — lets an outer page lock its own language selector for the rest of the journey. */ onFirstAnswer?: () => void } = {}) {
   const router = useRouter();
   const { language, t } = useLanguage();
   // Governs the entire wizard's visible/spoken text — narration, card
@@ -1843,7 +1853,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   );
 
   if (step === "generating" && seeds) return (
-    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} lessons={defaultLessons} childContext={childContext} onDone={handleDone} onError={handleGenError} luna={luna} />
+    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} languageExplicitlyChosen={languageExplicitlyChosen} lessons={defaultLessons} childContext={childContext} onDone={handleDone} onError={handleGenError} luna={luna} />
   );
 
   if (step === "done") {

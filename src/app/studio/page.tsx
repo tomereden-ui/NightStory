@@ -30,6 +30,7 @@ import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType, type Bank
 import Icon from "@/components/ui/Icon";
 import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 import { useLanguageMismatchGate } from "@/hooks/useLanguageMismatchGate";
+import { detectScriptLanguage } from "@/lib/scriptLanguageCheck";
 
 // ─── Draft key — kept as its original storage-key name; only the route/URL
 // moved from /studio2 to /studio, this key was never user-visible ───────────
@@ -1164,7 +1165,19 @@ export default function Studio2Page() {
     storyLangOverrideRef.current = lang;
     try { localStorage.setItem(STORY_LANG_OVERRIDE_KEY, lang); } catch { /* ignore */ }
     setStoryLang(lang);
+    setLanguageExplicitlyChosen(true);
   }, []);
+  // Whether the user has actually pressed one of the in-panel language
+  // toggles for the CURRENT story attempt, as opposed to storyLang just
+  // holding its default (the app's own UI language) or a sticky value
+  // carried over from a PAST session's pick. That carried-over value is a
+  // convenience pre-fill, not a decision made for this story — treating it
+  // as one is exactly what caused a story to "auto-select" a language the
+  // user never actually chose this time (see scriptLanguageCheck.ts). Reset
+  // to false at the start of every new generation attempt (all three
+  // journeys) so each one is judged fresh rather than inheriting an earlier
+  // story's confirmation in the same session.
+  const [languageExplicitlyChosen, setLanguageExplicitlyChosen] = useState(false);
 
   // Bumped to force-remount FiveQuestionFlow for a full reset (its own state
   // — step, answers, etc. — is internal, so a key change is the clean way to
@@ -1871,6 +1884,7 @@ export default function Studio2Page() {
     setCompletedJob(null);
     setLastGenerationMs(undefined);
     setLastValidationStages(undefined);
+    setLanguageExplicitlyChosen(false);
     pendingVoiceOverridesRef.current = {};
     // A brand-new story must never show a previous story's analyzed lessons
     // while its own script is still being generated/analyzed.
@@ -1908,10 +1922,17 @@ export default function Studio2Page() {
     };
 
     try {
-      // Quick, free, instant check of what the user actually typed against
-      // the selected language — only surfaces a dialog (languageMismatchModal
-      // below) when they genuinely disagree. See useLanguageMismatchGate.
-      body.language = await checkLanguage(promptText, language);
+      // Quick, free, instant check of what the user actually typed. Only
+      // surfaces a conflict dialog (languageMismatchModal below) when the
+      // user has genuinely, explicitly picked a language THIS session — see
+      // languageExplicitlyChosen's declaration for why a merely-inherited
+      // default must never be treated as a real choice to defend. Otherwise
+      // just trusts whatever script the text itself is actually written in,
+      // falling back to the app's own language only when the text gives no
+      // signal either way (empty, or ambiguous Latin-script content).
+      body.language = languageExplicitlyChosen
+        ? await checkLanguage(promptText, language)
+        : (detectScriptLanguage(promptText) ?? language);
       const res  = await fetch("/api/generate-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
@@ -2339,6 +2360,7 @@ export default function Studio2Page() {
     try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
     setWizardResetKey((k) => k + 1);
     setWizardStarted(false);
+    setLanguageExplicitlyChosen(false);
     setScriptBlocks([]);
     setPromptText("");
     setSummary("");
@@ -2646,6 +2668,7 @@ export default function Studio2Page() {
             activeChild={activeChild}
             storyLanguage={storyLang}
             onStoryLanguageChange={setStoryLangOverride}
+            languageExplicitlyChosen={languageExplicitlyChosen}
             onFirstMessage={() => setChatLocked(true)}
             onDiscard={() => setChatLocked(false)}
             onGenerating={() => {
@@ -2673,6 +2696,7 @@ export default function Studio2Page() {
               setEditingStoryId(null);
               setLastGenerationMs(undefined);
               setLastValidationStages(undefined);
+              setLanguageExplicitlyChosen(false);
               setPendingLessonsInstruction(null);
               setHasPendingCastChange(false);
               setHasScriptChanges(false);
@@ -2856,6 +2880,7 @@ export default function Studio2Page() {
             <FiveQuestionFlow
               key={wizardResetKey}
               contentLanguage={storyLang}
+              languageExplicitlyChosen={languageExplicitlyChosen}
               childName={activeChild?.name}
               childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
               childId={activeChild?.id}
@@ -2880,6 +2905,7 @@ export default function Studio2Page() {
                 setEditingStoryId(null);
                 setLastGenerationMs(undefined);
                 setLastValidationStages(undefined);
+                setLanguageExplicitlyChosen(false);
                 setPendingLessonsInstruction(null);
                 setHasPendingCastChange(false);
                 setHasScriptChanges(false);

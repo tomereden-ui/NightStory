@@ -11,6 +11,7 @@ import OwlAvatar from "@/components/ui/OwlAvatar";
 import { LunaWorkingBanner } from "@/components/studio/LunaWorkingCard";
 import { getWizardUi } from "@/constants/wizardUi";
 import { useLanguageMismatchGate } from "@/hooks/useLanguageMismatchGate";
+import { detectScriptLanguage } from "@/lib/scriptLanguageCheck";
 import type { Language } from "@/types";
 
 interface Message {
@@ -198,6 +199,7 @@ export default function LunaChatPanel({
   onGenerating,
   storyLanguage,
   onStoryLanguageChange,
+  languageExplicitlyChosen,
 }: {
   activeChild: DBChildProfile | null;
   onScriptReady: (draft: Omit<DraftState, "coverUrl">, durationMinutes?: number) => void;
@@ -208,6 +210,13 @@ export default function LunaChatPanel({
    *  global UI language (set via the picker in this panel's own header). */
   storyLanguage: string;
   onStoryLanguageChange: (lang: string) => void;
+  /** Whether the user has actually pressed this panel's own language
+   *  toggle for the CURRENT story attempt, as opposed to storyLanguage
+   *  just holding its default/carried-over value. Only a genuine, this-
+   *  session pick is worth defending with a conflict dialog if the typed
+   *  text disagrees — an inherited default isn't a real choice to protect,
+   *  so the text's own script wins silently in that case instead. */
+  languageExplicitlyChosen?: boolean;
 }) {
   const language = storyLanguage;
   const { checkLanguage, languageMismatchModal } = useLanguageMismatchGate();
@@ -579,7 +588,9 @@ export default function LunaChatPanel({
       onGenerating?.();
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       try {
-        const finalLanguage = await checkLanguage(promptText, language);
+        const finalLanguage = languageExplicitlyChosen
+          ? await checkLanguage(promptText, language)
+          : (detectScriptLanguage(promptText) ?? language);
         if (finalLanguage !== language) onStoryLanguageChange(finalLanguage);
         const res = await fetch("/api/generate-story", {
           method: "POST",
@@ -715,7 +726,10 @@ export default function LunaChatPanel({
       const hero = overrideFields?.hero ?? storyParams.hero ?? "";
       const setting = overrideFields?.setting ?? storyParams.setting ?? "";
       const plot = overrideFields?.plot ?? storyParams.plot ?? "";
-      const finalLanguage = await checkLanguage([hero, setting, plot].filter(Boolean).join(" "), language);
+      const combinedText = [hero, setting, plot].filter(Boolean).join(" ");
+      const finalLanguage = languageExplicitlyChosen
+        ? await checkLanguage(combinedText, language)
+        : (detectScriptLanguage(combinedText) ?? language);
       if (finalLanguage !== language) onStoryLanguageChange(finalLanguage);
       const res = await fetch("/api/generate-story", {
         method: "POST",

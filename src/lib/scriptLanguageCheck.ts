@@ -30,3 +30,19 @@ export function findLanguageMismatch(text: string, selectedLanguage: string): st
   // as the alternative, since it's this app's own default/fallback language).
   return NON_LATIN_LANGS.includes(selectedLanguage) ? "en" : null;
 }
+
+/**
+ * Returns the non-Latin language the given text is unambiguously written
+ * in, or null if it's plain Latin-script (or empty) — no conflict to
+ * resolve, just "no signal either way" from character range alone.
+ *
+ * Used when the language toggle is still at its untouched default (the
+ * user never actually picked anything for THIS story) — in that case there's
+ * no real selection to weigh the typed text against, so the right move is
+ * to trust the text directly rather than surface a dialog comparing it to a
+ * value the user never chose.
+ */
+export function detectScriptLanguage(text: string): string | null {
+  if (!text.trim()) return null;
+  return NON_LATIN_LANGS.find((lang) => SCRIPT_RANGES[lang].test(text)) ?? null;
+}
