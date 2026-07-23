@@ -3167,18 +3167,27 @@ export default function Studio2Page() {
             {(() => {
               const neverSaved = savesCount === 0;
               const canSave = needsSave && !isProducing;
+              // scriptBlocks doesn't reflect the final story yet while the
+              // post-generation review pass is still trickling blocks in
+              // (see the FiveQuestionFlow/chat onComplete handlers' staggered
+              // reveal) — saving here would silently persist whatever
+              // partial subset of blocks had landed so far, or no-op
+              // entirely if clicked before the first one has. Same "not
+              // settled yet" gate Produce Audio already uses.
+              const notReadyToSave = isValidating;
+              const saveEnabled = (neverSaved || canSave) && !notReadyToSave;
               if (!neverSaved && !needsSave && saveLabel === "idle") return null;
               return (
                 <button
                   onClick={handleManualSave}
-                  disabled={!(neverSaved || canSave) || isSaving || saveLabel === "saved"}
+                  disabled={!saveEnabled || isSaving || saveLabel === "saved"}
                   className="w-full mt-2.5 py-3.5 rounded-full text-fs-body font-semibold transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-2"
                   style={saveLabel === "saved" ? {
                     background: "rgba(16,185,129,0.12)",
                     border: "1.5px solid rgba(52,211,153,0.4)",
                     color: "#6ee7b7",
                     boxShadow: "0 0 20px rgba(16,185,129,0.15)",
-                  } : (neverSaved || canSave) ? {
+                  } : saveEnabled ? {
                     background: "linear-gradient(135deg, rgba(139,92,246,0.18) 0%, rgba(99,102,241,0.14) 100%)",
                     border: "1.5px solid rgba(167,139,250,0.45)",
                     color: "#d8b4fe",
@@ -3197,6 +3206,11 @@ export default function Studio2Page() {
                     </>
                   ) : saveLabel === "saved" ? (
                     <><span className="text-fs-heading leading-none">✓</span> {i18nT(language, "savedVersion")}</>
+                  ) : notReadyToSave ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.4)" }} />
+                      Checking content…
+                    </>
                   ) : neverSaved ? (
                     <><span className="text-fs-heading leading-none">💾</span> Save for later</>
                   ) : (
