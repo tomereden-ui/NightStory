@@ -209,20 +209,26 @@ function AddChildModal({
   onClose,
   t,
 }: {
-  onAdd: (child: Omit<ChildProfile, "id" | "favoriteCategories" | "ageGroup">) => void;
+  onAdd: (child: Omit<ChildProfile, "id" | "favoriteCategories" | "ageGroup"> & { gender: "boy" | "girl" | "other" }) => void;
   onClose: () => void;
   t: (key: Parameters<ReturnType<typeof useLanguage>["t"]>[0]) => string;
 }) {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [emoji, setEmoji] = useState("");
+  // Collected at creation, not left for a later edit — a profile created
+  // without gender silently defaults to "other", which means Luna's chat
+  // gets no gender signal at all and gendered languages (Hebrew etc.) fall
+  // back to masculine forms for girls. Onboarding and Studio's picker both
+  // already ask; this modal was the one creation path that didn't.
+  const [gender, setGender] = useState<"boy" | "girl" | "other">("other");
   const [pickingAvatar, setPickingAvatar] = useState(false);
 
   function handleSave() {
     const trimmed = name.trim();
     const parsedAge = parseInt(age, 10);
     if (!trimmed || isNaN(parsedAge) || parsedAge < 1 || parsedAge > 16) return;
-    onAdd({ name: trimmed, age: parsedAge, avatarEmoji: emoji });
+    onAdd({ name: trimmed, age: parsedAge, avatarEmoji: emoji, gender });
     onClose();
   }
 
@@ -310,6 +316,23 @@ function AddChildModal({
               onFocus={(e) => { e.target.style.borderColor = "rgba(79,195,247,0.4)"; }}
               onBlur={(e) => { e.target.style.borderColor = "rgba(255,255,255,0.1)"; }}
             />
+          </div>
+          <div>
+            <label className="text-white/40 text-fs-body uppercase tracking-widest font-bold mb-1.5 block">Gender</label>
+            <div className="flex gap-1.5">
+              {(["boy", "girl", "other"] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGender(g)}
+                  className="flex-1 py-3 rounded-2xl text-fs-body font-semibold capitalize transition-all"
+                  style={{
+                    background: gender === g ? "rgba(79,195,247,0.12)" : "rgba(255,255,255,0.04)",
+                    border: gender === g ? "1.5px solid rgba(79,195,247,0.45)" : "1px solid rgba(255,255,255,0.08)",
+                    color: gender === g ? "#4fc3f7" : "rgba(255,255,255,0.4)",
+                  }}
+                >{g}</button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -1196,12 +1219,12 @@ export default function ProfilePage() {
       .catch(() => {});
   }, []);
 
-  async function handleAddChild(partial: Omit<ChildProfile, "id" | "favoriteCategories" | "ageGroup">) {
+  async function handleAddChild(partial: Omit<ChildProfile, "id" | "favoriteCategories" | "ageGroup"> & { gender?: "boy" | "girl" | "other" }) {
     try {
       const res = await fetch("/api/child-profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: partial.name, age: partial.age, avatar_emoji: partial.avatarEmoji ?? "", gender: "other" }),
+        body: JSON.stringify({ name: partial.name, age: partial.age, avatar_emoji: partial.avatarEmoji ?? "", gender: partial.gender ?? "other" }),
       });
       if (res.ok) {
         const saved = await res.json() as { id: string; name: string; age: number; avatar_emoji: string };
