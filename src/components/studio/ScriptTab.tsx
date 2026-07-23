@@ -985,8 +985,16 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
             lessons, director's note) that sit below the script instead. */}
         {belowCover}
 
-        {/* Scene-by-scene outline */}
-        {scenes && scenes.length > 0 && (
+        {/* Scene-by-scene outline — scenes arrive in the SAME initial Gemini
+            response as the raw (not-yet-validated) blocks, well before the
+            policy-check/validate-blocks passes finish and stream `blocks`
+            in via the staggered reveal below. Gating on totalExpectedBlocks
+            (cleared once that reveal completes) keeps this from showing a
+            "done" scene breakdown — durations/character lists computed
+            against an empty `blocks` array, and clicks that silently no-op
+            since blocks[idx] doesn't exist yet — while the script panel
+            right below it still reads "Checking 0/N". */}
+        {scenes && scenes.length > 0 && !totalExpectedBlocks && (
           <SceneMap
             scenes={scenes}
             blocks={blocks}
