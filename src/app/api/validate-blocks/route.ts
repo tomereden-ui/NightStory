@@ -298,7 +298,9 @@ Return an empty array [] if every block is already fine. Never echo blocks that 
 
 BLOCKS:
 ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareText)}`).join("\n")}`;
+  const pass1StartedAt = Date.now();
   changes += await runReviewPass(genAI, pass1Prompt, textBlocks, resultBlocks, "pass1-content");
+  const pass1Ms = Date.now() - pass1StartedAt;
 
   // ── Pass 2: dedicated grammar/typo-only proofread ───────────────────────
   // Pass 1 judges age-appropriateness AND grammar in one shot, and can miss
@@ -321,7 +323,9 @@ Return an empty array [] if every block is already fine. Never echo blocks that 
 
 BLOCKS:
 ${pass2Blocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareText)}`).join("\n")}`;
+  const pass2StartedAt = Date.now();
   changes += await runReviewPass(genAI, pass2Prompt, pass2Blocks, resultBlocks, "pass2-grammar");
+  const pass2Ms = Date.now() - pass2StartedAt;
 
   // ── Pass 3: Hebrew-only nikkud/grammar + proofread cycle ────────────────
   // Passes 1-2 are language-agnostic and, even together, don't reliably
@@ -331,6 +335,7 @@ ${pass2Blocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareT
   // own dedicated guidance file with an explicit nikkud-then-strip-nikkud
   // two-step read, and re-proofreads pass 1+2's own output.
   const detectedLanguage = await languagePromise;
+  let pass3Ms: number | undefined;
   if (detectedLanguage === "he") {
     const pass3Blocks: IndexedTextBlock[] = resultBlocks
       .map((b, i) => ({ _idx: i, characterName: b.characterName, ...stripTag(b.textPayload) }))
@@ -341,6 +346,7 @@ Also include the block's index (from the BLOCKS list below) as a line "- Index: 
 
 BLOCKS:
 ${pass3Blocks.map((b, i) => `[${i}] ${b.characterName}: ${b.bareText}`).join("\n")}`;
+    const pass3StartedAt = Date.now();
     changes += await runHebrewPass(genAI, hebrewPassPrompt, pass3Blocks, resultBlocks);
 
     for (let i = 0; i < resultBlocks.length; i++) {
@@ -352,9 +358,18 @@ ${pass3Blocks.map((b, i) => `[${i}] ${b.characterName}: ${b.bareText}`).join("\n
         changes++;
       }
     }
+    pass3Ms = Date.now() - pass3StartedAt;
   }
 
   if (changes > 0) console.log(`[validate-blocks] ${changes} total fix(es) across ${detectedLanguage === "he" ? "all three passes" : "both passes"}, ${textBlocks.length} block(s) reviewed.`);
 
-  return NextResponse.json({ blocks: resultBlocks, changes });
+  return NextResponse.json({
+    blocks: resultBlocks,
+    changes,
+    // Per-pass wall time — lets callers (studio/page.tsx) attribute this
+    // call's total duration to the individual content/grammar/Hebrew
+    // review passes in production_metrics.stages, instead of one opaque
+    // "validate_blocks" blob.
+    timings: { pass1Ms, pass2Ms, ...(pass3Ms !== undefined ? { pass3Ms } : {}) },
+  });
 }

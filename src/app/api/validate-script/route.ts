@@ -68,6 +68,7 @@ Return ONLY the raw JSON object. No markdown fences, no explanation outside the 
     2,
   );
 
+  const startedAt = Date.now();
   try {
     const genAI  = new GoogleGenerativeAI(apiKey);
     const model  = genAI.getGenerativeModel({
@@ -116,6 +117,7 @@ Return ONLY the raw JSON object. No markdown fences, no explanation outside the 
       ok: parsed.ok !== false && applied === 0,
       blocks: corrected,
       issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+      ms: Date.now() - startedAt,
     });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });

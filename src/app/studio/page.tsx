@@ -1261,6 +1261,14 @@ export default function Studio2Page() {
   // saved. Undefined for a story reopened from an existing draft/library
   // entry rather than freshly generated this session.
   const [lastGenerationMs, setLastGenerationMs] = useState<number | undefined>(undefined);
+  // Timed spans for the post-generation review rounds (policy check +
+  // validate-blocks' content/grammar/Hebrew passes) that just ran for the
+  // current script — same lifecycle as lastGenerationMs above (set at
+  // generation-completion, forwarded to POST /api/library, undefined for a
+  // reopened draft). Recorded client-side because this is the one place that
+  // sees every round in order, across what are actually two separate API
+  // routes called sequentially.
+  const [lastValidationStages, setLastValidationStages] = useState<Record<string, { startMs: number; endMs: number; ms: number }> | undefined>(undefined);
   // Issues found by re-running the policy check (validate-script) after a
   // manual save — cleared at the start of every Update Version click so a
   // stale list never lingers from a previous check.
@@ -1659,6 +1667,7 @@ export default function Studio2Page() {
         moralLessons: moralLessons.length ? moralLessons : undefined,
         childIds: activeChildId ? [activeChildId] : undefined,
         scriptGenerationMs: lastGenerationMs,
+        validationStages: lastValidationStages,
       }),
     })
       .then((r) => r.json())
@@ -1671,7 +1680,7 @@ export default function Studio2Page() {
       })
       .catch(() => {})
       .finally(() => { creatingDraftRef.current = false; draftSaveInFlightRef.current = null; });
-  }, [loaded, scriptBlocks, totalExpectedBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons, lastGenerationMs]);
+  }, [loaded, scriptBlocks, totalExpectedBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons, lastGenerationMs, lastValidationStages]);
 
   // No silent autosave here by design: the live story row (and the version
   // history) must only ever change when the user explicitly clicks Update
@@ -1854,6 +1863,7 @@ export default function Studio2Page() {
     setCoverUrl("");
     setStoryHasAudio(false);
     setLastGenerationMs(undefined);
+    setLastValidationStages(undefined);
     pendingVoiceOverridesRef.current = {};
     // A brand-new story must never show a previous story's analyzed lessons
     // while its own script is still being generated/analyzed.
@@ -1927,10 +1937,21 @@ export default function Studio2Page() {
       setIsValidating(true);
       if (cp) fetchCover(cp, sm);
 
+      // Post-generation review rounds are timed relative to this shared t0,
+      // same span-shape ({startMs, endMs, ms}) ProductionTimer uses for the
+      // later audio pipeline — merged into the same production_metrics row
+      // (via markScriptDone below) so the whole script->audio timeline lives
+      // in one place. Recorded here (client-side) since this is the only
+      // vantage point that sees every round in order, across what are
+      // actually two separate, sequential API routes.
+      const validationT0 = Date.now();
+      const validationStages: Record<string, { startMs: number; endMs: number; ms: number }> = {};
+
       // Round 2 — policy check + auto-fix (validate-script)
       setValidatingPhase("Luna is checking your story's guidelines…");
       const childAge = activeChild?.age ?? 6;
       let policyBlocks = rawBlocks;
+      const policyStartMs = Date.now() - validationT0;
       try {
         const polRes = await fetch("/api/validate-script", {
           method: "POST",
@@ -1957,11 +1978,15 @@ export default function Studio2Page() {
         }
       } catch (err) {
         console.warn("[Policy] Policy check failed, using raw script:", err);
+      } finally {
+        const policyEndMs = Date.now() - validationT0;
+        validationStages.policy_check = { startMs: policyStartMs, endMs: policyEndMs, ms: policyEndMs - policyStartMs };
       }
 
       // Round 2.5 — per-block age/content check (validate-blocks)
       setValidatingPhase("Luna is proofreading it…");
       let blocks: ScriptBlock[];
+      const blocksStartMs = Date.now() - validationT0;
       try {
         const valRes = await fetch("/api/validate-blocks", {
           method: "POST",
@@ -1971,9 +1996,36 @@ export default function Studio2Page() {
         const valData = await valRes.json();
         blocks = (valRes.ok && valData.blocks?.length) ? valData.blocks as ScriptBlock[] : policyBlocks;
         if (valData.changes > 0) console.log(`[Validation] Fixed ${valData.changes} block(s)`);
+        // Break down into its own content/grammar/Hebrew sub-passes using the
+        // server-reported per-pass timings, nested sequentially within this
+        // round's own window (they really do run one after another).
+        let cursor = blocksStartMs;
+        const t = valData.timings as { pass1Ms?: number; pass2Ms?: number; pass3Ms?: number } | undefined;
+        if (typeof t?.pass1Ms === "number") {
+          validationStages.content_review = { startMs: cursor, endMs: cursor + t.pass1Ms, ms: t.pass1Ms };
+          cursor += t.pass1Ms;
+        }
+        if (typeof t?.pass2Ms === "number") {
+          validationStages.grammar_review = { startMs: cursor, endMs: cursor + t.pass2Ms, ms: t.pass2Ms };
+          cursor += t.pass2Ms;
+        }
+        if (typeof t?.pass3Ms === "number") {
+          validationStages.hebrew_review = { startMs: cursor, endMs: cursor + t.pass3Ms, ms: t.pass3Ms };
+          cursor += t.pass3Ms;
+        }
       } catch {
         blocks = policyBlocks; // fall back to policy-checked blocks on network error
+      } finally {
+        // No granular sub-pass breakdown to fall back on (network error, or
+        // no text blocks to review at all) — record the whole round as one
+        // span rather than losing the time entirely.
+        if (!validationStages.content_review) {
+          const blocksEndMs = Date.now() - validationT0;
+          validationStages.validate_blocks = { startMs: blocksStartMs, endMs: blocksEndMs, ms: blocksEndMs - blocksStartMs };
+        }
       }
+      setLastValidationStages(validationStages);
+
       // Strip a redundant "CharacterName:" prefix some generations bake into
       // the line itself — deterministic, safe, always a no-op if not present.
       blocks = blocks.map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
@@ -2589,6 +2641,7 @@ export default function Studio2Page() {
               // metrics 'script_done' row at all.
               setEditingStoryId(null);
               setLastGenerationMs(undefined);
+              setLastValidationStages(undefined);
               setPendingLessonsInstruction(null);
               setHasPendingCastChange(false);
               pendingVoiceOverridesRef.current = {};
@@ -2626,6 +2679,12 @@ export default function Studio2Page() {
               setValidatingPhase("Luna is proofreading it…");
               if (draft.coverPrompt) fetchCover(draft.coverPrompt, draft.summary);
               const childAge = activeChild?.age ?? 6;
+              // Chat mode skips the whole-script policy check (validate-script)
+              // that the prompt tab runs — only validate-blocks' per-block
+              // review applies here. Timed the same way (span shape, merged
+              // into production_metrics via markScriptDone) for consistency,
+              // just without a policy_check entry.
+              const validationT0 = Date.now();
               fetch("/api/validate-blocks", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -2640,6 +2699,17 @@ export default function Studio2Page() {
                   // call shouldn't wait out the reveal animation.
                   writeDraft({ ...draft, scriptBlocks: blocks, coverUrl: "" }, DRAFT_KEY);
                   void analyzeLessons(blocks, null);
+                  const validationStages: Record<string, { startMs: number; endMs: number; ms: number }> = {};
+                  let cursor = 0;
+                  const t = valData.timings as { pass1Ms?: number; pass2Ms?: number; pass3Ms?: number } | undefined;
+                  if (typeof t?.pass1Ms === "number") { validationStages.content_review = { startMs: cursor, endMs: cursor + t.pass1Ms, ms: t.pass1Ms }; cursor += t.pass1Ms; }
+                  if (typeof t?.pass2Ms === "number") { validationStages.grammar_review = { startMs: cursor, endMs: cursor + t.pass2Ms, ms: t.pass2Ms }; cursor += t.pass2Ms; }
+                  if (typeof t?.pass3Ms === "number") { validationStages.hebrew_review = { startMs: cursor, endMs: cursor + t.pass3Ms, ms: t.pass3Ms }; cursor += t.pass3Ms; }
+                  if (!validationStages.content_review) {
+                    const endMs = Date.now() - validationT0;
+                    validationStages.validate_blocks = { startMs: 0, endMs, ms: endMs };
+                  }
+                  setLastValidationStages(validationStages);
                   blocks.forEach((block, i) => {
                     setTimeout(() => {
                       setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId, validated: true }]);
@@ -2656,6 +2726,8 @@ export default function Studio2Page() {
                   void resolveAndSetCharacterAvatars(rawBlocks, draft.summary);
                   writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
                   void analyzeLessons(rawBlocks, null);
+                  const endMs = Date.now() - validationT0;
+                  setLastValidationStages({ validate_blocks: { startMs: 0, endMs, ms: endMs } });
                   rawBlocks.forEach((block, i) => {
                     setTimeout(() => {
                       setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId }]);
@@ -2758,6 +2830,7 @@ export default function Studio2Page() {
                 // matching comment in Chat mode's onGenerating below).
                 setEditingStoryId(null);
                 setLastGenerationMs(undefined);
+                setLastValidationStages(undefined);
                 setPendingLessonsInstruction(null);
                 setHasPendingCastChange(false);
                 pendingVoiceOverridesRef.current = {};
@@ -2794,6 +2867,10 @@ export default function Studio2Page() {
                 setValidatingPhase("Luna is proofreading it…");
                 if (cp) fetchCover(cp, sm);
                 const childAge = activeChild?.age ?? 6;
+                // Step-by-step also skips validate-script's whole-script
+                // policy check, same as Chat mode — see the matching comment
+                // there.
+                const validationT0 = Date.now();
                 fetch("/api/validate-blocks", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -2808,6 +2885,17 @@ export default function Studio2Page() {
                     // call shouldn't wait out the reveal animation.
                     writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang, storyTitle: fqTitle }, DRAFT_KEY);
                     void analyzeLessons(blocks, null);
+                    const validationStages: Record<string, { startMs: number; endMs: number; ms: number }> = {};
+                    let cursor = 0;
+                    const t = valData.timings as { pass1Ms?: number; pass2Ms?: number; pass3Ms?: number } | undefined;
+                    if (typeof t?.pass1Ms === "number") { validationStages.content_review = { startMs: cursor, endMs: cursor + t.pass1Ms, ms: t.pass1Ms }; cursor += t.pass1Ms; }
+                    if (typeof t?.pass2Ms === "number") { validationStages.grammar_review = { startMs: cursor, endMs: cursor + t.pass2Ms, ms: t.pass2Ms }; cursor += t.pass2Ms; }
+                    if (typeof t?.pass3Ms === "number") { validationStages.hebrew_review = { startMs: cursor, endMs: cursor + t.pass3Ms, ms: t.pass3Ms }; cursor += t.pass3Ms; }
+                    if (!validationStages.content_review) {
+                      const endMs = Date.now() - validationT0;
+                      validationStages.validate_blocks = { startMs: 0, endMs, ms: endMs };
+                    }
+                    setLastValidationStages(validationStages);
                     blocks.forEach((block, i) => {
                       setTimeout(() => {
                         setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId, validated: true }]);
@@ -2823,6 +2911,8 @@ export default function Studio2Page() {
                     void resolveAndSetCharacterAvatars(rawBlocks, sm, fqChars);
                     writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
                     void analyzeLessons(rawBlocks, null);
+                    const endMs = Date.now() - validationT0;
+                    setLastValidationStages({ validate_blocks: { startMs: 0, endMs, ms: endMs } });
                     rawBlocks.forEach((block, i) => {
                       setTimeout(() => {
                         setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId }]);
