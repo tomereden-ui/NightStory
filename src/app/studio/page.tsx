@@ -2611,7 +2611,7 @@ export default function Studio2Page() {
             framed Script as a destination you'd choose instead of one you
             arrive at — the app already auto-advances to it the moment
             generation finishes, and editing afterward happens in place
-            (director's notes, moral lessons, regenerate), never by flipping
+            (director's notes, values, regenerate), never by flipping
             back to this toggle. So there's no tab bar at all now: this
             segmented toggle IS the whole "Create" phase's header, and the
             screen simply becomes Script once one exists. The only way back
@@ -3083,7 +3083,7 @@ export default function Studio2Page() {
 
               {/* Result — everything below is what was generated: cover,
                   title, summary, Cast (quick-fix editable), scenes, and the
-                  script itself. Heavier editing tools (moral lessons,
+                  script itself. Heavier editing tools (values,
                   director's note) live further down under their own "Make
                   Changes" heading, so it's never ambiguous which part is the
                   finished result and which part is a control for changing
@@ -3186,7 +3186,7 @@ export default function Studio2Page() {
                 isValidating ? null : (
                 <>
                   {/* Edit — everything from here down changes the story
-                      above rather than being part of it: moral lessons and
+                      above rather than being part of it: values and
                       (right after this component closes) Director's Note.
                       Grouped under one heading instead of being scattered
                       before and after the actual result. */}

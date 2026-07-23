@@ -104,7 +104,7 @@ export interface GenerateStoryRequest {
   durationMinutes?: number;
   // child's age group from profile (e.g. "4-6", "6-8", "8-10")
   childAgeGroup?: string;
-  // optional moral lesson(s) to weave into the story
+  // optional value(s) to weave into the story
   lesson?: string;
   lessons?: string[];
   // language for story generation (ISO 639-1 code)

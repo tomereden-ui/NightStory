@@ -710,7 +710,7 @@ export default function ClassicDetailPage() {
           </div>
         )}
 
-        {/* Moral lessons panel — same presentation as Studio's collapsed view, read-only */}
+        {/* Values panel — same presentation as Studio's collapsed view, read-only */}
         {moralLessons && moralLessons.length > 0 && (
           <div className="mt-4 px-5">
             <ReadOnlyLessonsPanel moralLessons={moralLessons} storyLanguage={storyLanguage} />

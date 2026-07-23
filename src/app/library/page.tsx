@@ -991,7 +991,7 @@ export default function LibraryPage() {
               })}
             </FilterChipRow>
 
-            <FilterChipRow label="Moral lesson">
+            <FilterChipRow label="Value">
               {lessonCatalog.map((l) => {
                 const active = selectedLessons.has(l.id);
                 return (

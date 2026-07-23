@@ -752,7 +752,7 @@ function callTypeLabel(callType: string): string {
     casting: "Voice Casting", voice_profiling: "Voice Profiling", character_classification: "Character Classification",
     avatar_matching: "Avatar Matching", scene_generation: "Scene Generation", drama_planning: "Drama Planning",
     language_detection: "Language Detection", hebrew_letter_fix: "Hebrew Letter Fix",
-    lesson_analysis: "Lesson Analysis", lesson_rewrite: "Lesson Rewrite", director_note_revise: "Director's Note Revise",
+    lesson_analysis: "Value Analysis", lesson_rewrite: "Value Rewrite", director_note_revise: "Director's Note Revise",
     summary_generation: "Summary Generation", title_conflict_resolution: "Title Conflict Resolution",
     content_safety_rewrite: "Content Safety Rewrite", voice_preview: "Voice Preview",
     voice_preset_preview: "Voice Preset Preview", voice_pick_preview: "Voice Pick (text model)",

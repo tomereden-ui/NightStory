@@ -1479,7 +1479,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   // profile (or none at all), which is the common case and handled fine by
   // Q3View's relation-word fallback chips (Mom/Dad/Grandpa/Grandma/...).
   const [siblingNames, setSiblingNames] = useState<string[]>([]);
-  // The active child's own default moral lessons (Profile > Edit / onboarding)
+  // The active child's own default values (Profile > Edit / onboarding)
   // — pre-applied to the generated story so the wizard never has to ask.
   const [defaultLessons, setDefaultLessons] = useState<string[]>([]);
   // Rest of the active child's profile — age (for language-level targeting),

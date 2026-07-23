@@ -250,7 +250,7 @@ export function copyCastAssignments(
   return { characterProfiles, blocks, matchedCount };
 }
 
-// ─── Moral lessons ──────────────────────────────────────────────────────────
+// ─── Values ─────────────────────────────────────────────────────────────────
 // Moved here from analyze-lessons/route.ts (which still owns persisting the
 // result for its own single-story use from Studio); refresh-story calls this
 // directly and persists all four fields together in one write.

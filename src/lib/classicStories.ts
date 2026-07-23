@@ -97,7 +97,7 @@ export interface ClassicMeta {
   chapterNumber?: number;
   chapterCount?: number;
   /** Only present once the classic has actually been generated (a DB row exists) —
-   *  used by library search (character names, mood, moral lessons). undefined for a
+   *  used by library search (character names, mood, values). undefined for a
    *  still-"pending" classic that only exists as a hardcoded definition/Storage script. */
   characterProfiles?: Record<string, { type: string; visualDescription: string; gender?: string; voicePersona?: string; ageBucket?: string; category?: string; avatarUrl?: string }>;
   scenes?: { primaryMood: string }[];

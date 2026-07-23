@@ -35,7 +35,7 @@ interface ScriptTabProps {
   studioMode?: boolean;
   belowCover?: React.ReactNode;
   /** Rendered after the script content — for heavier editing tools (e.g.
-   *  moral lessons) that belong grouped with Director's Note rather than
+   *  values) that belong grouped with Director's Note rather than
    *  next to the story's identity like belowCover's Cast. */
   belowScript?: React.ReactNode;
   characterAvatars?: Record<string, string>;
@@ -1013,7 +1013,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
 
         {/* Script panel — shares the same frame/coloring/title identity, and
             now the same collapsible-header interaction pattern, as the
-            Director's Note and Moral Lessons panels below it. */}
+            Director's Note and Values panels below it. */}
         {(() => {
           const pendingCount = totalExpectedBlocks ? Math.max(0, totalExpectedBlocks - blocks.length) : 0;
           const isChecking = pendingCount > 0;
@@ -1160,7 +1160,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
           </>
         )}
 
-        {/* Slot rendered after the finished script (e.g. moral lessons) — the
+        {/* Slot rendered after the finished script (e.g. values) — the
             result (cover/summary/scenes/script) plus quick Cast fixes are all
             complete above this point; everything from here down is a
             heavier editing tool, not part of the generated result itself. */}

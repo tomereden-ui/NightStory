@@ -771,7 +771,7 @@ function EditChildModal({
 
           <CollapsiblePanel
             icon="💫"
-            title="Default moral lessons"
+            title="Default values"
             summary={summarizeChips(defaultLessons, getLessonsCatalog(), "None selected")}
             accentText="#4fc3f7"
             accentBg="rgba(79,195,247,0.15)"

@@ -1,8 +1,9 @@
-// Localized display layer for the "Moral Lessons" feature (LessonStep +
-// LessonEditor). The underlying identifier sent to the backend / stored in
-// `lessons: string[]` and `stories.moral_lessons` stays the stable English
-// canonical id below — only the icon/label/description shown to the user,
-// and the UI chrome around it, are localized.
+// Localized display layer for the "Values" feature (LessonStep +
+// LessonEditor — internal names kept for stability). The underlying
+// identifier sent to the backend / stored in `lessons: string[]` and
+// `stories.moral_lessons` stays the stable English canonical id below —
+// only the icon/label/description shown to the user, and the UI chrome
+// around it, are localized.
 
 import type { IconName } from "@/lib/icons";
 
@@ -182,12 +183,12 @@ export interface LessonsChrome {
 
 const CHROME: Record<string, LessonsChrome> = {
   en: {
-    panelTitle: "Moral Lessons",
-    addLessonButton: "+ Add lesson",
+    panelTitle: "Values",
+    addLessonButton: "+ Add value",
     collapsedSubtitle: "The values this story brings to life",
     analyzing: "Reading the story for embedded values…",
-    emptyNoConfirmed: "No confirmed values yet — rewrite the story below to weave your selected lesson in.",
-    emptyNoLessons: "No moral lesson detected yet — tap “+ Add lesson” to weave a value into the story.",
+    emptyNoConfirmed: "No confirmed values yet — rewrite the story below to weave your selected value in.",
+    emptyNoLessons: "No value detected yet — tap “+ Add value” to weave one into the story.",
     confirmedBadge: "Confirmed in this story",
     currentlyInStory: "Currently in this story",
     addAValue: "Add a value",
@@ -195,22 +196,22 @@ const CHROME: Record<string, LessonsChrome> = {
     customPlaceholder: "e.g. learning to ask for help…",
     cancel: "Cancel",
     apply: "Apply",
-    removeAll: "Remove all lessons",
+    removeAll: "Remove all values",
     stepBackToIdea: "Back to idea",
     stepLabel: "Optional · Step 2",
     stepHeading: "Want today's story to teach something?",
     stepSubheading: "Pick one or more values — they'll be woven in naturally, never stated out loud.",
     stepWriteMyStory: "Write My Story",
-    stepWriteMyStoryWithCount: (n) => `Write My Story with ${n} lessons`,
+    stepWriteMyStoryWithCount: (n) => `Write My Story with ${n} values`,
     stepSkip: "Skip — just tell a fun story",
   },
   he: {
-    panelTitle: "ערכים מוסריים",
+    panelTitle: "ערכים",
     addLessonButton: "+ הוסף ערך",
     collapsedSubtitle: "הערכים שהסיפור הזה מביא לחיים",
     analyzing: "קוראים את הסיפור לאיתור ערכים מוטמעים…",
     emptyNoConfirmed: "עדיין אין ערכים מאושרים — שכתבו את הסיפור למטה כדי לשלב את הערך שבחרתם.",
-    emptyNoLessons: "עדיין לא זוהה ערך מוסרי — הקישו על “+ הוסף ערך” כדי לשלב ערך בסיפור.",
+    emptyNoLessons: "עדיין לא זוהה ערך — הקישו על “+ הוסף ערך” כדי לשלב ערך בסיפור.",
     confirmedBadge: "מאושר בסיפור זה",
     currentlyInStory: "כרגע בסיפור זה",
     addAValue: "הוספת ערך",
@@ -228,12 +229,12 @@ const CHROME: Record<string, LessonsChrome> = {
     stepSkip: "דלגו — פשוט ספרו סיפור כיפי",
   },
   es: {
-    panelTitle: "Lecciones morales",
+    panelTitle: "Valores",
     addLessonButton: "+ Añadir valor",
     collapsedSubtitle: "Los valores que esta historia transmite",
     analyzing: "Leyendo la historia en busca de valores incorporados…",
     emptyNoConfirmed: "Aún no hay valores confirmados — reescribe la historia abajo para incorporar el valor elegido.",
-    emptyNoLessons: "Aún no se detectó ninguna lección moral — toca “+ Añadir valor” para incorporar uno a la historia.",
+    emptyNoLessons: "Aún no se detectó ningún valor — toca “+ Añadir valor” para incorporarlo a la historia.",
     confirmedBadge: "Confirmado en esta historia",
     currentlyInStory: "Actualmente en esta historia",
     addAValue: "Añadir un valor",
@@ -251,12 +252,12 @@ const CHROME: Record<string, LessonsChrome> = {
     stepSkip: "Omitir — solo cuenta una historia divertida",
   },
   fr: {
-    panelTitle: "Leçons morales",
+    panelTitle: "Valeurs",
     addLessonButton: "+ Ajouter une valeur",
     collapsedSubtitle: "Les valeurs que cette histoire transmet",
     analyzing: "Lecture de l'histoire à la recherche de valeurs intégrées…",
     emptyNoConfirmed: "Aucune valeur confirmée pour l'instant — réécrivez l'histoire ci-dessous pour intégrer la valeur choisie.",
-    emptyNoLessons: "Aucune leçon morale détectée pour l'instant — appuyez sur « + Ajouter une valeur » pour en intégrer une.",
+    emptyNoLessons: "Aucune valeur détectée pour l'instant — appuyez sur « + Ajouter une valeur » pour en intégrer une.",
     confirmedBadge: "Confirmé dans cette histoire",
     currentlyInStory: "Actuellement dans cette histoire",
     addAValue: "Ajouter une valeur",
@@ -274,12 +275,12 @@ const CHROME: Record<string, LessonsChrome> = {
     stepSkip: "Passer — juste une histoire amusante",
   },
   de: {
-    panelTitle: "Moralische Lektionen",
+    panelTitle: "Werte",
     addLessonButton: "+ Wert hinzufügen",
     collapsedSubtitle: "Die Werte, die diese Geschichte vermittelt",
     analyzing: "Die Geschichte wird nach eingebetteten Werten durchsucht…",
     emptyNoConfirmed: "Noch keine bestätigten Werte — schreibe die Geschichte unten um, um den gewählten Wert einzubauen.",
-    emptyNoLessons: "Noch keine moralische Lektion erkannt — tippe auf „+ Wert hinzufügen“, um einen Wert einzubauen.",
+    emptyNoLessons: "Noch kein Wert erkannt — tippe auf „+ Wert hinzufügen“, um einen Wert einzubauen.",
     confirmedBadge: "In dieser Geschichte bestätigt",
     currentlyInStory: "Derzeit in dieser Geschichte",
     addAValue: "Wert hinzufügen",
@@ -297,12 +298,12 @@ const CHROME: Record<string, LessonsChrome> = {
     stepSkip: "Überspringen — einfach eine lustige Geschichte erzählen",
   },
   pt: {
-    panelTitle: "Lições morais",
+    panelTitle: "Valores",
     addLessonButton: "+ Adicionar valor",
     collapsedSubtitle: "Os valores que esta história transmite",
     analyzing: "Lendo a história em busca de valores incorporados…",
     emptyNoConfirmed: "Ainda não há valores confirmados — reescreva a história abaixo para incorporar o valor escolhido.",
-    emptyNoLessons: "Nenhuma lição moral detectada ainda — toque em “+ Adicionar valor” para incorporar um à história.",
+    emptyNoLessons: "Nenhum valor detectado ainda — toque em “+ Adicionar valor” para incorporá-lo à história.",
     confirmedBadge: "Confirmado nesta história",
     currentlyInStory: "Atualmente nesta história",
     addAValue: "Adicionar um valor",
@@ -320,12 +321,12 @@ const CHROME: Record<string, LessonsChrome> = {
     stepSkip: "Pular — apenas conte uma história divertida",
   },
   it: {
-    panelTitle: "Lezioni morali",
+    panelTitle: "Valori",
     addLessonButton: "+ Aggiungi valore",
     collapsedSubtitle: "I valori che questa storia trasmette",
     analyzing: "Lettura della storia alla ricerca di valori incorporati…",
     emptyNoConfirmed: "Ancora nessun valore confermato — riscrivi la storia qui sotto per incorporare il valore scelto.",
-    emptyNoLessons: "Ancora nessuna lezione morale rilevata — tocca “+ Aggiungi valore” per incorporarne una nella storia.",
+    emptyNoLessons: "Ancora nessun valore rilevato — tocca “+ Aggiungi valore” per incorporarlo nella storia.",
     confirmedBadge: "Confermato in questa storia",
     currentlyInStory: "Attualmente in questa storia",
     addAValue: "Aggiungi un valore",
@@ -343,12 +344,12 @@ const CHROME: Record<string, LessonsChrome> = {
     stepSkip: "Salta — racconta solo una storia divertente",
   },
   ar: {
-    panelTitle: "الدروس الأخلاقية",
+    panelTitle: "القيم",
     addLessonButton: "+ إضافة قيمة",
     collapsedSubtitle: "القيم التي تجسدها هذه القصة",
     analyzing: "جارٍ قراءة القصة بحثاً عن القيم المتضمنة…",
     emptyNoConfirmed: "لا توجد قيم مؤكدة بعد — أعد كتابة القصة أدناه لدمج القيمة التي اخترتها.",
-    emptyNoLessons: "لم يتم اكتشاف أي درس أخلاقي بعد — اضغط على “+ إضافة قيمة” لدمج قيمة في القصة.",
+    emptyNoLessons: "لم يتم اكتشاف أي قيمة بعد — اضغط على “+ إضافة قيمة” لدمجها في القصة.",
     confirmedBadge: "مؤكد في هذه القصة",
     currentlyInStory: "حالياً في هذه القصة",
     addAValue: "إضافة قيمة",
@@ -366,12 +367,12 @@ const CHROME: Record<string, LessonsChrome> = {
     stepSkip: "تخطّي — فقط احكِ قصة ممتعة",
   },
   ja: {
-    panelTitle: "道徳的な教訓",
+    panelTitle: "価値観",
     addLessonButton: "+ 価値観を追加",
     collapsedSubtitle: "この物語が伝える価値観",
     analyzing: "物語から埋め込まれた価値観を読み取っています…",
     emptyNoConfirmed: "まだ確認された価値観はありません — 下の物語を書き直して選んだ価値観を織り込みましょう。",
-    emptyNoLessons: "まだ道徳的な教訓は検出されていません — 「+ 価値観を追加」をタップして物語に価値観を織り込みましょう。",
+    emptyNoLessons: "まだ価値観は検出されていません — 「+ 価値観を追加」をタップして物語に織り込みましょう。",
     confirmedBadge: "この物語で確認済み",
     currentlyInStory: "現在この物語にあるもの",
     addAValue: "価値観を追加",
@@ -389,12 +390,12 @@ const CHROME: Record<string, LessonsChrome> = {
     stepSkip: "スキップ — ただ楽しい物語を語る",
   },
   hi: {
-    panelTitle: "नैतिक शिक्षाएँ",
+    panelTitle: "मूल्य",
     addLessonButton: "+ मूल्य जोड़ें",
     collapsedSubtitle: "इस कहानी में उतारे गए मूल्य",
     analyzing: "कहानी में शामिल मूल्यों को पढ़ा जा रहा है…",
     emptyNoConfirmed: "अभी तक कोई पुष्ट मूल्य नहीं — चुने गए मूल्य को शामिल करने के लिए नीचे कहानी फिर से लिखें।",
-    emptyNoLessons: "अभी तक कोई नैतिक शिक्षा नहीं मिली — कहानी में मूल्य जोड़ने के लिए “+ मूल्य जोड़ें” पर टैप करें।",
+    emptyNoLessons: "अभी तक कोई मूल्य नहीं मिला — कहानी में मूल्य जोड़ने के लिए “+ मूल्य जोड़ें” पर टैप करें।",
     confirmedBadge: "इस कहानी में पुष्ट",
     currentlyInStory: "फ़िलहाल इस कहानी में",
     addAValue: "एक मूल्य जोड़ें",

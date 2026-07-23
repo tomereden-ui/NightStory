@@ -23,7 +23,7 @@ export interface FiveQuestionStoryRequest {
   language?: string;
   // user's chosen default narrator voice — always wins for the "Narrator" character
   narratorVoiceId?: string;
-  // the active child's default moral lessons (Profile/onboarding) — woven in
+  // the active child's default values (Profile/onboarding) — woven in
   // the same way generate-story's STORY VALUES section does
   lessons?: string[];
   // remaining child-profile fields — this route previously ignored all of
