@@ -3491,19 +3491,26 @@ export default function Studio2Page() {
             })()}
 
             {/* Save for later / Update version — one adaptive button, not two.
-                Before this story has ever been saved once (savesCount === 0),
-                it's always visible as "Save for later" — an explicit, findable
-                way to stop here without producing audio; the story shows up
-                in Library > My Stories as a Draft from that point on (see
-                includeDrafts in libraryStore.ts). After the first save, this
-                button disappears entirely until something actually changes
+                Before this story has ever been saved once (savesCount === 0)
+                AND before it's ever been produced, it's always visible as
+                "Save for later" — an explicit, findable way to stop here
+                without producing audio; the story shows up in Library > My
+                Stories as a Draft from that point on (see includeDrafts in
+                libraryStore.ts). Producing audio persists the story for real
+                (addEntry upsert in produce-drama) without ever going through
+                this button's own /api/script-saves call, so storyHasAudio
+                counts as "saved" here too — otherwise this kept reading as
+                neverSaved forever post-production and re-offered "Save for
+                later" on an already-produced, already-listenable story.
+                After the first save (or first production), this button
+                disappears entirely until something actually changes
                 (needsSave), then reappears labeled "Update version" — so its
                 mere presence is the signal that there's something to save,
                 rather than sitting there permanently disabled and easy to
                 ignore. Stays visible through the "saving"/"saved" confirmation
                 even though needsSave flips false the instant the save lands. */}
             {(() => {
-              const neverSaved = savesCount === 0;
+              const neverSaved = savesCount === 0 && !storyHasAudio;
               const canSave = needsSave && !isProducing;
               // scriptBlocks doesn't reflect the final story yet while the
               // post-generation review pass is still trickling blocks in
