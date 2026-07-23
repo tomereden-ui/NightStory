@@ -295,6 +295,7 @@ function CharacterCards({
   onAvatarChange,
   onVoiceChange,
   storyLanguage,
+  totalExpectedBlocks,
 }: {
   blocks: ScriptBlock[];
   voicePool: Voice[];
@@ -305,6 +306,10 @@ function CharacterCards({
   onVoiceChange: (characterName: string, voiceId: string) => void;
   /** The story's actual content language — falls back to UI language if not provided. */
   storyLanguage?: string;
+  /** Set (non-undefined) while the post-generation review pass is still
+   *  staggering blocks into `blocks` — lets Cast show a loading placeholder
+   *  instead of vanishing outright while there's nothing to extract yet. */
+  totalExpectedBlocks?: number;
 }) {
   const [openCharacter, setOpenCharacter] = useState<string | null>(null);
   const { language } = useLanguage();
@@ -324,7 +329,29 @@ function CharacterCards({
       .values(),
   );
 
-  if (cast.length === 0) return null;
+  if (cast.length === 0) {
+    // Mid-reveal (blocks still staggering in after generation) — show a
+    // loading placeholder rather than rendering nothing, which used to read
+    // as "Cast disappeared" instead of "Cast is still loading".
+    if (totalExpectedBlocks) {
+      return (
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.45)" }}>
+              {i18nT(language, "castLabel")} <span style={{ fontStyle: "italic", fontWeight: 400, textTransform: "none" }}>({i18nT(language, "tapToEdit")})</span>
+            </p>
+          </div>
+          <div className="flex gap-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="w-16 h-16 rounded-full flex-shrink-0 animate-pulse"
+                style={{ background: "rgba(255,255,255,0.05)", animationDelay: `${i * 100}ms` }} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const openMember = openCharacter ? cast.find((c) => c.characterName === openCharacter) : null;
 
@@ -2869,6 +2896,7 @@ export default function Studio2Page() {
                   characterProfiles={characterProfiles}
                   onAvatarChange={handleAvatarChange}
                   onVoiceChange={handleCharacterVoiceChange}
+                  totalExpectedBlocks={totalExpectedBlocks}
                 />
               }
               belowScript={
