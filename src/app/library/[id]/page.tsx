@@ -152,8 +152,15 @@ export default function StoryDetailPage() {
     }
     if (!entry?.summary) return;
 
+    // Every chapter of a series shares the same summary text and the same
+    // narrated audio file (see assign-to-series, where the text is synced) —
+    // keying the cache by series rather than by this one chapter's story ID
+    // means switching chapters never re-synthesizes audio that's already
+    // cached from another chapter.
+    const summaryCacheKey = entry.seriesId ? `series-${entry.seriesId}` : `story-${entry.id}`;
+
     // Reuse cached audio URL from this session (survives component remounts)
-    const sessionCached = entry?.id ? summaryAudioCache.get(entry.id) : undefined;
+    const sessionCached = summaryAudioCache.get(summaryCacheKey);
     if (sessionCached) {
       const audio = new Audio(sessionCached);
       audio.onended = () => setSummaryPlaying(false);
@@ -169,10 +176,10 @@ export default function StoryDetailPage() {
       const res = await fetch("/api/summary-audio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: entry.summary, cacheKey: `story-${entry.id}`, childIds: entry.childIds }),
+        body: JSON.stringify({ text: entry.summary, cacheKey: summaryCacheKey, childIds: entry.childIds }),
       });
       const { audioUrl } = await res.json() as { audioUrl: string };
-      if (entry?.id) summaryAudioCache.set(entry.id, audioUrl);
+      summaryAudioCache.set(summaryCacheKey, audioUrl);
       const audio = new Audio(audioUrl);
       audio.onended = () => setSummaryPlaying(false);
       audio.onerror = () => setSummaryPlaying(false);
@@ -184,7 +191,7 @@ export default function StoryDetailPage() {
     } finally {
       setSummaryLoading(false);
     }
-  }, [entry?.id, entry?.summary, summaryPlaying]);
+  }, [entry?.id, entry?.summary, entry?.seriesId, entry?.childIds, summaryPlaying]);
 
   useEffect(() => {
     fetch(`/api/library/${id}`)

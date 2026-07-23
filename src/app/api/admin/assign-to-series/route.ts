@@ -49,30 +49,44 @@ export async function POST(req: NextRequest) {
 
   const chapterCount = existingChapters.length + 1;
 
+  // Every chapter of a series shares one summary — both the text and (via a
+  // series-scoped cache key in /api/summary-audio) the narrated audio file —
+  // so switching chapters in the Library never triggers a redundant rewrite
+  // or a redundant TTS synthesis. Chapter 1 is canonical; every other chapter
+  // just mirrors it, here and in the backfill loop below.
+  const chapterOneSummary = (
+    anchorWasStandalone
+      ? anchor.summary
+      : existingChapters.find((c) => (c.chapterNumber ?? (c.id === anchor.id ? 1 : undefined)) === 1)?.summary
+  ) ?? anchor.summary;
+
   await addEntry({
     ...target,
     seriesId,
     chapterNumber,
     chapterCount,
     coverUrl: castSource.coverUrl ?? target.coverUrl,
+    summary: chapterOneSummary,
     characterProfiles,
     blocks,
   });
 
-  // Keep every sibling chapter's chapter_count in sync, and — if the anchor
-  // was standalone — stamp its own series_id/chapter_number now too. A targeted
-  // column update, not addEntry(...c) — `c` comes from getSeriesChapters, which
-  // fetches a lightweight projection without blocks/character_profiles/scenes/
+  // Keep every sibling chapter's chapter_count (and canonical summary) in
+  // sync, and — if the anchor was standalone — stamp its own
+  // series_id/chapter_number now too. A targeted column update, not
+  // addEntry(...c) — `c` comes from getSeriesChapters, which fetches a
+  // lightweight projection without blocks/character_profiles/scenes/
   // moral_lessons, and running that through addEntry's full-row upsert used to
   // blank those columns out on every sibling whenever a new chapter was linked.
   await Promise.all(
     existingChapters.map((c) => {
-      const needsUpdate = c.chapterCount !== chapterCount || (anchorWasStandalone && c.id === anchor.id);
+      const needsUpdate = c.chapterCount !== chapterCount || c.summary !== chapterOneSummary || (anchorWasStandalone && c.id === anchor.id);
       if (!needsUpdate) return Promise.resolve();
       return updateSeriesMeta(c.id, {
         seriesId,
         chapterNumber: anchorWasStandalone && c.id === anchor.id ? 1 : c.chapterNumber,
         chapterCount,
+        summary: chapterOneSummary,
       });
     }),
   );

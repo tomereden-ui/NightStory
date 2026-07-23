@@ -181,13 +181,18 @@ export async function updateMoralLessons(id: string, moralLessons: MoralLesson[]
 // exactly the bug that wiped previously-produced chapters' scripts.
 export async function updateSeriesMeta(
   id: string,
-  meta: { seriesId: string; chapterNumber?: number; chapterCount: number },
+  meta: { seriesId: string; chapterNumber?: number; chapterCount: number; summary?: string },
 ): Promise<void> {
-  const { error } = await supabase.from("stories").update({
+  const update: Record<string, unknown> = {
     series_id: meta.seriesId,
     chapter_number: meta.chapterNumber ?? null,
     chapter_count: meta.chapterCount,
-  }).eq("id", id);
+  };
+  // Every chapter of a series shares one summary (text + narrated audio) —
+  // see assign-to-series, the only place chapters get linked — so this is
+  // only ever set when backfilling a chapter whose summary doesn't match yet.
+  if (meta.summary !== undefined) update.summary = meta.summary;
+  const { error } = await supabase.from("stories").update(update).eq("id", id);
   if (error) throw new Error(`updateSeriesMeta: ${error.message}`);
 }
 

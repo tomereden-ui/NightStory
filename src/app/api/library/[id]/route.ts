@@ -73,7 +73,7 @@ export async function PATCH(
     .update(updates)
     .eq("id", id)
     .or(`family_id.eq.${ctx.familyId},family_id.is.null`)
-    .select("id");
+    .select("id, series_id, chapter_number");
   if (error) {
     console.error("[library PATCH] db error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 502 });
@@ -92,6 +92,24 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found, or not owned by your family" }, { status: 404 });
   }
   console.log(`[library PATCH] story=${id} — SUCCESS: 1 row updated`);
+
+  // Every chapter of a series shares one summary (see assign-to-series,
+  // where chapters first get linked) — chapter 1 is canonical, so an edit
+  // to its summary here needs to propagate to every sibling chapter too,
+  // or they'd silently drift back out of sync. Edits to a non-chapter-1
+  // summary are intentionally NOT propagated (chapter 1 alone stays
+  // canonical) and are effectively academic anyway — nothing in the app
+  // exposes a way to edit a produced story's summary directly.
+  const row = data[0] as { id: string; series_id: string | null; chapter_number: number | null };
+  if (body.summary !== undefined && row.series_id && row.chapter_number === 1) {
+    const { error: syncErr } = await supabase
+      .from("stories")
+      .update({ summary: body.summary })
+      .eq("series_id", row.series_id)
+      .neq("id", id);
+    if (syncErr) console.warn(`[library PATCH] story=${id} — sibling summary sync failed:`, syncErr.message);
+  }
+
   return NextResponse.json({ ok: true });
 }
 
