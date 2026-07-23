@@ -1869,6 +1869,14 @@ export default function Studio2Page() {
     // while its own script is still being generated/analyzed.
     setMoralLessons([]);
     setLessonImplementations([]);
+    // Leftover Director's Note text/chips from a PREVIOUS story (typed but
+    // never applied or cancelled) otherwise survives into this brand-new
+    // story untouched, since nothing but Cancel/a successful apply ever
+    // clears them — hasPendingDirectorNote would then read true for a
+    // script the user hasn't touched at all, blocking Produce Audio from
+    // the moment it's ready.
+    setDirectorNote("");
+    setSelectedMoodChips(new Set());
     // Navigate to Script tab immediately so the user sees progress in context
     setActiveTab("script");
 
@@ -2599,6 +2607,10 @@ export default function Studio2Page() {
               setPendingLessonsInstruction(null);
               setHasPendingCastChange(false);
               pendingVoiceOverridesRef.current = {};
+              // Leftover Director's Note text/chips from a previous story —
+              // see the matching comment in the prompt-tab's handleGenerate.
+              setDirectorNote("");
+              setSelectedMoodChips(new Set());
             }}
             onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
@@ -2611,6 +2623,15 @@ export default function Studio2Page() {
               setCoverUrl("");
               setStoryTitle(draft.storyTitle ?? "");
               setLessons([]);
+              // Without this, a stale cleanLessonsRef left over from a
+              // PREVIOUS story in this session (prompt-tab generation sets
+              // it to that story's own selectedLessons; a lesson rewrite
+              // sets it too) mismatches this new, lesson-less story's
+              // lessons=[] the moment the "mark dirty when lessons change"
+              // effect sees them — freezing the produced/saved baselines
+              // before the reveal even finishes and leaving Produce Audio
+              // (and Update Version) incorrectly blocked from the start.
+              cleanLessonsRef.current = [];
               setLessonImplementations([]);
               setMoralLessons([]);
               setScenes(draft.scenes ?? []);
@@ -2757,6 +2778,10 @@ export default function Studio2Page() {
                 setPendingLessonsInstruction(null);
                 setHasPendingCastChange(false);
                 pendingVoiceOverridesRef.current = {};
+                // Leftover Director's Note text/chips from a previous story —
+                // see the matching comment in the prompt-tab's handleGenerate.
+                setDirectorNote("");
+                setSelectedMoodChips(new Set());
               }}
               onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle, generationMs: fqGenerationMs }) => {
                 setActiveTab("script");
@@ -2769,6 +2794,12 @@ export default function Studio2Page() {
                 // whatever language was chosen in this flow's own picker,
                 // not necessarily the app's global UI language.
                 setLessons([]);
+                // See the matching comment in Chat mode's onScriptReady
+                // above — without this, a stale cleanLessonsRef from a
+                // previous story in this session incorrectly marks this
+                // brand-new, lesson-less story dirty the moment it lands,
+                // blocking Produce Audio from the start.
+                cleanLessonsRef.current = [];
                 setLessonImplementations([]);
                 setMoralLessons([]);
                 setScenes(fqScenes ?? []);
