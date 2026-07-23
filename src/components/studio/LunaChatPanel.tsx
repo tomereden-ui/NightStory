@@ -19,6 +19,12 @@ interface Message {
    *  this specific model message — tapping one sends it as the next message,
    *  same as if the user had typed it themselves. */
   chips?: string[];
+  /** Set on the hardcoded English "Hello! I'm Luna" text used when the real
+   *  greeting fetch fails twice in a row (rate limit, network blip, auth
+   *  hiccup) — never a real Gemini reply, so it must never get treated as a
+   *  restorable conversation (see the restore-draft effect below), or a
+   *  transient failure would leave the chat permanently stuck in English. */
+  isFallback?: boolean;
 }
 
 interface ChatResponse {
@@ -388,7 +394,13 @@ export default function LunaChatPanel({
           readyConfirmed?: boolean;
           durationMinutes?: number;
         };
-        if (parsed.messages?.length) {
+        // A fallback-only conversation (the greeting fetch failed twice in a
+        // row last visit) is never treated as a real restorable session —
+        // otherwise a transient failure would leave the chat permanently
+        // stuck showing that hardcoded English text forever, since a
+        // restored conversation's greeting is never re-fetched.
+        const isFallbackOnly = parsed.messages?.length === 1 && parsed.messages[0].isFallback;
+        if (parsed.messages?.length && !isFallbackOnly) {
           setMessages(parsed.messages);
           if (parsed.storyReady) setStoryReady(parsed.storyReady);
           if (parsed.storyParams) setStoryParams(parsed.storyParams);
@@ -466,7 +478,7 @@ export default function LunaChatPanel({
     // live rather than a wall of text dropped in all at once. Kept as ONE
     // message throughout (content grows line-by-line) so the Listen button
     // and its single TTS call still cover the whole greeting, not each line.
-    const revealGreetingLive = async (fullText: string): Promise<void> => {
+    const revealGreetingLive = async (fullText: string, isFallback = false): Promise<void> => {
       const parts = fullText.split("\n").map((s) => s.trim()).filter(Boolean);
       let acc = "";
       for (const part of parts) {
@@ -476,7 +488,7 @@ export default function LunaChatPanel({
         if (ctrl.signal.aborted) return;
         acc = acc ? `${acc}\n${part}` : part;
         setLoading(false);
-        setMessages([{ role: "model", content: acc }]);
+        setMessages([{ role: "model", content: acc, isFallback }]);
       }
     };
 
@@ -503,7 +515,7 @@ export default function LunaChatPanel({
           return;
         }
         setMessages([]);
-        await revealGreetingLive("Hello! 🌙 I'm Luna.\nYour magical story guide.\n\nWho's our hero tonight? 🌟");
+        await revealGreetingLive("Hello! 🌙 I'm Luna.\nYour magical story guide.\n\nWho's our hero tonight? 🌟", true);
       }
     };
 
