@@ -1380,6 +1380,19 @@ export default function Studio2Page() {
   const [characterTypes, setCharacterTypes]               = useState<Record<string, CharacterType>>({});
   const [characterDescriptions, setCharacterDescriptions] = useState<Record<string, string>>({});
   const [characterProfiles, setCharacterProfiles]         = useState<Record<string, CharacterProfile>>({});
+  // The post-generation reveal (below) staggers scriptBlocks in one at a
+  // time over several seconds, appending each block's ORIGINAL, generation-
+  // time assignedVoiceId — if the user reassigns a character's voice via
+  // Cast while blocks for that same character are still queued to arrive,
+  // those later blocks silently kept their stale voice, since the append
+  // closures captured the pre-reassignment block object at loop setup and
+  // had no way to know a reassignment happened in the meantime. Every reveal
+  // loop below now looks up this ref (written by handleCharacterVoiceChange)
+  // before appending, so a mid-reveal reassignment applies to every block of
+  // that character, not just the ones that had already landed. Reset at the
+  // start of each new generation (the onGenerating handlers) so a previous
+  // story's overrides can't leak into the next one.
+  const pendingVoiceOverridesRef = useRef<Record<string, string>>({});
 
   // ─── Saves ──────────────────────────────────────────────────────────────────
   const [savesRefreshKey, setSavesRefreshKey] = useState(0);
@@ -1851,6 +1864,7 @@ export default function Studio2Page() {
     setCoverUrl("");
     setStoryHasAudio(false);
     setLastGenerationMs(undefined);
+    pendingVoiceOverridesRef.current = {};
     // A brand-new story must never show a previous story's analyzed lessons
     // while its own script is still being generated/analyzed.
     setMoralLessons([]);
@@ -1977,7 +1991,7 @@ export default function Studio2Page() {
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
         setTimeout(() => {
-          setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
+          setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId, validated: true }]);
           if (i === blocks.length - 1) {
             setIsValidating(false);
             setValidatingPhase("");
@@ -2230,6 +2244,9 @@ export default function Studio2Page() {
     setScriptBlocks((prev) =>
       prev.map((b) => b.characterName === characterName ? { ...b, assignedVoiceId: voiceId } : b)
     );
+    // Covers blocks for this character that haven't landed yet (still mid
+    // staggered-reveal) — see pendingVoiceOverridesRef's declaration above.
+    pendingVoiceOverridesRef.current[characterName] = voiceId;
     markScriptDirty();
     setHasPendingCastChange(true);
   }, []);
@@ -2581,6 +2598,7 @@ export default function Studio2Page() {
               setLastGenerationMs(undefined);
               setPendingLessonsInstruction(null);
               setHasPendingCastChange(false);
+              pendingVoiceOverridesRef.current = {};
             }}
             onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
@@ -2618,7 +2636,7 @@ export default function Studio2Page() {
                   void analyzeLessons(blocks, null);
                   blocks.forEach((block, i) => {
                     setTimeout(() => {
-                      setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
+                      setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId, validated: true }]);
                       if (i === blocks.length - 1) {
                         setIsValidating(false);
                         setValidatingPhase("");
@@ -2634,7 +2652,7 @@ export default function Studio2Page() {
                   void analyzeLessons(rawBlocks, null);
                   rawBlocks.forEach((block, i) => {
                     setTimeout(() => {
-                      setScriptBlocks((prev) => [...prev, block]);
+                      setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId }]);
                       if (i === rawBlocks.length - 1) {
                         setIsValidating(false);
                         setValidatingPhase("");
@@ -2738,6 +2756,7 @@ export default function Studio2Page() {
                 setLastGenerationMs(undefined);
                 setPendingLessonsInstruction(null);
                 setHasPendingCastChange(false);
+                pendingVoiceOverridesRef.current = {};
               }}
               onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle, generationMs: fqGenerationMs }) => {
                 setActiveTab("script");
@@ -2777,7 +2796,7 @@ export default function Studio2Page() {
                     void analyzeLessons(blocks, null);
                     blocks.forEach((block, i) => {
                       setTimeout(() => {
-                        setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
+                        setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId, validated: true }]);
                         if (i === blocks.length - 1) {
                           setIsValidating(false);
                           setValidatingPhase("");
@@ -2792,7 +2811,7 @@ export default function Studio2Page() {
                     void analyzeLessons(rawBlocks, null);
                     rawBlocks.forEach((block, i) => {
                       setTimeout(() => {
-                        setScriptBlocks((prev) => [...prev, block]);
+                        setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId }]);
                         if (i === rawBlocks.length - 1) {
                           setIsValidating(false);
                           setValidatingPhase("");
