@@ -2119,7 +2119,7 @@ export default function AdminPage() {
   };
 
   const handleGenerateAllVoices = () => {
-    if (!confirm("Generate preview samples for EVERY voice × English + Hebrew (~66 TTS calls across Gemini + ElevenLabs)? This will take a while and use real API quota.")) return;
+    if (!confirm("Generate preview samples for EVERY voice — presets, the Hebrew pool, and every family's cloned voices — × English + Hebrew? This will take a while and use real API quota.")) return;
     runGenerateVoiceSamples({ applyAll: true });
   };
 

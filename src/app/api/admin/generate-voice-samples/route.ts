@@ -21,10 +21,38 @@ interface ComboResult {
   error?: string;
 }
 
-async function generateOne(voiceId: string, language: PreviewLanguage, customText?: string): Promise<ComboResult> {
+// Cloned family voices live in the `voices` table (category='family'), not
+// in either static pool above — resolved by id -> its own el_voice_id, so
+// generateOne can synthesize through ElevenLabs the same way it already does
+// for the curated Hebrew pool, just with a per-family voice id instead of a
+// shared one. Cached for the lifetime of one request (fetched once in POST,
+// not per voiceId/language combo).
+async function fetchFamilyVoiceElIds(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const { data, error } = await supabase
+      .from("voices")
+      .select("id, el_voice_id")
+      .eq("category", "family")
+      .not("el_voice_id", "is", null);
+    if (error) {
+      console.warn("[generate-voice-samples] fetchFamilyVoiceElIds failed:", error.message);
+      return map;
+    }
+    for (const row of data ?? []) {
+      if (row.el_voice_id) map.set(row.id, row.el_voice_id as string);
+    }
+  } catch (err) {
+    console.warn("[generate-voice-samples] fetchFamilyVoiceElIds exception:", err);
+  }
+  return map;
+}
+
+async function generateOne(voiceId: string, language: PreviewLanguage, familyElIds: Map<string, string>, customText?: string): Promise<ComboResult> {
   const isGeminiPreset = GEMINI_PRESET_IDS.has(voiceId);
   const isElPool = EL_POOL_IDS.has(voiceId);
-  if (!isGeminiPreset && !isElPool) {
+  const familyElVoiceId = familyElIds.get(voiceId);
+  if (!isGeminiPreset && !isElPool && !familyElVoiceId) {
     return { voiceId, language, ok: false, error: "Unknown voice id" };
   }
 
@@ -41,12 +69,16 @@ async function generateOne(voiceId: string, language: PreviewLanguage, customTex
   const pathFor = (ext: string) => requestedPath.replace(/\.wav$/, `.${ext}`);
 
   try {
-    if (isElPool) {
+    if (isElPool || familyElVoiceId) {
       const elKey = process.env.ELEVENLABS_API_KEY;
       if (!elKey) return { voiceId, language, ok: false, error: "ELEVENLABS_API_KEY not configured" };
       // Raw EL voice id — force straight through ElevenLabs regardless of
-      // language, since this pool's whole purpose is being played via EL.
-      await synthesizeLine(text, voiceId, elKey, requestedPath, undefined, true, undefined, undefined, language);
+      // language, since both the curated pool and a cloned family voice only
+      // ever play via EL. The row is cached under `voiceId` (this story's/
+      // family's own id), not the el_voice_id passed to ElevenLabs itself —
+      // matches how familyVoiceToVoice() shapes the Voice object everywhere
+      // else, so VoicePicker's sampleMap[voice.id] lookup finds it.
+      await synthesizeLine(text, familyElVoiceId ?? voiceId, elKey, requestedPath, undefined, true, undefined, undefined, language);
     } else {
       const geminiKey = process.env.GEMINI_API_KEY;
       if (!geminiKey) return { voiceId, language, ok: false, error: "GEMINI_API_KEY not configured" };
@@ -94,16 +126,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
+  const familyElIds = await fetchFamilyVoiceElIds();
+
   // Engine-scoped regeneration (Voice Manager "Regenerate Previews" panel):
   // restrict applyAll's voice universe to whichever engines are enabled —
-  // Gemini presets if either gemini engine is in the list, EL pool voices if
-  // elevenlabs is. Falls back to everything when engines isn't provided, so
-  // the existing admin/page.tsx "Generate ALL" button keeps working as-is.
+  // Gemini presets if either gemini engine is in the list, EL pool voices
+  // (plus every cloned family voice — both only ever play through
+  // ElevenLabs) if elevenlabs is. Falls back to everything when engines
+  // isn't provided, so the existing admin/page.tsx "Generate ALL" button
+  // keeps working as-is.
   const scopedIds = (): string[] => {
-    if (!body.engines) return [...Array.from(GEMINI_PRESET_IDS), ...Array.from(EL_POOL_IDS)];
+    if (!body.engines) return [...Array.from(GEMINI_PRESET_IDS), ...Array.from(EL_POOL_IDS), ...Array.from(familyElIds.keys())];
     const ids: string[] = [];
     if (body.engines.includes("gemini25") || body.engines.includes("gemini31")) ids.push(...Array.from(GEMINI_PRESET_IDS));
-    if (body.engines.includes("elevenlabs")) ids.push(...Array.from(EL_POOL_IDS));
+    if (body.engines.includes("elevenlabs")) ids.push(...Array.from(EL_POOL_IDS), ...Array.from(familyElIds.keys()));
     return ids;
   };
 
@@ -122,7 +158,7 @@ export async function POST(req: NextRequest) {
   const results: ComboResult[] = [];
   for (const voiceId of targetVoiceIds) {
     for (const language of PREVIEW_LANGUAGES) {
-      results.push(await generateOne(voiceId, language, body.text));
+      results.push(await generateOne(voiceId, language, familyElIds, body.text));
     }
   }
 
