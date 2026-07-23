@@ -168,6 +168,12 @@ function MessageBubble({
 // ─── Luna chat panel ───────────────────────────────────────────────────
 
 const CHAT_DRAFT_KEY_PREFIX = "ns-chat-draft-v1";
+// Shared cache namespace for Luna's chat TTS -- the element store normally
+// scopes cached audio to a real story ID, but Luna's greetings/replies recur
+// verbatim across many different chats (same voice, same language), so a
+// single well-known pseudo-story-ID lets identical lines reuse cached audio
+// instead of re-hitting ElevenLabs/Gemini every time.
+const CHAT_TTS_CACHE_ID = "luna-chat-shared";
 
 // Labels come from wizardUi at render time (language-dependent) — this only
 // holds the language-independent value/icon pairing.
@@ -283,7 +289,7 @@ export default function LunaChatPanel({
       const res = await fetch("/api/synthesize-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), childIds: activeChildId ? [activeChildId] : undefined }),
+        body: JSON.stringify({ text, characterName: "Narrator", assignedVoiceId: getNarratorVoiceId(), childIds: activeChildId ? [activeChildId] : undefined, storyId: CHAT_TTS_CACHE_ID }),
         signal: ctrl.signal,
       });
       if (!res.ok || ctrl.signal.aborted) return;
@@ -446,6 +452,26 @@ export default function LunaChatPanel({
     const ctrl = new AbortController();
     greetAbortRef.current = ctrl;
 
+    // A fresh/empty chat (never one restored from a saved draft — this
+    // effect never runs for those) reveals its opening lines one at a time
+    // with a typing pause between them, so it reads as Luna actually typing
+    // live rather than a wall of text dropped in all at once. Kept as ONE
+    // message throughout (content grows line-by-line) so the Listen button
+    // and its single TTS call still cover the whole greeting, not each line.
+    const revealGreetingLive = async (fullText: string): Promise<void> => {
+      const parts = fullText.split("\n").map((s) => s.trim()).filter(Boolean);
+      let acc = "";
+      for (const part of parts) {
+        if (ctrl.signal.aborted) return;
+        setLoading(true);
+        await new Promise((r) => setTimeout(r, 550 + Math.random() * 250));
+        if (ctrl.signal.aborted) return;
+        acc = acc ? `${acc}\n${part}` : part;
+        setLoading(false);
+        setMessages([{ role: "model", content: acc }]);
+      }
+    };
+
     // Retries once before falling back — transient failures (rate limiting,
     // a network blip) are common and shouldn't force an English fallback
     // greeting onto a chat that was just set to a different language.
@@ -459,7 +485,8 @@ export default function LunaChatPanel({
         });
         const data: ChatResponse & { error?: string } = await r.json();
         if (!r.ok || !data.reply) throw new Error(data.error ?? `Chat greeting failed (HTTP ${r.status})`);
-        setMessages([{ role: "model", content: data.reply }]);
+        setMessages([]);
+        await revealGreetingLive(data.reply);
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         console.error(`[Luna] Greeting fetch failed${isRetry ? " (after retry)" : " — retrying once"}:`, err);
@@ -467,10 +494,8 @@ export default function LunaChatPanel({
           await attemptGreeting(true);
           return;
         }
-        setMessages([{
-          role: "model",
-          content: "Hello! 🌙 I'm Luna.\nYour magical story guide.\n\nWho's our hero tonight? 🌟",
-        }]);
+        setMessages([]);
+        await revealGreetingLive("Hello! 🌙 I'm Luna.\nYour magical story guide.\n\nWho's our hero tonight? 🌟");
       }
     };
 

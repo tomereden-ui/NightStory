@@ -31,7 +31,7 @@ function buildChildContext(p: ChildProfileCtx | null | undefined): string {
   const avoidPart = p.avoid
     ? `\n\nCONTENT TO STRICTLY AVOID\n--------------------------\n${p.avoid}\nNEVER include these elements in any story suggestion or generated story. This is a hard rule — not a preference.`
     : "";
-  return `\n\nACTIVE CHILD PROFILE\n====================\n${parts.join("\n")}\nUse this profile to personalise your greeting (use the child's name!) and to bias story suggestions toward their interests and age-appropriate language.${avoidPart}`;
+  return `\n\nACTIVE CHILD PROFILE\n====================\n${parts.join("\n")}\nUse this profile to personalise your greeting (use the child's name!) and to bias story suggestions toward their interests and age-appropriate language. In languages with grammatical gender (Hebrew, Arabic, French, Spanish, Italian, Portuguese, German, etc.), any adjective, endearment, or verb form addressed directly TO the child (e.g. "sweet {name}") must agree with the Gender field above — never default to the masculine form for a girl. If Gender is not given, use neutral phrasing or the child's name alone instead of guessing. This is separate from the story's own protagonist, whose gender is governed only by what the user describes in the story.${avoidPart}`;
 }
 
 function loadChatGuide(): string {
