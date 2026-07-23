@@ -1928,6 +1928,10 @@ export default function Studio2Page() {
       setScenes(rawScenes);
       setHasScriptChanges(false);
       setHasUnsavedChanges(false);
+      // metaDirty too — a title/cover edit on the PREVIOUS story otherwise
+      // freezes savedBaselineRef at that story's snapshot, making this
+      // brand-new script read as needsSave=true the instant it lands.
+      setMetaDirty(false);
       cleanLessonsRef.current = selectedLessons;
       setCharacterAvatars({});
       setCharacterTypes({});
@@ -2644,6 +2648,9 @@ export default function Studio2Page() {
               setLastValidationStages(undefined);
               setPendingLessonsInstruction(null);
               setHasPendingCastChange(false);
+              setHasScriptChanges(false);
+              setHasUnsavedChanges(false);
+              setMetaDirty(false);
               pendingVoiceOverridesRef.current = {};
               // Leftover Director's Note text/chips from a previous story —
               // see the matching comment in the prompt-tab's handleGenerate.
@@ -2673,6 +2680,17 @@ export default function Studio2Page() {
               setLessonImplementations([]);
               setMoralLessons([]);
               setScenes(draft.scenes ?? []);
+              // A brand-new script starts clean — without these resets, a
+              // dirty flag left over from a PREVIOUS story in this session
+              // (any block/voice/title/cover edit) keeps savedBaselineRef/
+              // producedBaselineRef frozen at that old story's snapshot, so
+              // this new script instantly reads as needsSave=true and
+              // Produce Audio arrives already blocked. The prompt tab's
+              // handleGenerate has always done this; Chat and Step-by-step
+              // never did.
+              setHasScriptChanges(false);
+              setHasUnsavedChanges(false);
+              setMetaDirty(false);
               setActiveTab("script");
               setTotalExpectedBlocks(rawBlocks.length);
               setIsValidating(true);
@@ -2833,6 +2851,9 @@ export default function Studio2Page() {
                 setLastValidationStages(undefined);
                 setPendingLessonsInstruction(null);
                 setHasPendingCastChange(false);
+                setHasScriptChanges(false);
+                setHasUnsavedChanges(false);
+                setMetaDirty(false);
                 pendingVoiceOverridesRef.current = {};
                 // Leftover Director's Note text/chips from a previous story —
                 // see the matching comment in the prompt-tab's handleGenerate.
@@ -2859,6 +2880,12 @@ export default function Studio2Page() {
                 setLessonImplementations([]);
                 setMoralLessons([]);
                 setScenes(fqScenes ?? []);
+                // Same reset as Chat's onScriptReady above — a stale dirty
+                // flag from a previous story otherwise freezes the saved/
+                // produced baselines and blocks Produce Audio from the start.
+                setHasScriptChanges(false);
+                setHasUnsavedChanges(false);
+                setMetaDirty(false);
                 setCharacterAvatars({});
                 setCharacterTypes({});
                 setCharacterDescriptions({});
@@ -3386,27 +3413,33 @@ export default function Studio2Page() {
             {/* Produce Audio — enabled when there's no audio yet, or once the
                 script/voices genuinely differ from what's currently produced
                 (editing text back to exactly its produced form disables it
-                again — see scriptChangedFromProduced above). Also blocked
-                while there's an unsaved change pending (needsSave), OR
-                anything the Update Script button above would apply is still
-                pending — a Director's Note, a lessons change, or a cast
-                avatar/voice reassignment. Producing right now would silently
-                ignore whichever of those is pending and use the script as it
-                stood before, which reads as the pending edit having no
-                effect at all. Getting unblocked means either committing the
-                pending thing (Update Script above) or discarding it
-                (Discard & start over / the note's own Cancel); a hint below
-                the button says so explicitly rather than leaving it looking
-                disabled for no visible reason. */}
+                again — see scriptChangedFromProduced above). Blocked while
+                anything the Update Story button above would apply is still
+                staged but unapplied — a Director's Note, a lessons change,
+                or a cast avatar/voice reassignment. Producing right then
+                would silently ignore the staged edit and use the script as
+                it stood before, which reads as the edit having no effect at
+                all. Getting unblocked means either committing it (Update
+                Story above) or discarding it (the panel's own Cancel); a
+                hint below the button says so explicitly rather than leaving
+                it looking disabled for no visible reason.
+                Deliberately NOT blocked by needsSave: production itself
+                persists the exact current script/title/cover (addEntry
+                upsert in produce-drama), so an unsaved-but-applied change
+                doesn't need a separate "Update Version" click first — that
+                requirement previously left Produce dead right after
+                clicking Update Story (the revision marks the script dirty),
+                turning the intended change → Update Story → Produce flow
+                into a three-click scavenger hunt. */}
             {(() => {
               const hasPendingDirectorNote = directorNote.trim().length > 0 || selectedMoodChips.size > 0;
               const lessonsPending = pendingLessonsInstruction !== null;
               const hasAnyPendingEdit = hasPendingDirectorNote || lessonsPending || hasPendingCastChange;
-              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover || needsSave || hasAnyPendingEdit;
-              // Only worth calling out when a pending edit is specifically
+              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover || hasAnyPendingEdit;
+              // Only worth calling out when a staged edit is specifically
               // why it's blocked — every other blocking reason already shows
               // its own state inside the button itself (mixing/checking/etc.).
-              const blockedByPendingEdit = (needsSave || hasAnyPendingEdit) && !isProducing && !isValidating && !generating && !isFetchingCover;
+              const blockedByPendingEdit = hasAnyPendingEdit && !isProducing && !isValidating && !generating && !isFetchingCover;
               return (
                 <>
                   <button
@@ -3450,9 +3483,7 @@ export default function Studio2Page() {
                   </button>
                   {blockedByPendingEdit && (
                     <p className="text-fs-body text-center mt-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      {hasAnyPendingEdit
-                        ? "Update or cancel your pending changes to produce audio"
-                        : "Save or discard your changes to produce audio"}
+                      Update or cancel your pending changes to produce audio
                     </p>
                   )}
                 </>
