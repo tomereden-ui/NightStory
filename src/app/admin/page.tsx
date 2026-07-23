@@ -2301,6 +2301,7 @@ export default function AdminPage() {
               }}
               hideDurationPicker
               hideProduceButton
+              storyId={addStoryId || undefined}
               characterAvatars={characterAvatars}
               belowCover={
                 <CharacterCards

@@ -1973,7 +1973,7 @@ export default function Studio2Page() {
     setIsRevising(true);
     setReviseError(null);
     try {
-      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: scriptBlocks, instruction: instruction.trim() }) });
+      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: scriptBlocks, instruction: instruction.trim(), storyId: editingStoryId ?? undefined }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Revision failed");
       const cleaned = (data.blocks as ScriptBlock[]).map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
@@ -1988,7 +1988,7 @@ export default function Studio2Page() {
     } finally {
       setIsRevising(false);
     }
-  }, [scriptBlocks, isRevising]);
+  }, [scriptBlocks, isRevising, editingStoryId]);
 
   // ─── Rewrite with lessons (passes lessons so blocks get tagged) ─────────────
 
@@ -1997,7 +1997,7 @@ export default function Studio2Page() {
     setIsRevising(true);
     setReviseError(null);
     try {
-      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: scriptBlocks, instruction: instruction.trim(), lessons }) });
+      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks: scriptBlocks, instruction: instruction.trim(), lessons, storyId: editingStoryId ?? undefined }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Revision failed");
       const cleaned = (data.blocks as ScriptBlock[]).map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));

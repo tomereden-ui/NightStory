@@ -681,7 +681,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     setIsRevising(true);
     setReviseError(null);
     try {
-      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks, instruction: instruction.trim() }) });
+      const res  = await fetch("/api/revise-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks, instruction: instruction.trim(), storyId }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Revision failed");
       onBlocksChange(data.blocks);
@@ -692,7 +692,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     } finally {
       setIsRevising(false);
     }
-  }, [blocks, isRevising, onBlocksChange, markDirty]);
+  }, [blocks, isRevising, onBlocksChange, markDirty, storyId]);
 
   // ─── Validate / regenerate ──────────────────────────────────────────────────
 

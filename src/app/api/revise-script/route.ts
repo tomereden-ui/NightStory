@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { trackGemini } from "@/lib/usageTracker";
 import { splitLongBlocks } from "@/lib/services/scriptGenerationHelpers";
 import { readRevisionGuidance } from "@/lib/services/storyGuidance";
+import { recordScriptRevision } from "@/lib/perfMetrics";
+import { supabase } from "@/lib/supabase";
 import type { ScriptBlock } from "@/types";
 
 interface RawBlock {
@@ -19,11 +21,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
   }
 
-  const { blocks, instruction, targetBlockId, lessons } = await req.json() as {
+  const { blocks, instruction, targetBlockId, lessons, storyId } = await req.json() as {
     blocks: ScriptBlock[];
     instruction: string;
     targetBlockId?: string;
     lessons?: string[];
+    // The story's production_metrics row id, if one exists yet (it's created
+    // the moment the script is first saved — see markScriptDone) — lets this
+    // revision get recorded as a numbered pre-production phase. Undefined for
+    // a revision applied before that initial save has resolved; the revision
+    // itself still proceeds normally either way.
+    storyId?: string;
   };
 
   if (!Array.isArray(blocks) || blocks.length === 0) {
@@ -69,6 +77,10 @@ ${returnFormat}`;
 
   const scriptJson = JSON.stringify(blocks, null, 2);
   const userPrompt = `Director's instruction: "${instruction.trim()}"\n\nScript:\n${scriptJson}`;
+
+  // Times the whole revision (both retry paths below) so it can be recorded
+  // as one numbered pre-production phase — see recordScriptRevision.
+  const revisionStartedAt = Date.now();
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -136,6 +148,9 @@ ${returnFormat}`;
       // Re-chunk any block Gemini wrote too long (bad for TTS pacing) into
       // several shorter consecutive blocks — lessonHighlight, already
       // assigned per-block above, carries forward onto every resulting chunk.
+      if (storyId) {
+        void recordScriptRevision(supabase, { storyId, type: "lesson_rewrite", ms: Date.now() - revisionStartedAt, instruction });
+      }
       return NextResponse.json({ blocks: splitLongBlocks(merged, 30).blocks, lessonImplementations });
     }
 
@@ -154,6 +169,9 @@ ${returnFormat}`;
       blockOrder: i + 1,
     }));
 
+    if (storyId) {
+      void recordScriptRevision(supabase, { storyId, type: "directors_note", ms: Date.now() - revisionStartedAt, instruction });
+    }
     return NextResponse.json({ blocks: splitLongBlocks(merged, 30).blocks });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });

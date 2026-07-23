@@ -184,3 +184,69 @@ export async function markScriptDone(
     console.warn("[perfMetrics] markScriptDone failed:", err);
   }
 }
+
+/** One pre-production script edit (Director's Note or lesson rewrite) — the
+ *  shape stored under stages.phase_N. Unlike StageSpan (an offset from a
+ *  shared run start), these have no shared timer to offset from — revisions
+ *  can land minutes or hours apart — so each one carries its own real
+ *  timestamp instead. */
+export interface RevisionPhaseSpan {
+  ms: number;
+  type: "directors_note" | "lesson_rewrite";
+  instruction?: string;
+  at: string;
+}
+
+/**
+ * Records one pre-production script revision (Director's Note or lesson
+ * rewrite, both applied via /api/revise-script) as a numbered phase —
+ * phase_1, phase_2, ... — in the same production_metrics row markScriptDone
+ * created, plus a running revision_count alongside them. Matches the most
+ * recently created row for this story_id (there should only ever be one, but
+ * "most recent" is a safer tiebreaker than an arbitrary one if that ever
+ * isn't true) and merges into its existing stages rather than overwriting —
+ * same rationale as ProductionTimer.flush. Best-effort: if no row exists yet
+ * (a revision landing before the initial script-done save has resolved is a
+ * real, if narrow, race), logs a warning and skips rather than inserting a
+ * partial row missing every field markScriptDone would normally set.
+ */
+export async function recordScriptRevision(
+  supabase: SupabaseClient,
+  meta: { storyId: string; type: "directors_note" | "lesson_rewrite"; ms: number; instruction?: string },
+): Promise<void> {
+  try {
+    const { data: existingRow, error: selectError } = await supabase
+      .from("production_metrics")
+      .select("id, stages")
+      .eq("story_id", meta.storyId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (selectError) {
+      console.warn("[perfMetrics] recordScriptRevision: select failed:", selectError.message);
+      return;
+    }
+    if (!existingRow) {
+      console.warn(`[perfMetrics] recordScriptRevision: no production_metrics row found for story_id=${meta.storyId}, skipping`);
+      return;
+    }
+
+    const stages = (existingRow.stages as Record<string, unknown> | null) ?? {};
+    const nextPhase = Object.keys(stages).filter((k) => /^phase_\d+$/.test(k)).length + 1;
+    const phaseEntry: RevisionPhaseSpan = {
+      ms: meta.ms,
+      type: meta.type,
+      at: new Date().toISOString(),
+      ...(meta.instruction ? { instruction: meta.instruction.slice(0, 300) } : {}),
+    };
+
+    const { error: updateError } = await supabase
+      .from("production_metrics")
+      .update({ stages: { ...stages, [`phase_${nextPhase}`]: phaseEntry, revision_count: nextPhase } })
+      .eq("id", existingRow.id);
+    if (updateError) console.warn("[perfMetrics] recordScriptRevision: update failed:", updateError.message);
+  } catch (err) {
+    console.warn("[perfMetrics] recordScriptRevision failed:", err);
+  }
+}
