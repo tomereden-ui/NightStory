@@ -3074,7 +3074,9 @@ export default function Studio2Page() {
                   >
                     {i18nT(language, "cancel")}
                   </button>
-                  {readyToApply ? (
+                  {!hasFreeText && readyToApply ? (
+                    // Chips-only — their instructions are pre-vetted, so there's
+                    // nothing to check; apply directly, same as before.
                     <button
                       disabled={!hasPending || isRevising}
                       onClick={() => handleRevise(buildCombinedInstruction(), () => setSelectedMoodChips(new Set()))}
@@ -3084,14 +3086,20 @@ export default function Studio2Page() {
                       {i18nT(language, "updateScript" as never)}
                     </button>
                   ) : (
+                    // Free text present — "Ok" now ONLY runs the wording check;
+                    // it no longer chains straight into handleRevise once
+                    // valid. The separate "Update Script" button below only
+                    // appears after this passes, so applying the rewrite is
+                    // always its own explicit click, not folded into the
+                    // check. Disabled (and shown as "Checked") once valid —
+                    // editing the text again (handleDirectorNoteChange)
+                    // already resets directionValid, re-enabling this and
+                    // hiding Update Script until it's re-checked.
                     <button
-                      disabled={!hasPending || isRevising || checkingDirection}
-                      onClick={async () => {
-                        const ok = await checkDirectorNote();
-                        if (ok) handleRevise(buildCombinedInstruction(), () => setSelectedMoodChips(new Set()));
-                      }}
+                      disabled={!hasPending || isRevising || checkingDirection || directionValid}
+                      onClick={async () => { await checkDirectorNote(); }}
                       className="flex-1 py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-1.5"
-                      style={hasPending && !isRevising && !checkingDirection
+                      style={hasPending && !isRevising && !checkingDirection && !directionValid
                         ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
                         : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.48)" }
                       }
@@ -3099,10 +3107,25 @@ export default function Studio2Page() {
                       {checkingDirection && (
                         <span className="w-3 h-3 border-2 rounded-full animate-spin flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.6)" }} />
                       )}
-                      {checkingDirection ? i18nT(language, "checkingDirection" as never) : "Ok"}
+                      {checkingDirection ? i18nT(language, "checkingDirection" as never) : directionValid ? "✓ Checked" : "Ok"}
                     </button>
                   )}
                 </div>
+
+                {/* Update Script — a separate, explicit third step for typed
+                    free text: only appears once "Ok" has actually validated
+                    the wording, so applying the rewrite is never bundled
+                    into the check itself. */}
+                {hasFreeText && directionValid && (
+                  <button
+                    disabled={isRevising}
+                    onClick={() => handleRevise(buildCombinedInstruction(), () => setSelectedMoodChips(new Set()))}
+                    className="w-full py-2.5 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.98] disabled:opacity-40"
+                    style={{ background: "linear-gradient(90deg, rgba(79,195,247,0.22), rgba(139,92,246,0.22))", border: "1.5px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}
+                  >
+                    {i18nT(language, "updateScript" as never)}
+                  </button>
+                )}
 
                 {reviseError && (
                   <p className="text-fs-body" style={{ color: "rgba(239,68,68,0.75)" }}>⚠ {reviseError}</p>
