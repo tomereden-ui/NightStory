@@ -60,7 +60,7 @@ Return ONLY valid JSON, no markdown, no explanation:
     const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.2, maxOutputTokens: 512, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "validate_wizard_text" });
     if (!ok) {
       // Fail open — a Gemini hiccup shouldn't block a bedtime story from being made.
       return NextResponse.json({ approved: true });

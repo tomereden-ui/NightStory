@@ -2257,7 +2257,7 @@ export default function Studio2Page() {
       const res = await fetch("/api/validate-script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks: cleanedBlocks }),
+        body: JSON.stringify({ blocks: cleanedBlocks, storyId: editingStoryId ?? undefined }),
       });
       const data = await res.json();
       if (res.ok && !data.ok && Array.isArray(data.issues) && data.issues.length > 0) {

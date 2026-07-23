@@ -1,8 +1,9 @@
 // Thin wrapper around the Gemini generateContent REST endpoint.
-// Automatically extracts usageMetadata.totalTokenCount from every response
-// and fires a background trackGemini() call so token counts are always recorded.
+// Automatically extracts usageMetadata (input/output token split) from every
+// response and records one accurate, per-call, per-story cost row — see
+// src/lib/serviceUsage.ts.
 
-import { trackGemini } from "@/lib/usageTracker";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -11,7 +12,7 @@ interface GeminiResponse {
     content?: { parts?: Array<{ text?: string }> };
     finishReason?: string;
   }>;
-  usageMetadata?: { totalTokenCount?: number };
+  usageMetadata?: { totalTokenCount?: number; promptTokenCount?: number; candidatesTokenCount?: number };
   promptFeedback?: { blockReason?: string };
   error?: { message?: string; [key: string]: unknown };
 }
@@ -20,6 +21,11 @@ export async function geminiPost(
   apiKey: string,
   model: string,
   body: object,
+  // What this call is FOR (required — every call site should know), and
+  // which story it belongs to when one exists yet. Cost tracking without a
+  // call_type label is much less useful than the per-stage breakdown this
+  // exists to enable, so this isn't optional the way storyId/jobId are.
+  usage: { callType: string; storyId?: string | null; jobId?: string | null },
 ): Promise<{ data: GeminiResponse; ok: boolean; status: number }> {
   const res = await fetch(`${BASE}/${model}:generateContent?key=${apiKey}`, {
     method: "POST",
@@ -29,8 +35,13 @@ export async function geminiPost(
   const data = (await res.json()) as GeminiResponse;
 
   // Fire-and-forget — never let tracking errors surface to callers
-  const tokens = data?.usageMetadata?.totalTokenCount;
-  if (tokens && tokens > 0) trackGemini(tokens).catch(() => {});
+  const um = data?.usageMetadata;
+  if (um?.promptTokenCount || um?.candidatesTokenCount || um?.totalTokenCount) {
+    recordGeminiUsage(
+      { callType: usage.callType, storyId: usage.storyId, jobId: usage.jobId },
+      { model, inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount },
+    ).catch(() => {});
+  }
 
   return { data, ok: res.ok, status: res.status };
 }

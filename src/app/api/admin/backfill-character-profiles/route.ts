@@ -46,7 +46,7 @@ async function backfillOne(entry: LibraryEntry, apiKey: string): Promise<Backfil
     .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
     .join("\n");
 
-  const classified = await classifyCharacters(characters, entry.summary, scriptSample, apiKey);
+  const classified = await classifyCharacters(characters, entry.summary, scriptSample, apiKey, entry.id);
   const characterProfiles = Object.fromEntries(
     Object.entries(classified).map(([name, c]) => [
       name,

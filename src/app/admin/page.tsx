@@ -634,6 +634,26 @@ interface CostData {
     pollinations_calls: number;
   };
   storyCount: number; publicCount: number; privateCount: number; totalDurationSec: number;
+  // Real, per-call-log-derived cost — see src/lib/serviceUsage.ts and
+  // /api/admin/cost-analysis. Accurate (per-model input/output token
+  // pricing, real EL SFX duration-based billing) unlike `totals` above,
+  // which is the old cumulative-blob estimate kept only for stories
+  // produced before this tracking existed.
+  accurate: {
+    grandTotalUsd: number;
+    rowCount: number;
+    storiesWithUsage: number;
+    callTypeBreakdown: { callType: string; provider: string; model: string; calls: number; costUsd: number; inputTokens: number; outputTokens: number; characters: number; audioSeconds: number }[];
+    providerBreakdown: { provider: string; calls: number; costUsd: number }[];
+    tableReady: boolean;
+    error?: string;
+  };
+}
+
+interface StoryUsageCost {
+  storyId: string; title: string; language: string | null; isDraft: boolean | null;
+  costUsd: number; calls: number;
+  topCallTypes: { callType: string; costUsd: number }[];
 }
 
 interface StoryCost {
@@ -720,52 +740,136 @@ function BreakdownTable({ rows, total }: { rows: { label: string; usage: string;
   );
 }
 
-// ── Mode A: API usage tracker (cumulative) ────────────────────────────────────
-function UsageMode({ data, onRefresh }: { data: CostData; onRefresh: () => void }) {
-  const { totals, storyCount, publicCount, privateCount, totalDurationSec } = data;
-  const totalMinutes = totalDurationSec / 60;
-  const costs = {
-    gemini_text:  totals.gemini_tokens      * PRICING.gemini_token,
-    gemini_tts:   totals.gemini_tts_chars   * PRICING.gemini_tts_char,
-    gemini_image: totals.gemini_image_calls * PRICING.gemini_image,
-    el_tts:       totals.el_tts_chars       * PRICING.el_tts_char,
-    el_sfx:       totals.el_sfx_calls       * PRICING.el_sfx_call,
+// Human-readable label for a call_type key — falls back to a title-cased
+// version of the raw key so a new call site never shows up as a blank row.
+function callTypeLabel(callType: string): string {
+  const LABELS: Record<string, string> = {
+    script_generation: "Script Generation", content_review: "Content Review (policy)",
+    grammar_review: "Grammar Review", hebrew_review: "Hebrew Review (nikkud)",
+    chat_reply: "Chat Reply", chat_greeting: "Chat Greeting", chat_confirmation_check: "Chat Confirmation Check",
+    dialogue_tts: "Dialogue TTS", sfx_generation: "SFX Generation", cover_image: "Cover Image",
+    cover_prompt_rewrite: "Cover Prompt Rewrite", cover_prompt_enhancement: "Cover Prompt Enhancement",
+    casting: "Voice Casting", voice_profiling: "Voice Profiling", character_classification: "Character Classification",
+    avatar_matching: "Avatar Matching", scene_generation: "Scene Generation", drama_planning: "Drama Planning",
+    language_detection: "Language Detection", hebrew_letter_fix: "Hebrew Letter Fix",
+    lesson_analysis: "Lesson Analysis", lesson_rewrite: "Lesson Rewrite", director_note_revise: "Director's Note Revise",
+    summary_generation: "Summary Generation", title_conflict_resolution: "Title Conflict Resolution",
+    content_safety_rewrite: "Content Safety Rewrite", voice_preview: "Voice Preview",
+    voice_preset_preview: "Voice Preset Preview", voice_pick_preview: "Voice Pick (text model)",
+    insert_block: "Insert Block", validate_text: "Validate Text", validate_sfx: "Validate SFX",
+    validate_animal: "Validate Animal", validate_wizard_text: "Validate Wizard Text",
+    suggest_names: "Suggest Names", avatar_age_backfill: "Avatar Age Backfill",
+    story_meta_analysis: "Story Meta Analysis", sfx_suggestion: "SFX Suggestion",
+    classic_script_generation: "Classic Script Generation", name_pronunciation: "Name Pronunciation",
+    name_pronunciation_alternatives: "Name Pronunciation Alternatives",
   };
-  const totalCost   = Object.values(costs).reduce((s, c) => s + c, 0);
-  const totalTts    = totals.gemini_tts_chars + totals.el_tts_chars;
-  const elPct       = totalTts > 0 ? Math.round((totals.el_tts_chars / totalTts) * 100) : 0;
+  return LABELS[callType] ?? callType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function usageDescriptor(row: { calls: number; inputTokens: number; outputTokens: number; characters: number; audioSeconds: number }): string {
+  if (row.characters > 0) return `${fmtNum(row.characters)} chars`;
+  if (row.audioSeconds > 0) return `${row.audioSeconds.toFixed(0)}s audio`;
+  if (row.inputTokens || row.outputTokens) return `${fmtNum(row.inputTokens)} in / ${fmtNum(row.outputTokens)} out`;
+  return `${row.calls} calls`;
+}
+
+// ── Mode A: accurate per-call usage (service_usage), with the old
+// cumulative-blob estimate kept as a fallback note for context ─────────────
+function UsageMode({ data, onRefresh }: { data: CostData; onRefresh: () => void }) {
+  const { accurate, storyCount } = data;
+  const [byStory, setByStory] = useState<StoryUsageCost[] | null>(null);
+  const [byStoryLoading, setByStoryLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/cost-analysis/by-story", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setByStory(Array.isArray(d.stories) ? d.stories : []))
+      .catch(() => setByStory([]))
+      .finally(() => setByStoryLoading(false));
+  }, []);
+
+  if (!accurate.tableReady) {
+    return (
+      <div className="flex flex-col gap-3 items-center text-center py-8">
+        <span className="text-4xl">📊</span>
+        <p className="text-white text-fs-body font-bold">Accurate usage tracking isn't set up yet</p>
+        <p className="text-fs-body max-w-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          Run <code>supabase/service-usage-migration.sql</code> in the Supabase SQL Editor, then every Gemini/ElevenLabs
+          call going forward will log its exact cost here, per call and per story.
+        </p>
+        {accurate.error && <p className="text-fs-body" style={{ color: "#EC4899" }}>{accurate.error}</p>}
+        <button onClick={onRefresh} className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95"
+          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          ↻ Check again
+        </button>
+      </div>
+    );
+  }
+
+  const gTotal = accurate.providerBreakdown.find((p) => p.provider === "gemini")?.costUsd ?? 0;
+  const elTotal = accurate.providerBreakdown.find((p) => p.provider === "elevenlabs")?.costUsd ?? 0;
+  const providerTotal = gTotal + elTotal || 1;
+  const elPct = Math.round((elTotal / providerTotal) * 100);
 
   return (
     <div className="flex flex-col gap-4">
       <SummaryChips items={[
-        { label: "Total stories",  value: storyCount,                            sub: `${publicCount} public · ${privateCount} private` },
-        { label: "Total audio",    value: fmtDuration(totalDurationSec),          sub: `${totalMinutes.toFixed(1)} min` },
-        { label: "Cost / minute",  value: fmtCost(totalCost / (totalMinutes||1)), sub: "cumulative average" },
-        { label: "Cost / story",   value: fmtCost(totalCost / (storyCount||1)),   sub: "cumulative average" },
+        { label: "Total spend",       value: fmtCost(accurate.grandTotalUsd), sub: `${fmtNum(accurate.rowCount)} calls logged` },
+        { label: "Stories w/ usage",  value: accurate.storiesWithUsage,       sub: `of ${storyCount} total` },
+        { label: "Cost / story",      value: fmtCost(accurate.grandTotalUsd / (accurate.storiesWithUsage || 1)), sub: "avg, attributed calls only" },
+        { label: "Gemini vs ElevenLabs", value: `${100 - elPct}% / ${elPct}%`, sub: "by cost, not call count" },
       ]} />
 
       <div className="rounded-xl px-3 py-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.55)" }}>TTS Voice Split</p>
+        <p className="text-fs-body font-bold mb-2" style={{ color: "rgba(255,255,255,0.55)" }}>Cost by provider</p>
         <div className="flex rounded-full overflow-hidden mb-2" style={{ height: 8 }}>
           <div style={{ width: `${100 - elPct}%`, background: "linear-gradient(90deg,#4fc3f7,#a78bfa)" }} />
           <div style={{ width: `${elPct}%`, background: "linear-gradient(90deg,#f59e0b,#EC4899)" }} />
         </div>
         <div className="flex justify-between">
-          <span className="text-fs-body" style={{ color: "#4fc3f7" }}>Gemini {100-elPct}% — {fmtNum(totals.gemini_tts_chars)} chars</span>
-          <span className="text-fs-body" style={{ color: "#f59e0b" }}>EL {elPct}% — {fmtNum(totals.el_tts_chars)} chars</span>
+          <span className="text-fs-body" style={{ color: "#4fc3f7" }}>Gemini {100 - elPct}% — {fmtCost(gTotal)}</span>
+          <span className="text-fs-body" style={{ color: "#f59e0b" }}>ElevenLabs {elPct}% — {fmtCost(elTotal)}</span>
         </div>
       </div>
 
-      <BreakdownTable total={totalCost} rows={[
-        { label: "Gemini Text Gen",  usage: `${fmtNum(totals.gemini_tokens)} tokens`, cost: costs.gemini_text,  sub: `${totals.gemini_calls} calls · $0.40/1M tokens` },
-        { label: "Gemini TTS",       usage: `${fmtNum(totals.gemini_tts_chars)} chars`, cost: costs.gemini_tts, sub: `${totals.gemini_tts_calls} calls · $0.10/1M chars` },
-        { label: "Gemini Images",    usage: `${totals.gemini_image_calls} images`,    cost: costs.gemini_image, sub: "$0.04/image (Imagen)" },
-        { label: "ElevenLabs TTS",   usage: `${fmtNum(totals.el_tts_chars)} chars`,   cost: costs.el_tts,       sub: `${totals.el_tts_calls} calls · $0.20/1K chars` },
-        { label: "ElevenLabs SFX",   usage: `${totals.el_sfx_calls} effects`,         cost: costs.el_sfx,       sub: `${fmtNum(totals.el_sfx_chars)} prompt chars · $0.08/effect` },
-      ]} />
+      <BreakdownTable
+        total={accurate.grandTotalUsd}
+        rows={accurate.callTypeBreakdown.map((r) => ({
+          label: callTypeLabel(r.callType),
+          usage: usageDescriptor(r),
+          cost: r.costUsd,
+          sub: `${r.calls} call${r.calls === 1 ? "" : "s"} · ${r.model}`,
+        }))}
+      />
+
+      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="px-3 py-2" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.52)" }}>Most expensive stories</span>
+        </div>
+        <div className="px-3">
+          {byStoryLoading ? (
+            <p className="text-fs-body py-3" style={{ color: "rgba(255,255,255,0.4)" }}>Loading…</p>
+          ) : !byStory?.length ? (
+            <p className="text-fs-body py-3" style={{ color: "rgba(255,255,255,0.4)" }}>No per-story usage logged yet.</p>
+          ) : (
+            byStory.slice(0, 15).map((s) => (
+              <div key={s.storyId} className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-fs-body truncate">{s.title}{s.isDraft ? " (draft)" : ""}</p>
+                  <p className="text-fs-body truncate" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    {s.topCallTypes.map((t) => callTypeLabel(t.callType)).join(", ")}
+                  </p>
+                </div>
+                <span className="text-fs-body flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)" }}>{s.calls} calls</span>
+                <span className="text-fs-body font-bold flex-shrink-0" style={{ color: "#4fc3f7", minWidth: 70, textAlign: "right" }}>{fmtCost(s.costUsd)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
       <p className="text-center text-fs-body" style={{ color: "rgba(255,255,255,0.40)" }}>
-        Includes test runs, retries, voice previews — not just produced stories
+        Includes test runs, retries, voice previews — not just produced stories. Prices from src/lib/pricing.ts.
       </p>
       <button onClick={onRefresh} className="text-fs-body px-4 py-2 rounded-xl transition-all active:scale-95 self-center"
         style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}>

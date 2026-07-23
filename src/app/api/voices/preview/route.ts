@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { trackELTts, trackGemini, trackGeminiTts } from "@/lib/usageTracker";
+import { recordTtsUsage, recordGeminiUsage } from "@/lib/serviceUsage";
 
 // ─── Sample texts ─────────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ async function callGeminiTTS(
       throw new Error("No audio data in Gemini response");
     }
 
-    trackGeminiTts(text.length).catch(() => {});
+    recordTtsUsage({ callType: "voice_preview" }, { provider: "gemini", model: "gemini-2.5-flash-preview-tts", characters: text.length }).catch(() => {});
     return { audioBase64: inlineData.data, mimeType: inlineData.mimeType };
   }
 
@@ -162,8 +162,8 @@ Return ONLY the voice name. Nothing else.`;
   }
 
   const json = await res.json();
-  const _t = json.usageMetadata?.totalTokenCount;
-  if (_t) trackGemini(_t).catch(() => {});
+  const um = json.usageMetadata;
+  if (um) recordGeminiUsage({ callType: "voice_pick_preview" }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
   const raw: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   const cleaned = raw.trim().split(/\s/)[0];
 
@@ -250,7 +250,7 @@ async function ttsEL(apiKey: string, voiceId: string, text: string, language?: s
   }
 
   const arrayBuffer = await res.arrayBuffer();
-  trackELTts(text.length).catch(() => {});
+  recordTtsUsage({ callType: "voice_preview" }, { provider: "elevenlabs", model: "eleven_v3", characters: text.length }).catch(() => {});
   return Buffer.from(arrayBuffer).toString("base64");
 }
 

@@ -53,7 +53,7 @@ or
     const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.4, maxOutputTokens: 512, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "validate_animal" });
     if (!ok) {
       // Fail closed here (unlike the general text checker) — approving
       // unconditionally would let a non-animal word slip through with no

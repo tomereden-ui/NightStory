@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 import type { ScriptBlock } from "@/types";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 
 // ─── Language detection ─────────────────────────────────────────────────────────
 // The prompt tab sends the app's OWN UI language to the generation prompt, but
@@ -16,7 +17,7 @@ import type { ScriptBlock } from "@/types";
 // detectScriptLanguage, just reimplemented with the SDK client these two
 // generation routes already use (produce-drama uses a different geminiClient
 // wrapper) rather than duplicating that import for one small call.
-export async function detectGeneratedLanguage(blocks: { characterName: string; textPayload: string }[], apiKey: string): Promise<string> {
+export async function detectGeneratedLanguage(blocks: { characterName: string; textPayload: string }[], apiKey: string, storyId?: string, jobId?: string): Promise<string> {
   const sample = blocks
     .filter((b) => b.characterName !== "SFX")
     .slice(0, 6)
@@ -39,6 +40,8 @@ export async function detectGeneratedLanguage(blocks: { characterName: string; t
     const result = await model.generateContent(
       `What language is this text written in? Reply with ONLY the ISO 639-1 two-letter code (e.g. "en", "he", "ar", "fr", "de", "es"). No explanation.\n\n${sample}`,
     );
+    const um = result.response.usageMetadata;
+    if (um) recordGeminiUsage({ callType: "language_detection", storyId, jobId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
     const code = result.response.text().trim().toLowerCase();
     if (/^[a-z]{2}$/.test(code)) return code;
   } catch {
@@ -275,6 +278,8 @@ export async function resolveTitleConflict(
   title: string,
   summary: string,
   existingTitles: string[],
+  storyId?: string,
+  jobId?: string,
 ): Promise<string> {
   const existNorm = new Set(existingTitles.map(normTitle));
   if (!existNorm.has(normTitle(title))) return title;
@@ -295,6 +300,8 @@ export async function resolveTitleConflict(
       const existList = excluded.slice(0, 20).map((t) => `"${t}"`).join(", ");
       const prompt = `The children's story title "${title}" already exists in this family's library. Based on this story summary: "${summary.slice(0, 200)}", suggest ONE alternative creative title. It must NOT be any of: ${existList}. Output ONLY the title, nothing else.`;
       const result = await model.generateContent(prompt);
+      const um = result.response.usageMetadata;
+      if (um) recordGeminiUsage({ callType: "title_conflict_resolution", storyId, jobId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
       const alt = result.response.text().trim().replace(/^["'`]|["'`]$/g, "").trim();
       if (alt && alt.length > 2 && alt.length < 80 && !existNorm.has(normTitle(alt))) return alt;
       if (alt) excluded.push(alt); // don't let the next attempt suggest the same rejected alternative
@@ -323,7 +330,7 @@ function readHebrewLetterCheckGuide(): string {
   }
 }
 
-export async function fixHebrewLatinMixup(blocks: ScriptBlock[], apiKey: string): Promise<ScriptBlock[]> {
+export async function fixHebrewLatinMixup(blocks: ScriptBlock[], apiKey: string, storyId?: string, jobId?: string): Promise<ScriptBlock[]> {
   const guide = readHebrewLetterCheckGuide();
   if (!guide) return blocks;
 
@@ -345,6 +352,8 @@ export async function fixHebrewLatinMixup(blocks: ScriptBlock[], apiKey: string)
     });
     const payload = checkable.map((b) => ({ index: b.index, text: b.textPayload }));
     const result = await model.generateContent(JSON.stringify(payload));
+    const um = result.response.usageMetadata;
+    if (um) recordGeminiUsage({ callType: "hebrew_letter_fix", storyId, jobId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
     const raw = result.response.text().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const corrections = JSON.parse(raw) as Array<{ index?: unknown; text?: unknown }>;
     if (!Array.isArray(corrections) || corrections.length === 0) return blocks;

@@ -17,7 +17,7 @@ async function regenerateOne(entry: LibraryEntry, geminiKey: string): Promise<Re
     return { storyId: entry.id, title: entry.title, sceneCount: 0, skippedReason: "no script blocks" };
   }
 
-  const scenes = await generateScenes(entry.blocks, geminiKey);
+  const scenes = await generateScenes(entry.blocks, geminiKey, entry.id);
   if (scenes.length === 0) {
     return { storyId: entry.id, title: entry.title, sceneCount: 0, skippedReason: "scene generation failed" };
   }

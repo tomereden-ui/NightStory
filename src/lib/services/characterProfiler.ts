@@ -26,6 +26,8 @@ export async function profileCharacters(
   apiKey: string,
   characterDescriptions?: Record<string, string>,
   characterTypes?: Record<string, string>,
+  storyId?: string,
+  jobId?: string,
 ): Promise<Record<string, CharacterVoiceProfile>> {
   const seen = new Set<string>();
   const characters = blocks.map((b) => b.characterName).filter((c) => {
@@ -107,7 +109,7 @@ export async function profileCharacters(
         { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
         { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
       ],
-    });
+    }, { callType: "voice_profiling", storyId, jobId });
 
     const raw = (geminiText(data))
       .trim()

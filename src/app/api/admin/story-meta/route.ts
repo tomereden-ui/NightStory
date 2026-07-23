@@ -47,7 +47,7 @@ For ageGroup, pick the range that best matches the vocabulary, themes, and compl
     const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: "application/json", temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "story_meta_analysis" });
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     const parsed = JSON.parse(text as string) as {
       summary?: string; ageGroup?: string; coverPrompt?: string;

@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.9, maxOutputTokens: 250, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "name_pronunciation_alternatives" });
     if (!ok) return NextResponse.json({ error: "Gemini request failed" }, { status: 502 });
 
     const raw = geminiText(data);

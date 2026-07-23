@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
-import { trackGemini } from "@/lib/usageTracker";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 import { LANGUAGE_META } from "@/lib/i18n";
 import type { Language } from "@/types";
 
@@ -73,8 +73,8 @@ async function detectExplicitGoAhead(genAI: GoogleGenerativeAI, lastUserMessage:
       },
     });
     const result = await model.generateContent(lastUserMessage);
-    const tokens = result.response.usageMetadata?.totalTokenCount;
-    if (tokens) trackGemini(tokens).catch(() => {});
+    const um = result.response.usageMetadata;
+    if (um) recordGeminiUsage({ callType: "chat_confirmation_check" }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
     return result.response.text().trim().toLowerCase().startsWith("true");
   } catch {
     // A classification hiccup shouldn't block anything -- the quick-reply
@@ -119,8 +119,8 @@ export async function POST(req: NextRequest) {
     // Empty messages = initial greeting trigger
     if (messages.length === 0) {
       const result = await model.generateContent("BEGIN_CONVERSATION");
-      const tokens = result.response.usageMetadata?.totalTokenCount;
-      if (tokens) trackGemini(tokens).catch(() => {});
+      const um = result.response.usageMetadata;
+      if (um) recordGeminiUsage({ callType: "chat_greeting" }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
       return NextResponse.json({ reply: result.response.text().trim(), storyReady: false });
     }
 
@@ -139,8 +139,8 @@ export async function POST(req: NextRequest) {
     const lastMessage = messages[messages.length - 1].content;
 
     const result = await chat.sendMessage(lastMessage);
-    const tokens = result.response.usageMetadata?.totalTokenCount;
-    if (tokens) trackGemini(tokens).catch(() => {});
+    const um = result.response.usageMetadata;
+    if (um) recordGeminiUsage({ callType: "chat_reply" }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
 
     const raw = result.response.text();
 

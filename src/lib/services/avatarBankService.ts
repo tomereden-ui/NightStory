@@ -23,6 +23,8 @@ async function getBank() {
 export async function findBestAvatar(
   description: string,
   apiKey: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<string | null> {
   const bank = await getBank();
   if (bank.length === 0) {
@@ -44,7 +46,7 @@ export async function findBestAvatar(
       // multi-digit picks got truncated (MAX_TOKENS) — "40" came back as "4",
       // silently selecting the wrong avatar while looking like a clean reply.
       generationConfig: { temperature: 0, maxOutputTokens: 50, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "avatar_matching", storyId, jobId });
 
     const text = geminiText(data)?.trim() ?? "";
     const index = parseInt(text.replace(/\D/g, "")) - 1;
@@ -133,6 +135,8 @@ export async function findBestAvatarForCharacter(
   profile: { type: string; gender?: string; ageBucket?: string; category?: string; visualDescription?: string },
   apiKey: string,
   excludeUrls?: Set<string>,
+  storyId?: string,
+  jobId?: string,
 ): Promise<string | null> {
   const bank = await getBankFull();
   if (bank.length === 0) {
@@ -202,7 +206,7 @@ export async function findBestAvatarForCharacter(
       // See findBestAvatar above: 50 not 5, or multi-digit picks truncate to
       // a wrong single digit (this is exactly how a tree once matched a pig).
       generationConfig: { temperature: 0, maxOutputTokens: 50, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "avatar_matching", storyId, jobId });
 
     const text = geminiText(data)?.trim() ?? "";
     const index = parseInt(text.replace(/\D/g, "")) - 1;

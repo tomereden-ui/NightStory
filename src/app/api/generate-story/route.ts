@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 import { assignVoicesToCharacters, pickVoiceForCharacterProfile } from "@/lib/services/voiceAssignment";
-import { trackGemini } from "@/lib/usageTracker";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
 import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, buildLengthTargetReminder, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
@@ -72,6 +72,8 @@ ${JSON.stringify(fields)}
 
 Return ONLY a JSON object with the exact same keys, each containing the reworded text.`;
     const result = await model.generateContent(prompt);
+    const um = result.response.usageMetadata;
+    if (um) recordGeminiUsage({ callType: "content_safety_rewrite" }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
     const raw = result.response.text().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const out: Record<string, string> = {};
@@ -305,15 +307,15 @@ export async function POST(req: NextRequest) {
       let text: string;
       try {
         const result = await model.generateContent(currentPrompt);
-        const _t = result.response.usageMetadata?.totalTokenCount;
-        if (_t) trackGemini(_t).catch(() => {});
+        const um = result.response.usageMetadata;
+        if (um) recordGeminiUsage({ callType: "script_generation" }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
         text = result.response.text().trim();
       } catch (err) {
         console.warn(`[generate-story] Gemini attempt ${attempt} failed (${err instanceof Error ? err.message : "unknown error"}), retrying once:`, err);
         try {
           const retryResult = await model.generateContent(currentPrompt);
-          const _t = retryResult.response.usageMetadata?.totalTokenCount;
-          if (_t) trackGemini(_t).catch(() => {});
+          const um = retryResult.response.usageMetadata;
+          if (um) recordGeminiUsage({ callType: "script_generation" }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
           text = retryResult.response.text().trim();
         } catch (err2) {
           if (attempt === maxLengthAttempts) {

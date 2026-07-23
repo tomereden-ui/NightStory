@@ -41,7 +41,7 @@ Return ONLY raw JSON, no markdown: {"labels": [{"age": <bucket or null>, "catego
     const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0, maxOutputTokens: 8192, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "avatar_age_backfill" });
     const parsed = JSON.parse(stripJsonFences(geminiText(data) ?? "")) as { labels?: { age?: string | null; category?: string | null }[] };
     const labels = parsed.labels ?? [];
     return rows.map((_, i) => {

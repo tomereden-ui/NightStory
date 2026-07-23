@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { trackGemini } from "@/lib/usageTracker";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 import fs from "fs";
 import path from "path";
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 500 });
   }
 
-  const { blocks } = await req.json() as { blocks: RawBlock[] };
+  const { blocks, storyId } = await req.json() as { blocks: RawBlock[]; storyId?: string };
   if (!Array.isArray(blocks) || blocks.length === 0) {
     return NextResponse.json({ error: "blocks array is required." }, { status: 400 });
   }
@@ -89,8 +89,8 @@ Return ONLY the raw JSON object. No markdown fences, no explanation outside the 
       },
     });
     const result = await model.generateContent(`Review this script:\n\n${scriptJson}`);
-    const _t = result.response.usageMetadata?.totalTokenCount;
-    if (_t) trackGemini(_t).catch(() => {});
+    const um = result.response.usageMetadata;
+    if (um) recordGeminiUsage({ callType: "content_review", storyId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
     const text   = result.response.text().trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
 
     let parsed: { ok?: boolean; fixes?: { index?: number; textPayload?: string }[]; issues?: string[] };

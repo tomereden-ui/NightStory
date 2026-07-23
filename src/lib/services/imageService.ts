@@ -1,12 +1,15 @@
 import type { ScriptBlock } from "@/types";
 import { generateWithImagen } from "./imagenClient";
 import { buildCoverScenePrompt, buildFinalCoverPrompt } from "@/config/coverImageInstructions";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 
 export async function generateCoverImage(
   title: string,
   blocks: ScriptBlock[],
   apiKey: string,
   coverPrompt?: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<{ buf: Buffer; mimeType: string } | null> {
   // ── Step 1: build scene description ──────────────────────────────────────────
   const characters = Array.from(
@@ -59,6 +62,8 @@ export async function generateCoverImage(
       );
       if (res.ok) {
         const data = await res.json();
+        const um = data?.usageMetadata;
+        if (um) recordGeminiUsage({ callType: "cover_prompt_enhancement", storyId, jobId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
         const enhanced = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (enhanced && enhanced.length > 20) scenePrompt = enhanced;
       }
@@ -70,7 +75,7 @@ export async function generateCoverImage(
   // ── Step 2: generate image with Imagen ───────────────────────────────────────
   const fullPrompt = buildFinalCoverPrompt(scenePrompt);
 
-  const result = await generateWithImagen(fullPrompt, apiKey);
+  const result = await generateWithImagen(fullPrompt, apiKey, storyId, jobId);
   if (result) console.log("[CoverImage] Generated with Imagen");
   return result;
 }

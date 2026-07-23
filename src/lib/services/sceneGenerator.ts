@@ -17,7 +17,7 @@ function readSceneGuidance(): string {
   }
 }
 
-export async function generateScenes(blocks: ScriptBlock[], geminiKey: string): Promise<StoryScene[]> {
+export async function generateScenes(blocks: ScriptBlock[], geminiKey: string, storyId?: string, jobId?: string): Promise<StoryScene[]> {
   const script = blocks
     .map((b, i) => `[${i}] ${b.characterName}: ${b.textPayload}`)
     .join("\n");
@@ -38,7 +38,7 @@ ${script}`;
       // slowest call gates the whole phase — default-on thinking was quietly
       // making this the long pole.
       generationConfig: { temperature: 0.4, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "scene_generation", storyId, jobId });
     const text = geminiText(data).replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const raw = JSON.parse(text) as Array<{
       sceneNumber: number; title: string; summary: string;

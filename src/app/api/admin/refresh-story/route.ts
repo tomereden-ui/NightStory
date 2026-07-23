@@ -29,9 +29,9 @@ async function refreshOne(entry: LibraryEntry, apiKey: string, narratorVoiceId: 
 
   const [{ blocks, characterProfiles, changedCount }, moralLessons, scenes, summary] = await Promise.all([
     reassignVoicesForStory(entry, apiKey, narratorVoiceId),
-    analyzeLessonsForStory(entry.blocks, apiKey, entry.language),
-    generateScenes(entry.blocks, apiKey),
-    deriveSummaryForStory(entry.blocks, entry.title, apiKey, entry.language),
+    analyzeLessonsForStory(entry.blocks, apiKey, entry.language, entry.id),
+    generateScenes(entry.blocks, apiKey, entry.id),
+    deriveSummaryForStory(entry.blocks, entry.title, apiKey, entry.language, entry.id),
   ]);
   // generateScenes swallows its own errors and returns [] rather than
   // throwing, so treat an empty result here as this story's failure (a real

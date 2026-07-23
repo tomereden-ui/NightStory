@@ -291,6 +291,8 @@ async function castVoicesWithGemini(
   characters: Record<string, CharacterProfile>,
   apiKey: string,
   excludePresetIds: Set<string> = new Set(),
+  storyId?: string,
+  jobId?: string,
 ): Promise<Record<string, string>> {
   if (Object.keys(characters).length === 0) return {};
 
@@ -304,7 +306,7 @@ async function castVoicesWithGemini(
   const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
     contents: [{ role: "user", parts: [{ text: buildCastingPrompt(characters, excludeVoiceNames) }] }],
     generationConfig: { temperature: 0.4, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
-  });
+  }, { callType: "casting", storyId, jobId });
   if (!ok) return {};
 
   const raw = geminiText(data).replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
@@ -344,6 +346,8 @@ export async function assignVoicesToCharacters(
   primaryVoiceId: string = PRESET_VOICES[0].id,
   characters: Record<string, CharacterProfile> = {},
   apiKey?: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<Record<string, string>> {
   if (!apiKey || Object.keys(characters).length === 0) {
     return assignVoicesToCharactersDeterministic(blocks, heroName, primaryVoiceId, characters);
@@ -364,7 +368,7 @@ export async function assignVoicesToCharacters(
 
   let geminiAssignments: Record<string, string> = {};
   try {
-    geminiAssignments = await castVoicesWithGemini(castableCharacters, apiKey, new Set([primaryVoiceId]));
+    geminiAssignments = await castVoicesWithGemini(castableCharacters, apiKey, new Set([primaryVoiceId]), storyId, jobId);
   } catch (err) {
     console.warn("[voiceAssignment] Gemini casting call failed, using deterministic fallback:", err);
   }

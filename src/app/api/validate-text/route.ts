@@ -31,7 +31,7 @@ Text: "${text.trim().slice(0, 800)}"`;
     const { data } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: "application/json", temperature: 0, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "validate_text" });
     const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     const parsed = JSON.parse(raw as string);
     return NextResponse.json({ valid: !!parsed.valid, reason: parsed.reason ?? "" });

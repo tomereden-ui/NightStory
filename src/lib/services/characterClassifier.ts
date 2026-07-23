@@ -30,6 +30,8 @@ export async function classifyCharacters(
   summary: string | undefined,
   scriptSample: string | undefined,
   apiKey: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<Record<string, CharacterClassification>> {
   // Always treat "Narrator" as narrator without calling AI
   const nonNarrators = characters.filter((c) => c !== "Narrator" && c !== "SFX");
@@ -98,7 +100,7 @@ Example output:
         responseMimeType: "application/json",
         thinkingConfig: { thinkingBudget: 0 },
       },
-    });
+    }, { callType: "character_classification", storyId, jobId });
 
     const text = geminiText(data);
     const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();

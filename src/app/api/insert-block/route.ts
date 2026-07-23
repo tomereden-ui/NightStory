@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
 
-  let blocks: ScriptBlock[], afterIndex: number, instruction: string, summary: string | undefined;
+  let blocks: ScriptBlock[], afterIndex: number, instruction: string, summary: string | undefined, storyId: string | undefined;
   try {
-    ({ blocks, afterIndex, instruction, summary } = await req.json());
+    ({ blocks, afterIndex, instruction, summary, storyId } = await req.json());
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
@@ -56,7 +56,7 @@ Each element: { "characterName": string, "textPayload": string }`;
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: [{ role: "user", parts: [{ text: userMessage }] }],
       generationConfig: { temperature: 0.75, maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "insert_block", storyId });
 
     const raw = geminiText(data);
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();

@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         maxOutputTokens: 60,
         thinkingConfig: { thinkingBudget: 0 },
       },
-    });
+    }, { callType: "suggest_names" });
 
     const text = geminiText(data);
     if (text) {

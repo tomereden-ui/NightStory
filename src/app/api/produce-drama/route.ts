@@ -30,6 +30,8 @@ async function matchAvatarsForProfiles(
   geminiKey: string,
   childName?: string,
   childAvatarUrl?: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<Record<string, CharacterProfile> | undefined> {
   if (!characterProfiles || Object.keys(characterProfiles).length === 0) return characterProfiles;
   const childNameLower = childName?.trim().toLowerCase();
@@ -45,7 +47,7 @@ async function matchAvatarsForProfiles(
         return [name, { ...profile, avatarUrl: childAvatarUrl }] as const;
       }
       try {
-        const avatarUrl = await findBestAvatarForCharacter(profile, geminiKey);
+        const avatarUrl = await findBestAvatarForCharacter(profile, geminiKey, undefined, storyId, jobId);
         return [name, avatarUrl ? { ...profile, avatarUrl } : profile] as const;
       } catch (err) {
         console.warn(`[produce-drama] avatar match failed for "${name}":`, err);
@@ -130,7 +132,7 @@ function generateSummary(blocks: ScriptBlock[]): string {
   return words.slice(0, 20).join(" ") + (words.length > 20 ? "…" : "");
 }
 
-async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Promise<string> {
+async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string, storyId?: string, jobId?: string): Promise<string> {
   const sample = blocks
     .filter((b) => b.characterName !== "SFX")
     .slice(0, 6)
@@ -142,7 +144,7 @@ async function detectScriptLanguage(blocks: ScriptBlock[], apiKey: string): Prom
     const { data, ok } = await geminiPost(apiKey, "gemini-3.5-flash", {
       contents: [{ role: "user", parts: [{ text: `What language is this text written in? Reply with ONLY the ISO 639-1 two-letter code (e.g. "en", "he", "ar", "fr", "de", "es"). No explanation.\n\n${sample}` }] }],
       generationConfig: { temperature: 0, maxOutputTokens: 5, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "language_detection", storyId, jobId });
     if (ok) {
       const code = geminiText(data).toLowerCase();
       if (code && /^[a-z]{2}$/.test(code)) return code;
@@ -453,22 +455,22 @@ async function runProduction(
     // disappears from the critical path instead of gating everything.
     // (.then wrappers so a rejection settling before its await is reached
     // can't fire Node's unhandled-rejection handler.)
-    const planPromise = perf.track("planning", planDrama(blocks, geminiKey, durationMinutes, existingTitle))
+    const planPromise = perf.track("planning", planDrama(blocks, geminiKey, durationMinutes, existingTitle, storyId, jobId))
       .then((d) => ({ ok: true as const, d }), (e) => ({ ok: false as const, e }));
     // Consumed only at library-save time — failures degrade to "no scenes" /
     // unmatched avatars rather than failing the production.
-    const scenesPromise = generateScenes(blocks, geminiKey).catch((err) => {
+    const scenesPromise = generateScenes(blocks, geminiKey, storyId, jobId).catch((err) => {
       console.warn(`[${ts()}][produce-drama] generateScenes failed:`, err);
       return [] as Awaited<ReturnType<typeof generateScenes>>;
     });
-    const avatarsPromise = matchAvatarsForProfiles(characterProfiles, geminiKey, childName, childAvatarUrl).catch((err) => {
+    const avatarsPromise = matchAvatarsForProfiles(characterProfiles, geminiKey, childName, childAvatarUrl, storyId, jobId).catch((err) => {
       console.warn(`[${ts()}][produce-drama] avatar matching failed:`, err);
       return characterProfiles;
     });
 
     const [voiceProfiles, scriptLanguage, voiceOverrides, elementCache] = await perf.track("voice_profiling", Promise.all([
-      profileCharacters(blocks, geminiKey, characterDescriptions, characterTypes),
-      detectScriptLanguage(blocks, geminiKey),
+      profileCharacters(blocks, geminiKey, characterDescriptions, characterTypes, storyId, jobId),
+      detectScriptLanguage(blocks, geminiKey, storyId, jobId),
       buildVoiceOverrides(blocks, supabase),
       getElementsForStory(storyId),
     ]));
@@ -620,6 +622,8 @@ async function runProduction(
             vs?.use_speaker_boost,
             vs?.speed,
             forceFallback,
+            storyId,
+            jobId,
           );
           modelsUsed.add(ttsModel);
           if (!useELForChar && provider !== "gemini" && characterEngineState.get(charName) !== provider) {
@@ -705,12 +709,12 @@ async function runProduction(
       ? Promise.resolve({ buf: Buffer.from(existingCover.data, "base64"), mimeType: existingCover.mimeType })
       : existingCoverUrl && isSafeStorageUrl(existingCoverUrl)
         ? fetch(existingCoverUrl).then(async (r) => {
-            if (!r.ok) return generateCoverImage(drama.title, blocks, geminiKey, coverPrompt);
+            if (!r.ok) return generateCoverImage(drama.title, blocks, geminiKey, coverPrompt, storyId, jobId);
             const buf = Buffer.from(await r.arrayBuffer());
             const mimeType = r.headers.get("content-type") ?? "image/jpeg";
             return { buf, mimeType };
-          }).catch(() => generateCoverImage(drama.title, blocks, geminiKey, coverPrompt))
-        : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt));
+          }).catch(() => generateCoverImage(drama.title, blocks, geminiKey, coverPrompt, storyId, jobId))
+        : generateCoverImage(drama.title, blocks, geminiKey, coverPrompt, storyId, jobId));
 
     // ── Step 3: SFX generation, concurrent with the dialogue still in flight ──
     // SFX uses ElevenLabs while dialogue uses Gemini — different providers,
@@ -786,7 +790,7 @@ async function runProduction(
           }
 
           // ── Cache miss: generate via ElevenLabs and queue for upload ─────────
-          const sfxResult = await generateSfx(desc, durationHint, elevenKey, outPath);
+          const sfxResult = await generateSfx(desc, durationHint, elevenKey, outPath, storyId, jobId);
           if (!sfxResult.ok) {
             writeSilence(durationHint, outPath.replace(".mp3", ".wav"));
           } else {

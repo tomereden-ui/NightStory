@@ -4,7 +4,7 @@ import { classifyCharacters } from "@/lib/services/characterClassifier";
 import { findBestAvatarForCharacter } from "@/lib/services/avatarBankService";
 import { getLessonsCatalog } from "@/constants/lessonsUi";
 import { LANGUAGE_META } from "@/lib/i18n";
-import { trackGemini } from "@/lib/usageTracker";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 import type { LibraryEntry, CharacterProfile } from "@/lib/libraryStore";
 import type { ScriptBlock, MoralLesson, Language } from "@/types";
 
@@ -56,7 +56,7 @@ export async function reassignVoicesForStory(
       .slice(0, 40)
       .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
       .join("\n");
-    const classified = await classifyCharacters(nonNarratorChars, entry.summary, scriptSample, apiKey);
+    const classified = await classifyCharacters(nonNarratorChars, entry.summary, scriptSample, apiKey, entry.id);
     freshProfiles = Object.fromEntries(
       Object.entries(classified).map(([name, c]) => [
         name,
@@ -78,7 +78,7 @@ export async function reassignVoicesForStory(
     ...(existingNarratorProfile ? { [narratorName]: existingNarratorProfile } : {}),
   };
 
-  const voiceMap = await assignVoicesToCharacters(entry.blocks, "", undefined, characterProfiles, apiKey);
+  const voiceMap = await assignVoicesToCharacters(entry.blocks, "", undefined, characterProfiles, apiKey, entry.id);
   if (narratorVoiceId) voiceMap[narratorName] = narratorVoiceId;
 
   let changedCount = 0;
@@ -127,7 +127,7 @@ export async function reassignAvatarsForStory(
       .slice(0, 40)
       .map((b) => `${b.characterName}: ${b.textPayload.replace(/\[.*?\]/g, "").trim()}`)
       .join("\n");
-    const classified = await classifyCharacters(nonNarratorChars, entry.summary, scriptSample, apiKey);
+    const classified = await classifyCharacters(nonNarratorChars, entry.summary, scriptSample, apiKey, entry.id);
     freshProfiles = Object.fromEntries(
       Object.entries(classified).map(([name, c]) => [
         name,
@@ -174,7 +174,7 @@ export async function reassignAvatarsForStory(
       updated[name] = profile;
       continue;
     }
-    const avatarUrl = await findBestAvatarForCharacter(profile, apiKey, usedUrls);
+    const avatarUrl = await findBestAvatarForCharacter(profile, apiKey, usedUrls, entry.id);
     if (avatarUrl) usedUrls.add(avatarUrl);
     if (avatarUrl && avatarUrl !== profile.avatarUrl) {
       changedCount++;
@@ -296,7 +296,7 @@ const READONLY_GENERATION_CONFIG = {
   thinkingConfig: { thinkingBudget: 0 },
 };
 
-export async function analyzeLessonsForStory(blocks: ScriptBlock[], apiKey: string, language?: string): Promise<MoralLesson[]> {
+export async function analyzeLessonsForStory(blocks: ScriptBlock[], apiKey: string, language?: string, storyId?: string): Promise<MoralLesson[]> {
   const scriptText = scriptTextFromBlocks(blocks);
   if (!scriptText.trim()) return [];
 
@@ -307,8 +307,8 @@ export async function analyzeLessonsForStory(blocks: ScriptBlock[], apiKey: stri
     generationConfig: READONLY_GENERATION_CONFIG,
   });
   const result = await model.generateContent(`Story script:\n\n${scriptText}`);
-  const totalTokens = result.response.usageMetadata?.totalTokenCount;
-  if (totalTokens) trackGemini(totalTokens).catch(() => {});
+  const um = result.response.usageMetadata;
+  if (um) recordGeminiUsage({ callType: "lesson_analysis", storyId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
   const text = stripJsonFences(result.response.text());
 
   const parsed = JSON.parse(text) as { lessons?: { lesson?: string; how?: string }[] };
@@ -329,7 +329,7 @@ export async function analyzeLessonsForStory(blocks: ScriptBlock[], apiKey: stri
 // "reasonable length, makes you want to press play" rule applied to classics'
 // tagline, generalized here for any story. Never rewrites the script itself.
 
-export async function deriveSummaryForStory(blocks: ScriptBlock[], title: string, apiKey: string, language?: string): Promise<string> {
+export async function deriveSummaryForStory(blocks: ScriptBlock[], title: string, apiKey: string, language?: string, storyId?: string): Promise<string> {
   const scriptText = scriptTextFromBlocks(blocks).slice(0, 4000);
   const meta = language ? LANGUAGE_META[language as Language] : undefined;
   const languageLine = meta
@@ -352,7 +352,7 @@ Return ONLY the summary text, nothing else, no quotes.`;
     generationConfig: { ...READONLY_GENERATION_CONFIG, maxOutputTokens: 300 },
   });
   const result = await model.generateContent(`Title: ${title}\n\nScript:\n${scriptText}`);
-  const totalTokens = result.response.usageMetadata?.totalTokenCount;
-  if (totalTokens) trackGemini(totalTokens).catch(() => {});
+  const um = result.response.usageMetadata;
+  if (um) recordGeminiUsage({ callType: "summary_generation", storyId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
   return result.response.text().trim().replace(/^["'`]|["'`]$/g, "").trim();
 }

@@ -653,7 +653,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
         const res = await fetch("/api/insert-block", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ blocks, afterIndex, instruction, summary }),
+          body: JSON.stringify({ blocks, afterIndex, instruction, summary, storyId }),
         });
         const data = await res.json();
         if (!res.ok || !data.newBlocks?.length) throw new Error(data.error ?? "Insert failed");
@@ -700,7 +700,7 @@ export default function ScriptTab({ blocks, voices, onBlocksChange, onProduce, i
     setIsValidating(true);
     setValidationIssues(null);
     try {
-      const res  = await fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks }) });
+      const res  = await fetch("/api/validate-script", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ blocks, storyId }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Validation failed");
 

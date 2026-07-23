@@ -1,5 +1,5 @@
 import fs from "fs";
-import { trackELTts, trackGeminiTts } from "@/lib/usageTracker";
+import { recordTtsUsage } from "@/lib/serviceUsage";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_ENGINE_SETTINGS, DEFAULT_ENGINE_PRIORITY, type EngineSettings, type EnginePriority, type TtsEngine } from "@/config/ttsEngines";
 
@@ -97,6 +97,8 @@ async function synthesizeEL(
   similarityBoost = 0.80,
   useSpeakerBoost = true,
   speed?: number,
+  storyId?: string,
+  jobId?: string,
 ): Promise<void> {
   const langCode = detectLanguageCode(text, language);
   for (let attempt = 1; attempt <= 5; attempt++) {
@@ -153,7 +155,7 @@ async function synthesizeEL(
       console.warn(`[${ts()}][EL TTS] suspiciously small audio (${mp3.length} bytes) — first bytes: ${mp3.slice(0, 16).toString("hex")}`);
     }
     fs.writeFileSync(outputPath.replace(/\.wav$/, ".mp3"), mp3);
-    trackELTts(text.length).catch(() => {});
+    recordTtsUsage({ callType: "dialogue_tts", storyId, jobId }, { provider: "elevenlabs", model: "eleven_v3", characters: text.length }).catch(() => {});
     return;
   }
   throw new Error("EL TTS failed after 5 attempts");
@@ -396,6 +398,8 @@ async function synthesizeGemini(
   language?: string,
   opts?: GeminiTTSOptions,
   model: string = "gemini-2.5-flash-preview-tts",
+  storyId?: string,
+  jobId?: string,
 ): Promise<{ mimeType: string }> {
   if (Date.now() < geminiQuotaExhaustedUntil) {
     throw new Error(`TTS rate limited (429): daily quota exhausted, cooling down until ${new Date(geminiQuotaExhaustedUntil).toISOString()}`);
@@ -519,7 +523,7 @@ async function synthesizeGemini(
       else if (isWavMagic) fs.writeFileSync(outputPath, rawBuf);
       else fs.writeFileSync(outputPath.replace(/\.wav$/i, ".bin"), rawBuf);
     }
-    trackGeminiTts(text.length).catch(() => {});
+    recordTtsUsage({ callType: "dialogue_tts", storyId, jobId }, { provider: "gemini", model, characters: text.length }).catch(() => {});
     return { mimeType: mime };
   }
   throw new Error(lastError || "Gemini TTS failed");
@@ -573,6 +577,8 @@ export async function synthesizeLine(
   // fallback keeps them consistent for the rest of the story instead of
   // drifting back and forth.
   forceFallback = false,
+  storyId?: string,
+  jobId?: string,
 ): Promise<{ mimeType?: string; provider: TtsProvider; model: string }> {
   // Strip performance tags [warmly] etc. for providers that don't interpret them
   const spokenText = line.replace(/\[([^\]]+)\]/g, "").replace(/\s{2,}/g, " ").trim();
@@ -596,6 +602,8 @@ export async function synthesizeLine(
       similarityBoost ?? (heTuned ? 0.75 : undefined),
       useSpeakerBoost,
       speed,
+      storyId,
+      jobId,
     );
     return { provider: "elevenlabs", model: "eleven_v3" };
   }
@@ -616,7 +624,7 @@ export async function synthesizeLine(
       const geminiModel = geminiModelName[engine];
       try {
         console.log(`[${ts()}][Gemini TTS] text → (${geminiModel})`, JSON.stringify(line));
-        const result = await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, geminiModel);
+        const result = await synthesizeGemini(line, voiceId, primaryKey, outputPath, persona || undefined, language, geminiOpts, geminiModel, storyId, jobId);
         return { ...result, provider: "gemini", model: geminiModel };
       } catch (err) {
         // Both Gemini TTS models have a confirmed intermittent failure mode:
@@ -654,7 +662,7 @@ export async function synthesizeLine(
       console.log(`[${ts()}][HE-EL fallback] ${voiceId} → ${heVoiceId}`);
       // Hebrew prosody tuning: lower stability allows natural intonation variance;
       // higher style exaggeration pushes the voice away from flat/robotic delivery.
-      await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.30, style ?? 0.60, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed);
+      await synthesizeEL(spokenText || line, heVoiceId, elKey, outputPath, stability ?? 0.30, style ?? 0.60, "he", similarityBoost ?? 0.75, useSpeakerBoost ?? true, speed, storyId, jobId);
       return { mimeType: "audio/mpeg", provider: "elevenlabs", model: "eleven_v3" };
     }
 

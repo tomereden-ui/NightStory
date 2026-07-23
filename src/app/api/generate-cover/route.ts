@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geminiPost, geminiText } from "@/lib/geminiClient";
+import { recordGeminiImageUsage } from "@/lib/serviceUsage";
 import { COVER_FALLBACK_PROMPT, buildCoverRewriterPrompt } from "@/config/coverImageInstructions";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
         parts: [{ text: buildCoverRewriterPrompt(prompt, summary) }],
       }],
       generationConfig: { temperature: 0.7, maxOutputTokens: 220, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "cover_prompt_rewrite" });
     const enhanced = geminiText(data);
     if (enhanced && enhanced.length > 30) {
       imagePrompt = enhanced;
@@ -85,6 +86,7 @@ export async function POST(req: NextRequest) {
 
     const { mimeType = "image/png", data: b64 } = imagePart.inlineData;
     console.log("[CoverGen] Success — mimeType:", mimeType, "size:", Math.round(b64.length * 0.75 / 1024), "KB");
+    recordGeminiImageUsage({ callType: "cover_image" }, { model: IMAGE_MODEL }).catch(() => {});
     return NextResponse.json({ coverUrl: `data:${mimeType};base64,${b64}` });
   } catch (err) {
     console.error("[CoverGen] Fetch error:", err);

@@ -94,6 +94,8 @@ export async function planDrama(
   apiKey: string,
   durationMinutes = 3,
   existingTitle?: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<DramaScript> {
   // Number the non-SFX lines so the model can reference them by index in
   // its output instead of re-transcribing the text — for a 50-line story
@@ -135,7 +137,7 @@ export async function planDrama(
       { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
     ],
-  });
+  }, { callType: "drama_planning", storyId, jobId });
 
   if (!ok) {
     throw new Error(`Drama planner API error ${status}`);

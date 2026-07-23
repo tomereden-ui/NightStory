@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { trackGemini } from "@/lib/usageTracker";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 import { detectGeneratedLanguage } from "@/lib/services/scriptGenerationHelpers";
 import type { ScriptBlock } from "@/types";
 import fs from "fs";
@@ -58,6 +58,9 @@ async function runReviewPass(
   passBlocks: IndexedTextBlock[],
   resultBlocks: ScriptBlock[],
   passLabel: string,
+  callType: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<number> {
   let changes = 0;
   try {
@@ -67,8 +70,8 @@ async function runReviewPass(
       // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
       generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 2048 } },
     });
-    const tokens = result.response.usageMetadata?.totalTokenCount;
-    if (tokens) trackGemini(tokens).catch(() => {});
+    const um = result.response.usageMetadata;
+    if (um) recordGeminiUsage({ callType, storyId, jobId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
 
     const raw = result.response.text().trim();
     const jsonStr = raw.replace(/^```[^\n]*\n?/, "").replace(/\n?```$/, "").trim();
@@ -181,6 +184,8 @@ async function runHebrewPass(
   promptText: string,
   passBlocks: IndexedTextBlock[],
   resultBlocks: ScriptBlock[],
+  storyId?: string,
+  jobId?: string,
 ): Promise<number> {
   let changes = 0;
   try {
@@ -196,8 +201,8 @@ async function runHebrewPass(
       // @ts-expect-error thinkingConfig is valid but not yet in the SDK's typedefs
       generationConfig: { temperature: 0.2, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 4096 } },
     });
-    const tokens = result.response.usageMetadata?.totalTokenCount;
-    if (tokens) trackGemini(tokens).catch(() => {});
+    const um = result.response.usageMetadata;
+    if (um) recordGeminiUsage({ callType: "hebrew_review", storyId, jobId }, { model: "gemini-3.1-pro-preview", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
 
     const records = parseHebrewPassFlags(result.response.text(), passBlocks.map((b) => b.characterName));
     for (const record of records) {
@@ -244,9 +249,9 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
 
-  let blocks: ScriptBlock[], age: number, lessons: string[], summary: string, language: string | undefined;
+  let blocks: ScriptBlock[], age: number, lessons: string[], summary: string, language: string | undefined, storyId: string | undefined, jobId: string | undefined;
   try {
-    ({ blocks, age = 6, lessons = [], summary = "", language } = await req.json());
+    ({ blocks, age = 6, lessons = [], summary = "", language, storyId, jobId } = await req.json());
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
@@ -299,7 +304,7 @@ Return an empty array [] if every block is already fine. Never echo blocks that 
 BLOCKS:
 ${textBlocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareText)}`).join("\n")}`;
   const pass1StartedAt = Date.now();
-  changes += await runReviewPass(genAI, pass1Prompt, textBlocks, resultBlocks, "pass1-content");
+  changes += await runReviewPass(genAI, pass1Prompt, textBlocks, resultBlocks, "pass1-content", "content_review", storyId, jobId);
   const pass1Ms = Date.now() - pass1StartedAt;
 
   // ── Pass 2: dedicated grammar/typo-only proofread ───────────────────────
@@ -324,7 +329,7 @@ Return an empty array [] if every block is already fine. Never echo blocks that 
 BLOCKS:
 ${pass2Blocks.map((b, i) => `[${i}] ${b.characterName}: ${JSON.stringify(b.bareText)}`).join("\n")}`;
   const pass2StartedAt = Date.now();
-  changes += await runReviewPass(genAI, pass2Prompt, pass2Blocks, resultBlocks, "pass2-grammar");
+  changes += await runReviewPass(genAI, pass2Prompt, pass2Blocks, resultBlocks, "pass2-grammar", "grammar_review", storyId, jobId);
   const pass2Ms = Date.now() - pass2StartedAt;
 
   // ── Pass 3: Hebrew-only nikkud/grammar + proofread cycle ────────────────
@@ -347,7 +352,7 @@ Also include the block's index (from the BLOCKS list below) as a line "- Index: 
 BLOCKS:
 ${pass3Blocks.map((b, i) => `[${i}] ${b.characterName}: ${b.bareText}`).join("\n")}`;
     const pass3StartedAt = Date.now();
-    changes += await runHebrewPass(genAI, hebrewPassPrompt, pass3Blocks, resultBlocks);
+    changes += await runHebrewPass(genAI, hebrewPassPrompt, pass3Blocks, resultBlocks, storyId, jobId);
 
     for (let i = 0; i < resultBlocks.length; i++) {
       const before = resultBlocks[i].textPayload;

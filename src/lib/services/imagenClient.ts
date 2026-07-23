@@ -1,4 +1,4 @@
-import { trackGeminiImage } from "@/lib/usageTracker";
+import { recordGeminiImageUsage } from "@/lib/serviceUsage";
 
 export const IMAGE_MODEL = "gemini-3.1-flash-image";
 
@@ -10,6 +10,8 @@ interface ImagenResult {
 export async function generateWithImagen(
   prompt: string,
   apiKey: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<ImagenResult | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`;
 
@@ -48,7 +50,7 @@ export async function generateWithImagen(
     return null;
   }
 
-  trackGeminiImage().catch(() => {});
+  recordGeminiImageUsage({ callType: "cover_image", storyId, jobId }, { model: IMAGE_MODEL }).catch(() => {});
   return {
     buf: Buffer.from(imagePart.inlineData.data, "base64"),
     mimeType: imagePart.inlineData.mimeType ?? "image/png",

@@ -181,7 +181,7 @@ RULES:
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents: [{ role: "user", parts: [{ text: def.scriptPrompt }] }],
       generationConfig: { temperature: 0.8, maxOutputTokens: 3000, thinkingConfig: { thinkingBudget: 0 } },
-    });
+    }, { callType: "classic_script_generation", storyId: id });
 
     const raw = geminiText(data);
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();

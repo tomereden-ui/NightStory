@@ -1,5 +1,5 @@
 import fs from "fs";
-import { trackELSfx } from "@/lib/usageTracker";
+import { recordSfxUsage } from "@/lib/serviceUsage";
 
 /**
  * Calls ElevenLabs sound-generation API.
@@ -10,6 +10,8 @@ export async function generateSfx(
   durationHintMs: number,
   apiKey: string,
   outputPath: string,
+  storyId?: string,
+  jobId?: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const durationSeconds = Math.min(22, Math.max(0.5, durationHintMs / 1000));
 
@@ -36,7 +38,9 @@ export async function generateSfx(
 
     const buf = Buffer.from(await res.arrayBuffer());
     fs.writeFileSync(outputPath, buf);
-    trackELSfx(description.length).catch(() => {});
+    // Billed per minute of the REQUESTED output duration, not prompt length —
+    // durationSeconds above is the exact value already sent to EL.
+    recordSfxUsage({ callType: "sfx_generation", storyId, jobId }, { model: "sound-generation", audioSeconds: durationSeconds }).catch(() => {});
     return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

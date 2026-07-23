@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { VOICE_PRESETS } from "@/config/voicePresets";
-import { trackELTts } from "@/lib/usageTracker";
+import { recordTtsUsage } from "@/lib/serviceUsage";
 
 const SAMPLE_TEXTS: Record<string, string> = {
   en: "Once upon a time, in a land filled with stars and moonlight, a little child drifted off to sleep.",
@@ -65,6 +65,6 @@ export async function POST(req: NextRequest) {
   }
 
   const buf = await res.arrayBuffer();
-  trackELTts(text.length).catch(() => {});
+  recordTtsUsage({ callType: "voice_preset_preview" }, { provider: "elevenlabs", model: "eleven_v3", characters: text.length }).catch(() => {});
   return NextResponse.json({ audioBase64: Buffer.from(buf).toString("base64"), mimeType: "audio/mpeg" });
 }

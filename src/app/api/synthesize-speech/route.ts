@@ -156,6 +156,9 @@ export async function POST(req: NextRequest) {
       useEL ? undefined : { maxAttempts: 1, perAttemptTimeoutMs: 22_000 },
       savedVoiceSettings?.similarity_boost,
       savedVoiceSettings?.use_speaker_boost,
+      undefined,
+      undefined,
+      storyId,
     );
 
     // Gemini may write to a different extension (.mp3/.ogg) than requested (.wav).

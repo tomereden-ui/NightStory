@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const lessons: MoralLesson[] = await analyzeLessonsForStory(blocks, apiKey, language);
+    const lessons: MoralLesson[] = await analyzeLessonsForStory(blocks, apiKey, language, storyId);
 
     if (storyId) {
       try {

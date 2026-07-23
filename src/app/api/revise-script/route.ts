@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { trackGemini } from "@/lib/usageTracker";
 import { splitLongBlocks } from "@/lib/services/scriptGenerationHelpers";
 import { readRevisionGuidance } from "@/lib/services/storyGuidance";
 import { recordScriptRevision } from "@/lib/perfMetrics";
+import { recordGeminiUsage } from "@/lib/serviceUsage";
 import { supabase } from "@/lib/supabase";
 import type { ScriptBlock } from "@/types";
 
@@ -102,8 +102,8 @@ ${returnFormat}`;
     // the first bad response.
     const generateAndParse = async <T,>(): Promise<{ text: string; parsed: T } | null> => {
       const result = await model.generateContent(userPrompt);
-      const _t = result.response.usageMetadata?.totalTokenCount;
-      if (_t) trackGemini(_t).catch(() => {});
+      const um = result.response.usageMetadata;
+      if (um) recordGeminiUsage({ callType: hasLessons ? "lesson_rewrite" : "director_note_revise", storyId }, { model: "gemini-3.5-flash", inputTokens: um.promptTokenCount, outputTokens: um.candidatesTokenCount, totalTokens: um.totalTokenCount }).catch(() => {});
       const text = result.response.text().trim()
         .replace(/^```(?:json)?\n?/, "")
         .replace(/\n?```$/, "")
