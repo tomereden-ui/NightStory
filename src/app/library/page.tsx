@@ -854,7 +854,15 @@ export default function LibraryPage() {
             <div ref={recentScrollRef} onScroll={updateRecentScroll}
               className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {[
-                ...entries.slice(0, 3).map((e) => ({
+                // myProducedEntries, not entries — entries includes drafts
+                // (includeDrafts=1, see the My Stories fetch above), and a
+                // draft has no audio and therefore no cover_url at all. It
+                // showed up here as a broken-looking placeholder thumbnail
+                // even though the story genuinely has no cover yet (nothing
+                // to fetch) — and worse, "Recently Played" showing a story
+                // that was never producible in the first place doesn't mean
+                // anything anyway.
+                ...myProducedEntries.slice(0, 3).map((e) => ({
                   key: `s-${e.id}`,
                   href: `/library/${e.id}`,
                   title: e.title,
