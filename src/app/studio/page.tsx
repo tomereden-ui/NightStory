@@ -748,11 +748,11 @@ function DirectionSheet({
                 {!isNarrator && (
                 <button
                   onClick={handleAutoAssign}
-                  className="w-full mb-2 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
-                  style={{ background: "rgba(79,195,247,0.12)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }}
+                  className="w-full mb-2 py-2.5 rounded-xl text-fs-body font-semibold tracking-wide transition-all active:scale-[0.98]"
+                  style={{ background: "rgba(79,195,247,0.08)", border: "1px solid rgba(79,195,247,0.28)", color: "#4fc3f7" }}
                   title="Match this character's nature (gender/style/age) to the best-fitting voice"
                 >
-                  ✨ Auto Assign
+                  Auto Assign
                 </button>
                 )}
                 <VoicePicker
