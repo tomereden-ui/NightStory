@@ -3019,6 +3019,14 @@ export default function Studio2Page() {
                 />
               }
               belowScript={
+                // The whole "Make Changes" area (this header + LessonEditor,
+                // plus Director's Note right after this component closes)
+                // stays hidden until the script itself is fully generated
+                // AND has passed the staggered validate-blocks pass — showing
+                // editing tools for a script that's still being checked lets
+                // the user "fix" content that's about to be silently
+                // overwritten by the validation pass's own corrections.
+                isValidating ? null : (
                 <>
                   {/* Edit — everything from here down changes the story
                       above rather than being part of it: moral lessons and
@@ -3051,6 +3059,7 @@ export default function Studio2Page() {
                     storyLanguage={storyLang}
                   />
                 </>
+                )
               }
             />
 
@@ -3088,8 +3097,11 @@ export default function Studio2Page() {
               </div>
             )}
 
-            {/* Director's Note */}
-            {(() => {
+            {/* Director's Note — hidden while the script is still being
+                validated, same rationale as the Make Changes/LessonEditor
+                gate above: nothing here should look editable while the
+                validate-blocks pass could still overwrite it. */}
+            {!isValidating && (() => {
               const hasFreeText = directorNote.trim().length > 0;
               const hasChips = selectedMoodChips.size > 0;
               const hasPending = hasFreeText || hasChips;
