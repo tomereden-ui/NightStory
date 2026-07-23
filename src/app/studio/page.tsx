@@ -3117,19 +3117,25 @@ export default function Studio2Page() {
                 script/voices genuinely differ from what's currently produced
                 (editing text back to exactly its produced form disables it
                 again — see scriptChangedFromProduced above). Also blocked
-                while there's an unsaved change pending (needsSave) — audio
-                should never be produced from a script the user hasn't
-                actually committed to yet. Getting unblocked means either
-                saving (Update version) or discarding the change (Discard &
-                start over); a hint below the button says so explicitly
-                rather than leaving it looking disabled for no visible
-                reason. */}
+                while there's an unsaved change pending (needsSave), OR a
+                Director's Note has been typed/chip-selected but not yet
+                applied — a pending note sits in local state
+                (directorNote/selectedMoodChips) until "Update Script" runs
+                handleRevise, so producing right now would silently ignore
+                it and use the script as it stood before the note, which
+                reads as the note having no effect at all. Getting
+                unblocked means either committing the pending thing (Update
+                version / Update Script) or discarding it (Discard & start
+                over / the note's own Cancel); a hint below the button says
+                so explicitly rather than leaving it looking disabled for
+                no visible reason. */}
             {(() => {
-              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover || needsSave;
-              // Only worth calling out when unsaved changes are specifically
+              const hasPendingDirectorNote = directorNote.trim().length > 0 || selectedMoodChips.size > 0;
+              const blocked = isProducing || !needsProduce || isValidating || generating || isFetchingCover || needsSave || hasPendingDirectorNote;
+              // Only worth calling out when a pending edit is specifically
               // why it's blocked — every other blocking reason already shows
               // its own state inside the button itself (mixing/checking/etc.).
-              const blockedByUnsavedChanges = needsSave && !isProducing && !isValidating && !generating && !isFetchingCover;
+              const blockedByPendingEdit = (needsSave || hasPendingDirectorNote) && !isProducing && !isValidating && !generating && !isFetchingCover;
               return (
                 <>
                   <button
@@ -3171,9 +3177,11 @@ export default function Studio2Page() {
                       </>
                     )}
                   </button>
-                  {blockedByUnsavedChanges && (
+                  {blockedByPendingEdit && (
                     <p className="text-fs-body text-center mt-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      Save or discard your changes to produce audio
+                      {hasPendingDirectorNote
+                        ? "Update or cancel your director's note to produce audio"
+                        : "Save or discard your changes to produce audio"}
                     </p>
                   )}
                 </>
