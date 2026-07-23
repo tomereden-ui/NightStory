@@ -445,6 +445,14 @@ export default function LunaChatPanel({
     // flush as the restore-draft effect above, before its own state updates
     // have applied to a new render yet.
     if (skipGreetingRef.current || firstMsgSent.current) return;
+    // The child profile (name/age/gender/interests) often finishes loading
+    // slightly after this component mounts — firing the greeting before it
+    // arrives would send Gemini an empty childProfile, producing a generic,
+    // gender-less greeting that (once greetedLanguageRef is set) would never
+    // get a chance to re-fire correctly, since a same-language re-render
+    // wouldn't trip this guard again. Waiting for a real profile first makes
+    // sure every greeting actually carries the child's gender.
+    if (!activeChild) return;
     if (greetedLanguageRef.current === language) return;
     greetedLanguageRef.current = language;
     setLoading(true);
