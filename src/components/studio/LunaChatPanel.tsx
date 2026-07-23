@@ -378,6 +378,13 @@ export default function LunaChatPanel({
   // below needs to reset it too, and reading it before its declaration
   // would be a temporal-dead-zone error.
   const greetedLanguageRef = useRef<string | null>(null);
+  // Real React state (not just a ref reset), bumped by handleDiscard --
+  // "Start over" on the SAME child in the SAME language changes neither
+  // activeChild nor language, so without something in the greeting effect's
+  // own dependency array, resetting greetedLanguageRef/skipGreetingRef alone
+  // is inert: a ref mutation doesn't make React re-run an effect, so the
+  // greeting silently never re-fired and Start Over left the chat empty.
+  const [greetResetToken, setGreetResetToken] = useState(0);
 
   useEffect(() => {
     greetAbortRef.current?.abort();
@@ -520,7 +527,7 @@ export default function LunaChatPanel({
     };
 
     attemptGreeting().finally(() => setLoading(false));
-  }, [activeChild, language]);
+  }, [activeChild, language, greetResetToken]);
 
   // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -673,6 +680,10 @@ export default function LunaChatPanel({
     setDurationMinutes(5);
     setCreateError(null);
     firstMsgSent.current = false;
+    // Forces the greeting effect to actually re-run even when neither
+    // activeChild nor language changed (the plain "Start over, same child,
+    // same language" case) -- see greetResetToken's declaration above.
+    setGreetResetToken((n) => n + 1);
     onDiscard?.();
   }
 
