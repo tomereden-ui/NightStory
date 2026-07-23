@@ -95,7 +95,7 @@ export class ProductionTimer {
       console.warn("[perfMetrics] flush: reading existing stages failed, proceeding without them:", err);
     }
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       job_id: meta.jobId,
       story_title: meta.storyTitle ?? null,
       language: meta.language ?? null,
@@ -112,12 +112,35 @@ export class ProductionTimer {
     };
 
     try {
-      const { data: updated, error: updateError } = await supabase
-        .from("production_metrics")
-        .update(payload)
-        .eq("story_id", meta.storyId)
-        .eq("outcome", "script_done")
-        .select("id");
+      // duration_seconds (production-metrics-duration-migration.sql) and
+      // script_generation_ms (production-metrics-generation-migration.sql)
+      // are both follow-up columns that may not exist yet in a given
+      // environment — and PostgREST rejects the WHOLE update/insert the
+      // moment even one column is unknown, which otherwise means this
+      // flush NEVER lands: every produced story's row stays stuck at
+      // outcome='script_done' with only markScriptDone's partial stages,
+      // forever, exactly like moveToTrash's trash-table gap. Same
+      // self-healing fallback: strip whichever column PostgREST just
+      // complained about and retry, capped so a genuinely different error
+      // still surfaces.
+      const updatePayload = { ...payload };
+      let updated: { id: string }[] | null = null;
+      let updateError: { message: string } | null = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const { data, error } = await supabase
+          .from("production_metrics")
+          .update(updatePayload)
+          .eq("story_id", meta.storyId)
+          .eq("outcome", "script_done")
+          .select("id");
+        updated = data;
+        updateError = error;
+        if (!error) break;
+        const missingColumn = /Could not find the '([a-zA-Z0-9_]+)' column/.exec(error.message)?.[1];
+        if (!missingColumn || !(missingColumn in updatePayload)) break;
+        console.warn(`[perfMetrics] flush: production_metrics missing column '${missingColumn}' (migration not run yet) — retrying update without it`);
+        delete updatePayload[missingColumn];
+      }
 
       if (updateError) {
         console.warn("[perfMetrics] update failed:", updateError.message);
@@ -131,8 +154,18 @@ export class ProductionTimer {
         console.warn(`[perfMetrics] no script_done row found for story_id=${meta.storyId}; inserting a fresh row instead of updating`);
       }
 
-      const { error } = await supabase.from("production_metrics").insert({ story_id: meta.storyId, ...payload });
-      if (error) console.warn("[perfMetrics] insert failed:", error.message);
+      const insertPayload: Record<string, unknown> = { story_id: meta.storyId, ...payload };
+      let insertError: { message: string } | null = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const { error } = await supabase.from("production_metrics").insert(insertPayload);
+        insertError = error;
+        if (!error) break;
+        const missingColumn = /Could not find the '([a-zA-Z0-9_]+)' column/.exec(error.message)?.[1];
+        if (!missingColumn || !(missingColumn in insertPayload)) break;
+        console.warn(`[perfMetrics] flush: production_metrics missing column '${missingColumn}' (migration not run yet) — retrying insert without it`);
+        delete insertPayload[missingColumn];
+      }
+      if (insertError) console.warn("[perfMetrics] insert failed:", insertError.message);
     } catch (err) {
       console.warn("[perfMetrics] flush failed:", err);
     }
