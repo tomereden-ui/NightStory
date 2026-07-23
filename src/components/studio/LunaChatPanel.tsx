@@ -959,8 +959,9 @@ export default function LunaChatPanel({
         <div className="pt-1 flex flex-col gap-3">
           {/* Duration picker */}
           <div className="rounded-2xl px-4 py-3" style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.12)" }}>
-            <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-1.5 mb-2.5">
               <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(79,195,247,0.5)" }}>{wizardUi.storyLength}</span>
+              <span className="text-fs-body" style={{ color: "rgba(79,195,247,0.35)" }}>·</span>
               <span className="text-fs-body font-bold tabular-nums" style={{ color: "#4fc3f7" }}>{durationMinutes} {wizardUi.minutesUnit}</span>
             </div>
             <div className="flex gap-2">
