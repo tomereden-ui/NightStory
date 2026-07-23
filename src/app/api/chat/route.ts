@@ -103,9 +103,26 @@ export async function POST(req: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
+    const childContextBlock = buildChildContext(childProfile);
+    const languageOverrideBlock = languageOverride(language);
+
+    // Empty messages = initial greeting trigger — log exactly what per-child
+    // info Gemini receives for this session (everything EXCEPT the static
+    // gemini-chat-guide.txt persona/rules text), so a wrong-gender greeting
+    // can be traced straight to either "the data sent was wrong" or "the
+    // data was right and Gemini just didn't follow it" without guessing.
+    if (messages.length === 0) {
+      console.log(
+        `[Luna greeting] child profile info sent to Gemini for this session:\n` +
+        `--- raw childProfile (as received from the client) ---\n${JSON.stringify(childProfile, null, 2)}\n` +
+        `--- ACTIVE CHILD PROFILE block (built server-side, appended to the guide) ---\n${childContextBlock || "(empty — childProfile has no name)"}\n` +
+        `--- LANGUAGE OVERRIDE block ---\n${languageOverrideBlock || "(none — no language override for this request)"}`
+      );
+    }
+
     const model = genAI.getGenerativeModel({
       model: "gemini-3.5-flash",
-      systemInstruction: loadChatGuide() + buildChildContext(childProfile) + languageOverride(language),
+      systemInstruction: loadChatGuide() + childContextBlock + languageOverrideBlock,
       generationConfig: {
         // Luna's replies are short conversational turns following an explicit
         // guide — no reasoning chain needed. Without any generationConfig,
