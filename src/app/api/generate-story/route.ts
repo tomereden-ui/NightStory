@@ -278,6 +278,11 @@ export async function POST(req: NextRequest) {
     let raw: RawResponse | undefined;
     let currentPrompt = prompt;
     const maxLengthAttempts = 3;
+    // Times just this retry loop — the raw script-writing step itself —
+    // separately from casting/scene-generation/language-detection/etc. below,
+    // so production_metrics can report generation time in isolation. See
+    // markScriptDone in src/lib/perfMetrics.ts.
+    const generationStartedAt = Date.now();
 
     for (let attempt = 1; attempt <= maxLengthAttempts; attempt++) {
       // result.response.text() throws (not the generateContent() call itself)
@@ -344,6 +349,7 @@ export async function POST(req: NextRequest) {
       console.warn(`[generate-story] Attempt ${attempt}: ${actualWords} words vs target ${targetWords} — retrying with a length correction.`);
       currentPrompt = `${prompt}${buildLengthCorrectionNote(actualWords, targetWords, raw!.blocks?.length, targetBlockRange)}`;
     }
+    const generationMs = Date.now() - generationStartedAt;
 
     if (!raw) {
       return NextResponse.json({ error: "Gemini returned non-JSON output after retries." }, { status: 502 });
@@ -456,7 +462,7 @@ export async function POST(req: NextRequest) {
       ? remappedScenes
       : await generateScenes(finalBlocks, apiKey);
 
-    return NextResponse.json({ blocks: finalBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes: finalScenes, language: detectedLanguage });
+    return NextResponse.json({ blocks: finalBlocks, title: raw.title ?? "", summary: raw.summary ?? "", coverPrompt: raw.coverPrompt ?? "", lessonImplementations, characters: raw.characters ?? {}, scenes: finalScenes, language: detectedLanguage, generationMs });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

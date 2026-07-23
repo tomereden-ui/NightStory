@@ -77,6 +77,24 @@ export class ProductionTimer {
       errorMessage?: string;
     },
   ): Promise<void> {
+    // markScriptDone (below) already recorded a "script_generation" span in
+    // stages when the script itself was written — a plain overwrite here
+    // would erase it the moment audio production finishes. Read whatever's
+    // already there first and layer this run's own stages on top, so the
+    // full script → audio timeline survives in one row.
+    let existingStages: Record<string, StageSpan> = {};
+    try {
+      const { data: existingRow } = await supabase
+        .from("production_metrics")
+        .select("stages")
+        .eq("story_id", meta.storyId)
+        .eq("outcome", "script_done")
+        .maybeSingle();
+      existingStages = (existingRow?.stages as Record<string, StageSpan> | undefined) ?? {};
+    } catch (err) {
+      console.warn("[perfMetrics] flush: reading existing stages failed, proceeding without them:", err);
+    }
+
     const payload = {
       job_id: meta.jobId,
       story_title: meta.storyTitle ?? null,
@@ -90,7 +108,7 @@ export class ProductionTimer {
       outcome: meta.outcome,
       error_message: meta.errorMessage ?? null,
       total_ms: this.totalMs(),
-      stages: this.stages,
+      stages: { ...existingStages, ...this.stages },
     };
 
     try {
@@ -131,7 +149,18 @@ export class ProductionTimer {
  */
 export async function markScriptDone(
   supabase: SupabaseClient,
-  meta: { storyId: string; storyTitle?: string; language?: string; dialogueCount?: number; sfxCount?: number },
+  meta: {
+    storyId: string;
+    storyTitle?: string;
+    language?: string;
+    dialogueCount?: number;
+    sfxCount?: number;
+    // How long the raw Gemini generation step alone took (the generate-story/
+    // five-question-story retry loop), measured server-side and threaded
+    // through the client to here — undefined for admin-pasted scripts, which
+    // never call a generation endpoint at all.
+    scriptGenerationMs?: number;
+  },
 ): Promise<void> {
   try {
     const { error } = await supabase.from("production_metrics").insert({
@@ -140,8 +169,15 @@ export async function markScriptDone(
       language: meta.language ?? null,
       dialogue_count: meta.dialogueCount ?? null,
       sfx_count: meta.sfxCount ?? null,
+      script_generation_ms: meta.scriptGenerationMs ?? null,
       outcome: "script_done",
       total_ms: 0,
+      // Recorded as a proper stage span (not just the flat column above) so
+      // it sits in the same timeline ProductionTimer's later audio-pipeline
+      // stages land in — flush() merges into this rather than overwriting it.
+      stages: meta.scriptGenerationMs !== undefined
+        ? { script_generation: { startMs: 0, endMs: meta.scriptGenerationMs, ms: meta.scriptGenerationMs } }
+        : {},
     });
     if (error) console.warn("[perfMetrics] markScriptDone insert failed:", error.message);
   } catch (err) {

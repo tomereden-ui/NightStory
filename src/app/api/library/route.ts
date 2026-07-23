@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
     characterProfiles?: Record<string, CharacterProfile>;
     moralLessons?: MoralLesson[];
     childIds?: string[];
+    scriptGenerationMs?: number;
   };
   try {
     body = await req.json();
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
     language: body.language,
     dialogueCount: body.blocks.filter((b) => b.characterName !== "SFX").length,
     sfxCount: body.blocks.filter((b) => b.characterName === "SFX").length,
+    scriptGenerationMs: body.scriptGenerationMs,
   });
 
   return NextResponse.json({ id });

@@ -28,6 +28,12 @@ export interface DraftState {
   audioUrl?: string;
   /** Paired with audioUrl — lets Studio show a real duration in the sticky player without re-fetching. */
   durationSeconds?: number;
+  /** How long the raw Gemini script-generation step alone took (ms), as
+   *  reported by generate-story/five-question-story — threaded through to
+   *  markScriptDone (see src/lib/perfMetrics.ts) when this draft is first
+   *  saved. Undefined for a story loaded from an existing draft/library
+   *  entry, not a fresh generation. */
+  generationMs?: number;
 }
 
 export function readDraft(key = KEY): DraftState | null {

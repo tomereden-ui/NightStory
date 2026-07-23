@@ -1254,6 +1254,13 @@ export default function Studio2Page() {
   // progress instead of an undifferentiated stall.
   const [validatingPhase, setValidatingPhase] = useState("");
   const [totalExpectedBlocks, setTotalExpectedBlocks] = useState<number | undefined>(undefined);
+  // How long the most recent generation's raw Gemini script-writing step took
+  // (ms) — reported by generate-story/five-question-story, captured here from
+  // whichever generation path just produced the current script, and forwarded
+  // to POST /api/library (→ markScriptDone) the moment the draft is first
+  // saved. Undefined for a story reopened from an existing draft/library
+  // entry rather than freshly generated this session.
+  const [lastGenerationMs, setLastGenerationMs] = useState<number | undefined>(undefined);
   // Issues found by re-running the policy check (validate-script) after a
   // manual save — cleared at the start of every Update Version click so a
   // stale list never lingers from a previous check.
@@ -1494,6 +1501,7 @@ export default function Studio2Page() {
       setCoverFocusY(draft.coverFocusY);
       setEditingStoryId(draft.editingStoryId ?? null);
       setForkedFromTitle(draft.forkedFromTitle ?? null);
+      setLastGenerationMs(draft.generationMs);
       const needsLessonAnalysis = !draft.moralLessons?.length && draft.scriptBlocks.length > 0;
       if (draft.language) {
         setStoryLang(draft.language);
@@ -1617,6 +1625,7 @@ export default function Studio2Page() {
         characterProfiles: Object.keys(characterProfiles).length ? characterProfiles : undefined,
         moralLessons: moralLessons.length ? moralLessons : undefined,
         childIds: activeChildId ? [activeChildId] : undefined,
+        scriptGenerationMs: lastGenerationMs,
       }),
     })
       .then((r) => r.json())
@@ -1629,7 +1638,7 @@ export default function Studio2Page() {
       })
       .catch(() => {})
       .finally(() => { creatingDraftRef.current = false; draftSaveInFlightRef.current = null; });
-  }, [loaded, scriptBlocks, totalExpectedBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons]);
+  }, [loaded, scriptBlocks, totalExpectedBlocks, editingStoryId, storyTitle, summary, storyLang, scenes, characterProfiles, moralLessons, lastGenerationMs]);
 
   // No silent autosave here by design: the live story row (and the version
   // history) must only ever change when the user explicitly clicks Update
@@ -1811,6 +1820,7 @@ export default function Studio2Page() {
     setSummary("");
     setCoverUrl("");
     setStoryHasAudio(false);
+    setLastGenerationMs(undefined);
     // A brand-new story must never show a previous story's analyzed lessons
     // while its own script is still being generated/analyzed.
     setMoralLessons([]);
@@ -1849,6 +1859,7 @@ export default function Studio2Page() {
       const impls = (data.lessonImplementations ?? []) as { lesson: string; implemented: boolean; how: string }[];
       const storyChars = (data.characters ?? {}) as Record<string, CharacterProfile>;
       const rawScenes = (data.scenes ?? []) as StoryScene[];
+      setLastGenerationMs(typeof data.generationMs === "number" ? data.generationMs : undefined);
 
       // Story is ready — transition from "generating" to "validating"
       setSummary(sm);
@@ -2526,12 +2537,14 @@ export default function Studio2Page() {
               // or Step-by-step) never got its own draft row / production_
               // metrics 'script_done' row at all.
               setEditingStoryId(null);
+              setLastGenerationMs(undefined);
             }}
             onScriptReady={(draft, chatDuration) => {
               const rawBlocks = draft.scriptBlocks;
               setGenerating(false);
               setScriptBlocks([]);
               setSummary(draft.summary);
+              setLastGenerationMs(draft.generationMs);
               if (chatDuration) setDurationMinutes(chatDuration);
               setCoverPrompt(draft.coverPrompt);
               setCoverUrl("");
@@ -2679,13 +2692,15 @@ export default function Studio2Page() {
                 // row / production_metrics 'script_done' row (see the
                 // matching comment in Chat mode's onGenerating below).
                 setEditingStoryId(null);
+                setLastGenerationMs(undefined);
               }}
-              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle }) => {
+              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle, generationMs: fqGenerationMs }) => {
                 setActiveTab("script");
                 setSummary(sm);
                 setCoverPrompt(cp);
                 setCoverUrl("");
                 setStoryTitle(fqTitle ?? "");
+                setLastGenerationMs(fqGenerationMs);
                 // storyLang deliberately left as-is — it already reflects
                 // whatever language was chosen in this flow's own picker,
                 // not necessarily the app's global UI language.
