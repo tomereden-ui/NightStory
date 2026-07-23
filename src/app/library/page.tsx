@@ -233,7 +233,7 @@ function ClassicsTab({ classics, loading, onClassicUpdated, matchesFilter }: {
 
 // ── Main Library page ─────────────────────────────────────────────────────────
 
-type LibraryTab = "all" | "my-stories" | "family" | "classics" | "community";
+type LibraryTab = "all" | "my-stories" | "family" | "classics" | "community" | "drafts";
 
 // ── Family Stories grid with per-card child assignment ────────────────────────
 
@@ -588,12 +588,12 @@ export default function LibraryPage() {
     // open — the whole point of that link is "take me to Classics", not
     // "take me wherever I happened to leave off".
     const tabParam = searchParams.get("tab");
-    const validTabs: LibraryTab[] = ["all", "my-stories", "family", "classics", "community"];
+    const validTabs: LibraryTab[] = ["all", "my-stories", "family", "classics", "community", "drafts"];
     if (tabParam && (validTabs as string[]).includes(tabParam)) {
       setActiveTab(tabParam as LibraryTab);
     } else {
       const saved = sessionStorage.getItem("library-tab");
-      if (saved === "classics" || saved === "community" || saved === "family" || saved === "all") setActiveTab(saved as LibraryTab);
+      if (saved === "classics" || saved === "community" || saved === "family" || saved === "all" || saved === "drafts") setActiveTab(saved as LibraryTab);
     }
     const childId = typeof window !== "undefined" ? localStorage.getItem("ns-active-child-id") : null;
     setActiveChildId(childId);
@@ -732,7 +732,13 @@ export default function LibraryPage() {
   // One shared search bar + chip row now drives every tab's filtering —
   // My Stories/All/Family/Community/Classics all use the exact same
   // matchesFilters predicate against their own dataset.
-  const filtered = dedupeBySeries(entries.filter(matchesFilters));
+  // My Stories only ever shows produced stories — an unproduced-but-saved
+  // script (isDraft) belongs in its own Drafts tab instead, so it doesn't
+  // clutter the grid a parent expects to be finished, listenable stories.
+  const myProducedEntries = entries.filter((e) => !e.isDraft);
+  const myDraftEntries = entries.filter((e) => e.isDraft);
+  const filtered = dedupeBySeries(myProducedEntries.filter(matchesFilters));
+  const filteredDrafts = dedupeBySeries(myDraftEntries.filter(matchesFilters));
   const filteredAll = dedupeBySeries(allEntries.filter(matchesFilters));
   const filteredFamily = dedupeBySeries(familyEntries.filter(matchesFilters));
   const filteredCommunity = dedupeBySeries(communityStories.filter(matchesFilters));
@@ -898,6 +904,7 @@ export default function LibraryPage() {
             { key: "family",     label: "Family Stories" },
             { key: "classics",   label: t("classicsTab") },
             { key: "community",  label: t("communityTab") },
+            { key: "drafts",     label: "Drafts" },
           ] as { key: LibraryTab; label: string }[]).map(({ key, label }) => {
             const active = activeTab === key;
             return (
@@ -1215,21 +1222,28 @@ export default function LibraryPage() {
           )
         )}
 
-        {/* ── My Stories tab ── */}
-        {activeTab === "my-stories" && (
+        {/* ── My Stories / Drafts tabs — share the exact same card grid and
+            delete-confirm flow, just scoped to a different slice of
+            `entries` (produced vs. isDraft) so an in-progress script never
+            clutters the grid a parent expects to be finished stories. ── */}
+        {(activeTab === "my-stories" || activeTab === "drafts") && (() => {
+          const isDraftsTab = activeTab === "drafts";
+          const rawList = isDraftsTab ? myDraftEntries : myProducedEntries;
+          const list = isDraftsTab ? filteredDrafts : filtered;
+          return (
           loading ? (
             <div className="grid gap-3 pt-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.04)", aspectRatio: "2/3", animationDelay: `${i * 0.08}s` }} />
               ))}
             </div>
-          ) : entries.length === 0 ? (
+          ) : rawList.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-24 gap-4 text-center">
-              <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>🌙</span>
-              <p className="text-white/40 text-fs-body font-light tracking-wide">{t("noStories")}</p>
-              <p className="text-white/40 text-fs-body">{t("createFirstStory")}</p>
+              <span className="text-5xl" style={{ filter: "drop-shadow(0 0 20px rgba(79,195,247,0.4))" }}>{isDraftsTab ? "📝" : "🌙"}</span>
+              <p className="text-white/40 text-fs-body font-light tracking-wide">{isDraftsTab ? "No drafts yet" : t("noStories")}</p>
+              <p className="text-white/40 text-fs-body">{isDraftsTab ? "Save a script for later in Studio and it'll show up here" : t("createFirstStory")}</p>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : list.length === 0 ? (
             <div className="flex flex-col items-center justify-center pt-20 gap-3 text-center">
               <span className="text-fs-display" style={{ filter: "drop-shadow(0 0 16px rgba(79,195,247,0.3))" }}>🔭</span>
               <p className="text-white/40 text-fs-body">{t("noStoriesFilter")}</p>
@@ -1247,7 +1261,7 @@ export default function LibraryPage() {
               className="grid gap-3"
               style={{ gridTemplateColumns: effective === "desktop" ? "repeat(4, 1fr)" : effective === "tablet" ? "repeat(3, 1fr)" : "repeat(3, 1fr)" }}
             >
-              {filtered.slice(0, visibleCount).map((entry) => {
+              {list.slice(0, visibleCount).map((entry) => {
                 const isConfirming = confirmingId === entry.id;
                 const isDeleting = deletingId === entry.id;
                 const [c1, c2] = cardPalette(entry.title);
@@ -1368,12 +1382,13 @@ export default function LibraryPage() {
                 );
               })}
             </div>
-            {filtered.length > visibleCount && (
+            {list.length > visibleCount && (
               <NextStoriesButton onClick={() => setVisibleCount((v) => v + PAGE_SIZE)} />
             )}
             </>
           )
-        )}
+          );
+        })()}
       </div>
 
       {/* FAB — only on My Stories tab */}
