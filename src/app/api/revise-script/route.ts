@@ -149,7 +149,11 @@ ${returnFormat}`;
       // several shorter consecutive blocks — lessonHighlight, already
       // assigned per-block above, carries forward onto every resulting chunk.
       if (storyId) {
-        void recordScriptRevision(supabase, { storyId, type: "lesson_rewrite", ms: Date.now() - revisionStartedAt, instruction });
+        // Awaited, not fire-and-forget: a `void` promise racing the response
+        // return can be silently killed on serverless-style hosts, and the
+        // extra couple of DB round trips are nothing next to the Gemini call
+        // this request just made. recordScriptRevision never throws.
+        await recordScriptRevision(supabase, { storyId, type: "lesson_rewrite", ms: Date.now() - revisionStartedAt, instruction });
       }
       return NextResponse.json({ blocks: splitLongBlocks(merged, 30).blocks, lessonImplementations });
     }
@@ -170,7 +174,8 @@ ${returnFormat}`;
     }));
 
     if (storyId) {
-      void recordScriptRevision(supabase, { storyId, type: "directors_note", ms: Date.now() - revisionStartedAt, instruction });
+      // Awaited for the same reason as the lessons path above.
+      await recordScriptRevision(supabase, { storyId, type: "directors_note", ms: Date.now() - revisionStartedAt, instruction });
     }
     return NextResponse.json({ blocks: splitLongBlocks(merged, 30).blocks });
   } catch (err: unknown) {

@@ -163,7 +163,7 @@ export async function markScriptDone(
   },
 ): Promise<void> {
   try {
-    const { error } = await supabase.from("production_metrics").insert({
+    const row = {
       story_id: meta.storyId,
       story_title: meta.storyTitle ?? null,
       language: meta.language ?? null,
@@ -178,8 +178,26 @@ export async function markScriptDone(
       stages: meta.scriptGenerationMs !== undefined
         ? { script_generation: { startMs: 0, endMs: meta.scriptGenerationMs, ms: meta.scriptGenerationMs } }
         : {},
-    });
-    if (error) console.warn("[perfMetrics] markScriptDone insert failed:", error.message);
+    };
+    const { error } = await supabase.from("production_metrics").insert(row);
+    if (error) {
+      // Until production-metrics-generation-migration.sql has been run, the
+      // script_generation_ms column doesn't exist — and one unknown column
+      // fails the ENTIRE insert, meaning no script_done row at all, which
+      // then breaks everything downstream that finds-and-updates this row
+      // (ProductionTimer.flush, recordScriptRevision's phase_N entries).
+      // Degrade for real: retry without the new column. The duration isn't
+      // fully lost either — it still rides along inside stages (a column
+      // that has existed since the base migration).
+      if (/script_generation_ms/.test(error.message)) {
+        const { script_generation_ms: _dropped, ...withoutNewColumn } = row;
+        const { error: retryError } = await supabase.from("production_metrics").insert(withoutNewColumn);
+        if (retryError) console.warn("[perfMetrics] markScriptDone retry insert failed:", retryError.message);
+        else console.warn("[perfMetrics] markScriptDone: script_generation_ms column missing (migration not run yet) — row saved without it");
+      } else {
+        console.warn("[perfMetrics] markScriptDone insert failed:", error.message);
+      }
+    }
   } catch (err) {
     console.warn("[perfMetrics] markScriptDone failed:", err);
   }
