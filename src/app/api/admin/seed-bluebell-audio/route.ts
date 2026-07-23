@@ -26,6 +26,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "I can already feel it! Now — who travels alongside our hero?",
     q4: "Magnificent! Now — and this is the most important question of all — what is the funniest, or the scariest thing in our hero's world?",
     q5: "That is magnificent... Last question — when the adventure ends, how should our hero feel?",
+    summary: "We're all set! Let's create your magical story now.",
   },
   he: {
     q1: "כל הרפתקה צריכה גיבור... מי שלנו הלילה?",
@@ -33,6 +34,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "אני כבר מרגישה את זה! עכשיו — מי מלווה את הגיבור שלנו?",
     q4: "נהדר! עכשיו — וזו השאלה הכי חשובה מכל — מה הדבר הכי מצחיק, או הכי מפחיד בעולמו של הגיבור שלנו?",
     q5: "זה נהדר... שאלה אחרונה — כשההרפתקה נגמרת, איך הגיבור שלנו צריך להרגיש?",
+    summary: "הכל מוכן! עכשיו ניצור את הסיפור הקסום שלך.",
   },
   es: {
     q1: "Toda aventura necesita un héroe... ¿Quién es el nuestro esta noche?",
@@ -40,6 +42,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "¡Ya puedo sentirlo! Ahora — ¿quién viaja junto a nuestro héroe?",
     q4: "¡Magnífico! Ahora — y esta es la pregunta más importante de todas — ¿qué es lo más divertido o lo más aterrador en el mundo de nuestro héroe?",
     q5: "Eso es magnífico... Última pregunta — cuando la aventura termine, ¿cómo debería sentirse nuestro héroe?",
+    summary: "¡Todo listo! Ahora vamos a crear tu historia mágica.",
   },
   fr: {
     q1: "Chaque aventure a besoin d'un héros... Qui est le nôtre ce soir?",
@@ -47,6 +50,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "Je le sens déjà! Maintenant — qui voyage aux côtés de notre héros?",
     q4: "Magnifique! Maintenant — et c'est la question la plus importante de toutes — quelle est la chose la plus drôle ou la plus effrayante dans le monde de notre héros?",
     q5: "C'est magnifique... Dernière question — quand l'aventure se termine, comment notre héros devrait-il se sentir?",
+    summary: "Tout est prêt ! Créons maintenant ton histoire magique.",
   },
   de: {
     q1: "Jedes Abenteuer braucht einen Helden... Wer ist unser Held heute Nacht?",
@@ -54,6 +58,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "Ich kann es schon spüren! Nun — wer reist an der Seite unseres Helden?",
     q4: "Wundervoll! Nun — und das ist die wichtigste Frage von allen — was ist das Lustigste oder das Gruseligste in der Welt unseres Helden?",
     q5: "Das ist wundervoll... Letzte Frage — wenn das Abenteuer endet, wie sollte sich unser Held fühlen?",
+    summary: "Alles ist bereit! Lass uns jetzt deine zauberhafte Geschichte erschaffen.",
   },
   pt: {
     q1: "Toda aventura precisa de um herói... Quem é o nosso esta noite?",
@@ -61,6 +66,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "Já posso sentir! Agora — quem viaja ao lado do nosso herói?",
     q4: "Magnífico! Agora — e esta é a pergunta mais importante de todas — qual é a coisa mais engraçada ou mais assustadora no mundo do nosso herói?",
     q5: "Isso é magnífico... Última pergunta — quando a aventura terminar, como nosso herói deve se sentir?",
+    summary: "Está tudo pronto! Vamos criar agora a sua história mágica.",
   },
   ar: {
     q1: "كل مغامرة تحتاج إلى بطل... من هو بطلنا الليلة؟",
@@ -68,6 +74,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "أستطيع أن أشعر بذلك بالفعل! الآن — من يسافر إلى جانب بطلنا؟",
     q4: "رائع! الآن — وهذا هو السؤال الأهم من بين جميع الأسئلة — ما هو أكثر شيء مضحك أو مخيف في عالم بطلنا؟",
     q5: "هذا رائع... السؤال الأخير — عندما تنتهي المغامرة، كيف يجب أن يشعر بطلنا؟",
+    summary: "كل شيء جاهز! لنصنع الآن قصتك السحرية.",
   },
   zh: {
     q1: "每个冒险都需要一个英雄... 今晚我们的英雄是谁？",
@@ -75,6 +82,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "我已经感受到了！现在 — 谁与我们的英雄同行？",
     q4: "太棒了！现在 — 这是所有问题中最重要的 — 我们英雄的世界里什么最有趣，或者最可怕？",
     q5: "太精彩了... 最后一个问题 — 当冒险结束时，我们的英雄应该有什么感受？",
+    summary: "一切准备就绪！现在让我们创造你的魔法故事吧。",
   },
   ja: {
     q1: "すべての冒険には英雄が必要です... 今夜の私たちの英雄は誰でしょう？",
@@ -82,6 +90,7 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "もうわかります！さて — 私たちの英雄と一緒に旅するのは誰でしょう？",
     q4: "素晴らしい！さて — そしてこれが一番大切な質問です — 私たちの英雄の世界で一番おかしいこと、または一番怖いことは何でしょう？",
     q5: "それは素晴らしい... 最後の質問 — 冒険が終わったとき、私たちの英雄はどう感じるべきでしょう？",
+    summary: "準備万端です！さあ、あなたの魔法の物語を作りましょう。",
   },
   it: {
     q1: "Ogni avventura ha bisogno di un eroe... Chi è il nostro stanotte?",
@@ -89,10 +98,11 @@ const BLUEBELL_SCRIPTS_BY_LANG: Record<string, Record<string, string>> = {
     q3: "Lo sento già! Ora — chi viaggia accanto al nostro eroe?",
     q4: "Magnifico! Ora — e questa è la domanda più importante di tutte — qual è la cosa più divertente o più spaventosa nel mondo del nostro eroe?",
     q5: "È magnifico... Ultima domanda — quando l'avventura finisce, come dovrebbe sentirsi il nostro eroe?",
+    summary: "Tutto pronto! Creiamo ora la tua storia magica.",
   },
 };
 
-const QUESTION_KEYS = ["q1", "q2", "q3", "q4", "q5"];
+const QUESTION_KEYS = ["q1", "q2", "q3", "q4", "q5", "summary"];
 const FOLDER = "bluebell-questions";
 
 function resolveScripts(lang: string): Record<string, string> {

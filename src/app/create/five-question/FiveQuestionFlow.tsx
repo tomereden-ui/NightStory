@@ -1211,7 +1211,7 @@ function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, opti
 
 type SummaryPhase = "table" | "script" | "countdown" | "herewego";
 
-function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, luna, ui, moodLabels, companionTypes, animalTypes }: {
+function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, luna, ui, moodLabels, companionTypes, animalTypes, audioUrl }: {
   answers: Answers;
   durationMinutes: number;
   onDurationChange: (v: number) => void;
@@ -1223,9 +1223,19 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   moodLabels: Record<string, string>;
   companionTypes: CompanionTypeMeta[];
   animalTypes: AnimalTypeMeta[];
+  audioUrl?: string;
 }) {
   const [phase, setPhase] = useState<SummaryPhase>("table");
   const [showReady, setShowReady] = useState(false);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    if (!audioUrl) return;
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    audio.play().catch(() => {});
+    return () => { audio.pause(); audioRef.current = null; };
+  }, [audioUrl]);
 
   const moodLabel = answers.q5_mood ? moodLabels[answers.q5_mood] : "";
   // answers.q1_hero / q3_companion can be built from English proper-noun
@@ -1262,12 +1272,20 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
         ) : <div className="w-16" />}
       </div>
 
+      {phase === "table" && (
+        <div className="mb-7">
+          <LunaLine text={luna.summaryReady} />
+        </div>
+      )}
+
       <div className="rounded-2xl mb-5 overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
         {ROWS.map((row, i) => (
           <div key={row.label} className="flex items-center px-4 py-3 gap-3"
             style={{ borderBottom: i < ROWS.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-            <span className="text-fs-body font-bold uppercase tracking-widest w-20 flex-shrink-0" style={{ color: "rgba(255,255,255,0.52)" }}>{row.label}</span>
-            <span className="flex-1 text-fs-body text-white/80 truncate">{row.value}</span>
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.52)" }}>{row.label}</span>
+              <span className="text-fs-body text-white/80 truncate">{row.value}</span>
+            </div>
             <button onClick={() => onEditStep(row.step)}
               className="text-fs-body px-2.5 py-1 rounded-lg flex-shrink-0"
               style={{ background: "rgba(79,195,247,0.08)", color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.2)" }}>
@@ -1564,7 +1582,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
 
         if (!missing?.length) return;
 
-        const ordered = ["q1", "q2", "q3", "q4", "q5"].filter((k) => missing.includes(k));
+        const ordered = ["q1", "q2", "q3", "q4", "q5", "summary"].filter((k) => missing.includes(k));
         for (const key of ordered) {
           if (cancelled) return;
           try {
@@ -1810,7 +1828,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   if (step === "summary") return (
     <>
       {ErrorBanner}
-      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={showInternalReset ? handleReset : undefined} luna={luna} ui={ui} moodLabels={moodLabels} companionTypes={companionTypes} animalTypes={animalTypes} />
+      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={showInternalReset ? handleReset : undefined} luna={luna} ui={ui} moodLabels={moodLabels} companionTypes={companionTypes} animalTypes={animalTypes} audioUrl={questionAudios.summary} />
     </>
   );
 

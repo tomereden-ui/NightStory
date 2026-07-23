@@ -13,6 +13,9 @@ export interface LunaCopy {
   q5: (engine: string) => string;
   launch: (mood: string, companion: string, world: string, engine: string) => string;
   hereWeGo: string;
+  /** Narrated title on the summary/selections screen, before the launch
+   *  recap script — announces the recap is about to begin. */
+  summaryReady: string;
   q1TextOwn: string;
   q1TextStranger: string;
   q1TextFamilyFriend: string;
@@ -42,6 +45,7 @@ const EN: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}. Then I know exactly how this ends. Our hero. ${companion} — a loyal companion. ${world}. ${engine}. This story has never existed before tonight. Are you ready?`,
   hereWeGo: "...Here... we... go.",
+  summaryReady: "We're all set! Let's create your magical story now.",
   q1TextOwn: "What's your name?",
   q1TextStranger: "Give the stranger a name...",
   q1TextFamilyFriend: "Who's coming along? Give them a name...",
@@ -74,6 +78,7 @@ const HE: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}. אז אני יודעת בדיוק איך זה נגמר. הגיבור שלנו. ${companion} — בן לוויה נאמן. ${world}. ${engine}. הסיפור הזה מעולם לא היה קיים לפני הלילה. מוכנים?`,
   hereWeGo: "...ו... יוצאים... לדרך.",
+  summaryReady: "הכל מוכן! עכשיו ניצור את הסיפור הקסום שלך.",
   q1TextOwn: "מה השם שלך?",
   q1TextStranger: "תן שם לזר...",
   q1TextFamilyFriend: "מי מצטרף להרפתקה? תן להם שם...",
@@ -106,6 +111,7 @@ const ES: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}. Entonces sé exactamente cómo termina esto. Nuestro héroe. ${companion} — un compañero leal. ${world}. ${engine}. Esta historia nunca ha existido antes de esta noche. ¿Listos?`,
   hereWeGo: "...Aquí... vamos...",
+  summaryReady: "¡Todo listo! Ahora vamos a crear tu historia mágica.",
   q1TextOwn: "¿Cómo te llamas?",
   q1TextStranger: "Dale un nombre al desconocido...",
   q1TextFamilyFriend: "¿Quién los acompaña? Dales un nombre...",
@@ -138,6 +144,7 @@ const FR: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}. Alors je sais exactement comment cela se termine. Notre héros. ${companion} — un compagnon fidèle. ${world}. ${engine}. Cette histoire n'a jamais existé avant ce soir. Prêts ?`,
   hereWeGo: "...Et... on y... va.",
+  summaryReady: "Tout est prêt ! Créons maintenant ton histoire magique.",
   q1TextOwn: "Quel est ton nom ?",
   q1TextStranger: "Donne un nom à l'inconnu...",
   q1TextFamilyFriend: "Qui les accompagne ? Donne-leur un nom...",
@@ -170,6 +177,7 @@ const DE: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}. Dann weiß ich genau, wie das endet. Unser Held. ${companion} — ein treuer Begleiter. ${world}. ${engine}. Diese Geschichte gab es vor heute Nacht noch nie. Bereit?`,
   hereWeGo: "...Und... los... geht's.",
+  summaryReady: "Alles ist bereit! Lass uns jetzt deine zauberhafte Geschichte erschaffen.",
   q1TextOwn: "Wie heißt du?",
   q1TextStranger: "Gib dem Fremden einen Namen...",
   q1TextFamilyFriend: "Wer begleitet sie? Gib ihnen einen Namen...",
@@ -202,6 +210,7 @@ const PT: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}. Então eu sei exatamente como isso termina. Nosso herói. ${companion} — um companheiro leal. ${world}. ${engine}. Esta história nunca existiu antes desta noite. Prontos?`,
   hereWeGo: "...Lá... vamos... nós.",
+  summaryReady: "Está tudo pronto! Vamos criar agora a sua história mágica.",
   q1TextOwn: "Qual é o seu nome?",
   q1TextStranger: "Dê um nome ao estranho...",
   q1TextFamilyFriend: "Quem vai junto? Dê um nome a eles...",
@@ -234,6 +243,7 @@ const IT: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}. Allora so esattamente come finisce. Il nostro eroe. ${companion} — un fedele compagno. ${world}. ${engine}. Questa storia non è mai esistita prima di stanotte. Pronti?`,
   hereWeGo: "...E... si... parte.",
+  summaryReady: "Tutto pronto! Creiamo ora la tua storia magica.",
   q1TextOwn: "Come ti chiami?",
   q1TextStranger: "Dai un nome allo sconosciuto...",
   q1TextFamilyFriend: "Chi li accompagna? Dagli un nome...",
@@ -266,6 +276,7 @@ const AR: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}. إذن أنا أعرف بالضبط كيف ينتهي هذا. بطلنا. ${companion} — رفيق مخلص. ${world}. ${engine}. هذه القصة لم توجد من قبل حتى الليلة. هل أنتم مستعدون؟`,
   hereWeGo: "...ها نحن... ننطلق.",
+  summaryReady: "كل شيء جاهز! لنصنع الآن قصتك السحرية.",
   q1TextOwn: "ما اسمك؟",
   q1TextStranger: "أعطِ الغريب اسماً...",
   q1TextFamilyFriend: "من سينضم إليهم؟ أعطهم اسماً...",
@@ -298,6 +309,7 @@ const JA: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}。それなら、これがどう終わるか正確にわかります。私たちのヒーロー。${companion}——忠実な仲間。${world}。${engine}。この物語は今夜まで一度も存在しませんでした。準備はいいですか?`,
   hereWeGo: "…さあ…行き…ましょう。",
+  summaryReady: "準備万端です!さあ、あなたの魔法の物語を作りましょう。",
   q1TextOwn: "お名前は?",
   q1TextStranger: "見知らぬ人に名前をつけてください…",
   q1TextFamilyFriend: "誰が一緒に行きますか?名前をつけてください…",
@@ -330,6 +342,7 @@ const HI: LunaCopy = {
   launch: (mood, companion, world, engine) =>
     `${mood}। तो मुझे पता है कि यह कैसे खत्म होगा। हमारा नायक। ${companion} — एक वफादार साथी। ${world}। ${engine}। यह कहानी आज रात से पहले कभी नहीं थी। तैयार हैं?`,
   hereWeGo: "...चलो... चलते... हैं।",
+  summaryReady: "सब कुछ तैयार है! अब चलो तुम्हारी जादुई कहानी बनाते हैं।",
   q1TextOwn: "तुम्हारा नाम क्या है?",
   q1TextStranger: "अजनबी को एक नाम दो...",
   q1TextFamilyFriend: "साथ में कौन आ रहा है? उन्हें एक नाम दो...",
