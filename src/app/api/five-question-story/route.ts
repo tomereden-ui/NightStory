@@ -12,6 +12,8 @@ import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
 import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, buildLengthTargetReminder, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, resolveTitleConflict, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
 import { generateScenes } from "@/lib/services/sceneGenerator";
+import { LANGUAGE_META } from "@/lib/i18n";
+import type { Language } from "@/types";
 
 export const maxDuration = 120;
 
@@ -96,8 +98,14 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, langu
     ? `\n\nCONTENT TO STRICTLY AVOID\n--------------------------\n${avoid}\nThis is a HARD rule. Never include these elements — not even briefly, not even resolved positively. The child has fears or sensitivities around these topics.`
     : "";
   const childPart = child ? buildChildPersonalizationPart(child) : "";
-  const langPart = language && language !== "en"
-    ? `\n\nLANGUAGE\n--------\nWrite all DIALOGUE and NARRATION in ${language} (ISO 639-1: "${language}"). Character names, the story title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) must also be in this language — these are shown directly to the listener, so they must match the story's language exactly like the dialogue does.\nEXCEPTIONS — keep these fields in English regardless of story language:\n  • SFX textPayload descriptions (sent to ElevenLabs sound generator — non-English produces garbled audio)\n  • visualDescription in the characters map (sent to Imagen avatar generator — non-English produces wrong images)\n  • coverPrompt (sent to Imagen image generator)\n  • The bracketed performance tag at the start of EVERY SINGLE dialogue/narration textPayload (e.g. "[warmly]", "[excited]") — the tag word itself always stays in English, from the first line to the last, with no drift back to the story's language partway through; only the spoken text after the closing "]" switches language. Example: "[warmly] בְּלֵב שְׁכוּנָה מְלֵאָה בְּצִבְעִים וְקולוֹת, גָּר רוֹן הַקָּטָן." NOT "[חַמִּים] ...".${language === "he" ? `\nHEBREW VOCALIZATION — MANDATORY, no exceptions: write every Hebrew word fully niqqud-ed (with vowel points, ניקוד מלא), e.g. "שָׁלוֹם" not "שלום". This applies to EVERY Hebrew field you output — the dialogue/narration text, the title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) — not just the spoken lines. The top-level "summary" is shown to parents browsing the library and is also read by some screen readers, so it needs niqqud exactly as much as the script itself does. Unvocalized Hebrew text-to-speech mispronounces words constantly, so this is required for correct audio, not stylistic.` : ""}`
+  // Always explicit, even for English — see the matching comment in
+  // generate-story/route.ts's buildSystemInstruction for why skipping this
+  // for "en" was the actual bug (existing-title-list contamination writing
+  // Hebrew stories despite English being selected and everything the user
+  // typed being in English).
+  const langName = language ? (LANGUAGE_META[language as Language]?.label ?? language) : undefined;
+  const langPart = langName
+    ? `\n\nLANGUAGE\n--------\nWrite all DIALOGUE and NARRATION in ${langName} (ISO 639-1: "${language}"). Character names, the story title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) must also be in this language — these are shown directly to the listener, so they must match the story's language exactly like the dialogue does.\nEXCEPTIONS — keep these fields in English regardless of story language:\n  • SFX textPayload descriptions (sent to ElevenLabs sound generator — non-English produces garbled audio)\n  • visualDescription in the characters map (sent to Imagen avatar generator — non-English produces wrong images)\n  • coverPrompt (sent to Imagen image generator)\n  • The bracketed performance tag at the start of EVERY SINGLE dialogue/narration textPayload (e.g. "[warmly]", "[excited]") — the tag word itself always stays in English, from the first line to the last, with no drift back to the story's language partway through; only the spoken text after the closing "]" switches language. Example: "[warmly] בְּלֵב שְׁכוּנָה מְלֵאָה בְּצִבְעִים וְקולוֹת, גָּר רוֹן הַקָּטָן." NOT "[חַמִּים] ...".${language === "he" ? `\nHEBREW VOCALIZATION — MANDATORY, no exceptions: write every Hebrew word fully niqqud-ed (with vowel points, ניקוד מלא), e.g. "שָׁלוֹם" not "שלום". This applies to EVERY Hebrew field you output — the dialogue/narration text, the title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) — not just the spoken lines. The top-level "summary" is shown to parents browsing the library and is also read by some screen readers, so it needs niqqud exactly as much as the script itself does. Unvocalized Hebrew text-to-speech mispronounces words constantly, so this is required for correct audio, not stylistic.` : ""}`
     : "";
 
   const titleUniquePart = existingTitles?.length
@@ -299,11 +307,11 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    // See generate-story/route.ts for why this isn't just body.language: an
-    // explicit non-English request is trusted, but "en" (the unset default)
-    // adds no explicit LANGUAGE instruction, so what Gemini actually wrote can
-    // still differ from it.
-    const detectedLanguage = (body.language && body.language !== "en")
+    // The LANGUAGE section above now explicitly instructs Gemini for ANY
+    // requested language, including English — trust it whenever one was
+    // requested. Only fall back to detecting what Gemini actually wrote when
+    // no language was given at all.
+    const detectedLanguage = body.language
       ? body.language
       : await detectGeneratedLanguage(splitBlocks, apiKey);
 

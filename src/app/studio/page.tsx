@@ -29,6 +29,7 @@ import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { fetchBankAvatars, resolveCharacterAvatar, type CharacterType, type BankAvatar } from "@/lib/services/characterAvatars";
 import Icon from "@/components/ui/Icon";
 import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
+import { useLanguageMismatchGate } from "@/hooks/useLanguageMismatchGate";
 
 // ─── Draft key — kept as its original storage-key name; only the route/URL
 // moved from /studio2 to /studio, this key was never user-visible ───────────
@@ -1098,6 +1099,7 @@ function scriptSnapshot(blocks: ScriptBlock[]): string {
 
 export default function Studio2Page() {
   const { isRTL, language } = useLanguage();
+  const { checkLanguage, languageMismatchModal } = useLanguageMismatchGate();
   const router = useRouter();
 
   // ─── Active child profile ────────────────────────────────────────────────────
@@ -1906,6 +1908,10 @@ export default function Studio2Page() {
     };
 
     try {
+      // Quick, free, instant check of what the user actually typed against
+      // the selected language — only surfaces a dialog (languageMismatchModal
+      // below) when they genuinely disagree. See useLanguageMismatchGate.
+      body.language = await checkLanguage(promptText, language);
       const res  = await fetch("/api/generate-story", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
@@ -3658,6 +3664,8 @@ export default function Studio2Page() {
           storyId={editingStoryId ?? undefined}
         />
       )}
+
+      {languageMismatchModal}
     </div>
   );
 }

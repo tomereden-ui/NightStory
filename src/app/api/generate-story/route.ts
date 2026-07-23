@@ -8,7 +8,8 @@ import { getEntryTitles } from "@/lib/libraryStore";
 import { getFamilyContext } from "@/lib/authContext";
 import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, buildLengthTargetReminder, resolveTitleConflict, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
 import { generateScenes } from "@/lib/services/sceneGenerator";
-import type { ScriptBlock } from "@/types";
+import { LANGUAGE_META } from "@/lib/i18n";
+import type { ScriptBlock, Language } from "@/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -193,8 +194,18 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, child
     ? `\n\nSTORY VALUES\n------------\nEmbed the following values into the story through concrete actions the protagonist takes. Do NOT state the morals explicitly — let the character's choices show them:\n${allLessons.map((l, i) => `${i + 1}. ${l}`).join("\n")}\n\nAs specified in the script format, include the "lessonImplementations" field in your JSON response.`
     : "";
 
-  const langPart = language && language !== "en"
-    ? `\n\nLANGUAGE\n--------\nWrite all DIALOGUE and NARRATION in ${language} (ISO 639-1: "${language}"). Character names, the story title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) must also be in this language — these are shown directly to the listener, so they must match the story's language exactly like the dialogue does.\nEXCEPTIONS — keep these fields in English regardless of story language:\n  • SFX textPayload descriptions (sent to ElevenLabs sound generator — non-English produces garbled audio)\n  • visualDescription in the characters map (sent to Imagen avatar generator — non-English produces wrong images)\n  • coverPrompt (sent to Imagen image generator)\n  • The bracketed performance tag at the start of EVERY SINGLE dialogue/narration textPayload (e.g. "[warmly]", "[excited]") — the tag word itself always stays in English, from the first line to the last, with no drift back to the story's language partway through; only the spoken text after the closing "]" switches language. Example: "[warmly] בְּלֵב שְׁכוּנָה מְלֵאָה בְּצִבְעִים וְקולוֹת, גָּר רוֹן הַקָּטָן." NOT "[חַמִּים] ...".${language === "he" ? `\nHEBREW VOCALIZATION — MANDATORY, no exceptions: write every Hebrew word fully niqqud-ed (with vowel points, ניקוד מלא), e.g. "שָׁלוֹם" not "שלום". This applies to EVERY Hebrew field you output — the dialogue/narration text, the title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) — not just the spoken lines. The top-level "summary" is shown to parents browsing the library and is also read by some screen readers, so it needs niqqud exactly as much as the script itself does. Unvocalized Hebrew text-to-speech mispronounces words constantly, so this is required for correct audio, not stylistic.` : ""}`
+  // Always explicit, even for English — this used to skip entirely when
+  // language was "en" (or absent), leaving Gemini to "detect" the language
+  // from the rest of the prompt per story-guidance.txt's own instruction.
+  // That silently broke: the TITLE UNIQUENESS list below (every existing
+  // story title in the family's library) is often majority-Hebrew for a
+  // bilingual family, and with no explicit override, Gemini sometimes wrote
+  // the whole story in Hebrew despite English being selected and everything
+  // the user actually typed being in English. An explicit instruction here
+  // overrides that kind of incidental context regardless of source.
+  const langName = language ? (LANGUAGE_META[language as Language]?.label ?? language) : undefined;
+  const langPart = langName
+    ? `\n\nLANGUAGE\n--------\nWrite all DIALOGUE and NARRATION in ${langName} (ISO 639-1: "${language}"). Character names, the story title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) must also be in this language — these are shown directly to the listener, so they must match the story's language exactly like the dialogue does.\nEXCEPTIONS — keep these fields in English regardless of story language:\n  • SFX textPayload descriptions (sent to ElevenLabs sound generator — non-English produces garbled audio)\n  • visualDescription in the characters map (sent to Imagen avatar generator — non-English produces wrong images)\n  • coverPrompt (sent to Imagen image generator)\n  • The bracketed performance tag at the start of EVERY SINGLE dialogue/narration textPayload (e.g. "[warmly]", "[excited]") — the tag word itself always stays in English, from the first line to the last, with no drift back to the story's language partway through; only the spoken text after the closing "]" switches language. Example: "[warmly] בְּלֵב שְׁכוּנָה מְלֵאָה בְּצִבְעִים וְקולוֹת, גָּר רוֹן הַקָּטָן." NOT "[חַמִּים] ...".${language === "he" ? `\nHEBREW VOCALIZATION — MANDATORY, no exceptions: write every Hebrew word fully niqqud-ed (with vowel points, ניקוד מלא), e.g. "שָׁלוֹם" not "שלום". This applies to EVERY Hebrew field you output — the dialogue/narration text, the title, the top-level "summary" field, and each scene's "summary" field (in the scenes array) — not just the spoken lines. The top-level "summary" is shown to parents browsing the library and is also read by some screen readers, so it needs niqqud exactly as much as the script itself does. Unvocalized Hebrew text-to-speech mispronounces words constantly, so this is required for correct audio, not stylistic.` : ""}`
     : "";
 
   const avoidPart = avoid
@@ -433,13 +444,12 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    // If an explicit non-English language was requested, the LANGUAGE section
-    // above told Gemini to write in it and it reliably does -- trust it. When
-    // no language was given (or it's "en", the default that adds no explicit
-    // instruction), story-guidance.txt's own auto-detect-from-prompt behavior
-    // may have produced something other than English, so detect what Gemini
-    // actually wrote rather than assume the request's own language holds.
-    const detectedLanguage = (body.language && body.language !== "en")
+    // The LANGUAGE section above now explicitly instructs Gemini for ANY
+    // requested language, including English — trust it whenever one was
+    // requested. Only fall back to detecting what Gemini actually wrote when
+    // no language was given at all (e.g. an admin-pasted script with no
+    // language field to go on).
+    const detectedLanguage = body.language
       ? body.language
       : await detectGeneratedLanguage(splitBlocks, apiKey);
 

@@ -25,6 +25,7 @@ import { writeDraft } from "@/lib/draftStore";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
 import { PRESET_VOICE_POOL, fetchVoicePool } from "@/lib/services/voiceCatalog";
+import { useLanguageMismatchGate } from "@/hooks/useLanguageMismatchGate";
 import type { ScriptBlock, Voice } from "@/types";
 import type { Job } from "@/lib/jobs";
 import type { ResolutionMood, StorySeeds } from "@/utils/buildStoryPrompt";
@@ -1386,27 +1387,35 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
   const onErrorRef = useRef(onError);
   onDoneRef.current  = onDone;
   onErrorRef.current = onError;
+  const { checkLanguage, languageMismatchModal } = useLanguageMismatchGate();
 
   useEffect(() => {
     const msgId  = setInterval(() => setMsgIdx((i) => (i + 1) % messages.length), 3000);
     const longId = setTimeout(() => setShowLong(true), 20_000);
     const controller = new AbortController();
 
-    fetch("/api/five-question-story", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seeds, durationMinutes, language: contentLanguage, narratorVoiceId: getNarratorVoiceId(), lessons, ...childContext }),
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Generation failed");
-        onDoneRef.current(data.blocks as ScriptBlock[], data.summary ?? "", data.coverPrompt ?? "", data.characters as Record<string, StoryCharacterInfo> | undefined, data.scenes as import("@/types").StoryScene[] | undefined, data.title ?? "", data.generationMs as number | undefined);
-      })
-      .catch((err) => {
-        if ((err as { name?: string }).name === "AbortError") return;
-        onErrorRef.current(err instanceof Error ? err.message : String(err));
+    (async () => {
+      // Quick, free, instant check of what the user actually typed across
+      // the 5 seed answers against the selected language — only surfaces a
+      // dialog (via languageMismatchModal below) when they genuinely
+      // disagree. See useLanguageMismatchGate / scriptLanguageCheck.ts.
+      const seedsText = [seeds.q1_hero, seeds.q2_world, seeds.q3_companion, seeds.q4_engine].filter(Boolean).join(" ");
+      const finalLanguage = await checkLanguage(seedsText, contentLanguage ?? "en");
+      if (controller.signal.aborted) return;
+
+      const res = await fetch("/api/five-question-story", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seeds, durationMinutes, language: finalLanguage, narratorVoiceId: getNarratorVoiceId(), lessons, ...childContext }),
+        signal: controller.signal,
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed");
+      onDoneRef.current(data.blocks as ScriptBlock[], data.summary ?? "", data.coverPrompt ?? "", data.characters as Record<string, StoryCharacterInfo> | undefined, data.scenes as import("@/types").StoryScene[] | undefined, data.title ?? "", data.generationMs as number | undefined);
+    })().catch((err) => {
+      if ((err as { name?: string }).name === "AbortError") return;
+      onErrorRef.current(err instanceof Error ? err.message : String(err));
+    });
 
     return () => { controller.abort(); clearInterval(msgId); clearTimeout(longId); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1428,6 +1437,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, le
             style={{ background: "linear-gradient(135deg,#4fc3f7,#0088AA)", animation: `bounce 1s ease-in-out ${i * 0.15}s infinite` }} />
         ))}
       </div>
+      {languageMismatchModal}
     </div>
   );
 }

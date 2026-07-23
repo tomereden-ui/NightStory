@@ -10,6 +10,7 @@ import LanguageToggle from "@/components/ui/LanguageToggle";
 import OwlAvatar from "@/components/ui/OwlAvatar";
 import { LunaWorkingBanner } from "@/components/studio/LunaWorkingCard";
 import { getWizardUi } from "@/constants/wizardUi";
+import { useLanguageMismatchGate } from "@/hooks/useLanguageMismatchGate";
 import type { Language } from "@/types";
 
 interface Message {
@@ -209,6 +210,7 @@ export default function LunaChatPanel({
   onStoryLanguageChange: (lang: string) => void;
 }) {
   const language = storyLanguage;
+  const { checkLanguage, languageMismatchModal } = useLanguageMismatchGate();
 
   const ERROR_REPLY_LABELS: Record<string, string> = {
     he: "אופס, משהו השתבש. ✨\nתוכלו לומר את זה שוב?",
@@ -577,10 +579,12 @@ export default function LunaChatPanel({
       onGenerating?.();
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       try {
+        const finalLanguage = await checkLanguage(promptText, language);
+        if (finalLanguage !== language) onStoryLanguageChange(finalLanguage);
         const res = await fetch("/api/generate-story", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language, narratorVoiceId: getNarratorVoiceId(), lessons: activeChild?.default_moral_lessons ?? [], ...getChildContext() }),
+          body: JSON.stringify({ mode: "prompt", promptText, durationMinutes, childAgeGroup: getChildAgeGroup(), language: finalLanguage, narratorVoiceId: getNarratorVoiceId(), lessons: activeChild?.default_moral_lessons ?? [], ...getChildContext() }),
         });
         const data = await res.json() as { blocks: ScriptBlock[]; title?: string; summary?: string; coverPrompt?: string; scenes?: StoryScene[]; language?: string; generationMs?: number; error?: string };
         if (!res.ok) throw new Error(data.error || "Generation failed");
@@ -708,14 +712,19 @@ export default function LunaChatPanel({
     setSuggestedRewrite(null);
     onGenerating?.();
     try {
+      const hero = overrideFields?.hero ?? storyParams.hero ?? "";
+      const setting = overrideFields?.setting ?? storyParams.setting ?? "";
+      const plot = overrideFields?.plot ?? storyParams.plot ?? "";
+      const finalLanguage = await checkLanguage([hero, setting, plot].filter(Boolean).join(" "), language);
+      if (finalLanguage !== language) onStoryLanguageChange(finalLanguage);
       const res = await fetch("/api/generate-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "wizard",
-          hero: overrideFields?.hero ?? storyParams.hero ?? "",
-          setting: overrideFields?.setting ?? storyParams.setting ?? "",
-          plot: overrideFields?.plot ?? storyParams.plot ?? "",
+          hero,
+          setting,
+          plot,
           // storyParams.primaryVoiceId is never actually set anywhere in this
           // panel — this used to unconditionally fall back to the literal
           // string "v1", which isn't a real preset voice id at all, silently
@@ -725,7 +734,7 @@ export default function LunaChatPanel({
           primaryVoiceId: storyParams.primaryVoiceId,
           durationMinutes,
           childAgeGroup: getChildAgeGroup(),
-          language,
+          language: finalLanguage,
           narratorVoiceId: getNarratorVoiceId(),
           lessons: activeChild?.default_moral_lessons ?? [],
           ...getChildContext(),
@@ -1115,6 +1124,7 @@ export default function LunaChatPanel({
         )}
       </div>
 
+      {languageMismatchModal}
     </div>
   );
 }
