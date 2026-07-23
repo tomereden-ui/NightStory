@@ -244,9 +244,9 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
 
-  let blocks: ScriptBlock[], age: number, lessons: string[], summary: string;
+  let blocks: ScriptBlock[], age: number, lessons: string[], summary: string, language: string | undefined;
   try {
-    ({ blocks, age = 6, lessons = [], summary = "" } = await req.json());
+    ({ blocks, age = 6, lessons = [], summary = "", language } = await req.json());
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
@@ -266,13 +266,21 @@ export async function POST(req: NextRequest) {
   const resultBlocks = [...blocks];
   let changes = 0;
 
-  // Kicked off now so it overlaps with pass 1/2's latency instead of adding
-  // to it — the script's language never changes between passes, so there's
-  // no reason to wait until after they finish to start detecting it.
-  const languagePromise = detectGeneratedLanguage(
-    textBlocks.map((b) => ({ characterName: b.characterName, textPayload: b.bareText })),
-    apiKey,
-  ).catch(() => "en");
+  // Every Studio caller already knows the story's language (the generation
+  // routes detect/receive it and return it as data.language) — when it's
+  // passed in, the detection Gemini call is pure redundancy, so skip it.
+  // Kicked off now (when needed) so it overlaps with pass 1/2's latency
+  // instead of adding to it — the script's language never changes between
+  // passes, so there's no reason to wait until after they finish.
+  const knownLanguage = typeof language === "string" && /^[a-z]{2}$/.test(language.trim().toLowerCase())
+    ? language.trim().toLowerCase()
+    : undefined;
+  const languagePromise = knownLanguage
+    ? Promise.resolve(knownLanguage)
+    : detectGeneratedLanguage(
+        textBlocks.map((b) => ({ characterName: b.characterName, textPayload: b.bareText })),
+        apiKey,
+      ).catch(() => "en");
 
   // ── Pass 1: combined age/content/grammar review ────────────────────────
   const pass1Prompt = `You are a children's content safety and language quality reviewer for a bedtime story app.

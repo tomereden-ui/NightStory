@@ -1913,7 +1913,7 @@ export default function Studio2Page() {
         const valRes = await fetch("/api/validate-blocks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ blocks: policyBlocks, age: childAge, lessons: selectedLessons, summary: sm }),
+          body: JSON.stringify({ blocks: policyBlocks, age: childAge, lessons: selectedLessons, summary: sm, language: resolvedLanguage }),
         });
         const valData = await valRes.json();
         blocks = (valRes.ok && valData.blocks?.length) ? valData.blocks as ScriptBlock[] : policyBlocks;
@@ -1925,6 +1925,13 @@ export default function Studio2Page() {
       // the line itself — deterministic, safe, always a no-op if not present.
       blocks = blocks.map((b) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
 
+      // Draft persistence and lessons analysis need only the final blocks
+      // array, already known here — firing them now instead of inside the
+      // last reveal timeout means the lessons call isn't delayed by the
+      // reveal animation (~65ms × block count of pure theater).
+      writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, forkedFromTitle: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls, scenes: rawScenes }, DRAFT_KEY);
+      void analyzeLessons(blocks, null, resolvedLanguage);
+
       // Stagger-reveal validated blocks one by one for progressive feel
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
@@ -1934,8 +1941,6 @@ export default function Studio2Page() {
             setIsValidating(false);
             setValidatingPhase("");
             setTotalExpectedBlocks(undefined);
-            writeDraft({ promptText, scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, editingStoryId: undefined, forkedFromTitle: undefined, characterAvatars: {}, characterTypes: {}, storyTitle: title, lessons: selectedLessons, lessonImplementations: impls, scenes: rawScenes }, DRAFT_KEY);
-            void analyzeLessons(blocks, null, resolvedLanguage);
           }
         }, i * 65);
       }
@@ -2544,13 +2549,17 @@ export default function Studio2Page() {
               fetch("/api/validate-blocks", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: [], summary: draft.summary }),
+                body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: [], summary: draft.summary, language: draft.language ?? storyLang }),
               })
                 .then((r) => r.json())
                 .then((valData) => {
                   const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks)
                     .map((b: ScriptBlock) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
                   void resolveAndSetCharacterAvatars(blocks, draft.summary);
+                  // Fire now, not in the last reveal timeout — the lessons
+                  // call shouldn't wait out the reveal animation.
+                  writeDraft({ ...draft, scriptBlocks: blocks, coverUrl: "" }, DRAFT_KEY);
+                  void analyzeLessons(blocks, null);
                   blocks.forEach((block, i) => {
                     setTimeout(() => {
                       setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
@@ -2558,8 +2567,6 @@ export default function Studio2Page() {
                         setIsValidating(false);
                         setValidatingPhase("");
                         setTotalExpectedBlocks(undefined);
-                        writeDraft({ ...draft, scriptBlocks: blocks, coverUrl: "" }, DRAFT_KEY);
-                        void analyzeLessons(blocks, null);
                       }
                     }, i * 65);
                   });
@@ -2567,6 +2574,8 @@ export default function Studio2Page() {
                 .catch(() => {
                   // Fallback: show unvalidated blocks
                   void resolveAndSetCharacterAvatars(rawBlocks, draft.summary);
+                  writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
+                  void analyzeLessons(rawBlocks, null);
                   rawBlocks.forEach((block, i) => {
                     setTimeout(() => {
                       setScriptBlocks((prev) => [...prev, block]);
@@ -2574,8 +2583,6 @@ export default function Studio2Page() {
                         setIsValidating(false);
                         setValidatingPhase("");
                         setTotalExpectedBlocks(undefined);
-                        writeDraft({ ...draft, coverUrl: "" }, DRAFT_KEY);
-                        void analyzeLessons(rawBlocks, null);
                       }
                     }, i * 65);
                   });
@@ -2697,13 +2704,17 @@ export default function Studio2Page() {
                 fetch("/api/validate-blocks", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: [], summary: sm }),
+                  body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: [], summary: sm, language: storyLang }),
                 })
                   .then((r) => r.json())
                   .then((valData) => {
                     const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks)
                       .map((b: ScriptBlock) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
                     void resolveAndSetCharacterAvatars(blocks, sm, fqChars);
+                    // Fire now, not in the last reveal timeout — the lessons
+                    // call shouldn't wait out the reveal animation.
+                    writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang, storyTitle: fqTitle }, DRAFT_KEY);
+                    void analyzeLessons(blocks, null);
                     blocks.forEach((block, i) => {
                       setTimeout(() => {
                         setScriptBlocks((prev) => [...prev, { ...block, validated: true }]);
@@ -2711,14 +2722,14 @@ export default function Studio2Page() {
                           setIsValidating(false);
                           setValidatingPhase("");
                           setTotalExpectedBlocks(undefined);
-                          writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang, storyTitle: fqTitle }, DRAFT_KEY);
-                          void analyzeLessons(blocks, null);
                         }
                       }, i * 65);
                     });
                   })
                   .catch(() => {
                     void resolveAndSetCharacterAvatars(rawBlocks, sm, fqChars);
+                    writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
+                    void analyzeLessons(rawBlocks, null);
                     rawBlocks.forEach((block, i) => {
                       setTimeout(() => {
                         setScriptBlocks((prev) => [...prev, block]);
@@ -2726,8 +2737,6 @@ export default function Studio2Page() {
                           setIsValidating(false);
                           setValidatingPhase("");
                           setTotalExpectedBlocks(undefined);
-                          writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
-                          void analyzeLessons(rawBlocks, null);
                         }
                       }, i * 65);
                     });
@@ -3236,6 +3245,11 @@ export default function Studio2Page() {
               const notReadyToSave = isValidating;
               const saveEnabled = (neverSaved || canSave) && !notReadyToSave;
               if (!neverSaved && !needsSave && saveLabel === "idle") return null;
+              // While the review pass runs, the Produce Audio button right
+              // above already shows a "Checking content…" spinner — rendering
+              // a second, identical spinner button here just reads as clutter
+              // (two stacked spinners for one process). Hide until settled.
+              if (notReadyToSave) return null;
               return (
                 <button
                   onClick={handleManualSave}
@@ -3265,11 +3279,6 @@ export default function Studio2Page() {
                     </>
                   ) : saveLabel === "saved" ? (
                     <><span className="text-fs-heading leading-none">✓</span> {i18nT(language, "savedVersion")}</>
-                  ) : notReadyToSave ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.4)" }} />
-                      Checking content…
-                    </>
                   ) : neverSaved ? (
                     <><span className="text-fs-heading leading-none">💾</span> Save for later</>
                   ) : (
