@@ -514,7 +514,26 @@ export async function moveToTrash(id: string, familyId?: string): Promise<boolea
   // (legacy rows with no family yet remain deletable, as before).
   if (familyId && data.family_id && data.family_id !== familyId) return false;
 
-  const { error: insertErr } = await supabase.from("trash").upsert({ ...data, deleted_at: Date.now() });
+  // `trash` is meant to fully mirror `stories` (see trash-parity-migration.sql),
+  // but every new column added to `stories` needs its own follow-up migration
+  // to also add it to `trash` — and PostgREST rejects the WHOLE upsert the
+  // moment even one column is missing there, which otherwise means deleting
+  // ANY story hard-fails until that migration is run. Degrade for real:
+  // strip whichever column PostgREST just complained about and retry, same
+  // fallback markScriptDone (perfMetrics.ts) uses for the same class of gap.
+  // Capped so a genuinely different/unexpected error still surfaces instead
+  // of looping forever.
+  const payload: Record<string, unknown> = { ...data, deleted_at: Date.now() };
+  let insertErr: { message: string } | null = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { error } = await supabase.from("trash").upsert(payload);
+    insertErr = error;
+    if (!error) break;
+    const missingColumn = /Could not find the '([a-zA-Z0-9_]+)' column/.exec(error.message)?.[1];
+    if (!missingColumn || !(missingColumn in payload)) break;
+    console.warn(`[libraryStore] moveToTrash: trash table missing column '${missingColumn}' (migration not run yet) — retrying without it`);
+    delete payload[missingColumn];
+  }
   if (insertErr) throw new Error(`moveToTrash (insert): ${insertErr.message}`);
 
   const { error: deleteErr } = await supabase.from("stories").delete().eq("id", id);
