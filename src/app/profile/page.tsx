@@ -463,6 +463,13 @@ function EditChildModal({
     themes: string[]; interests: string; avoid: string; defaultLessons: string[];
   } | null>(null);
 
+  // Load failed / profile missing (e.g. an expired session makes the API
+  // 401 into a non-array) — the modal must NOT fall through to an empty but
+  // editable form: saving that would overwrite the child's real row with
+  // defaults (gender "other", blank themes/interests/avoid). Block editing
+  // entirely instead.
+  const [loadFailed, setLoadFailed] = useState(false);
+
   useEffect(() => {
     fetch("/api/child-profiles")
       .then((r) => r.json())
@@ -486,10 +493,13 @@ function EditChildModal({
             name: found.name, age: String(found.age), gender: loadedGender, avatar: found.avatar_emoji ?? "",
             themes: loadedThemes, interests: loadedInterests, avoid: loadedAvoid, defaultLessons: loadedLessons,
           };
+        } else {
+          console.warn(`[EditChildModal] profile ${childId} not found in response — blocking edit to avoid overwriting it with defaults`);
+          setLoadFailed(true);
         }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoadFailed(true); setLoading(false); });
   }, [childId]);
 
   // Same length + every original entry still present covers add/remove/
@@ -573,6 +583,30 @@ function EditChildModal({
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }}>
         <div className="w-8 h-8 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" style={{ borderTopColor: "transparent" }} />
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center"
+        style={{ background: "rgba(0,0,0,0.6)" }}
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-md rounded-t-3xl p-5 pb-8"
+          style={{ background: "#111526", border: "1px solid rgba(255,255,255,0.08)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-white/70 text-fs-body uppercase tracking-widest font-bold">Edit profile</p>
+            <button onClick={onClose} className="text-white/55 hover:text-white/60 transition-colors"><Icon name="close" size={18} /></button>
+          </div>
+          <p className="text-fs-body" style={{ color: "rgba(251,191,36,0.85)" }}>
+            ⚠ Couldn&apos;t load this profile right now — editing is disabled so nothing gets overwritten. Please close and try again (you may need to sign in again).
+          </p>
+        </div>
       </div>
     );
   }

@@ -275,12 +275,15 @@ export default function ChildProfilePicker({
 
   useEffect(() => {
     fetch("/api/child-profiles", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data: DBChildProfile[]) => {
+      .then(async (r) => ({ ok: r.ok, data: await r.json() as DBChildProfile[] | { error?: string } }))
+      .then(({ ok, data }) => {
         if (Array.isArray(data) && data.length > 0) {
           setProfiles(data);
           if (!selected) onChange(data[0]);
-        } else {
+        } else if (ok) {
+          // A successful response with a genuinely empty list — a brand-new
+          // family with no profiles yet (or no DB in local dev). The mock
+          // fallback is the intended experience here.
           const fallback: DBChildProfile[] = MOCK_USER.childProfiles.map((c) => ({
             id: c.id,
             name: c.name,
@@ -296,6 +299,14 @@ export default function ChildProfilePicker({
           }));
           setProfiles(fallback);
           if (!selected && fallback.length > 0) onChange(fallback[0]);
+        } else {
+          // Request failed (typically a 401 from an expired session). Do NOT
+          // quietly substitute mock children here — the real family's kids
+          // exist, and a mock (gender "other", empty interests) silently
+          // masquerading as one of them would feed wrong profile data into
+          // chat greetings and story generation. Better an empty picker that
+          // recovers on the next visit/sign-in than a wrong child.
+          console.warn("[ChildProfilePicker] profile fetch failed (session expired?) — leaving picker empty instead of substituting mock children:", (data as { error?: string })?.error);
         }
         setLoaded(true);
       })
