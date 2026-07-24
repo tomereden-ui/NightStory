@@ -1250,7 +1250,24 @@ export default function Studio2Page() {
     const stored = localStorage.getItem(CREATE_MODE_KEY);
     return stored === "step-by-step" ? "step-by-step" : "chat";
   };
-  const [activeTab, setActiveTab]           = useState<StudioTab>(startOnPrompt ? "step-by-step" : lastCreateMode());
+  const [activeTab, setActiveTab]           = useState<StudioTab>(() => {
+    const initial = startOnPrompt ? "step-by-step" : lastCreateMode();
+    // A brand-new Studio page load that lands directly on the SBS wizard —
+    // clear any draft left over from a previously abandoned attempt (the
+    // user never hit "Start over", just navigated away) so every field
+    // (hero/world/companion/challenge/ending/moods) starts genuinely blank
+    // instead of silently resuming stale answers. Runs once, in the lazy
+    // initializer, so it clears the key before FiveQuestionFlow's own
+    // mount-time restore effect ever gets a chance to read it. Deliberately
+    // does NOT run on the segmented toggle's tab-click (see its comment
+    // below) — that's an intentional same-session mode switch, not a new
+    // Studio visit, and clearing there would undo the wizard's own mid-
+    // session tab-peek continuity.
+    if (initial === "step-by-step" && typeof window !== "undefined") {
+      try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+    }
+    return initial;
+  });
   const [createMode, setCreateModeState]    = useState<"chat" | "step-by-step">(startOnPrompt ? "step-by-step" : lastCreateMode());
   const setCreateMode = useCallback((mode: "chat" | "step-by-step") => {
     setCreateModeState(mode);

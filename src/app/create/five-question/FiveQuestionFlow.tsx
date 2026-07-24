@@ -1609,7 +1609,11 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
         const parsed = JSON.parse(saved) as { step?: Step; answers?: Answers; durationMinutes?: number };
         const hasContent = parsed.answers && Object.values(parsed.answers).some((v) => Array.isArray(v) ? v.length > 0 : v);
         if (hasContent && parsed.answers) {
-          setAnswers(parsed.answers);
+          // Spread over INITIAL_ANSWERS rather than trusting parsed.answers'
+          // shape directly — an older draft saved before a field existed
+          // (e.g. storyMoods, added this session) would otherwise restore
+          // that field as undefined instead of its safe default ([]).
+          setAnswers({ ...INITIAL_ANSWERS, ...parsed.answers });
           if (parsed.durationMinutes) setDuration(parsed.durationMinutes);
           const safestep = parsed.step;
           // Never resume straight onto the summary screen — the Story Length
