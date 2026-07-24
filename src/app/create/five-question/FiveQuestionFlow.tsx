@@ -1241,10 +1241,10 @@ function MoodsView({ initialMoods, onNext, onBack, onReset, audioUrl, luna, ui, 
                 onClick={() => toggle(m.id)}
                 className="flex flex-col items-center gap-2 py-5 rounded-2xl transition-all active:scale-[0.97]"
                 style={active
-                  ? { background: `${MOOD_ACCENT}1f`, border: `1px solid ${MOOD_ACCENT}70`, color: MOOD_ACCENT }
-                  : { background: `${MOOD_ACCENT}0d`, border: `1px solid ${MOOD_ACCENT}33`, color: `${MOOD_ACCENT}b3` }}
+                  ? { background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.9)" }
+                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" }}
               >
-                <Icon name={m.icon} size={28} />
+                <Icon name={m.icon} size={28} style={{ color: MOOD_ACCENT }} />
                 <span className="text-fs-body font-semibold">{storyMoodLabels[m.id] ?? m.id}</span>
               </button>
             );

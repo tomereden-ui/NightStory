@@ -16,7 +16,7 @@ import { dedupeBySeries } from "@/lib/dedupeBySeries";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { getLessonsCatalog, VALUE_ACCENT } from "@/constants/lessonsUi";
 import { MOODS as MOOD_DEFINITIONS, MOOD_ACCENT } from "@/constants/moodUi";
-import { LANGUAGE_META, LANGUAGE_ACCENT } from "@/lib/i18n";
+import { LANGUAGE_META } from "@/lib/i18n";
 import type { Language } from "@/types";
 
 
@@ -977,10 +977,10 @@ export default function LibraryPage() {
                     onClick={() => toggleMood(m.id)}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
-                      ? { background: `${MOOD_ACCENT}26`, border: `1px solid ${MOOD_ACCENT}66`, color: MOOD_ACCENT }
-                      : { background: `${MOOD_ACCENT}0d`, border: `1px solid ${MOOD_ACCENT}33`, color: `${MOOD_ACCENT}b3` }}
+                      ? { background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.9)" }
+                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
                   >
-                    <Icon name={m.icon} size={13} />
+                    <Icon name={m.icon} size={13} style={{ color: MOOD_ACCENT }} />
                     <span>{m.id}</span>
                   </button>
                 );
@@ -996,10 +996,10 @@ export default function LibraryPage() {
                     onClick={() => toggleLesson(l.id)}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
-                      ? { background: `${VALUE_ACCENT}26`, border: `1px solid ${VALUE_ACCENT}66`, color: VALUE_ACCENT }
-                      : { background: `${VALUE_ACCENT}0d`, border: `1px solid ${VALUE_ACCENT}33`, color: `${VALUE_ACCENT}b3` }}
+                      ? { background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.9)" }
+                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
                   >
-                    <Icon name={l.icon} size={13} />
+                    <Icon name={l.icon} size={13} style={{ color: VALUE_ACCENT }} />
                     <span>{l.label}</span>
                   </button>
                 );
@@ -1015,8 +1015,8 @@ export default function LibraryPage() {
                     onClick={() => toggleLanguage(code)}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
-                      ? { background: `${LANGUAGE_ACCENT}26`, border: `1px solid ${LANGUAGE_ACCENT}66`, color: LANGUAGE_ACCENT }
-                      : { background: `${LANGUAGE_ACCENT}0d`, border: `1px solid ${LANGUAGE_ACCENT}33`, color: `${LANGUAGE_ACCENT}b3` }}
+                      ? { background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.9)" }
+                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
                   >
                     <span>{meta.flag}</span>
                     <span>{meta.label}</span>
