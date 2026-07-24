@@ -978,7 +978,7 @@ export default function LibraryPage() {
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
                       ? { background: `${MOOD_ACCENT}26`, border: `1px solid ${MOOD_ACCENT}66`, color: MOOD_ACCENT }
-                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+                      : { background: `${MOOD_ACCENT}0d`, border: `1px solid ${MOOD_ACCENT}33`, color: `${MOOD_ACCENT}b3` }}
                   >
                     <Icon name={m.icon} size={13} />
                     <span>{m.id}</span>
@@ -997,7 +997,7 @@ export default function LibraryPage() {
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
                       ? { background: `${VALUE_ACCENT}26`, border: `1px solid ${VALUE_ACCENT}66`, color: VALUE_ACCENT }
-                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+                      : { background: `${VALUE_ACCENT}0d`, border: `1px solid ${VALUE_ACCENT}33`, color: `${VALUE_ACCENT}b3` }}
                   >
                     <Icon name={l.icon} size={13} />
                     <span>{l.label}</span>
@@ -1016,7 +1016,7 @@ export default function LibraryPage() {
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
                       ? { background: `${LANGUAGE_ACCENT}26`, border: `1px solid ${LANGUAGE_ACCENT}66`, color: LANGUAGE_ACCENT }
-                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+                      : { background: `${LANGUAGE_ACCENT}0d`, border: `1px solid ${LANGUAGE_ACCENT}33`, color: `${LANGUAGE_ACCENT}b3` }}
                   >
                     <span>{meta.flag}</span>
                     <span>{meta.label}</span>
