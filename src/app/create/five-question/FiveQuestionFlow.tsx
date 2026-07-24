@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { getLuna, getMoodLabels, type LunaCopy } from "@/constants/lunaScripts";
-import { MOODS as STORY_MOODS, getStoryMoodLabels } from "@/constants/moodUi";
+import { MOODS as STORY_MOODS, MOOD_ACCENT, getStoryMoodLabels } from "@/constants/moodUi";
 import Icon from "@/components/ui/Icon";
 import {
   getWizardUi, type WizardUiCopy,
@@ -1241,7 +1241,7 @@ function MoodsView({ initialMoods, onNext, onBack, onReset, audioUrl, luna, ui, 
                 onClick={() => toggle(m.id)}
                 className="flex flex-col items-center gap-2 py-5 rounded-2xl transition-all active:scale-[0.97]"
                 style={active
-                  ? { background: `${m.color}1f`, border: `1px solid ${m.color}70`, color: m.color }
+                  ? { background: `${MOOD_ACCENT}1f`, border: `1px solid ${MOOD_ACCENT}70`, color: MOOD_ACCENT }
                   : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" }}
               >
                 <Icon name={m.icon} size={28} />

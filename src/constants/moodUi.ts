@@ -11,18 +11,26 @@ export interface MoodDefinition {
   id: string;
   /** Abstract line icon (see src/lib/icons.ts) — deliberately not an emoji, matching the rest of the app's icon style. */
   icon: IconName;
-  color: string;
   /** Sent to Gemini so it can classify/generate against a concrete definition, not just a bare word. */
   definition: string;
 }
 
+// One shared accent for every mood chip across the app (Library's mood
+// filter, the 5-Question wizard's mood picker) — moods are told apart by
+// icon + label, not by hue, so every mood-related UI element uses this same
+// blue rather than each mood having its own color. Values use their own
+// single orange (VALUE_ACCENT in lessonsUi.ts) and languages their own
+// single green (LANGUAGE_ACCENT in lib/i18n.ts), so the three filter/picker
+// categories read as three distinct color-coded groups at a glance.
+export const MOOD_ACCENT = "#4fc3f7";
+
 export const MOODS: MoodDefinition[] = [
-  { id: "Cozy", icon: "flame", color: "#f59e0b", definition: "A warm, soothing, and comforting atmosphere. Focuses on feelings of safety, home, and gentle wind-down for bedtime or quiet moments." },
-  { id: "Whimsical", icon: "sparkles", color: "#a78bfa", definition: "Enchanting, magical, and imaginative. Filled with wonder, fairytale logic, and delightful surprises that spark curiosity." },
-  { id: "Adventurous", icon: "compass", color: "#4fc3f7", definition: "Dynamic, brave, and full of action. Drives the narrative forward with exciting journeys, challenges, and child-driven problem solving." },
-  { id: "Mysterious", icon: "search", color: "#8b5cf6", definition: "Intriguing, thoughtful, and riddle-filled. Focuses on gathering clues, solving gentle secrets, and engaging critical thinking without fear." },
-  { id: "Playful", icon: "balloon", color: "#fbbf24", definition: "Lighthearted, energetic, and engaging. Captures everyday fun, social connections, and interactive, joyful moments." },
-  { id: "Silly", icon: "laugh", color: "#fb923c", definition: "Humorous, absurd, and funny. Uses age-appropriate nonsense, unexpected twists, and laughter to release stress." },
+  { id: "Cozy", icon: "flame", definition: "A warm, soothing, and comforting atmosphere. Focuses on feelings of safety, home, and gentle wind-down for bedtime or quiet moments." },
+  { id: "Whimsical", icon: "sparkles", definition: "Enchanting, magical, and imaginative. Filled with wonder, fairytale logic, and delightful surprises that spark curiosity." },
+  { id: "Adventurous", icon: "compass", definition: "Dynamic, brave, and full of action. Drives the narrative forward with exciting journeys, challenges, and child-driven problem solving." },
+  { id: "Mysterious", icon: "search", definition: "Intriguing, thoughtful, and riddle-filled. Focuses on gathering clues, solving gentle secrets, and engaging critical thinking without fear." },
+  { id: "Playful", icon: "balloon", definition: "Lighthearted, energetic, and engaging. Captures everyday fun, social connections, and interactive, joyful moments." },
+  { id: "Silly", icon: "laugh", definition: "Humorous, absurd, and funny. Uses age-appropriate nonsense, unexpected twists, and laughter to release stress." },
 ];
 
 // Gemini-facing block for the "primaryMood" scene field — full definitions,

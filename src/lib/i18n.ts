@@ -12,6 +12,11 @@ export function getDir(language: Language): "rtl" | "ltr" {
 
 // ─── Language metadata ────────────────────────────────────────────────────────
 
+// One shared accent for every language chip across the app (Library's
+// language filter) — see the matching note on MOOD_ACCENT in moodUi.ts for
+// why one color per category beats one color per item.
+export const LANGUAGE_ACCENT = "#10b981";
+
 export const LANGUAGE_META: Record<Language, { label: string; flag: string; nativeName: string; countryCode: string }> = {
   en: { label: "English",    flag: "🇺🇸", nativeName: "English",    countryCode: "us" },
   he: { label: "Hebrew",     flag: "🇮🇱", nativeName: "עברית",      countryCode: "il" },

@@ -7,6 +7,12 @@
 
 import type { IconName } from "@/lib/icons";
 
+// One shared accent for every value chip across the app (Library's value
+// filter, the Studio Values editor, read-only value panels) — see the
+// matching note on MOOD_ACCENT in moodUi.ts for why one color per category
+// beats one color per item.
+export const VALUE_ACCENT = "#fb923c";
+
 export const LESSON_IDS = [
   "Bravery", "Friendship", "Kindness", "Honesty", "Perseverance",
   "Sharing", "Patience", "Respecting differences", "Responsibility", "Gratitude",

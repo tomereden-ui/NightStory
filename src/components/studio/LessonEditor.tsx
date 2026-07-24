@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getLessonsCatalog, getLessonsChrome, LESSON_IDS, type LessonLabel } from "@/constants/lessonsUi";
+import { getLessonsCatalog, getLessonsChrome, LESSON_IDS, VALUE_ACCENT, type LessonLabel } from "@/constants/lessonsUi";
 import Icon from "@/components/ui/Icon";
 import type { MoralLesson } from "@/types";
 
@@ -9,25 +9,17 @@ function isPreset(l: string): l is LessonLabel {
   return (LESSON_IDS as readonly string[]).includes(l);
 }
 
-// Each lesson gets its own chip color, hashed from its name so the same
-// lesson always lands on the same color across renders/reloads (matching
-// the same hash-based palette pattern used for cast avatars elsewhere).
-// `text` is the brighter accent used for chip text/borders against a near-
-// black background (needs to stay legible); `solid` is a darker, more muted
-// tone of the same hue, used as an actual filled background (e.g. the "Add
-// a Value" card header) where the brighter shade read as too loud/saturated.
-const LESSON_PALETTE = [
-  { bg: "rgba(244,114,182,0.14)", border: "rgba(244,114,182,0.4)", text: "#f472b6", solid: "#8f4867" }, // pink / muted rose
-  { bg: "rgba(251,191,36,0.14)",  border: "rgba(251,191,36,0.4)",  text: "#fbbf24", solid: "#8a6a2e" }, // amber / muted gold
-  { bg: "rgba(79,195,247,0.14)",  border: "rgba(79,195,247,0.4)",  text: "#4fc3f7", solid: "#316379" }, // blue / muted teal-blue
-  { bg: "rgba(52,211,153,0.14)",  border: "rgba(52,211,153,0.4)",  text: "#34d399", solid: "#2c6b53" }, // teal / muted emerald
-  { bg: "rgba(167,139,250,0.14)", border: "rgba(167,139,250,0.4)", text: "#a78bfa", solid: "#5c4d85" }, // purple / muted violet
-  { bg: "rgba(248,113,113,0.14)", border: "rgba(248,113,113,0.4)", text: "#f87171", solid: "#8a4646" }, // red / muted brick
-];
-export function lessonColor(label: string): typeof LESSON_PALETTE[number] {
-  let h = 0;
-  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) >>> 0;
-  return LESSON_PALETTE[h % LESSON_PALETTE.length];
+// Every value chip shares one accent (VALUE_ACCENT) instead of a hashed
+// per-lesson color — matches Mood/Language now using one color per
+// category too (see MOOD_ACCENT in moodUi.ts). `text` is the brighter
+// accent used for chip text/borders against a near-black background;
+// `solid` is a darker, more muted tone of the same hue, used as an actual
+// filled background (e.g. the "Add a Value" card header) where the
+// brighter shade read as too loud/saturated. Kept as a function (rather
+// than a plain constant) so every call site is unaffected by the change.
+const VALUE_COLOR = { bg: "rgba(251,146,60,0.14)", border: "rgba(251,146,60,0.4)", text: VALUE_ACCENT, solid: "#8a5a2e" };
+export function lessonColor(_label: string): typeof VALUE_COLOR {
+  return VALUE_COLOR;
 }
 
 export default function LessonEditor({

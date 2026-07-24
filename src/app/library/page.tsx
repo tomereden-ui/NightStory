@@ -14,9 +14,9 @@ import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
 import StoryPoster from "@/components/ui/StoryPoster";
 import { dedupeBySeries } from "@/lib/dedupeBySeries";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
-import { getLessonsCatalog } from "@/constants/lessonsUi";
-import { MOODS as MOOD_DEFINITIONS } from "@/constants/moodUi";
-import { LANGUAGE_META } from "@/lib/i18n";
+import { getLessonsCatalog, VALUE_ACCENT } from "@/constants/lessonsUi";
+import { MOODS as MOOD_DEFINITIONS, MOOD_ACCENT } from "@/constants/moodUi";
+import { LANGUAGE_META, LANGUAGE_ACCENT } from "@/lib/i18n";
 import type { Language } from "@/types";
 
 
@@ -53,8 +53,8 @@ function formatDuration(seconds?: number): string | null {
 // Same moods scenes are tagged with (see src/constants/moodUi.ts and
 // config/story-guidance.txt's SCENE BREAKDOWN section) — reused here for
 // the library's mood filter chips.
-const MOODS: { id: string; icon: IconName; color: string }[] = MOOD_DEFINITIONS.map(
-  ({ id, icon, color }) => ({ id, icon, color })
+const MOODS: { id: string; icon: IconName }[] = MOOD_DEFINITIONS.map(
+  ({ id, icon }) => ({ id, icon })
 );
 
 // A story doesn't have one mood of its own — only its scenes do — so this
@@ -977,7 +977,7 @@ export default function LibraryPage() {
                     onClick={() => toggleMood(m.id)}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
-                      ? { background: `${m.color}26`, border: `1px solid ${m.color}66`, color: m.color }
+                      ? { background: `${MOOD_ACCENT}26`, border: `1px solid ${MOOD_ACCENT}66`, color: MOOD_ACCENT }
                       : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
                   >
                     <Icon name={m.icon} size={13} />
@@ -996,7 +996,7 @@ export default function LibraryPage() {
                     onClick={() => toggleLesson(l.id)}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
-                      ? { background: "rgba(139,92,246,0.16)", border: "1px solid rgba(139,92,246,0.45)", color: "#c4b5fd" }
+                      ? { background: `${VALUE_ACCENT}26`, border: `1px solid ${VALUE_ACCENT}66`, color: VALUE_ACCENT }
                       : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
                   >
                     <Icon name={l.icon} size={13} />
@@ -1015,7 +1015,7 @@ export default function LibraryPage() {
                     onClick={() => toggleLanguage(code)}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
                     style={active
-                      ? { background: "rgba(79,195,247,0.16)", border: "1px solid rgba(79,195,247,0.45)", color: "#4fc3f7" }
+                      ? { background: `${LANGUAGE_ACCENT}26`, border: `1px solid ${LANGUAGE_ACCENT}66`, color: LANGUAGE_ACCENT }
                       : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
                   >
                     <span>{meta.flag}</span>
