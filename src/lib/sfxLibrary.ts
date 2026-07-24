@@ -12,6 +12,10 @@ export interface SfxLibraryEntry {
   createdAt: number;
 }
 
+export interface SfxLibraryRow extends SfxLibraryEntry {
+  hitCount: number;
+}
+
 // ─── Embedding ────────────────────────────────────────────────────────────────
 
 async function embedText(text: string): Promise<number[] | null> {
@@ -170,6 +174,39 @@ export async function findSimilarSfx(
     console.warn("[SfxLibrary] findSimilarSfx error:", err);
     return null;
   }
+}
+
+/**
+ * Best-effort, fire-and-forget: record that a global library clip (found via
+ * findSimilarSfx, not a fresh generation) was reused for another story. Not
+ * atomic — a read-then-write, same tradeoff as elementStore's
+ * bumpElementHitCount — fine for approximate stats, not a precise ledger.
+ */
+export async function bumpSfxHitCount(id: string): Promise<void> {
+  try {
+    const { data } = await supabase.from("sfx_library").select("hit_count").eq("id", id).maybeSingle();
+    const current = typeof data?.hit_count === "number" ? data.hit_count : 0;
+    await supabase.from("sfx_library").update({ hit_count: current + 1 }).eq("id", id);
+  } catch (err) {
+    console.warn("[SfxLibrary] bumpSfxHitCount:", err);
+  }
+}
+
+/** List every cached SFX entry, most-reused first, for the admin SFX panel. */
+export async function listSfxLibrary(): Promise<SfxLibraryRow[]> {
+  const { data, error } = await supabase
+    .from("sfx_library")
+    .select("id, description, duration_ms, audio_url, created_at, hit_count")
+    .order("hit_count", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.id as string,
+    description: row.description as string,
+    durationMs: row.duration_ms as number,
+    audioUrl: row.audio_url as string,
+    createdAt: row.created_at as number,
+    hitCount: typeof row.hit_count === "number" ? row.hit_count : 0,
+  }));
 }
 
 // ─── Save ─────────────────────────────────────────────────────────────────────

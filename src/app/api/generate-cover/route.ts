@@ -17,9 +17,9 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "No API key" }, { status: 500 });
 
-  let prompt: string, summary: string | undefined;
+  let prompt: string, summary: string | undefined, storyId: string | undefined;
   try {
-    ({ prompt, summary } = await req.json());
+    ({ prompt, summary, storyId } = await req.json());
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         parts: [{ text: buildCoverRewriterPrompt(prompt, summary) }],
       }],
       generationConfig: { temperature: 0.7, maxOutputTokens: 220, thinkingConfig: { thinkingBudget: 0 } },
-    }, { callType: "cover_prompt_rewrite" });
+    }, { callType: "cover_prompt_rewrite", storyId });
     const enhanced = geminiText(data);
     if (enhanced && enhanced.length > 30) {
       imagePrompt = enhanced;
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     const { mimeType = "image/png", data: b64 } = imagePart.inlineData;
     console.log("[CoverGen] Success — mimeType:", mimeType, "size:", Math.round(b64.length * 0.75 / 1024), "KB");
-    recordGeminiImageUsage({ callType: "cover_image" }, { model: IMAGE_MODEL }).catch(() => {});
+    recordGeminiImageUsage({ callType: "cover_image", storyId }, { model: IMAGE_MODEL }).catch(() => {});
     return NextResponse.json({ coverUrl: `data:${mimeType};base64,${b64}` });
   } catch (err) {
     console.error("[CoverGen] Fetch error:", err);

@@ -2548,7 +2548,7 @@ export default function Studio2Page() {
     if (!prompt) return;
     setIsFetchingCover(true);
     try {
-      const res = await fetch("/api/generate-cover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, summary: storySummary }) });
+      const res = await fetch("/api/generate-cover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, summary: storySummary, storyId: editingStoryId ?? undefined }) });
       const data = await res.json();
       if (res.ok && data.coverUrl) {
         setCoverUrl(data.coverUrl);
@@ -2561,7 +2561,7 @@ export default function Studio2Page() {
     } finally {
       setIsFetchingCover(false);
     }
-  }, []);
+  }, [editingStoryId]);
 
   // Auto-fetch cover when a draft is loaded that has a coverPrompt but no coverUrl
   useEffect(() => {

@@ -411,7 +411,7 @@ async function runProduction(
     const { supabase, ensureBuckets } = await import("@/lib/supabase");
     const { getElementsForStory, uploadElementAudio, saveStoryElements,
             hashDialogue, hashSfx, downloadToFile, bumpElementHitCount } = await import("@/lib/elementStore");
-    const { findSimilarSfx, saveSfxLibraryEntry, fitAudioDuration } = await import("@/lib/sfxLibrary");
+    const { findSimilarSfx, saveSfxLibraryEntry, fitAudioDuration, bumpSfxHitCount } = await import("@/lib/sfxLibrary");
     await ensureBuckets();
 
     // ── Guard: return cached audio if this story is already produced ─────────────────────
@@ -770,6 +770,7 @@ async function runProduction(
               }
               try { fs.unlinkSync(rawPath); } catch { /* already renamed */ }
               sfxLibraryHits++;
+              bumpSfxHitCount(libraryHit.id).catch(() => {});
               // Register in story element cache so re-produces skip the library lookup
               newElements.push({
                 id: `el-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,

@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { saveSfxLibraryEntry } from "@/lib/sfxLibrary";
+import { saveSfxLibraryEntry, listSfxLibrary } from "@/lib/sfxLibrary";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+
+// Lists cached SFX entries for the admin SFX panel's table view, most-reused first.
+export async function GET() {
+  const rows = await listSfxLibrary();
+  return NextResponse.json({ rows });
+}
 
 export async function POST() {
   // 1. Fetch all SFX elements across all stories

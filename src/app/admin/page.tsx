@@ -1566,7 +1566,7 @@ export default function AdminPage() {
 
     // Fetch cover image in the background (non-blocking)
     setStoreCoverLoading(true);
-    fetch("/api/generate-cover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: coverPrompt, summary }) })
+    fetch("/api/generate-cover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: coverPrompt, summary, storyId: scriptDoneId }) })
       .then((r) => r.json())
       .then((d: { coverUrl?: string }) => setStoreCoverUrl(d.coverUrl ?? ""))
       .catch(() => {})
@@ -1746,7 +1746,7 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/generate-cover", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: storeCoverPrompt, summary: storeSummary }),
+        body: JSON.stringify({ prompt: storeCoverPrompt, summary: storeSummary, storyId: addStoryId || undefined }),
       });
       const d = await res.json() as { coverUrl?: string };
       setStoreCoverUrl(d.coverUrl ?? "");
@@ -1784,6 +1784,29 @@ export default function AdminPage() {
   const [sfxProgress, setSfxProgress] = useState(0);
   const [sfxLog, setSfxLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
 
+  // ── Admin Services: SFX library table (reuse counts) ─────────────────────
+  interface SfxLibraryRow { id: string; description: string; durationMs: number; audioUrl: string; createdAt: number; hitCount: number }
+  const [sfxLibraryRows, setSfxLibraryRows] = useState<SfxLibraryRow[]>([]);
+  const [sfxLibraryLoading, setSfxLibraryLoading] = useState(false);
+  const [sfxLibraryLoaded, setSfxLibraryLoaded] = useState(false);
+
+  const loadSfxLibrary = useCallback(async () => {
+    setSfxLibraryLoading(true);
+    try {
+      const res = await fetch("/api/admin/seed-sfx-library", { cache: "no-store" });
+      const data = await res.json() as { rows?: SfxLibraryRow[] };
+      setSfxLibraryRows(data.rows ?? []);
+    } catch { /* silent */ }
+    setSfxLibraryLoading(false);
+    setSfxLibraryLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (adminTab === "services" && servicesSubTab === "sfx" && !sfxLibraryLoaded && !sfxLibraryLoading) {
+      void loadSfxLibrary();
+    }
+  }, [adminTab, servicesSubTab, sfxLibraryLoaded, sfxLibraryLoading, loadSfxLibrary]);
+
   const handleUpdateSfxCache = async () => {
     setSfxRunning(true);
     setSfxProgress(10);
@@ -1801,6 +1824,7 @@ export default function AdminPage() {
           ...l,
           { type: "success", text: `✅ Done — ${data.seeded} new SFX added to cache (${data.skipped} skipped, ${data.alreadyInLibrary} already stored, ${data.total} unique descriptions total)` },
         ]);
+        void loadSfxLibrary();
       }
     } catch (e) {
       setSfxLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
@@ -2790,6 +2814,60 @@ export default function AdminPage() {
                       {entry.text}
                     </p>
                   ))}
+                </div>
+              )}
+            </div>
+            )}
+
+            {/* ── SFX Library Table Panel — reuse counts ── */}
+            {servicesSubTab === "sfx" && (
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">📚 SFX Library</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
+                    Every cached clip and how many times it&apos;s been reused across stories instead of
+                    regenerating via ElevenLabs — most-reused first.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void loadSfxLibrary()}
+                  disabled={sfxLibraryLoading}
+                  className="px-3 py-1.5 rounded-lg text-fs-caption font-bold transition-all active:scale-[0.98] disabled:opacity-40 whitespace-nowrap"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  {sfxLibraryLoading ? "Loading…" : "Refresh"}
+                </button>
+              </div>
+
+              {sfxLibraryLoading && sfxLibraryRows.length === 0 && (
+                <p className="text-fs-body mt-4" style={{ color: "rgba(255,255,255,0.4)" }}>Loading…</p>
+              )}
+              {!sfxLibraryLoading && sfxLibraryLoaded && sfxLibraryRows.length === 0 && (
+                <p className="text-fs-body mt-4" style={{ color: "rgba(255,255,255,0.4)" }}>No cached SFX entries yet.</p>
+              )}
+              {sfxLibraryRows.length > 0 && (
+                <div className="mt-4 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="max-h-96 overflow-y-auto">
+                    <table className="w-full text-fs-body" style={{ borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ background: "rgba(255,255,255,0.04)" }}>
+                          <th className="text-left px-3 py-2 font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>Description</th>
+                          <th className="text-right px-3 py-2 font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>Duration</th>
+                          <th className="text-right px-3 py-2 font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>Reused</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sfxLibraryRows.map((row) => (
+                          <tr key={row.id} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                            <td className="px-3 py-2 text-white/80">{row.description}</td>
+                            <td className="px-3 py-2 text-right" style={{ color: "rgba(255,255,255,0.45)" }}>{(row.durationMs / 1000).toFixed(1)}s</td>
+                            <td className="px-3 py-2 text-right font-bold" style={{ color: row.hitCount > 0 ? "#34d399" : "rgba(255,255,255,0.35)" }}>{row.hitCount}×</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
