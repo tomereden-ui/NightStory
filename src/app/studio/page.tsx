@@ -1252,7 +1252,7 @@ export default function Studio2Page() {
     return stored === "step-by-step" || stored === "quick-story" ? stored : "chat";
   };
   const [activeTab, setActiveTab]           = useState<StudioTab>(() => {
-    const initial = startOnPrompt ? "step-by-step" : lastCreateMode();
+    const initial = startOnPrompt ? "step-by-step" : requestedTab === "quick-story" ? "quick-story" : lastCreateMode();
     // A brand-new Studio page load that lands directly on the SBS wizard —
     // clear any draft left over from a previously abandoned attempt (the
     // user never hit "Start over", just navigated away) so every field
@@ -1269,7 +1269,9 @@ export default function Studio2Page() {
     }
     return initial;
   });
-  const [createMode, setCreateModeState]    = useState<"chat" | "step-by-step" | "quick-story">(startOnPrompt ? "step-by-step" : lastCreateMode());
+  const [createMode, setCreateModeState]    = useState<"chat" | "step-by-step" | "quick-story">(
+    startOnPrompt ? "step-by-step" : requestedTab === "quick-story" ? "quick-story" : lastCreateMode(),
+  );
   const setCreateMode = useCallback((mode: "chat" | "step-by-step" | "quick-story") => {
     setCreateModeState(mode);
     if (typeof window !== "undefined") localStorage.setItem(CREATE_MODE_KEY, mode);

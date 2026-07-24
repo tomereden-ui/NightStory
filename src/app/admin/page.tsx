@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import type { ScriptBlock } from "@/types";
 import type { Voice } from "@/types";
@@ -15,6 +16,7 @@ import type { CharacterProfile } from "@/lib/libraryStore";
 import type { CharacterClassification } from "@/lib/services/characterClassifier";
 import { pickBestVoiceForCharacter } from "@/lib/services/voiceAssignment";
 import type { AdminStoryOption } from "@/app/api/admin/list-all-stories/route";
+import VoiceManagerPanel from "@/components/admin/VoiceManagerPanel";
 
 const ADMIN_EMAIL = "tomereden@gmail.com";
 
@@ -1119,6 +1121,7 @@ function SfxLibrarySeeder() {
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
 
   // Everything typed/processed into the Add Story form survives a refresh or
   // navigating away — an admin pasting a long script and reviewing cast
@@ -1773,7 +1776,7 @@ export default function AdminPage() {
   const isError = job?.status === "error";
   const CAST_COLORS = ["#4fc3f7", "#a78bfa", "#fbbf24", "#f87171", "#34d399", "#fb923c"];
 
-  const [adminTab, setAdminTab] = useState<"factory" | "costs" | "services">("factory");
+  const [adminTab, setAdminTab] = useState<"factory" | "costs" | "services">(() => (searchParams.get("tab") === "services" ? "services" : "factory"));
   const [servicesSubTab, setServicesSubTab] = useState<"voices" | "values" | "summary" | "sfx" | "characters" | "general">("voices");
 
   // ── Admin Services: SFX cache update ─────────────────────────────────────
@@ -2790,6 +2793,11 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
+
+            {/* ── Voice Manager (audition tool) — moved here from the old standalone /voice_manager route ── */}
+            {servicesSubTab === "voices" && (
+              <VoiceManagerPanel />
             )}
 
             {/* ── Reassign Cast Voices Panel ── */}
