@@ -536,6 +536,90 @@ function FilterChipRow({ label, accent = "rgba(255,255,255,0.5)", children }: { 
   );
 }
 
+// Language filter, as a multi-select dropdown instead of a scrolling chip
+// row — there are 10 languages (more than Mood/Value have options for),
+// so a dropdown keeps the filter panel from growing tall/wide just to show
+// every option at once. Collapsed, it summarizes the current selection the
+// same way Profile's summarizeChips() does elsewhere in the app: 0 selected
+// reads as the neutral "All languages"; 1-2 selected are spelled out by
+// name; 3+ truncates to the first two plus a "+N" count.
+function LanguageMultiSelect({ selected, onToggle, onClear, accent }: {
+  selected: Set<Language>; onToggle: (code: Language) => void; onClear: () => void; accent: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const allLanguages = Object.entries(LANGUAGE_META) as [Language, typeof LANGUAGE_META[Language]][];
+  const selectedMetas = allLanguages.filter(([code]) => selected.has(code));
+
+  const summary = selectedMetas.length === 0
+    ? "All languages"
+    : selectedMetas.length <= 2
+      ? selectedMetas.map(([, m]) => m.label).join(", ")
+      : `${selectedMetas.slice(0, 2).map(([, m]) => m.label).join(", ")} +${selectedMetas.length - 2}`;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-fs-label font-bold uppercase tracking-widest" style={{ color: accent }}>Language</p>
+        {selected.size > 0 && (
+          <button onClick={onClear} className="text-fs-label font-semibold" style={{ color: "rgba(255,255,255,0.4)" }}>
+            Clear
+          </button>
+        )}
+      </div>
+      <div ref={ref} className="relative">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.99]"
+          style={selected.size > 0
+            ? { background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.9)" }
+            : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
+        >
+          <span className="truncate">{summary}</span>
+          <span className="flex-shrink-0" style={{ color: accent }}>{open ? "▲" : "▼"}</span>
+        </button>
+
+        {open && (
+          <div
+            className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl overflow-hidden"
+            style={{ background: "#111526", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}
+          >
+            <ul className="py-1 max-h-72 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+              {allLanguages.map(([code, meta]) => {
+                const active = selected.has(code);
+                return (
+                  <li key={code}>
+                    <button
+                      onClick={() => onToggle(code)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left"
+                      style={{ background: active ? `${accent}1a` : "transparent" }}
+                    >
+                      <span className="flex-shrink-0" style={{ color: accent }}>{meta.flag}</span>
+                      <span className="flex-1 text-fs-body" style={{ color: active ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.7)" }}>
+                        {meta.label}
+                      </span>
+                      {active && <Icon name="success" size={14} style={{ color: accent }} />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LibraryPage() {
   const { t, language } = useLanguage();
   const { effective } = useViewMode();
@@ -745,7 +829,6 @@ export default function LibraryPage() {
   // supported UI language), so every possible search facet is always
   // reachable regardless of which tab you're on.
   const lessonCatalog = getLessonsCatalog(language);
-  const allLanguages = Object.entries(LANGUAGE_META) as [Language, typeof LANGUAGE_META[Language]][];
 
   const toggleMood = (id: string) => setSelectedMoods((prev) => {
     const next = new Set(prev);
@@ -1006,24 +1089,12 @@ export default function LibraryPage() {
               })}
             </FilterChipRow>
 
-            <FilterChipRow label="Language" accent={LANGUAGE_ACCENT}>
-              {allLanguages.map(([code, meta]) => {
-                const active = selectedLanguages.has(code);
-                return (
-                  <button
-                    key={code}
-                    onClick={() => toggleLanguage(code)}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-fs-body font-semibold transition-all active:scale-95"
-                    style={active
-                      ? { background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.9)" }
-                      : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
-                  >
-                    <span style={{ color: LANGUAGE_ACCENT }}>{meta.flag}</span>
-                    <span>{meta.label}</span>
-                  </button>
-                );
-              })}
-            </FilterChipRow>
+            <LanguageMultiSelect
+              selected={selectedLanguages}
+              onToggle={toggleLanguage}
+              onClear={() => setSelectedLanguages(new Set())}
+              accent={LANGUAGE_ACCENT}
+            />
           </div>
         )}
       </div>
