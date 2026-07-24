@@ -11,6 +11,8 @@ export interface LunaCopy {
   q4Reaction1: string;
   q4Confirm: (engine: string) => string;
   q5: (engine: string) => string;
+  /** Narrated after Q5, before the optional story-mood picker step. */
+  moods: () => string;
   launch: (mood: string, companion: string, world: string, engine: string) => string;
   hereWeGo: string;
   /** Narrated title on the summary/selections screen, before the launch
@@ -42,6 +44,7 @@ const EN: LunaCopy = {
   q4Reaction1: "Oh... that is the most dangerous kind.",
   q4Confirm: (engine) => `${engine}... that is EXACTLY right.`,
   q5: (engine) => `${engine}... that is magnificent. Last question: when the adventure ends, how should our hero feel?`,
+  moods: () => "One more thing! What mood should today's story have? Pick as many as you like — or none, and I'll decide.",
   launch: (mood, companion, world, engine) =>
     `${mood}. Then I know exactly how this ends. Our hero. ${companion} — a loyal companion. ${world}. ${engine}. This story has never existed before tonight. Are you ready?`,
   hereWeGo: "...Here... we... go.",
@@ -75,6 +78,7 @@ const HE: LunaCopy = {
   q4Reaction1: "אה... זה הסוג הכי מסוכן.",
   q4Confirm: (engine) => `${engine}... זה בדיוק נכון.`,
   q5: (engine) => `${engine}... זה נהדר. שאלה אחרונה: כשההרפתקה מסתיימת, איך הגיבור שלנו אמור להרגיש?`,
+  moods: () => "עוד דבר אחד! איזו אווירה יהיה לסיפור של היום? בחרו כמה שתרצו — או בלי לבחור כלל, ואני אחליט.",
   launch: (mood, companion, world, engine) =>
     `${mood}. אז אני יודעת בדיוק איך זה נגמר. הגיבור שלנו. ${companion} — בן לוויה נאמן. ${world}. ${engine}. הסיפור הזה מעולם לא היה קיים לפני הלילה. מוכנים?`,
   hereWeGo: "...ו... יוצאים... לדרך.",
@@ -108,6 +112,7 @@ const ES: LunaCopy = {
   q4Reaction1: "Oh... ese es el tipo más peligroso.",
   q4Confirm: (engine) => `${engine}... eso es EXACTAMENTE correcto.`,
   q5: (engine) => `${engine}... eso es magnífico. Última pregunta: cuando la aventura termine, ¿cómo debería sentirse nuestro héroe?`,
+  moods: () => "¡Una cosa más! ¿Qué ambiente debería tener la historia de hoy? Elige tantos como quieras — o ninguno, y yo decidiré.",
   launch: (mood, companion, world, engine) =>
     `${mood}. Entonces sé exactamente cómo termina esto. Nuestro héroe. ${companion} — un compañero leal. ${world}. ${engine}. Esta historia nunca ha existido antes de esta noche. ¿Listos?`,
   hereWeGo: "...Aquí... vamos...",
@@ -141,6 +146,7 @@ const FR: LunaCopy = {
   q4Reaction1: "Oh... c'est le genre le plus dangereux.",
   q4Confirm: (engine) => `${engine}... c'est EXACTEMENT ça.`,
   q5: (engine) => `${engine}... c'est magnifique. Dernière question : quand l'aventure se termine, comment notre héros devrait-il se sentir ?`,
+  moods: () => "Encore une chose ! Quelle ambiance l'histoire d'aujourd'hui devrait-elle avoir ? Choisis-en autant que tu veux — ou aucune, et je déciderai.",
   launch: (mood, companion, world, engine) =>
     `${mood}. Alors je sais exactement comment cela se termine. Notre héros. ${companion} — un compagnon fidèle. ${world}. ${engine}. Cette histoire n'a jamais existé avant ce soir. Prêts ?`,
   hereWeGo: "...Et... on y... va.",
@@ -174,6 +180,7 @@ const DE: LunaCopy = {
   q4Reaction1: "Oh... das ist die gefährlichste Art.",
   q4Confirm: (engine) => `${engine}... das ist GENAU richtig.`,
   q5: (engine) => `${engine}... das ist wunderbar. Letzte Frage: Wenn das Abenteuer endet, wie soll sich unser Held fühlen?`,
+  moods: () => "Noch eine Sache! Welche Stimmung soll die heutige Geschichte haben? Wähle so viele wie du magst — oder keine, dann entscheide ich.",
   launch: (mood, companion, world, engine) =>
     `${mood}. Dann weiß ich genau, wie das endet. Unser Held. ${companion} — ein treuer Begleiter. ${world}. ${engine}. Diese Geschichte gab es vor heute Nacht noch nie. Bereit?`,
   hereWeGo: "...Und... los... geht's.",
@@ -207,6 +214,7 @@ const PT: LunaCopy = {
   q4Reaction1: "Oh... esse é o tipo mais perigoso.",
   q4Confirm: (engine) => `${engine}... isso está EXATAMENTE certo.`,
   q5: (engine) => `${engine}... isso é magnífico. Última pergunta: quando a aventura terminar, como nosso herói deve se sentir?`,
+  moods: () => "Mais uma coisa! Que clima a história de hoje deveria ter? Escolha quantos quiser — ou nenhum, e eu decido.",
   launch: (mood, companion, world, engine) =>
     `${mood}. Então eu sei exatamente como isso termina. Nosso herói. ${companion} — um companheiro leal. ${world}. ${engine}. Esta história nunca existiu antes desta noite. Prontos?`,
   hereWeGo: "...Lá... vamos... nós.",
@@ -240,6 +248,7 @@ const IT: LunaCopy = {
   q4Reaction1: "Oh... quello è il tipo più pericoloso.",
   q4Confirm: (engine) => `${engine}... è ESATTAMENTE giusto.`,
   q5: (engine) => `${engine}... è magnifico. Ultima domanda: quando l'avventura finisce, come dovrebbe sentirsi il nostro eroe?`,
+  moods: () => "Un'altra cosa! Che atmosfera dovrebbe avere la storia di oggi? Scegline quante vuoi — o nessuna, e deciderò io.",
   launch: (mood, companion, world, engine) =>
     `${mood}. Allora so esattamente come finisce. Il nostro eroe. ${companion} — un fedele compagno. ${world}. ${engine}. Questa storia non è mai esistita prima di stanotte. Pronti?`,
   hereWeGo: "...E... si... parte.",
@@ -273,6 +282,7 @@ const AR: LunaCopy = {
   q4Reaction1: "أوه... هذا هو النوع الأكثر خطورة.",
   q4Confirm: (engine) => `${engine}... هذا صحيح تماماً.`,
   q5: (engine) => `${engine}... هذا رائع. السؤال الأخير: عندما تنتهي المغامرة، كيف يجب أن يشعر بطلنا؟`,
+  moods: () => "شيء أخير! ما هو الجو الذي يجب أن تحمله قصة اليوم؟ اختر ما يحلو لك — أو لا تختر شيئاً وسأقرر أنا.",
   launch: (mood, companion, world, engine) =>
     `${mood}. إذن أنا أعرف بالضبط كيف ينتهي هذا. بطلنا. ${companion} — رفيق مخلص. ${world}. ${engine}. هذه القصة لم توجد من قبل حتى الليلة. هل أنتم مستعدون؟`,
   hereWeGo: "...ها نحن... ننطلق.",
@@ -306,6 +316,7 @@ const JA: LunaCopy = {
   q4Reaction1: "ああ…それは一番危険な種類です。",
   q4Confirm: (engine) => `${engine}…まさにその通りです。`,
   q5: (engine) => `${engine}…素晴らしいです。最後の質問です:冒険が終わるとき、私たちのヒーローはどんな気持ちになるべきですか?`,
+  moods: () => "もうひとつだけ!今日のお話にはどんな雰囲気がいいですか?好きなだけ選んでください——選ばなくても、私が決めますね。",
   launch: (mood, companion, world, engine) =>
     `${mood}。それなら、これがどう終わるか正確にわかります。私たちのヒーロー。${companion}——忠実な仲間。${world}。${engine}。この物語は今夜まで一度も存在しませんでした。準備はいいですか?`,
   hereWeGo: "…さあ…行き…ましょう。",
@@ -339,6 +350,7 @@ const HI: LunaCopy = {
   q4Reaction1: "ओह... यह सबसे खतरनाक किस्म है।",
   q4Confirm: (engine) => `${engine}... यह बिल्कुल सही है।`,
   q5: (engine) => `${engine}... यह शानदार है। आखिरी सवाल: जब रोमांच खत्म हो, तो हमारे नायक को कैसा महसूस होना चाहिए?`,
+  moods: () => "एक और बात! आज की कहानी का माहौल कैसा होना चाहिए? जितने चाहें उतने चुनें — या कुछ भी नहीं, और मैं तय कर लूँगी।",
   launch: (mood, companion, world, engine) =>
     `${mood}। तो मुझे पता है कि यह कैसे खत्म होगा। हमारा नायक। ${companion} — एक वफादार साथी। ${world}। ${engine}। यह कहानी आज रात से पहले कभी नहीं थी। तैयार हैं?`,
   hereWeGo: "...चलो... चलते... हैं।",

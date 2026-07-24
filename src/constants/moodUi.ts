@@ -31,3 +31,37 @@ export const MOODS: MoodDefinition[] = [
 export function buildMoodPromptSpec(): string {
   return MOODS.map((m) => `  - ${m.id}: ${m.definition}`).join("\n");
 }
+
+// Gemini-facing instruction block for user-picked story mood(s) — the
+// 5-Question wizard's optional "moods" step (Answers.storyMoods). English
+// ids stay canonical (they must match a MOODS[].id exactly); only shown to
+// the model, never localized.
+export function buildChosenMoodPromptBlock(chosenIds: string[]): string {
+  if (!chosenIds.length) return "";
+  const lines = chosenIds
+    .map((id) => MOODS.find((m) => m.id === id))
+    .filter((m): m is MoodDefinition => !!m)
+    .map((m, i) => `${i + 1}. ${m.id}: ${m.definition}`);
+  if (!lines.length) return "";
+  return `\n\nSTORY MOOD\n----------\nWrite this story so its overall atmosphere embodies the following mood(s):\n${lines.join("\n")}\nMost scenes' "primaryMood" should be drawn from this list — deviate only where a specific beat genuinely calls for a different one of the six moods (e.g. the scene-arc rule above).`;
+}
+
+// Localized display labels for the mood picker UI (5-Question wizard's
+// "moods" step + anywhere else a user picks a mood by hand) — the ids
+// themselves and their Gemini-facing definitions above stay English-only.
+const STORY_MOOD_LABELS_BY_LANG: Record<string, Record<string, string>> = {
+  en: { Cozy: "Cozy", Whimsical: "Whimsical", Adventurous: "Adventurous", Mysterious: "Mysterious", Playful: "Playful", Silly: "Silly" },
+  he: { Cozy: "חמים", Whimsical: "קסום", Adventurous: "הרפתקני", Mysterious: "מסתורי", Playful: "משעשע", Silly: "מצחיק" },
+  es: { Cozy: "Acogedor", Whimsical: "Fantasioso", Adventurous: "Aventurero", Mysterious: "Misterioso", Playful: "Juguetón", Silly: "Disparatado" },
+  fr: { Cozy: "Douillet", Whimsical: "Fantaisiste", Adventurous: "Aventureux", Mysterious: "Mystérieux", Playful: "Enjoué", Silly: "Loufoque" },
+  de: { Cozy: "Gemütlich", Whimsical: "Fantasievoll", Adventurous: "Abenteuerlich", Mysterious: "Geheimnisvoll", Playful: "Verspielt", Silly: "Albern" },
+  pt: { Cozy: "Aconchegante", Whimsical: "Fantasioso", Adventurous: "Aventureiro", Mysterious: "Misterioso", Playful: "Brincalhão", Silly: "Bobo" },
+  it: { Cozy: "Accogliente", Whimsical: "Fantasioso", Adventurous: "Avventuroso", Mysterious: "Misterioso", Playful: "Giocoso", Silly: "Sciocco" },
+  ar: { Cozy: "دافئ", Whimsical: "خيالي", Adventurous: "مغامر", Mysterious: "غامض", Playful: "مرح", Silly: "مضحك" },
+  ja: { Cozy: "心地よい", Whimsical: "幻想的", Adventurous: "冒険的", Mysterious: "神秘的", Playful: "遊び心のある", Silly: "おどけた" },
+  hi: { Cozy: "आरामदायक", Whimsical: "कल्पनाशील", Adventurous: "साहसिक", Mysterious: "रहस्यमय", Playful: "चंचल", Silly: "नटखट" },
+};
+
+export function getStoryMoodLabels(language?: string): Record<string, string> {
+  return (language && STORY_MOOD_LABELS_BY_LANG[language]) || STORY_MOOD_LABELS_BY_LANG.en;
+}

@@ -13,7 +13,7 @@ import { getFamilyContext } from "@/lib/authContext";
 import { estimateWordCount, isWithinLengthTolerance, buildLengthCorrectionNote, buildLengthTargetReminder, splitLongBlocks, detectGeneratedLanguage, fixHebrewLatinMixup, ageLanguageRules, buildChildPersonalizationPart, resolveTitleConflict, type ChildPersonalizationInput } from "@/lib/services/scriptGenerationHelpers";
 import { generateScenes } from "@/lib/services/sceneGenerator";
 import { LANGUAGE_META } from "@/lib/i18n";
-import { buildMoodPromptSpec } from "@/constants/moodUi";
+import { buildMoodPromptSpec, buildChosenMoodPromptBlock } from "@/constants/moodUi";
 import type { Language } from "@/types";
 
 export const maxDuration = 120;
@@ -27,6 +27,11 @@ export interface FiveQuestionStoryRequest {
   // the active child's default values (Profile/onboarding) — woven in
   // the same way generate-story's STORY VALUES section does
   lessons?: string[];
+  // 0+ ids from src/constants/moodUi.ts's MOODS, picked on the wizard's
+  // optional "moods" step (right after Q5) — shapes the story's overall
+  // atmosphere instead of leaving every scene's mood to Gemini's free
+  // classification, same as before this field existed.
+  moods?: string[];
   // remaining child-profile fields — this route previously ignored all of
   // these (age, avoid, gender, themes, animals, figures, interests, notes),
   // so the wizard's generation never adjusted to the real active child at all
@@ -87,13 +92,14 @@ function readGuidance(): string {
   }
 }
 
-function buildSystemInstruction(guidance: string, durationMinutes: number, language?: string, existingTitles?: string[], lessons?: string[], childAgeGroup?: string, avoid?: string, child?: ChildPersonalizationInput): string {
+function buildSystemInstruction(guidance: string, durationMinutes: number, language?: string, existingTitles?: string[], lessons?: string[], childAgeGroup?: string, avoid?: string, child?: ChildPersonalizationInput, moods?: string[]): string {
   const targetWords = Math.round(durationMinutes * 140);
   const minBlocks   = Math.max(4, Math.round(durationMinutes * 2.5));
   const maxBlocks   = Math.max(8, Math.round(durationMinutes * 3.6));
   const lessonPart = lessons?.length
     ? `\n\nSTORY VALUES\n------------\nEmbed the following values into the story through concrete actions the hero takes. Do NOT state the morals explicitly — let the character's choices show them:\n${lessons.map((l, i) => `${i + 1}. ${l}`).join("\n")}`
     : "";
+  const moodPart = buildChosenMoodPromptBlock(moods ?? []);
   const agePart = childAgeGroup ? `\n\n${ageLanguageRules(childAgeGroup)}` : "";
   const avoidPart = avoid
     ? `\n\nCONTENT TO STRICTLY AVOID\n--------------------------\n${avoid}\nThis is a HARD rule. Never include these elements — not even briefly, not even resolved positively. The child has fears or sensitivities around these topics.`
@@ -113,7 +119,7 @@ function buildSystemInstruction(guidance: string, durationMinutes: number, langu
     ? `\n\nTITLE UNIQUENESS\n----------------\nThe following titles already exist in this family's library. You MUST pick a title that does NOT appear in this list (not even as a close variant or reordering of the same words):\n${existingTitles.map((t) => `  - "${t}"`).join("\n")}\nIf your first choice matches any of these, invent a different title.`
     : "";
 
-  return `${guidance}${lessonPart}${agePart}${childPart}${langPart}${avoidPart}${titleUniquePart}\n\nRUNTIME TARGETS FOR THIS STORY\n-------------------------------\nTarget duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}\nTarget word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)\nTarget blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)\n\nSCENE STRUCTURE (required — output in "scenes" array)\n------------------------------------------------------\nDivide the story into 3–5 logical scenes based on natural story beats. For each scene output:\n  - sceneNumber: integer starting at 1\n  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")\n  - summary: exactly 1 sentence describing what happens in this scene\n  - primaryMood: exactly one of the following moods (choose based on the definition, not just the name):
+  return `${guidance}${lessonPart}${moodPart}${agePart}${childPart}${langPart}${avoidPart}${titleUniquePart}\n\nRUNTIME TARGETS FOR THIS STORY\n-------------------------------\nTarget duration  : ${durationMinutes} minute${durationMinutes !== 1 ? "s" : ""}\nTarget word count: ${targetWords - 60}–${targetWords + 60} spoken words (SFX blocks do not count)\nTarget blocks    : ${minBlocks}–${maxBlocks} total blocks (speech + SFX combined)\n\nSCENE STRUCTURE (required — output in "scenes" array)\n------------------------------------------------------\nDivide the story into 3–5 logical scenes based on natural story beats. For each scene output:\n  - sceneNumber: integer starting at 1\n  - title: 3–5 word evocative label (e.g. "The Moonlit Forest Path")\n  - summary: exactly 1 sentence describing what happens in this scene\n  - primaryMood: exactly one of the following moods (choose based on the definition, not just the name):
 ${buildMoodPromptSpec()}\n  - sfxTags: array of 2–4 short ambient/effect labels (e.g. ["crackling fire", "wind through trees"])\n  - lineRange: { "start": <first block index 0-based>, "end": <last block index 0-based, inclusive> }\n\nScene arc rule: build from an opening mood → engaging peak → low-stimulation soothing resolution (ideal for bedtime).\nlineRange indices must be contiguous, non-overlapping, and together cover all blocks from 0 to N-1.`;
 }
 
@@ -170,7 +176,7 @@ export async function POST(req: NextRequest) {
     preferredFigures: body.preferredFigures,
     interests: body.interests,
     notes: body.notes,
-  });
+  }, body.moods);
   // Reinforced here, not just in the system instruction — a numeric target
   // stated once at the tail of a 500+ line system brief was apparently getting
   // out-weighted by everything else in it (see buildLengthTargetReminder).

@@ -46,6 +46,12 @@ export interface WizardUiCopy {
   companion: string;
   challenge: string;
   ending: string;
+  /** Summary-table row label for the optional story-mood picker step. */
+  mood: string;
+  /** Confirm button on the story-mood picker step — selection there is
+   *  optional (0+ moods), so unlike other steps' "This is the X!" label,
+   *  it's a plain generic "Continue" that works whether or not anything's picked. */
+  continueButton: string;
   edit: string;
   storyLength: string;
   short: string;
@@ -102,6 +108,8 @@ const EN: WizardUiCopy = {
   companion: "Companion",
   challenge: "Challenge",
   ending: "Ending",
+  mood: "Mood",
+  continueButton: "Continue",
   edit: "edit",
   storyLength: "Story Length",
   short: "Short",
@@ -152,6 +160,8 @@ const HE: WizardUiCopy = {
   companion: "בן לוויה",
   challenge: "אתגר",
   ending: "סוף",
+  mood: "אווירה",
+  continueButton: "המשך",
   edit: "עריכה",
   storyLength: "אורך הסיפור",
   short: "קצר",
@@ -202,6 +212,8 @@ const ES: WizardUiCopy = {
   companion: "Compañero",
   challenge: "Desafío",
   ending: "Final",
+  mood: "Ambiente",
+  continueButton: "Continuar",
   edit: "editar",
   storyLength: "Duración",
   short: "Corta",
@@ -252,6 +264,8 @@ const FR: WizardUiCopy = {
   companion: "Compagnon",
   challenge: "Défi",
   ending: "Fin",
+  mood: "Ambiance",
+  continueButton: "Continuer",
   edit: "modifier",
   storyLength: "Durée de l'histoire",
   short: "Courte",
@@ -302,6 +316,8 @@ const DE: WizardUiCopy = {
   companion: "Begleiter",
   challenge: "Herausforderung",
   ending: "Ende",
+  mood: "Stimmung",
+  continueButton: "Weiter",
   edit: "bearbeiten",
   storyLength: "Geschichtenlänge",
   short: "Kurz",
@@ -352,6 +368,8 @@ const PT: WizardUiCopy = {
   companion: "Companheiro",
   challenge: "Desafio",
   ending: "Final",
+  mood: "Clima",
+  continueButton: "Continuar",
   edit: "editar",
   storyLength: "Duração da história",
   short: "Curta",
@@ -402,6 +420,8 @@ const IT: WizardUiCopy = {
   companion: "Compagno",
   challenge: "Sfida",
   ending: "Finale",
+  mood: "Atmosfera",
+  continueButton: "Continua",
   edit: "modifica",
   storyLength: "Durata della storia",
   short: "Breve",
@@ -452,6 +472,8 @@ const AR: WizardUiCopy = {
   companion: "الرفيق",
   challenge: "التحدي",
   ending: "النهاية",
+  mood: "الأجواء",
+  continueButton: "متابعة",
   edit: "تعديل",
   storyLength: "مدة القصة",
   short: "قصيرة",
@@ -502,6 +524,8 @@ const JA: WizardUiCopy = {
   companion: "仲間",
   challenge: "試練",
   ending: "結末",
+  mood: "雰囲気",
+  continueButton: "続ける",
   edit: "編集",
   storyLength: "物語の長さ",
   short: "短い",
@@ -552,6 +576,8 @@ const HI: WizardUiCopy = {
   companion: "साथी",
   challenge: "चुनौती",
   ending: "अंत",
+  mood: "माहौल",
+  continueButton: "जारी रखें",
   edit: "बदलें",
   storyLength: "कहानी की लंबाई",
   short: "छोटी",

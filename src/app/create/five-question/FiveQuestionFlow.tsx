@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
 import { getLuna, getMoodLabels, type LunaCopy } from "@/constants/lunaScripts";
+import { MOODS as STORY_MOODS, getStoryMoodLabels } from "@/constants/moodUi";
+import Icon from "@/components/ui/Icon";
 import {
   getWizardUi, type WizardUiCopy,
   getWorldOptions, type WorldOptionMeta,
@@ -33,7 +35,7 @@ import type { ResolutionMood, StorySeeds } from "@/utils/buildStoryPrompt";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────────
 
-type Step = "q1" | "q2" | "q3" | "q4" | "q5" | "summary" | "generating" | "done";
+type Step = "q1" | "q2" | "q3" | "q4" | "q5" | "moods" | "summary" | "generating" | "done";
 
 interface Answers {
   q1_hero: string;
@@ -41,6 +43,10 @@ interface Answers {
   q3_companion: string;
   q4_engine: string;
   q5_mood: ResolutionMood | null;
+  /** Optional — 0 or more ids from src/constants/moodUi.ts's MOODS, picked
+   *  on the "moods" step right after Q5. Empty means no preference: Gemini
+   *  classifies each scene's mood freely, same as before this step existed. */
+  storyMoods: string[];
 }
 
 export const DRAFT_KEY = "ns-wizard-draft-v1";
@@ -1209,11 +1215,52 @@ function Q5View({ engineText, initialMood, onNext, onBack, onSkip, onReset, opti
   );
 }
 
+// ─── Moods — Story mood(s), optional multi-select ──────────────────────────────────────────────────
+
+function MoodsView({ initialMoods, onNext, onBack, onReset, audioUrl, luna, ui, storyMoodLabels }: {
+  initialMoods: string[]; onNext: (moods: string[]) => void; onBack: () => void; onReset?: () => void;
+  audioUrl?: string; luna: LunaCopy; ui: WizardUiCopy; storyMoodLabels: Record<string, string>;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set(initialMoods));
+
+  const toggle = (id: string) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  return (
+    <QuestionShell onBack={onBack} onReset={onReset} lunaText={luna.moods()} audioUrl={audioUrl} ui={ui}>
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
+          {STORY_MOODS.map((m) => {
+            const active = selected.has(m.id);
+            return (
+              <button
+                key={m.id}
+                onClick={() => toggle(m.id)}
+                className="flex flex-col items-center gap-2 py-5 rounded-2xl transition-all active:scale-[0.97]"
+                style={active
+                  ? { background: `${m.color}1f`, border: `1px solid ${m.color}70`, color: m.color }
+                  : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" }}
+              >
+                <Icon name={m.icon} size={28} />
+                <span className="text-fs-body font-semibold">{storyMoodLabels[m.id] ?? m.id}</span>
+              </button>
+            );
+          })}
+        </div>
+        <ConfirmRow confirmLabel={ui.continueButton} onConfirm={() => onNext(Array.from(selected))} />
+      </div>
+    </QuestionShell>
+  );
+}
+
 // ─── Summary screen ────────────────────────────────────────────────────────────────────────────────
 
 type SummaryPhase = "table" | "script" | "countdown" | "herewego";
 
-function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, luna, ui, moodLabels, companionTypes, animalTypes, audioUrl }: {
+function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, onLaunch, onReset, luna, ui, moodLabels, storyMoodLabels, companionTypes, animalTypes, audioUrl }: {
   answers: Answers;
   durationMinutes: number;
   onDurationChange: (v: number) => void;
@@ -1223,6 +1270,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   luna: LunaCopy;
   ui: WizardUiCopy;
   moodLabels: Record<string, string>;
+  storyMoodLabels: Record<string, string>;
   companionTypes: CompanionTypeMeta[];
   animalTypes: AnimalTypeMeta[];
   audioUrl?: string;
@@ -1247,12 +1295,15 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
   const displayCompanion = localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui, animalTypes);
   const launchScript = luna.launch(moodLabel, displayCompanion, answers.q2_world, answers.q4_engine);
 
+  const storyMoodsDisplay = answers.storyMoods.map((id) => storyMoodLabels[id] ?? id).join(", ");
+
   const ROWS: { label: string; value: string; step: Step }[] = [
     { label: ui.hero,      value: displayHero,       step: "q1" },
     { label: ui.world,     value: answers.q2_world,  step: "q2" },
     { label: ui.companion, value: displayCompanion,  step: "q3" },
     { label: ui.challenge, value: answers.q4_engine, step: "q4" },
     { label: ui.ending,    value: moodLabel,         step: "q5" },
+    ...(storyMoodsDisplay ? [{ label: ui.mood, value: storyMoodsDisplay, step: "moods" as Step }] : []),
   ];
 
   const handleCountdownDone = useCallback(() => {
@@ -1367,7 +1418,7 @@ function SummaryView({ answers, durationMinutes, onDurationChange, onEditStep, o
 
 // ─── Generating screen ────────────────────────────────────────────────────────────────────────
 
-function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, languageExplicitlyChosen, lessons, childContext, onDone, onError, luna }: {
+function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, languageExplicitlyChosen, lessons, moods, childContext, onDone, onError, luna }: {
   worldName: string;
   seeds: StorySeeds; durationMinutes: number;
   contentLanguage?: string;
@@ -1376,6 +1427,8 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, la
    *  carried-over value — see the matching prop on LunaChatPanel. */
   languageExplicitlyChosen?: boolean;
   lessons?: string[];
+  /** 0+ ids from the "moods" step — see Answers.storyMoods. */
+  moods?: string[];
   childContext?: {
     childAgeGroup?: string; avoid?: string; gender?: "boy" | "girl" | "other";
     favoriteThemes?: string[]; favoriteAnimals?: string[]; preferredFigures?: string[];
@@ -1416,7 +1469,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, la
       const res = await fetch("/api/five-question-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seeds, durationMinutes, language: finalLanguage, narratorVoiceId: getNarratorVoiceId(), lessons, ...childContext }),
+        body: JSON.stringify({ seeds, durationMinutes, language: finalLanguage, narratorVoiceId: getNarratorVoiceId(), lessons, moods, ...childContext }),
         signal: controller.signal,
       });
       const data = await res.json();
@@ -1454,7 +1507,7 @@ function GeneratingView({ worldName, seeds, durationMinutes, contentLanguage, la
 
 // ─── Main orchestrator ────────────────────────────────────────────────────────────────────────────
 
-const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", q4_engine: "", q5_mood: null };
+const INITIAL_ANSWERS: Answers = { q1_hero: "", q2_world: "", q3_companion: "", q4_engine: "", q5_mood: null, storyMoods: [] };
 
 export interface StoryCharacterInfo { type: "child" | "adult" | "animal" | "narrator"; visualDescription: string; }
 export type FiveQuestionCompleteData = { blocks: ScriptBlock[]; summary: string; coverPrompt: string; characters?: Record<string, StoryCharacterInfo>; scenes?: import("@/types").StoryScene[]; storyTitle?: string; generationMs?: number };
@@ -1469,6 +1522,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   const luna = useMemo(() => getLuna(effectiveLanguage), [effectiveLanguage]);
   const ui = useMemo(() => getWizardUi(effectiveLanguage), [effectiveLanguage]);
   const moodLabels = useMemo(() => getMoodLabels(effectiveLanguage), [effectiveLanguage]);
+  const storyMoodLabels = useMemo(() => getStoryMoodLabels(effectiveLanguage), [effectiveLanguage]);
   const worldOptions = useMemo(() => getWorldOptions(effectiveLanguage), [effectiveLanguage]);
   const companionTypes = useMemo(() => getCompanionTypes(effectiveLanguage), [effectiveLanguage]);
   const q4Categories = useMemo(() => getQ4Categories(effectiveLanguage), [effectiveLanguage]);
@@ -1553,7 +1607,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as { step?: Step; answers?: Answers; durationMinutes?: number };
-        const hasContent = parsed.answers && Object.values(parsed.answers).some((v) => v);
+        const hasContent = parsed.answers && Object.values(parsed.answers).some((v) => Array.isArray(v) ? v.length > 0 : v);
         if (hasContent && parsed.answers) {
           setAnswers(parsed.answers);
           if (parsed.durationMinutes) setDuration(parsed.durationMinutes);
@@ -1717,7 +1771,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   }, []);
 
   const handleBack = () => {
-    const order: Step[] = ["q1", "q2", "q3", "q4", "q5", "summary"];
+    const order: Step[] = ["q1", "q2", "q3", "q4", "q5", "moods", "summary"];
     const idx = order.indexOf(step);
     if (idx > 0) setStep(order[idx - 1]);
     else handleReset();
@@ -1809,7 +1863,7 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   ) : null;
 
   // Whether user has made any progress (for showing Start over button)
-  const hasProgress = Object.values(answers).some((v) => v) || step !== "q1";
+  const hasProgress = Object.values(answers).some((v) => Array.isArray(v) ? v.length > 0 : v) || step !== "q1";
 
   const backToSummary = () => { setEditingFromSummary(false); setStep("summary"); };
   const nextOrSummary = (next: Step) => editingFromSummary ? backToSummary() : setStep(next);
@@ -1843,17 +1897,18 @@ export function FiveQuestionFlow({ onComplete, onGenerating, childName, childAva
   if (step === "q2") return <>{GeneratingBadge}<Q2View key={resetToken} initialWorld={answers.q2_world} onNext={(w) => { setAnswer("q2_world", w); nextOrSummary("q3"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q3", () => { if (!answers.q2_world) setAnswer("q2_world", pickRandom(worldOptions).label); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q2} luna={luna} ui={ui} worldOptions={worldOptions} language={effectiveLanguage} /></>;
   if (step === "q3") return <>{GeneratingBadge}<Q3View key={resetToken} heroName={answers.q1_hero} worldName={answers.q2_world} initialCompanion={answers.q3_companion} onNext={(c) => { setAnswer("q3_companion", c); nextOrSummary("q4"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q4", () => { if (!answers.q3_companion) setAnswer("q3_companion", pickRandom(SURPRISE_COMPANIONS)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q3} luna={luna} ui={ui} companionTypes={companionTypes} language={effectiveLanguage} siblingNames={siblingNames} animalTypes={animalTypes} childName={childName} /></>;
   if (step === "q4") return <>{GeneratingBadge}<Q4View key={resetToken} heroName={answers.q1_hero} companionName={localizeCompanionForDisplay(answers.q3_companion, companionTypes, ui, animalTypes)} initialEngine={answers.q4_engine} onNext={(e) => { setAnswer("q4_engine", e); nextOrSummary("q5"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("q5", () => { if (!answers.q4_engine) setAnswer("q4_engine", pickRandom(SURPRISE_ENGINES)); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q4} luna={luna} ui={ui} q4Categories={q4Categories} language={effectiveLanguage} /></>;
-  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("generating", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} luna={luna} ui={ui} moodLabels={moodLabels} /></>;
+  if (step === "q5") return <>{GeneratingBadge}<Q5View key={resetToken} engineText={answers.q4_engine} initialMood={answers.q5_mood ?? null} onNext={(m) => { setAnswer("q5_mood", m); nextOrSummary("moods"); }} onBack={editingFromSummary ? backToSummary : handleBack} onSkip={() => skipOrSummary("generating", () => { if (!answers.q5_mood) setAnswer("q5_mood", "sleepy"); })} onReset={resetProp} optionImages={optionImages} audioUrl={questionAudios.q5} luna={luna} ui={ui} moodLabels={moodLabels} /></>;
+  if (step === "moods") return <>{GeneratingBadge}<MoodsView key={resetToken} initialMoods={answers.storyMoods} onNext={(moods) => { setAnswer("storyMoods", moods); nextOrSummary("summary"); }} onBack={editingFromSummary ? backToSummary : handleBack} onReset={resetProp} audioUrl={questionAudios.moods} luna={luna} ui={ui} storyMoodLabels={storyMoodLabels} /></>;
 
   if (step === "summary") return (
     <>
       {ErrorBanner}
-      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={showInternalReset ? handleReset : undefined} luna={luna} ui={ui} moodLabels={moodLabels} companionTypes={companionTypes} animalTypes={animalTypes} audioUrl={questionAudios.summary} />
+      <SummaryView key={resetToken} answers={answers} durationMinutes={durationMinutes} onDurationChange={setDuration} onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }} onLaunch={handleLaunch} onReset={showInternalReset ? handleReset : undefined} luna={luna} ui={ui} moodLabels={moodLabels} storyMoodLabels={storyMoodLabels} companionTypes={companionTypes} animalTypes={animalTypes} audioUrl={questionAudios.summary} />
     </>
   );
 
   if (step === "generating" && seeds) return (
-    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} languageExplicitlyChosen={languageExplicitlyChosen} lessons={defaultLessons} childContext={childContext} onDone={handleDone} onError={handleGenError} luna={luna} />
+    <GeneratingView worldName={answers.q2_world} seeds={seeds} durationMinutes={durationMinutes} contentLanguage={effectiveLanguage} languageExplicitlyChosen={languageExplicitlyChosen} lessons={defaultLessons} moods={answers.storyMoods} childContext={childContext} onDone={handleDone} onError={handleGenError} luna={luna} />
   );
 
   if (step === "done") {
