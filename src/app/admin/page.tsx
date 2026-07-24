@@ -1774,6 +1774,7 @@ export default function AdminPage() {
   const CAST_COLORS = ["#4fc3f7", "#a78bfa", "#fbbf24", "#f87171", "#34d399", "#fb923c"];
 
   const [adminTab, setAdminTab] = useState<"factory" | "costs" | "services">("factory");
+  const [servicesSubTab, setServicesSubTab] = useState<"voices" | "values" | "summary" | "sfx" | "characters" | "general">("voices");
 
   // ── Admin Services: SFX cache update ─────────────────────────────────────
   const [sfxRunning, setSfxRunning] = useState(false);
@@ -2036,6 +2037,118 @@ export default function AdminPage() {
   const handleRefreshAllStories = () => {
     if (!confirm("Refresh cast/voices, lessons, scenes, and summary for EVERY story in the library (public + private)? This never touches script text, cover image, or audio. Each story requires 4 fresh Gemini calls — this may take a while for a large library.")) return;
     runRefreshStory({ applyAll: true });
+  };
+
+  // ── Admin Services: Analyze Values (re-classify against the current 10-value catalog) ──
+  const [analyzeQuery, setAnalyzeQuery] = useState("");
+  const [analyzeRunning, setAnalyzeRunning] = useState(false);
+  const [analyzeLog, setAnalyzeLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const runAnalyzeValues = async (body: { storyId: string } | { title: string } | { applyAll: true }) => {
+    setAnalyzeRunning(true);
+    setAnalyzeLog([{
+      type: "info",
+      text: "applyAll" in body ? "Scanning every story in the library…"
+        : "title" in body ? `Searching for stories matching "${body.title}"…`
+        : `Analyzing values for story ${body.storyId}…`,
+    }]);
+    try {
+      const res = await fetch("/api/admin/analyze-values", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAnalyzeLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      const d = data as {
+        totalStories: number; storiesAnalyzed: number; storiesFailed: number;
+        results: Array<{ storyId: string; title: string; status: "ok" | "error"; lessonCount?: number; error?: string }>;
+      };
+      setAnalyzeLog((l) => [
+        ...l,
+        { type: "success", text: `✅ Done — ${d.storiesAnalyzed}/${d.totalStories} stories analyzed (${d.storiesFailed} failed)` },
+        ...d.results.filter((r) => r.status === "ok").map((r) => ({ type: "info" as const, text: `  · "${r.title}" — ${r.lessonCount ?? 0} value(s) detected` })),
+        ...d.results.filter((r) => r.status === "error").map((r) => ({ type: "error" as const, text: `  · "${r.title}" (${r.storyId}) — ${r.error}` })),
+      ]);
+    } catch (e) {
+      setAnalyzeLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setAnalyzeRunning(false);
+    }
+  };
+
+  const handleAnalyzeById = () => {
+    if (!analyzeQuery.trim()) return;
+    runAnalyzeValues({ storyId: analyzeQuery.trim() });
+  };
+
+  const handleAnalyzeByTitle = () => {
+    if (!analyzeQuery.trim()) return;
+    runAnalyzeValues({ title: analyzeQuery.trim() });
+  };
+
+  const handleAnalyzeAllStories = () => {
+    if (!confirm("Re-classify values for EVERY story in the library (public + private) against the current 10-value catalog? This never touches script text, cast/voices, scenes, cover image, or audio. Each story requires 1 fresh Gemini call — this may take a while for a large library.")) return;
+    runAnalyzeValues({ applyAll: true });
+  };
+
+  // ── Admin Services: Regenerate Summary ──────────────────────────────────────
+  const [summaryQuery, setSummaryQuery] = useState("");
+  const [summaryRunning, setSummaryRunning] = useState(false);
+  const [summaryLog, setSummaryLog] = useState<Array<{ type: "info" | "error" | "success"; text: string }>>([]);
+
+  const runRegenerateSummary = async (body: { storyId: string } | { title: string } | { applyAll: true }) => {
+    setSummaryRunning(true);
+    setSummaryLog([{
+      type: "info",
+      text: "applyAll" in body ? "Scanning every story in the library…"
+        : "title" in body ? `Searching for stories matching "${body.title}"…`
+        : `Regenerating summary for story ${body.storyId}…`,
+    }]);
+    try {
+      const res = await fetch("/api/admin/regenerate-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSummaryLog((l) => [...l, { type: "error", text: `Server error: ${data.error ?? res.statusText}` }]);
+        return;
+      }
+      const d = data as {
+        totalStories: number; storiesRegenerated: number; storiesFailed: number;
+        results: Array<{ storyId: string; title: string; status: "ok" | "error"; summary?: string; error?: string }>;
+      };
+      setSummaryLog((l) => [
+        ...l,
+        { type: "success", text: `✅ Done — ${d.storiesRegenerated}/${d.totalStories} summaries regenerated (${d.storiesFailed} failed)` },
+        ...d.results.filter((r) => r.status === "ok").map((r) => ({ type: "info" as const, text: `  · "${r.title}" — "${(r.summary ?? "").slice(0, 60)}${(r.summary?.length ?? 0) > 60 ? "…" : ""}"` })),
+        ...d.results.filter((r) => r.status === "error").map((r) => ({ type: "error" as const, text: `  · "${r.title}" (${r.storyId}) — ${r.error}` })),
+      ]);
+    } catch (e) {
+      setSummaryLog((l) => [...l, { type: "error", text: `Network error: ${e instanceof Error ? e.message : String(e)}` }]);
+    } finally {
+      setSummaryRunning(false);
+    }
+  };
+
+  const handleSummaryById = () => {
+    if (!summaryQuery.trim()) return;
+    runRegenerateSummary({ storyId: summaryQuery.trim() });
+  };
+
+  const handleSummaryByTitle = () => {
+    if (!summaryQuery.trim()) return;
+    runRegenerateSummary({ title: summaryQuery.trim() });
+  };
+
+  const handleSummaryAllStories = () => {
+    if (!confirm("Regenerate the summary blurb for EVERY story in the library (public + private)? This never touches script text, cast/voices, values, scenes, cover image, or audio. Each story requires 1 fresh Gemini call — this may take a while for a large library.")) return;
+    runRegenerateSummary({ applyAll: true });
   };
 
   // ── Add Story: "episode of a series" option ─────────────────────────────────
@@ -2597,7 +2710,29 @@ export default function AdminPage() {
         {adminTab === "services" && (
           <div className="flex flex-col gap-6">
 
+            {/* Sub-tab bar — groups the services below by subject rather than
+                one long undifferentiated scroll. */}
+            <div className="flex gap-1.5 flex-wrap p-1 rounded-2xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              {([
+                { id: "voices",     label: "🔊 Voices" },
+                { id: "values",     label: "💫 Values" },
+                { id: "summary",    label: "📝 Summary" },
+                { id: "sfx",        label: "🎧 SFX" },
+                { id: "characters", label: "🧬 Characters" },
+                { id: "general",    label: "🛠️ General" },
+              ] as const).map((tab) => (
+                <button key={tab.id} onClick={() => setServicesSubTab(tab.id)}
+                  className="flex-1 py-2 px-2 rounded-xl text-fs-body font-medium transition-all"
+                  style={{ minWidth: 110, ...(servicesSubTab === tab.id
+                    ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.35)", color: "#4fc3f7" }
+                    : { background: "transparent", border: "1px solid transparent", color: "rgba(255,255,255,0.55)" }) }}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             {/* ── SFX Cache Panel ── */}
+            {servicesSubTab === "sfx" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -2655,8 +2790,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Reassign Cast Voices Panel ── */}
+            {servicesSubTab === "voices" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -2717,8 +2854,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Reassign Cast Avatars Panel ── */}
+            {servicesSubTab === "characters" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -2779,8 +2918,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Backfill Character Profiles Panel ── */}
+            {servicesSubTab === "characters" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -2839,8 +2980,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Regenerate Scene Maps Panel ── */}
+            {servicesSubTab === "general" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -2900,8 +3043,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Refresh Story Policies Panel ── */}
+            {servicesSubTab === "general" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -2971,8 +3116,153 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
+
+            {/* ── Analyze Values Panel ── */}
+            {servicesSubTab === "values" && (
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">💫 Analyze Values</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
+                    Re-classifies which of the 10 canonical values (Bravery, Kindness, etc.) are
+                    meaningfully embedded in a story, against the current catalog — lighter-weight
+                    than the full Refresh Story Policies bundle above, since it&apos;s just this one
+                    Gemini call. Useful for older stories analyzed before this pipeline existed, or
+                    after the value catalog itself changes. Never touches script text, cast/voices,
+                    scenes, cover image, or audio.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={analyzeQuery}
+                  onChange={(e) => setAnalyzeQuery(e.target.value)}
+                  placeholder="Story ID or title"
+                  disabled={analyzeRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={handleAnalyzeById}
+                  disabled={analyzeRunning || !analyzeQuery.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Analyze by ID
+                </button>
+                <button
+                  onClick={handleAnalyzeByTitle}
+                  disabled={analyzeRunning || !analyzeQuery.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Analyze by Title
+                </button>
+              </div>
+
+              <button
+                onClick={handleAnalyzeAllStories}
+                disabled={analyzeRunning}
+                className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {analyzeRunning ? "Working…" : "Analyze ALL Stories"}
+              </button>
+
+              {analyzeLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {analyzeLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+            )}
+
+            {/* ── Regenerate Summary Panel ── */}
+            {servicesSubTab === "summary" && (
+            <div className="rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-white font-bold text-fs-body">📝 Regenerate Summary</p>
+                  <p className="text-fs-body mt-0.5" style={{ color: "rgba(255,255,255,0.52)" }}>
+                    Re-derives just the summary blurb shown on library/home cards, from the story&apos;s
+                    existing script — lighter-weight than the full Refresh Story Policies bundle above.
+                    Never touches script text, cast/voices, values, scenes, cover image, or audio.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={summaryQuery}
+                  onChange={(e) => setSummaryQuery(e.target.value)}
+                  placeholder="Story ID or title"
+                  disabled={summaryRunning}
+                  className="flex-1 rounded-xl px-3 py-2.5 text-fs-body outline-none text-white/80"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={handleSummaryById}
+                  disabled={summaryRunning || !summaryQuery.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Regenerate by ID
+                </button>
+                <button
+                  onClick={handleSummaryByTitle}
+                  disabled={summaryRunning || !summaryQuery.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }}>
+                  Regenerate by Title
+                </button>
+              </div>
+
+              <button
+                onClick={handleSummaryAllStories}
+                disabled={summaryRunning}
+                className="w-full mt-3 py-3 rounded-xl text-fs-body font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,rgba(167,139,250,0.2),rgba(79,195,247,0.2))", border: "1px solid rgba(167,139,250,0.4)", color: "#fff" }}>
+                {summaryRunning ? "Working…" : "Regenerate ALL Summaries"}
+              </button>
+
+              {summaryLog.length > 0 && (
+                <div className="mt-4 rounded-xl px-3 py-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {summaryLog.map((entry, i) => (
+                    <p key={i} className="text-fs-body leading-snug"
+                      style={{
+                        color: entry.type === "error" ? "#f87171"
+                          : entry.type === "success" ? "#34d399"
+                          : "rgba(255,255,255,0.45)",
+                        fontFamily: "monospace",
+                      }}>
+                      {entry.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+            )}
 
             {/* ── Generate Voice Preview Samples Panel ── */}
+            {servicesSubTab === "voices" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -3032,8 +3322,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Promote Story Panel ── */}
+            {servicesSubTab === "general" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(79,195,247,0.04)", border: "1px solid rgba(79,195,247,0.18)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -3091,8 +3383,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Delete Story Panel ── */}
+            {servicesSubTab === "general" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.18)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -3143,8 +3437,10 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Delete Audio Only Panel ── */}
+            {servicesSubTab === "general" && (
             <div className="rounded-2xl p-5"
               style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.18)" }}>
               <div className="flex items-start justify-between mb-1">
@@ -3195,6 +3491,7 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+            )}
 
           </div>
         )}
