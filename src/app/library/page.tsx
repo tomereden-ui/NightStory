@@ -9,6 +9,7 @@ import { useViewMode } from "@/context/ViewModeContext";
 import type { LibraryEntry } from "@/lib/libraryStore";
 import type { ClassicMeta } from "@/lib/classicStories";
 import Icon from "@/components/ui/Icon";
+import type { IconName } from "@/lib/icons";
 import SeriesCountBadge from "@/components/ui/SeriesCountBadge";
 import StoryPoster from "@/components/ui/StoryPoster";
 import { dedupeBySeries } from "@/lib/dedupeBySeries";
@@ -52,8 +53,8 @@ function formatDuration(seconds?: number): string | null {
 // Same moods scenes are tagged with (see src/constants/moodUi.ts and
 // config/story-guidance.txt's SCENE BREAKDOWN section) — reused here for
 // the library's mood filter chips.
-const MOODS: { id: string; emoji: string; color: string }[] = MOOD_DEFINITIONS.map(
-  ({ id, emoji, color }) => ({ id, emoji, color })
+const MOODS: { id: string; icon: IconName; color: string }[] = MOOD_DEFINITIONS.map(
+  ({ id, icon, color }) => ({ id, icon, color })
 );
 
 // A story doesn't have one mood of its own — only its scenes do — so this
@@ -979,7 +980,7 @@ export default function LibraryPage() {
                       ? { background: `${m.color}26`, border: `1px solid ${m.color}66`, color: m.color }
                       : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
                   >
-                    <span>{m.emoji}</span>
+                    <Icon name={m.icon} size={13} />
                     <span>{m.id}</span>
                   </button>
                 );
