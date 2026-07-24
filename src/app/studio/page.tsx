@@ -18,7 +18,8 @@ import type { CharacterProfile } from "@/lib/libraryStore";
 import type { GenerateStoryRequest } from "@/app/api/generate-story/route";
 import type { Job } from "@/lib/jobs";
 import type { ScriptSaveMeta, ScriptSaveFull } from "@/lib/scriptSaves";
-import { FiveQuestionFlow, DRAFT_KEY as WIZARD_DRAFT_KEY } from "@/app/create/five-question/FiveQuestionFlow";
+import { FiveQuestionFlow, DRAFT_KEY as WIZARD_DRAFT_KEY, type StoryCharacterInfo } from "@/app/create/five-question/FiveQuestionFlow";
+import { StoryBuilderFlow } from "@/app/create/story-builder/StoryBuilderFlow";
 import { SCENE_CHARS } from "@/config/sceneCharacters";
 import { LANGUAGE_META, t as i18nT } from "@/lib/i18n";
 import ChildProfilePicker, { type DBChildProfile } from "@/components/studio/ChildProfilePicker";
@@ -1082,7 +1083,7 @@ function PromptTabContent({
 
 // ─── Studio 2 page ────────────────────────────────────────────────────────────
 
-type StudioTab = "chat" | "step-by-step" | "lesson" | "script" | "producing";
+type StudioTab = "chat" | "step-by-step" | "quick-story" | "lesson" | "script" | "producing";
 
 // Reduces a script down to just the fields that matter for "did the script or
 // its cast's voices actually change" — text, who speaks it, which voice reads
@@ -1245,10 +1246,10 @@ export default function Studio2Page() {
   // it. A plain nav tap into Studio carries no such param, so it falls
   // through to the remembered Create sub-tab instead.
   const requestedTab = searchParams.get("tab");
-  const lastCreateMode = (): "chat" | "step-by-step" => {
+  const lastCreateMode = (): "chat" | "step-by-step" | "quick-story" => {
     if (typeof window === "undefined") return "chat";
     const stored = localStorage.getItem(CREATE_MODE_KEY);
-    return stored === "step-by-step" ? "step-by-step" : "chat";
+    return stored === "step-by-step" || stored === "quick-story" ? stored : "chat";
   };
   const [activeTab, setActiveTab]           = useState<StudioTab>(() => {
     const initial = startOnPrompt ? "step-by-step" : lastCreateMode();
@@ -1268,8 +1269,8 @@ export default function Studio2Page() {
     }
     return initial;
   });
-  const [createMode, setCreateModeState]    = useState<"chat" | "step-by-step">(startOnPrompt ? "step-by-step" : lastCreateMode());
-  const setCreateMode = useCallback((mode: "chat" | "step-by-step") => {
+  const [createMode, setCreateModeState]    = useState<"chat" | "step-by-step" | "quick-story">(startOnPrompt ? "step-by-step" : lastCreateMode());
+  const setCreateMode = useCallback((mode: "chat" | "step-by-step" | "quick-story") => {
     setCreateModeState(mode);
     if (typeof window !== "undefined") localStorage.setItem(CREATE_MODE_KEY, mode);
   }, []);
@@ -2409,6 +2410,131 @@ export default function Studio2Page() {
     setActiveTab(startOnPrompt ? "step-by-step" : createMode);
   }, [startOnPrompt, createMode]);
 
+  // ─── Shared wizard-style generation handlers ────────────────────────────────
+  // Both Step-by-step (FiveQuestionFlow) and Quick Story (StoryBuilderFlow)
+  // produce the exact same onComplete payload shape ({blocks, summary,
+  // coverPrompt, characters, scenes, storyTitle, generationMs}), so they
+  // share these two handlers rather than each having their own copy of the
+  // validate-blocks/character-avatar/lessons-analysis pipeline below.
+  const handleWizardGenerating = () => {
+    setScriptBlocks([]);
+    setMoralLessons([]);
+    // A fresh script must be produceable immediately, not left disabled by a
+    // stale storyHasAudio=true carried over from whatever story was open before.
+    setStoryHasAudio(false);
+    // The sticky StudioAudioBar is gated on completedJob independently of
+    // storyHasAudio — same fix as above.
+    setCompletedJob(null);
+    // Also clear editingStoryId — otherwise a second story generated in the
+    // same session never gets its own draft row / production_metrics
+    // 'script_done' row.
+    setEditingStoryId(null);
+    setLastGenerationMs(undefined);
+    setLastValidationStages(undefined);
+    setLanguageExplicitlyChosen(false);
+    setPendingLessonsInstruction(null);
+    setHasPendingCastChange(false);
+    setHasScriptChanges(false);
+    setHasUnsavedChanges(false);
+    setMetaDirty(false);
+    pendingVoiceOverridesRef.current = {};
+    // Leftover Director's Note text/chips from a previous story.
+    setDirectorNote("");
+    setSelectedMoodChips(new Set());
+  };
+
+  const handleWizardComplete = ({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle, generationMs: fqGenerationMs }: {
+    blocks: ScriptBlock[]; summary: string; coverPrompt: string;
+    characters?: Record<string, StoryCharacterInfo>; scenes?: StoryScene[]; storyTitle?: string; generationMs?: number;
+  }) => {
+    setActiveTab("script");
+    setSummary(sm);
+    setCoverPrompt(cp);
+    setCoverUrl("");
+    setStoryTitle(fqTitle ?? "");
+    setLastGenerationMs(fqGenerationMs);
+    // storyLang deliberately left as-is — it already reflects whatever
+    // language was chosen in this flow's own picker, not necessarily the
+    // app's global UI language.
+    setLessons([]);
+    // Without this, a stale cleanLessonsRef from a previous story in this
+    // session incorrectly marks this brand-new, lesson-less story dirty the
+    // moment it lands, blocking Produce Audio from the start.
+    cleanLessonsRef.current = [];
+    setLessonImplementations([]);
+    setMoralLessons([]);
+    setScenes(fqScenes ?? []);
+    // A stale dirty flag from a previous story otherwise freezes the saved/
+    // produced baselines and blocks Produce Audio from the start.
+    setHasScriptChanges(false);
+    setHasUnsavedChanges(false);
+    setMetaDirty(false);
+    setCharacterAvatars({});
+    setCharacterTypes({});
+    setCharacterDescriptions({});
+    setTotalExpectedBlocks(rawBlocks.length);
+    setIsValidating(true);
+    setValidatingPhase("Luna is proofreading it…");
+    if (cp) fetchCover(cp, sm);
+    const childAge = activeChild?.age ?? 6;
+    // Both wizard flows skip validate-script's whole-script policy check,
+    // same as Chat mode — see the matching comment there.
+    const validationT0 = Date.now();
+    fetch("/api/validate-blocks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: [], summary: sm, language: storyLang }),
+    })
+      .then((r) => r.json())
+      .then((valData) => {
+        const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks)
+          .map((b: ScriptBlock) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
+        void resolveAndSetCharacterAvatars(blocks, sm, fqChars);
+        // Fire now, not in the last reveal timeout — the lessons call
+        // shouldn't wait out the reveal animation.
+        writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang, storyTitle: fqTitle }, DRAFT_KEY);
+        void analyzeLessons(blocks, null);
+        const validationStages: Record<string, { startMs: number; endMs: number; ms: number }> = {};
+        let cursor = 0;
+        const t = valData.timings as { pass1Ms?: number; pass2Ms?: number; pass3Ms?: number } | undefined;
+        if (typeof t?.pass1Ms === "number") { validationStages.content_review = { startMs: cursor, endMs: cursor + t.pass1Ms, ms: t.pass1Ms }; cursor += t.pass1Ms; }
+        if (typeof t?.pass2Ms === "number") { validationStages.grammar_review = { startMs: cursor, endMs: cursor + t.pass2Ms, ms: t.pass2Ms }; cursor += t.pass2Ms; }
+        if (typeof t?.pass3Ms === "number") { validationStages.hebrew_review = { startMs: cursor, endMs: cursor + t.pass3Ms, ms: t.pass3Ms }; cursor += t.pass3Ms; }
+        if (!validationStages.content_review) {
+          const endMs = Date.now() - validationT0;
+          validationStages.validate_blocks = { startMs: 0, endMs, ms: endMs };
+        }
+        setLastValidationStages(validationStages);
+        blocks.forEach((block, i) => {
+          setTimeout(() => {
+            setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId, validated: true }]);
+            if (i === blocks.length - 1) {
+              setIsValidating(false);
+              setValidatingPhase("");
+              setTotalExpectedBlocks(undefined);
+            }
+          }, i * 65);
+        });
+      })
+      .catch(() => {
+        void resolveAndSetCharacterAvatars(rawBlocks, sm, fqChars);
+        writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
+        void analyzeLessons(rawBlocks, null);
+        const endMs = Date.now() - validationT0;
+        setLastValidationStages({ validate_blocks: { startMs: 0, endMs, ms: endMs } });
+        rawBlocks.forEach((block, i) => {
+          setTimeout(() => {
+            setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId }]);
+            if (i === rawBlocks.length - 1) {
+              setIsValidating(false);
+              setValidatingPhase("");
+              setTotalExpectedBlocks(undefined);
+            }
+          }, i * 65);
+        });
+      });
+  };
+
   // ─── Fetch cover ─────────────────────────────────────────────────────────────
 
   // Fetches a cover into local state only -- never persists it. Used both for
@@ -2578,7 +2704,7 @@ export default function Studio2Page() {
 
   const hasScript = scriptBlocks.length > 0 || isValidating || generating;
   const showTabBar = activeTab !== "lesson";
-  const isOnCreateTab = activeTab === "chat" || activeTab === "step-by-step";
+  const isOnCreateTab = activeTab === "chat" || activeTab === "step-by-step" || activeTab === "quick-story";
 
   return (
     <div className="min-h-full" dir={isRTL ? "rtl" : "ltr"}>
@@ -2658,14 +2784,13 @@ export default function Studio2Page() {
               <span>🧚</span>
               <span>{i18nT(language, "stepByStep" as never)}</span>
             </button>
-            {/* Fully self-contained flow (own state, own review screen, own
-                produce call) — routed to rather than swapped in as a third
-                activeTab, so it doesn't entangle with this page's
-                ScriptTab-oriented state the way Chat/Step-by-step do. */}
             <button
-              onClick={() => router.push("/create/story-builder")}
+              onClick={() => { setCreateMode("quick-story"); setActiveTab("quick-story"); }}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.97]"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={createMode === "quick-story"
+                ? { background: "rgba(79,195,247,0.15)", border: "1px solid rgba(79,195,247,0.4)", color: "#4fc3f7" }
+                : { color: "rgba(255,255,255,0.55)" }
+              }
             >
               <span>✨</span>
               <span>Quick Story</span>
@@ -2851,8 +2976,10 @@ export default function Studio2Page() {
           />
         )}
 
-        {/* Step-by-step tab */}
-        {activeTab === "step-by-step" && (
+        {/* Step-by-step + Quick Story tabs — share the reset/language chrome
+            since both are wizard-style flows that hand off the exact same
+            onComplete payload shape into Studio's own Script tab. */}
+        {(activeTab === "step-by-step" || activeTab === "quick-story") && (
           <div className="-mx-5">
             {/* Reset + language — same as Chat with Luna: local to this story,
                 never touches the app's global UI language. */}
@@ -2862,7 +2989,10 @@ export default function Studio2Page() {
                   <span className="text-fs-body" style={{ color: "rgba(255,255,255,0.55)" }}>Start over?</span>
                   <button
                     onClick={() => {
-                      try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+                      // Only Step-by-step persists its own draft to localStorage.
+                      if (activeTab === "step-by-step") {
+                        try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+                      }
                       setWizardResetKey((k) => k + 1);
                       setWizardResetConfirm(false);
                       setWizardStarted(false);
@@ -2897,7 +3027,9 @@ export default function Studio2Page() {
                 <LanguageToggle
                   value={storyLang as Language}
                   onLanguageChange={(lang) => {
-                    try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+                    if (activeTab === "step-by-step") {
+                      try { localStorage.removeItem(WIZARD_DRAFT_KEY); } catch { /* ignore */ }
+                    }
                     setStoryLangOverride(lang);
                     setWizardResetKey((k) => k + 1);
                     setWizardResetConfirm(false);
@@ -2906,139 +3038,34 @@ export default function Studio2Page() {
                 />
               )}
             </div>
-            <FiveQuestionFlow
-              key={wizardResetKey}
-              contentLanguage={storyLang}
-              languageExplicitlyChosen={languageExplicitlyChosen}
-              childName={activeChild?.name}
-              childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
-              childId={activeChild?.id}
-              showInternalReset={false}
-              onFirstAnswer={() => setWizardStarted(true)}
-              onGenerating={() => {
-                setScriptBlocks([]);
-                setMoralLessons([]);
-                // Same fix as Chat mode's onGenerating (see below) — a fresh
-                // Step-by-step script must be produceable immediately, not
-                // left disabled by a stale storyHasAudio=true carried over
-                // from whatever story was open before.
-                setStoryHasAudio(false);
-                // The sticky StudioAudioBar is gated on completedJob
-                // independently of storyHasAudio — same fix as Chat mode's
-                // onGenerating.
-                setCompletedJob(null);
-                // Also clear editingStoryId — otherwise a second story
-                // generated in the same session never gets its own draft
-                // row / production_metrics 'script_done' row (see the
-                // matching comment in Chat mode's onGenerating below).
-                setEditingStoryId(null);
-                setLastGenerationMs(undefined);
-                setLastValidationStages(undefined);
-                setLanguageExplicitlyChosen(false);
-                setPendingLessonsInstruction(null);
-                setHasPendingCastChange(false);
-                setHasScriptChanges(false);
-                setHasUnsavedChanges(false);
-                setMetaDirty(false);
-                pendingVoiceOverridesRef.current = {};
-                // Leftover Director's Note text/chips from a previous story —
-                // see the matching comment in the prompt-tab's handleGenerate.
-                setDirectorNote("");
-                setSelectedMoodChips(new Set());
-              }}
-              onComplete={({ blocks: rawBlocks, summary: sm, coverPrompt: cp, characters: fqChars, scenes: fqScenes, storyTitle: fqTitle, generationMs: fqGenerationMs }) => {
-                setActiveTab("script");
-                setSummary(sm);
-                setCoverPrompt(cp);
-                setCoverUrl("");
-                setStoryTitle(fqTitle ?? "");
-                setLastGenerationMs(fqGenerationMs);
-                // storyLang deliberately left as-is — it already reflects
-                // whatever language was chosen in this flow's own picker,
-                // not necessarily the app's global UI language.
-                setLessons([]);
-                // See the matching comment in Chat mode's onScriptReady
-                // above — without this, a stale cleanLessonsRef from a
-                // previous story in this session incorrectly marks this
-                // brand-new, lesson-less story dirty the moment it lands,
-                // blocking Produce Audio from the start.
-                cleanLessonsRef.current = [];
-                setLessonImplementations([]);
-                setMoralLessons([]);
-                setScenes(fqScenes ?? []);
-                // Same reset as Chat's onScriptReady above — a stale dirty
-                // flag from a previous story otherwise freezes the saved/
-                // produced baselines and blocks Produce Audio from the start.
-                setHasScriptChanges(false);
-                setHasUnsavedChanges(false);
-                setMetaDirty(false);
-                setCharacterAvatars({});
-                setCharacterTypes({});
-                setCharacterDescriptions({});
-                setTotalExpectedBlocks(rawBlocks.length);
-                setIsValidating(true);
-                setValidatingPhase("Luna is proofreading it…");
-                if (cp) fetchCover(cp, sm);
-                const childAge = activeChild?.age ?? 6;
-                // Step-by-step also skips validate-script's whole-script
-                // policy check, same as Chat mode — see the matching comment
-                // there.
-                const validationT0 = Date.now();
-                fetch("/api/validate-blocks", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ blocks: rawBlocks, age: childAge, lessons: [], summary: sm, language: storyLang }),
-                })
-                  .then((r) => r.json())
-                  .then((valData) => {
-                    const blocks: ScriptBlock[] = (valData.blocks?.length ? valData.blocks : rawBlocks)
-                      .map((b: ScriptBlock) => ({ ...b, textPayload: stripNamePrefix(b.characterName, b.textPayload) }));
-                    void resolveAndSetCharacterAvatars(blocks, sm, fqChars);
-                    // Fire now, not in the last reveal timeout — the lessons
-                    // call shouldn't wait out the reveal animation.
-                    writeDraft({ promptText: "", scriptBlocks: blocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [], language: storyLang, storyTitle: fqTitle }, DRAFT_KEY);
-                    void analyzeLessons(blocks, null);
-                    const validationStages: Record<string, { startMs: number; endMs: number; ms: number }> = {};
-                    let cursor = 0;
-                    const t = valData.timings as { pass1Ms?: number; pass2Ms?: number; pass3Ms?: number } | undefined;
-                    if (typeof t?.pass1Ms === "number") { validationStages.content_review = { startMs: cursor, endMs: cursor + t.pass1Ms, ms: t.pass1Ms }; cursor += t.pass1Ms; }
-                    if (typeof t?.pass2Ms === "number") { validationStages.grammar_review = { startMs: cursor, endMs: cursor + t.pass2Ms, ms: t.pass2Ms }; cursor += t.pass2Ms; }
-                    if (typeof t?.pass3Ms === "number") { validationStages.hebrew_review = { startMs: cursor, endMs: cursor + t.pass3Ms, ms: t.pass3Ms }; cursor += t.pass3Ms; }
-                    if (!validationStages.content_review) {
-                      const endMs = Date.now() - validationT0;
-                      validationStages.validate_blocks = { startMs: 0, endMs, ms: endMs };
-                    }
-                    setLastValidationStages(validationStages);
-                    blocks.forEach((block, i) => {
-                      setTimeout(() => {
-                        setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId, validated: true }]);
-                        if (i === blocks.length - 1) {
-                          setIsValidating(false);
-                          setValidatingPhase("");
-                          setTotalExpectedBlocks(undefined);
-                        }
-                      }, i * 65);
-                    });
-                  })
-                  .catch(() => {
-                    void resolveAndSetCharacterAvatars(rawBlocks, sm, fqChars);
-                    writeDraft({ promptText: "", scriptBlocks: rawBlocks, summary: sm, coverUrl: "", coverPrompt: cp, lessons: [], lessonImplementations: [], scenes: fqScenes ?? [] }, DRAFT_KEY);
-                    void analyzeLessons(rawBlocks, null);
-                    const endMs = Date.now() - validationT0;
-                    setLastValidationStages({ validate_blocks: { startMs: 0, endMs, ms: endMs } });
-                    rawBlocks.forEach((block, i) => {
-                      setTimeout(() => {
-                        setScriptBlocks((prev) => [...prev, { ...block, assignedVoiceId: pendingVoiceOverridesRef.current[block.characterName] ?? block.assignedVoiceId }]);
-                        if (i === rawBlocks.length - 1) {
-                          setIsValidating(false);
-                          setValidatingPhase("");
-                          setTotalExpectedBlocks(undefined);
-                        }
-                      }, i * 65);
-                    });
-                  });
-              }}
-            />
+            {activeTab === "step-by-step" && (
+              <FiveQuestionFlow
+                key={wizardResetKey}
+                contentLanguage={storyLang}
+                languageExplicitlyChosen={languageExplicitlyChosen}
+                childName={activeChild?.name}
+                childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
+                childId={activeChild?.id}
+                showInternalReset={false}
+                onFirstAnswer={() => setWizardStarted(true)}
+                onGenerating={handleWizardGenerating}
+                onComplete={handleWizardComplete}
+              />
+            )}
+            {activeTab === "quick-story" && (
+              <StoryBuilderFlow
+                key={wizardResetKey}
+                contentLanguage={storyLang}
+                languageExplicitlyChosen={languageExplicitlyChosen}
+                childName={activeChild?.name}
+                childAvatarUrl={activeChild?.avatar_emoji?.startsWith("http") ? activeChild.avatar_emoji : undefined}
+                childId={activeChild?.id}
+                showInternalReset={false}
+                onFirstAnswer={() => setWizardStarted(true)}
+                onGenerating={handleWizardGenerating}
+                onComplete={handleWizardComplete}
+              />
+            )}
           </div>
         )}
 

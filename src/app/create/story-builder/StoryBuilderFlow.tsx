@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { getNarratorVoiceId } from "@/lib/narratorPreference";
+import { writeDraft } from "@/lib/draftStore";
 import Icon from "@/components/ui/Icon";
 import {
   HERO_PRESETS, COMPANION_PRESETS, SETTING_PRESETS, MISSION_PRESETS,
@@ -11,12 +12,9 @@ import {
 } from "@/constants/storyBuilderUi";
 import { MOODS as STORY_MOODS, MOOD_ACCENT, getStoryMoodLabels } from "@/constants/moodUi";
 import type { IconName } from "@/lib/icons";
-import { IllustratedCard } from "@/app/create/five-question/FiveQuestionFlow";
-import ProductionProgress from "@/components/studio/ProductionProgress";
-import DramaPlayer from "@/components/studio/DramaPlayer";
+import { IllustratedCard, type StoryCharacterInfo } from "@/app/create/five-question/FiveQuestionFlow";
 import { pickRandom } from "@/constants/surprisePicks";
-import type { ScriptBlock } from "@/types";
-import type { Job } from "@/lib/jobs";
+import type { ScriptBlock, StoryScene } from "@/types";
 
 // Hero/Companion/Setting/Mission presets carry a plain emoji (used as the
 // IllustratedCard loading-skeleton glyph, and as the fallback if a photo
@@ -32,7 +30,7 @@ type AnyPreset = { id: string } & ({ emoji: string; icon?: never } | { icon: Ico
 // only these 4 story-builder-specific values are ever used on this page.
 type ImageCategory = "sbHero" | "sbCompanion" | "sbSetting" | "sbMission";
 
-type Step = "hero" | "companion" | "setting" | "mission" | "mood" | "summary" | "review" | "producing" | "done";
+type Step = "hero" | "companion" | "setting" | "mission" | "mood" | "summary" | "generating";
 
 interface FieldChoice { type: string; customText?: string }
 
@@ -52,7 +50,7 @@ const INITIAL_STATE: BuilderState = {
   mood: "",
 };
 
-const STEP_ORDER: Step[] = ["hero", "companion", "setting", "mission", "mood", "summary", "review"];
+const STEP_ORDER: Step[] = ["hero", "companion", "setting", "mission", "mood", "summary"];
 
 type ValidationField = "heroName" | "companionName" | "world";
 
@@ -74,8 +72,8 @@ async function validateCustomText(text: string, field: ValidationField, language
 
 function StepShell({ headline, onBack, children }: { headline: string; onBack?: () => void; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
-      <div className="flex items-center mb-8">
+    <div className="flex flex-col min-h-full px-5 pt-4 pb-8" style={{ background: "transparent" }}>
+      <div className="flex items-center mb-6">
         {onBack
           ? <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-all" style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="back" size={16} /></button>
           : <div className="w-8" />}
@@ -228,46 +226,69 @@ function PresetStep({ headline, presets, labels, selected, onSelect, onConfirm, 
   );
 }
 
-// ─── Summary screen — recap every selection, with an edit link back to each step ──
+// ─── Summary screen — recap every selection (with its photo), edit link back to each step ──
 
-function SummaryView({ state, ui, heroLabels, companionLabels, settingLabels, missionLabels, moodLabels, onEditStep, onConfirm, onBack }: {
+function SummaryRow({ label, value, imageUrl, emoji, accent, onEdit, editLabel }: {
+  label: string; value: string; imageUrl?: string; emoji?: string; accent: string; onEdit: () => void; editLabel: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-3">
+      <div
+        className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center"
+        style={{ background: `${accent}14`, border: `1px solid ${accent}30` }}
+      >
+        {imageUrl
+          ? <img src={imageUrl} alt={value} className="w-full h-full object-cover" />
+          : <span className="text-fs-title" style={{ opacity: 0.6 }}>{emoji ?? "✨"}</span>}
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <span className="text-fs-label font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.45)" }}>{label}</span>
+        <span className="text-fs-heading font-semibold text-white truncate">{value}</span>
+      </div>
+      <button onClick={onEdit}
+        className="text-fs-body px-3 py-1.5 rounded-lg flex-shrink-0 font-semibold"
+        style={{ background: `${accent}14`, color: accent, border: `1px solid ${accent}40` }}>
+        {editLabel}
+      </button>
+    </div>
+  );
+}
+
+function SummaryView({ state, ui, heroLabels, companionLabels, settingLabels, missionLabels, moodLabels, optionImages, onEditStep, onConfirm, onBack }: {
   state: BuilderState; ui: ReturnType<typeof getStoryBuilderUi>;
   heroLabels: Record<string, string>; companionLabels: Record<string, string>;
   settingLabels: Record<string, string>; missionLabels: Record<string, string>; moodLabels: Record<string, string>;
+  optionImages: Record<string, string>;
   onEditStep: (step: Step) => void; onConfirm: () => void; onBack: () => void;
 }) {
   const displayFor = (choice: FieldChoice, labels: Record<string, string>) =>
     choice.type === "custom" ? (choice.customText ?? "") : (labels[choice.type] ?? choice.type);
 
-  const rows: { label: string; value: string; step: Step }[] = [
-    { label: ui.heroHeadline, value: displayFor(state.hero, heroLabels), step: "hero" },
-    { label: ui.companionHeadline, value: state.companion.type ? displayFor(state.companion, companionLabels) : "—", step: "companion" },
-    { label: ui.settingHeadline, value: displayFor(state.setting, settingLabels), step: "setting" },
-    { label: ui.missionHeadline, value: missionLabels[state.mission] ?? state.mission, step: "mission" },
-    { label: ui.moodHeadline, value: moodLabels[state.mood] ?? state.mood, step: "mood" },
+  const presetEmoji = (id: string, presets: AnyPreset[]) => presets.find((p) => p.id === id)?.emoji;
+
+  const rows: { label: string; value: string; step: Step; imageUrl?: string; emoji?: string }[] = [
+    { label: ui.heroHeadline, value: displayFor(state.hero, heroLabels), step: "hero", imageUrl: state.hero.type !== "custom" ? optionImages[`sbHero-${state.hero.type}`] : undefined, emoji: presetEmoji(state.hero.type, HERO_PRESETS) },
+    { label: ui.companionHeadline, value: state.companion.type ? displayFor(state.companion, companionLabels) : "—", step: "companion", imageUrl: state.companion.type !== "custom" ? optionImages[`sbCompanion-${state.companion.type}`] : undefined, emoji: presetEmoji(state.companion.type, COMPANION_PRESETS) },
+    { label: ui.settingHeadline, value: displayFor(state.setting, settingLabels), step: "setting", imageUrl: state.setting.type !== "custom" ? optionImages[`sbSetting-${state.setting.type}`] : undefined, emoji: presetEmoji(state.setting.type, SETTING_PRESETS) },
+    { label: ui.missionHeadline, value: missionLabels[state.mission] ?? state.mission, step: "mission", imageUrl: optionImages[`sbMission-${state.mission}`], emoji: presetEmoji(state.mission, MISSION_PRESETS) },
+    { label: ui.moodHeadline, value: moodLabels[state.mood] ?? state.mood, step: "mood", emoji: "✨" },
   ];
 
   return (
-    <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
-      <div className="flex items-center mb-7">
+    <div className="flex flex-col min-h-full px-5 pt-4 pb-8" style={{ background: "transparent" }}>
+      <div className="flex items-center mb-6">
         <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-all" style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="back" size={16} /></button>
-        <h1 className="flex-1 text-center text-fs-heading font-semibold text-white">{ui.allSet}</h1>
+        <h1 className="flex-1 text-center text-fs-title font-bold" style={{ background: "linear-gradient(90deg,#4fc3f7,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{ui.allSet}</h1>
         <div className="w-8" />
       </div>
 
-      <div className="rounded-2xl mb-5 overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+      <div className="rounded-2xl mb-5 overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)" }}>
         {rows.map((row, i) => (
-          <div key={row.step} className="flex items-center px-4 py-3 gap-3"
-            style={{ borderBottom: i < rows.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
-            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.52)" }}>{row.label}</span>
-              <span className="text-fs-body text-white/80 truncate">{row.value}</span>
-            </div>
-            <button onClick={() => onEditStep(row.step)}
-              className="text-fs-body px-2.5 py-1 rounded-lg flex-shrink-0"
-              style={{ background: "rgba(79,195,247,0.08)", color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.2)" }}>
-              {ui.edit}
-            </button>
+          <div key={row.step} style={{ borderBottom: i < rows.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+            <SummaryRow
+              label={row.label} value={row.value} imageUrl={row.imageUrl} emoji={row.emoji}
+              accent={MOOD_ACCENT} onEdit={() => onEditStep(row.step)} editLabel={ui.edit}
+            />
           </div>
         ))}
       </div>
@@ -283,129 +304,32 @@ function SummaryView({ state, ui, heroLabels, companionLabels, settingLabels, mi
   );
 }
 
-// ─── Review screen ───────────────────────────────────────────────────────────
-
-interface GeneratedStory {
-  blocks: ScriptBlock[];
-  title: string;
-  summary: string;
-  coverPrompt: string;
-  characters: Record<string, { type: string; visualDescription: string }>;
-  scenes?: unknown[];
-}
-
-function ReviewView({ state, effectiveLanguage, ui, onProduce, onBack, onError, existingStory }: {
-  state: BuilderState; effectiveLanguage: string; ui: ReturnType<typeof getStoryBuilderUi>;
-  onProduce: (story: GeneratedStory) => void; onBack: () => void; onError: (msg: string) => void;
-  // If production failed and the parent routed back here, reuse the story
-  // already generated instead of silently paying for a fresh Gemini
-  // generation call just to redisplay the same review screen.
-  existingStory?: GeneratedStory | null;
-}) {
-  const [story, setStory] = useState<GeneratedStory | null>(existingStory ?? null);
-  const [coverUrl, setCoverUrl] = useState("");
-  const [loading, setLoading] = useState(!existingStory);
-  const [error, setError] = useState("");
-
-  useState(() => {
-    if (existingStory) return;
-    (async () => {
-      try {
-        const res = await fetch("/api/story-builder", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            hero: state.hero, companion: state.companion, setting: state.setting,
-            mission: state.mission, mood: state.mood,
-            durationMinutes: 5, language: effectiveLanguage, narratorVoiceId: getNarratorVoiceId(),
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Generation failed");
-        setStory(data as GeneratedStory);
-        if (data.coverPrompt) {
-          fetch("/api/generate-cover", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: data.coverPrompt, summary: data.summary }),
-          }).then((r) => r.json()).then((d) => { if (d.coverUrl) setCoverUrl(d.coverUrl); }).catch(() => {});
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Generation failed";
-        setError(msg);
-        onError(msg);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  });
-
-  if (loading) {
-    return (
-      <div className="flex flex-col min-h-full items-center justify-center px-8 text-center gap-6">
-        <div className="w-16 h-16 rounded-full animate-pulse" style={{ background: "radial-gradient(circle, rgba(79,195,247,0.5), transparent)" }} />
-        <p className="text-white/70 text-fs-subtitle font-light">{ui.checkingAnswer}</p>
-      </div>
-    );
-  }
-
-  if (error || !story) {
-    return (
-      <div className="flex flex-col min-h-full items-center justify-center px-8 text-center gap-4">
-        <p className="text-fs-body" style={{ color: "#f87171" }}>⚠ {error}</p>
-        <button onClick={onBack} className="px-4 py-2 rounded-xl text-fs-body font-semibold" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.75)" }}>
-          {ui.back}
-        </button>
-      </div>
-    );
-  }
-
-  const castEntries = Object.entries(story.characters ?? {});
-
-  return (
-    <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
-      <div className="flex items-center mb-7">
-        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-all" style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="back" size={16} /></button>
-        <h1 className="flex-1 text-center text-fs-heading font-semibold text-white truncate mx-2">{ui.reviewHeadline}</h1>
-        <div className="w-8" />
-      </div>
-
-      {coverUrl && (
-        <img src={coverUrl} alt={story.title} className="w-full aspect-square object-cover rounded-2xl mb-4" />
-      )}
-
-      <h2 className="text-fs-title font-bold text-white mb-2">{story.title}</h2>
-      <p className="text-fs-body text-white/70 mb-5 leading-relaxed">{story.summary}</p>
-
-      {castEntries.length > 0 && (
-        <div className="mb-6">
-          <p className="text-fs-label font-bold uppercase tracking-widest mb-2" style={{ color: MOOD_ACCENT }}>{ui.cast}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {castEntries.map(([name, c]) => (
-              <span key={name} className="px-3 py-1.5 rounded-full text-fs-body font-semibold" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)" }}>
-                {name} <span style={{ color: "rgba(255,255,255,0.4)" }}>· {c.type}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <button
-        onClick={() => onProduce(story)}
-        className="mt-auto py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
-        style={{ background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }}
-      >
-        {ui.produceAudio}
-      </button>
-    </div>
-  );
-}
-
 // ─── Main orchestrator ───────────────────────────────────────────────────────
 
-export function StoryBuilderFlow() {
+export interface StoryBuilderCompleteData {
+  blocks: ScriptBlock[]; summary: string; coverPrompt: string;
+  characters?: Record<string, StoryCharacterInfo>; scenes?: StoryScene[]; storyTitle?: string; generationMs?: number;
+}
+
+export function StoryBuilderFlow({
+  onComplete, onGenerating, onFirstAnswer, showInternalReset = true,
+  contentLanguage, languageExplicitlyChosen, childId, childName, childAvatarUrl,
+}: {
+  onComplete?: (data: StoryBuilderCompleteData) => void;
+  onGenerating?: () => void;
+  onFirstAnswer?: () => void;
+  /** When false (embedded in Studio), this flow renders no reset affordance
+   *  of its own — Studio's shared "Start over" row above it covers that. */
+  showInternalReset?: boolean;
+  contentLanguage?: string;
+  languageExplicitlyChosen?: boolean;
+  childId?: string;
+  childName?: string;
+  childAvatarUrl?: string;
+}) {
   const router = useRouter();
   const { language } = useLanguage();
-  const effectiveLanguage = language;
+  const effectiveLanguage = contentLanguage ?? language;
   const ui = useMemo(() => getStoryBuilderUi(effectiveLanguage), [effectiveLanguage]);
   const heroLabels = useMemo(() => getHeroLabels(effectiveLanguage), [effectiveLanguage]);
   const companionLabels = useMemo(() => getCompanionLabels(effectiveLanguage), [effectiveLanguage]);
@@ -415,16 +339,40 @@ export function StoryBuilderFlow() {
 
   const [step, setStep] = useState<Step>("hero");
   const [state, setState] = useState<BuilderState>(INITIAL_STATE);
-  const [story, setStory] = useState<GeneratedStory | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [productionJobId, setProductionJobId] = useState<string | null>(null);
-  const [completedJob, setCompletedJob] = useState<Job | null>(null);
-  // Set while editing a single field from the Summary screen — "Continue" on
-  // that field should return straight to Summary instead of resuming the
-  // normal Hero->Companion->Setting->Mission->Mood sequence.
   const [editingFromSummary, setEditingFromSummary] = useState(false);
 
   const [optionImages, setOptionImages] = useState<Record<string, string>>({});
+
+  // The active child's own default values (Profile > Edit / onboarding) —
+  // the "secondary, character-flavor-only" half of the hierarchical Mission/
+  // Values prompt block in /api/story-builder. Mirrors FiveQuestionFlow's
+  // own child-context effect.
+  const [childContext, setChildContext] = useState<{
+    defaultValues?: string[]; childAgeGroup?: string; avoid?: string; gender?: "boy" | "girl" | "other";
+  }>({});
+
+  useEffect(() => {
+    if (!childId) return;
+    let cancelled = false;
+    fetch("/api/child-profiles", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((profiles: { id: string; age?: number; gender?: "boy" | "girl" | "other"; default_moral_lessons?: string[]; avoid?: string }[]) => {
+        if (cancelled) return;
+        const self = (profiles ?? []).find((p) => p.id === childId);
+        if (!self) return;
+        setChildContext({
+          defaultValues: self.default_moral_lessons,
+          childAgeGroup: self.age != null
+            ? (self.age <= 4 ? "2-4" : self.age <= 6 ? "4-6" : self.age <= 8 ? "6-8" : self.age <= 10 ? "8-10" : "10-12")
+            : undefined,
+          avoid: self.avoid,
+          gender: self.gender,
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [childId]);
 
   useState(() => {
     (async () => {
@@ -461,6 +409,19 @@ export function StoryBuilderFlow() {
     })();
   });
 
+  // Fires once, the first time the user makes real progress — lets an outer
+  // page (Studio) lock its own language selector for the rest of the journey,
+  // same as FiveQuestionFlow's onFirstAnswer.
+  const hasProgress = !!(state.hero.type || state.companion.type || state.setting.type || state.mission || state.mood) || step !== "hero";
+  const firstAnswerFiredRef = useRef(false);
+  useEffect(() => {
+    if (hasProgress && !firstAnswerFiredRef.current) {
+      firstAnswerFiredRef.current = true;
+      onFirstAnswer?.();
+    }
+    if (!hasProgress) firstAnswerFiredRef.current = false;
+  }, [hasProgress, onFirstAnswer]);
+
   const nextOrSummary = useCallback((next: Step) => {
     if (editingFromSummary) { setEditingFromSummary(false); setStep("summary"); }
     else setStep(next);
@@ -473,27 +434,10 @@ export function StoryBuilderFlow() {
 
   const goBack = useCallback(() => {
     if (editingFromSummary) { setEditingFromSummary(false); setStep("summary"); return; }
-    // Leaving Review backward means the user might change something on
-    // Summary before confirming again — invalidate the cached generation so
-    // a re-confirm regenerates against whatever they end up with, instead of
-    // silently producing the stale story from before. (Returning to Review
-    // from a failed *production* attempt is a different path — see
-    // handleProduce's catch — and deliberately keeps the cached story.)
-    if (step === "review") setStory(null);
     const idx = STEP_ORDER.indexOf(step);
     if (idx > 0) setStep(STEP_ORDER[idx - 1]);
     else router.back();
   }, [step, router, editingFromSummary]);
-
-  const handleReset = useCallback(() => {
-    setStep("hero");
-    setState(INITIAL_STATE);
-    setStory(null);
-    setError(null);
-    setProductionJobId(null);
-    setCompletedJob(null);
-    setEditingFromSummary(false);
-  }, []);
 
   // "Surprise Me!" — random preset combination (never custom), straight to
   // the Summary recap (still reviewable/editable, same as the normal path).
@@ -508,22 +452,57 @@ export function StoryBuilderFlow() {
     setStep("summary");
   }, []);
 
-  const handleProduce = useCallback(async (generated: GeneratedStory) => {
-    setStory(generated);
-    setStep("producing");
+  // Fire-and-forget cover warm-up for the standalone (no onComplete) path —
+  // mirrors FiveQuestionFlow's own standalone handleDone exactly: the result
+  // isn't kept locally (we navigate away right after), Studio re-derives its
+  // own cover from the draft's coverPrompt once it loads.
+  const fetchCoverBestEffort = (prompt: string, storySummary: string) => {
+    if (!prompt) return;
+    fetch("/api/generate-cover", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, summary: storySummary }),
+    }).catch(() => {});
+  };
+
+  const handleGenerate = useCallback(async () => {
+    setStep("generating");
+    setError(null);
+    onGenerating?.();
     try {
-      const res = await fetch("/api/produce-drama", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blocks: generated.blocks, durationMinutes: 5, summary: generated.summary, coverPrompt: generated.coverPrompt }),
+      const res = await fetch("/api/story-builder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hero: state.hero, companion: state.companion, setting: state.setting,
+          mission: state.mission, mood: state.mood,
+          durationMinutes: 5, language: effectiveLanguage, narratorVoiceId: getNarratorVoiceId(),
+          defaultValues: childContext.defaultValues,
+          childAgeGroup: childContext.childAgeGroup,
+          avoid: childContext.avoid,
+          gender: childContext.gender,
+          childName,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Production failed");
-      setProductionJobId(data.jobId);
+      if (!res.ok) throw new Error(data.error ?? "Generation failed");
+
+      if (onComplete) {
+        writeDraft({ promptText: "", scriptBlocks: data.blocks, summary: data.summary, coverPrompt: data.coverPrompt, coverUrl: "", scenes: data.scenes, storyTitle: data.title, generationMs: data.generationMs });
+        onComplete({ blocks: data.blocks, summary: data.summary, coverPrompt: data.coverPrompt, characters: data.characters, scenes: data.scenes, storyTitle: data.title, generationMs: data.generationMs });
+      } else {
+        writeDraft(
+          { promptText: "", scriptBlocks: data.blocks, summary: data.summary, coverPrompt: data.coverPrompt, coverUrl: "", scenes: data.scenes, characterProfiles: data.characters, storyTitle: data.title, generationMs: data.generationMs },
+          "nightstory_studio2_draft_v1",
+        );
+        if (data.coverPrompt) fetchCoverBestEffort(data.coverPrompt, data.summary);
+        router.push("/studio?tab=script");
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Production failed");
-      setStep("review");
+      setError(err instanceof Error ? err.message : "Generation failed");
+      setStep("summary");
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, effectiveLanguage, onComplete, onGenerating, router, childContext, childName]);
 
   if (step === "hero") return (
     <>
@@ -582,58 +561,31 @@ export function StoryBuilderFlow() {
   );
 
   if (step === "summary") return (
-    <SummaryView
-      state={state} ui={ui}
-      heroLabels={heroLabels} companionLabels={companionLabels} settingLabels={settingLabels}
-      missionLabels={missionLabels} moodLabels={moodLabels}
-      onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }}
-      onConfirm={() => setStep("review")}
-      onBack={goBack}
-    />
-  );
-
-  if (step === "review") return (
-    <ReviewView
-      state={state} effectiveLanguage={effectiveLanguage} ui={ui}
-      onProduce={handleProduce} onBack={goBack} onError={setError}
-      existingStory={story}
-    />
-  );
-
-  if (step === "producing") {
-    if (productionJobId) return (
-      <div className="min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
-        <div className="flex items-center mb-7">
-          <div className="w-8" />
-          <h1 className="flex-1 text-center text-fs-heading font-semibold text-white">{story?.title}</h1>
-          <div className="w-8" />
+    <>
+      <SummaryView
+        state={state} ui={ui}
+        heroLabels={heroLabels} companionLabels={companionLabels} settingLabels={settingLabels}
+        missionLabels={missionLabels} moodLabels={moodLabels}
+        optionImages={optionImages}
+        onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }}
+        onConfirm={handleGenerate}
+        onBack={goBack}
+      />
+      {error && (
+        <div className="mx-5 -mt-4 mb-4 px-4 py-3 rounded-2xl text-fs-body" style={{ background: "rgba(236,72,153,0.1)", border: "1px solid rgba(236,72,153,0.25)", color: "#EC4899" }}>
+          ⚠ {error}
         </div>
-        <ProductionProgress
-          jobId={productionJobId}
-          onDone={(job) => { setCompletedJob(job); setStep("done"); }}
-          onError={(msg) => { setError(msg); setStep("review"); }}
-        />
-      </div>
-    );
-    return (
-      <div className="flex flex-col min-h-full items-center justify-center px-8 text-center gap-6">
-        <div className="w-16 h-16 rounded-full animate-pulse" style={{ background: "radial-gradient(circle, rgba(79,195,247,0.5), transparent)" }} />
-        <p className="text-white/70 text-fs-subtitle font-light">{ui.produceAudio}…</p>
-        {error && <p className="text-fs-body" style={{ color: "#f87171" }}>⚠ {error}</p>}
-      </div>
-    );
-  }
+      )}
+    </>
+  );
 
-  if (step === "done" && completedJob) return (
-    <div className="min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
-      <div className="flex items-center mb-7">
-        <button onClick={handleReset} className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-all" style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="back" size={16} /></button>
-        <h1 className="flex-1 text-center text-fs-heading font-semibold text-white">{story?.title}</h1>
-        <div className="w-8" />
-      </div>
-      <DramaPlayer job={completedJob} onGenerateAnother={handleReset} />
+  // "generating" — a brief spinner only; the actual result (title, summary,
+  // cover, cast, script, Produce Audio) is presented by Studio's own Script
+  // tab, exactly like Chat and Step-by-step, via onComplete above.
+  return (
+    <div className="flex flex-col min-h-full items-center justify-center px-8 text-center gap-6">
+      <div className="w-16 h-16 rounded-full animate-pulse" style={{ background: "radial-gradient(circle, rgba(79,195,247,0.5), transparent)" }} />
+      <p className="text-white/70 text-fs-subtitle font-light">{ui.checkingAnswer}</p>
     </div>
   );
-
-  return null;
 }
