@@ -2658,6 +2658,18 @@ export default function Studio2Page() {
               <span>🧚</span>
               <span>{i18nT(language, "stepByStep" as never)}</span>
             </button>
+            {/* Fully self-contained flow (own state, own review screen, own
+                produce call) — routed to rather than swapped in as a third
+                activeTab, so it doesn't entangle with this page's
+                ScriptTab-oriented state the way Chat/Step-by-step do. */}
+            <button
+              onClick={() => router.push("/create/story-builder")}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-fs-body font-semibold transition-all active:scale-[0.97]"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              <span>✨</span>
+              <span>Quick Story</span>
+            </button>
           </div>
         )}
 
