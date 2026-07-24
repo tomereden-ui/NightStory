@@ -16,7 +16,7 @@ import { dedupeBySeries } from "@/lib/dedupeBySeries";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { getLessonsCatalog, VALUE_ACCENT } from "@/constants/lessonsUi";
 import { MOODS as MOOD_DEFINITIONS, MOOD_ACCENT } from "@/constants/moodUi";
-import { LANGUAGE_META } from "@/lib/i18n";
+import { LANGUAGE_META, LANGUAGE_ACCENT } from "@/lib/i18n";
 import type { Language } from "@/types";
 
 
@@ -482,7 +482,7 @@ function NextStoriesButton({ onClick }: { onClick: () => void }) {
 // div with no label (so it wasn't obvious what a row of chips was filtering
 // by) and no way to tell or reach hidden content besides a raw touch-drag.
 // Arrows only render on whichever side still has more to scroll to.
-function FilterChipRow({ label, children }: { label: string; children: React.ReactNode }) {
+function FilterChipRow({ label, accent = "rgba(255,255,255,0.5)", children }: { label: string; accent?: string; children: React.ReactNode }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -518,7 +518,7 @@ function FilterChipRow({ label, children }: { label: string; children: React.Rea
 
   return (
     <div>
-      <p className="text-fs-label font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(79,195,247,0.75)" }}>
+      <p className="text-fs-label font-bold uppercase tracking-widest mb-1" style={{ color: accent }}>
         {label}
       </p>
       <div className="relative">
@@ -968,7 +968,7 @@ export default function LibraryPage() {
             className="flex flex-col gap-2 mb-3"
             onMouseDown={(e) => e.preventDefault()}
           >
-            <FilterChipRow label="Mood">
+            <FilterChipRow label="Mood" accent={MOOD_ACCENT}>
               {MOODS.map((m) => {
                 const active = selectedMoods.has(m.id);
                 return (
@@ -987,7 +987,7 @@ export default function LibraryPage() {
               })}
             </FilterChipRow>
 
-            <FilterChipRow label="Value">
+            <FilterChipRow label="Value" accent={VALUE_ACCENT}>
               {lessonCatalog.map((l) => {
                 const active = selectedLessons.has(l.id);
                 return (
@@ -1006,7 +1006,7 @@ export default function LibraryPage() {
               })}
             </FilterChipRow>
 
-            <FilterChipRow label="Language">
+            <FilterChipRow label="Language" accent={LANGUAGE_ACCENT}>
               {allLanguages.map(([code, meta]) => {
                 const active = selectedLanguages.has(code);
                 return (
@@ -1018,7 +1018,7 @@ export default function LibraryPage() {
                       ? { background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.9)" }
                       : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}
                   >
-                    <span>{meta.flag}</span>
+                    <span style={{ color: LANGUAGE_ACCENT }}>{meta.flag}</span>
                     <span>{meta.label}</span>
                   </button>
                 );
