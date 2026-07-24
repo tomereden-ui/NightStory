@@ -69,6 +69,9 @@ export interface StoryBuilderUiCopy {
   cast: string;
   checkingAnswer: string;
   pleaseRephrase: string;
+  edit: string;
+  createStory: string;
+  allSet: string;
 }
 
 const EN: StoryBuilderUiCopy = {
@@ -92,6 +95,9 @@ const EN: StoryBuilderUiCopy = {
   cast: "Cast",
   checkingAnswer: "Let me think about that...",
   pleaseRephrase: "Hmm, could you try saying that a different way?",
+  edit: "edit",
+  createStory: "Let's create the magic! ✨",
+  allSet: "We're all set!",
 };
 
 const HE: StoryBuilderUiCopy = {
@@ -115,6 +121,9 @@ const HE: StoryBuilderUiCopy = {
   cast: "השחקנים",
   checkingAnswer: "רגע, אני חושבת על זה...",
   pleaseRephrase: "הממ, אפשר לנסות לומר את זה קצת אחרת?",
+  edit: "עריכה",
+  createStory: "בואו ניצור את הקסם! ✨",
+  allSet: "הכל מוכן!",
 };
 
 const ES: StoryBuilderUiCopy = {
@@ -138,6 +147,9 @@ const ES: StoryBuilderUiCopy = {
   cast: "Elenco",
   checkingAnswer: "Déjame pensarlo...",
   pleaseRephrase: "Mmm, ¿puedes intentar decirlo de otra manera?",
+  edit: "editar",
+  createStory: "¡Creemos la magia! ✨",
+  allSet: "¡Todo listo!",
 };
 
 const FR: StoryBuilderUiCopy = {
@@ -161,6 +173,9 @@ const FR: StoryBuilderUiCopy = {
   cast: "Personnages",
   checkingAnswer: "Laisse-moi y réfléchir...",
   pleaseRephrase: "Hmm, peux-tu essayer de le dire autrement ?",
+  edit: "modifier",
+  createStory: "Créons la magie ! ✨",
+  allSet: "Tout est prêt !",
 };
 
 const DE: StoryBuilderUiCopy = {
@@ -184,6 +199,9 @@ const DE: StoryBuilderUiCopy = {
   cast: "Besetzung",
   checkingAnswer: "Lass mich darüber nachdenken...",
   pleaseRephrase: "Hmm, kannst du das anders ausdrücken?",
+  edit: "bearbeiten",
+  createStory: "Lass uns die Magie erschaffen! ✨",
+  allSet: "Alles bereit!",
 };
 
 const PT: StoryBuilderUiCopy = {
@@ -207,6 +225,9 @@ const PT: StoryBuilderUiCopy = {
   cast: "Elenco",
   checkingAnswer: "Deixe-me pensar sobre isso...",
   pleaseRephrase: "Hmm, pode tentar dizer isso de outra forma?",
+  edit: "editar",
+  createStory: "Vamos criar a magia! ✨",
+  allSet: "Tudo pronto!",
 };
 
 const IT: StoryBuilderUiCopy = {
@@ -230,6 +251,9 @@ const IT: StoryBuilderUiCopy = {
   cast: "Personaggi",
   checkingAnswer: "Fammi pensare...",
   pleaseRephrase: "Mmm, puoi provare a dirlo in un altro modo?",
+  edit: "modifica",
+  createStory: "Creiamo la magia! ✨",
+  allSet: "Tutto pronto!",
 };
 
 const AR: StoryBuilderUiCopy = {
@@ -253,6 +277,9 @@ const AR: StoryBuilderUiCopy = {
   cast: "الشخصيات",
   checkingAnswer: "دعني أفكر في ذلك...",
   pleaseRephrase: "همم، هل يمكنك تجربة قول ذلك بطريقة أخرى؟",
+  edit: "تعديل",
+  createStory: "لنصنع السحر! ✨",
+  allSet: "كل شيء جاهز!",
 };
 
 const JA: StoryBuilderUiCopy = {
@@ -276,6 +303,9 @@ const JA: StoryBuilderUiCopy = {
   cast: "登場人物",
   checkingAnswer: "少し考えさせてください…",
   pleaseRephrase: "うーん、別の言い方を試してみてもらえますか?",
+  edit: "編集",
+  createStory: "魔法を作りましょう! ✨",
+  allSet: "準備完了です!",
 };
 
 const HI: StoryBuilderUiCopy = {
@@ -299,6 +329,9 @@ const HI: StoryBuilderUiCopy = {
   cast: "पात्र",
   checkingAnswer: "मुझे इसके बारे में सोचने दो...",
   pleaseRephrase: "हम्म, क्या आप इसे किसी और तरीके से कहने की कोशिश कर सकते हैं?",
+  edit: "बदलें",
+  createStory: "चलो जादू बनाते हैं! ✨",
+  allSet: "सब तैयार है!",
 };
 
 const STORY_BUILDER_UI_BY_LANG: Record<string, StoryBuilderUiCopy> = { en: EN, he: HE, es: ES, fr: FR, de: DE, pt: PT, it: IT, ar: AR, ja: JA, hi: HI };

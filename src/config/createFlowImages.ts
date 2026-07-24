@@ -66,7 +66,51 @@ export const MOOD_IMAGE_PROMPTS: Record<string, string> = {
     "A small child peacefully asleep in a cozy glowing bed, moonlight through a star-filled window, dream clouds forming above with tiny wonderful adventures, a stuffed animal on the pillow. Pixar 3D animated movie style, soft blues and warm gold, deeply peaceful.",
 };
 
-export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile" | "figure" | "cta";
+export type CreateOptionType = "hero" | "world" | "companion" | "engine" | "mood" | "profile" | "figure" | "cta" | "sbHero" | "sbCompanion" | "sbSetting" | "sbMission";
+
+// Story Builder — the separate 5-step quick-create flow's own preset
+// catalog (src/constants/storyBuilderUi.ts). Distinct ids from the main
+// wizard's HERO/COMPANION_IMAGE_PROMPTS above (different presets entirely),
+// so these get their own "sb"-prefixed types rather than colliding.
+export const SB_HERO_IMAGE_PROMPTS: Record<string, string> = {
+  "brave-boy":
+    "A cheerful young boy with a bright confident smile and wind-swept hair, standing heroically with hands on hips, golden sunlight behind him. Pixar 3D animated movie style, warm and heroic, cinematic.",
+  "smart-girl":
+    "A bright young girl with glasses and a curious grin, holding a glowing book, sparkling ideas floating around her head. Pixar 3D animated movie style, warm and clever, cinematic.",
+  "fox-cub":
+    "An adorable curious baby fox cub with big round eyes and fluffy orange fur, peeking out from behind a glowing flower, tail twitching with excitement. Pixar 3D animated movie style, irresistibly cute, cinematic.",
+  unicorn:
+    "A magical unicorn with a flowing rainbow mane and a glowing spiral horn, rearing up joyfully amid sparkling stardust. Pixar 3D animated movie style, majestic and magical, cinematic.",
+};
+
+export const SB_COMPANION_IMAGE_PROMPTS: Record<string, string> = {
+  puppy:
+    "An impossibly adorable golden puppy mid-bounce with floppy ears and a huge joyful grin, tiny sparkles trailing behind. Pixar 3D animated movie style, irresistibly cute, cinematic.",
+  owl:
+    "A wise little owl with big round eyes, perched thoughtfully on a glowing branch under starlight. Pixar 3D animated movie style, warm and endearing, cinematic.",
+  solo:
+    "A confident young hero standing alone on a glowing hilltop at sunrise, cape fluttering, ready for adventure. Pixar 3D animated movie style, independent and inspiring, cinematic.",
+};
+
+export const SB_SETTING_IMAGE_PROMPTS: Record<string, string> = {
+  forest:
+    "A magical glowing forest clearing at twilight, giant luminous mushrooms, fireflies drifting through ancient mossy trees. Pixar 3D animated movie style, warm emerald and gold, cinematic.",
+  "cloud-castle":
+    "A dazzling castle floating on fluffy sunset clouds, glowing towers and rainbow flags, a bridge of light connecting to the sky. Pixar 3D animated movie style, warm amber and sky blue, cinematic.",
+  "candy-planet":
+    "A whimsical candy planet in outer space, swirling rainbow rings of gummy sweets, chocolate craters and cotton-candy clouds against a starry sky. Pixar 3D animated movie style, vibrant and joyful, cinematic.",
+};
+
+export const SB_MISSION_IMAGE_PROMPTS: Record<string, string> = {
+  "lost-toy":
+    "A worn but beloved teddy bear glowing softly in tall grass at dusk, waiting to be found, fireflies drifting nearby. Pixar 3D animated movie style, warm and heartfelt, cinematic.",
+  "help-friend":
+    "Two young friends embracing warmly, one comforting the other, soft golden light and gentle sparkles surrounding them. Pixar 3D animated movie style, deeply heartwarming, cinematic.",
+  "overcome-fear":
+    "A small child bravely stepping toward a gently glowing shadow that turns out to be friendly, warm courage-light pushing back the dark. Pixar 3D animated movie style, empowering and warm, cinematic.",
+  surprise:
+    "A beautifully wrapped glowing gift box bursting open with confetti and warm golden light, sparkles spilling outward. Pixar 3D animated movie style, joyful and warm, cinematic.",
+};
 
 // Onboarding's "which storybook figures does your child love?" picker
 export const FIGURE_IMAGE_PROMPTS: Record<string, string> = {
@@ -162,6 +206,14 @@ export function getAllCreateOptionSpecs(): CreateOptionSpec[] {
     specs.push({ type: "figure", id, prompt });
   for (const [id, prompt] of Object.entries(CTA_IMAGE_PROMPTS))
     specs.push({ type: "cta", id, prompt });
+  for (const [id, prompt] of Object.entries(SB_HERO_IMAGE_PROMPTS))
+    specs.push({ type: "sbHero", id, prompt });
+  for (const [id, prompt] of Object.entries(SB_COMPANION_IMAGE_PROMPTS))
+    specs.push({ type: "sbCompanion", id, prompt });
+  for (const [id, prompt] of Object.entries(SB_SETTING_IMAGE_PROMPTS))
+    specs.push({ type: "sbSetting", id, prompt });
+  for (const [id, prompt] of Object.entries(SB_MISSION_IMAGE_PROMPTS))
+    specs.push({ type: "sbMission", id, prompt });
   return specs;
 }
 

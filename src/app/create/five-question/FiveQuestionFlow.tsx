@@ -304,7 +304,7 @@ function cardPalette(label: string): [string, string] {
   return CARD_PALETTES[h % CARD_PALETTES.length];
 }
 
-function IllustratedCard({
+export function IllustratedCard({
   label, emoji, imageUrl, selected, onClick, badge,
 }: {
   label: string; emoji: string; imageUrl?: string;

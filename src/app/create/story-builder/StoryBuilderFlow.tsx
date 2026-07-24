@@ -11,19 +11,28 @@ import {
 } from "@/constants/storyBuilderUi";
 import { MOODS as STORY_MOODS, MOOD_ACCENT, getStoryMoodLabels } from "@/constants/moodUi";
 import type { IconName } from "@/lib/icons";
-
-// Hero/Companion/Setting/Mission presets carry a plain emoji; Mood presets
-// (from moodUi.ts) carry an abstract line icon instead (deliberately, per
-// this session's earlier "no emoji" mood work) — PresetStep below renders
-// whichever one a given entry has.
-type AnyPreset = { id: string } & ({ emoji: string; icon?: never } | { icon: IconName; emoji?: never });
+import { IllustratedCard } from "@/app/create/five-question/FiveQuestionFlow";
 import ProductionProgress from "@/components/studio/ProductionProgress";
 import DramaPlayer from "@/components/studio/DramaPlayer";
 import { pickRandom } from "@/constants/surprisePicks";
 import type { ScriptBlock } from "@/types";
 import type { Job } from "@/lib/jobs";
 
-type Step = "hero" | "companion" | "setting" | "mission" | "mood" | "review" | "producing" | "done";
+// Hero/Companion/Setting/Mission presets carry a plain emoji (used as the
+// IllustratedCard loading-skeleton glyph, and as the fallback if a photo
+// hasn't been generated yet); Mood presets (from moodUi.ts) carry an
+// abstract line icon instead (deliberately, per this session's earlier
+// "no emoji" mood work, shared with Library's mood filter) — PresetStep
+// below renders whichever one a given entry has, and only fetches photos
+// for the emoji-based steps.
+type AnyPreset = { id: string } & ({ emoji: string; icon?: never } | { icon: IconName; emoji?: never });
+
+// Matches the corresponding CreateOptionType in config/createFlowImages.ts —
+// kept as a plain string union here (rather than importing the type) since
+// only these 4 story-builder-specific values are ever used on this page.
+type ImageCategory = "sbHero" | "sbCompanion" | "sbSetting" | "sbMission";
+
+type Step = "hero" | "companion" | "setting" | "mission" | "mood" | "summary" | "review" | "producing" | "done";
 
 interface FieldChoice { type: string; customText?: string }
 
@@ -43,7 +52,7 @@ const INITIAL_STATE: BuilderState = {
   mood: "",
 };
 
-const STEP_ORDER: Step[] = ["hero", "companion", "setting", "mission", "mood", "review"];
+const STEP_ORDER: Step[] = ["hero", "companion", "setting", "mission", "mood", "summary", "review"];
 
 type ValidationField = "heroName" | "companionName" | "world";
 
@@ -94,9 +103,14 @@ interface PresetStepProps {
   // Custom-text option — omitted entirely for Mission/Mood (closed lists, per spec)
   custom?: { label: string; placeholder: string; field: ValidationField };
   effectiveLanguage: string;
+  // When set, presets render as photo-illustrated IllustratedCards (matching
+  // the main SBS wizard) instead of a plain emoji/icon tile — omitted for
+  // Mood, which keeps the app-wide abstract-icon treatment.
+  imageType?: ImageCategory;
+  optionImages?: Record<string, string>;
 }
 
-function PresetStep({ headline, presets, labels, selected, onSelect, onConfirm, onBack, accent, ui, custom, effectiveLanguage }: PresetStepProps) {
+function PresetStep({ headline, presets, labels, selected, onSelect, onConfirm, onBack, accent, ui, custom, effectiveLanguage, imageType, optionImages }: PresetStepProps) {
   const selectedType = typeof selected === "string" ? selected : selected.type;
   const [showCustomInput, setShowCustomInput] = useState(selectedType === "custom");
   const [customText, setCustomText] = useState(typeof selected === "object" ? selected.customText ?? "" : "");
@@ -127,6 +141,19 @@ function PresetStep({ headline, presets, labels, selected, onSelect, onConfirm, 
         <div className="grid grid-cols-2 gap-2.5">
           {presets.map((p) => {
             const active = selectedType === p.id;
+            const label = labels[p.id] ?? p.id;
+
+            if (imageType) return (
+              <IllustratedCard
+                key={p.id}
+                label={label}
+                emoji={p.emoji ?? ""}
+                imageUrl={optionImages?.[`${imageType}-${p.id}`]}
+                selected={active}
+                onClick={() => { setShowCustomInput(false); onSelect(typeof selected === "string" ? p.id : { type: p.id }); }}
+              />
+            );
+
             return (
               <button
                 key={p.id}
@@ -140,7 +167,7 @@ function PresetStep({ headline, presets, labels, selected, onSelect, onConfirm, 
                   ? <Icon name={p.icon} size={32} style={{ color: active ? accent : "rgba(255,255,255,0.7)" }} />
                   : <span className="text-fs-display">{p.emoji}</span>}
                 <span className="text-fs-body font-semibold" style={{ color: active ? accent : "rgba(255,255,255,0.85)" }}>
-                  {labels[p.id] ?? p.id}
+                  {label}
                 </span>
               </button>
             );
@@ -201,6 +228,61 @@ function PresetStep({ headline, presets, labels, selected, onSelect, onConfirm, 
   );
 }
 
+// ─── Summary screen — recap every selection, with an edit link back to each step ──
+
+function SummaryView({ state, ui, heroLabels, companionLabels, settingLabels, missionLabels, moodLabels, onEditStep, onConfirm, onBack }: {
+  state: BuilderState; ui: ReturnType<typeof getStoryBuilderUi>;
+  heroLabels: Record<string, string>; companionLabels: Record<string, string>;
+  settingLabels: Record<string, string>; missionLabels: Record<string, string>; moodLabels: Record<string, string>;
+  onEditStep: (step: Step) => void; onConfirm: () => void; onBack: () => void;
+}) {
+  const displayFor = (choice: FieldChoice, labels: Record<string, string>) =>
+    choice.type === "custom" ? (choice.customText ?? "") : (labels[choice.type] ?? choice.type);
+
+  const rows: { label: string; value: string; step: Step }[] = [
+    { label: ui.heroHeadline, value: displayFor(state.hero, heroLabels), step: "hero" },
+    { label: ui.companionHeadline, value: state.companion.type ? displayFor(state.companion, companionLabels) : "—", step: "companion" },
+    { label: ui.settingHeadline, value: displayFor(state.setting, settingLabels), step: "setting" },
+    { label: ui.missionHeadline, value: missionLabels[state.mission] ?? state.mission, step: "mission" },
+    { label: ui.moodHeadline, value: moodLabels[state.mood] ?? state.mood, step: "mood" },
+  ];
+
+  return (
+    <div className="flex flex-col min-h-full px-5 pt-12 pb-8" style={{ background: "transparent" }}>
+      <div className="flex items-center mb-7">
+        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-all" style={{ background: "rgba(255,255,255,0.06)" }}><Icon name="back" size={16} /></button>
+        <h1 className="flex-1 text-center text-fs-heading font-semibold text-white">{ui.allSet}</h1>
+        <div className="w-8" />
+      </div>
+
+      <div className="rounded-2xl mb-5 overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+        {rows.map((row, i) => (
+          <div key={row.step} className="flex items-center px-4 py-3 gap-3"
+            style={{ borderBottom: i < rows.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent" }}>
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span className="text-fs-body font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.52)" }}>{row.label}</span>
+              <span className="text-fs-body text-white/80 truncate">{row.value}</span>
+            </div>
+            <button onClick={() => onEditStep(row.step)}
+              className="text-fs-body px-2.5 py-1 rounded-lg flex-shrink-0"
+              style={{ background: "rgba(79,195,247,0.08)", color: "rgba(79,195,247,0.7)", border: "1px solid rgba(79,195,247,0.2)" }}>
+              {ui.edit}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onConfirm}
+        className="mt-auto py-4 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]"
+        style={{ background: "linear-gradient(90deg,#4fc3f7,#2a8cb5)", color: "#05080F", boxShadow: "0 4px 24px rgba(79,195,247,0.35)" }}
+      >
+        {ui.createStory}
+      </button>
+    </div>
+  );
+}
+
 // ─── Review screen ───────────────────────────────────────────────────────────
 
 interface GeneratedStory {
@@ -212,16 +294,21 @@ interface GeneratedStory {
   scenes?: unknown[];
 }
 
-function ReviewView({ state, effectiveLanguage, ui, onProduce, onBack, onError }: {
+function ReviewView({ state, effectiveLanguage, ui, onProduce, onBack, onError, existingStory }: {
   state: BuilderState; effectiveLanguage: string; ui: ReturnType<typeof getStoryBuilderUi>;
   onProduce: (story: GeneratedStory) => void; onBack: () => void; onError: (msg: string) => void;
+  // If production failed and the parent routed back here, reuse the story
+  // already generated instead of silently paying for a fresh Gemini
+  // generation call just to redisplay the same review screen.
+  existingStory?: GeneratedStory | null;
 }) {
-  const [story, setStory] = useState<GeneratedStory | null>(null);
+  const [story, setStory] = useState<GeneratedStory | null>(existingStory ?? null);
   const [coverUrl, setCoverUrl] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!existingStory);
   const [error, setError] = useState("");
 
   useState(() => {
+    if (existingStory) return;
     (async () => {
       try {
         const res = await fetch("/api/story-builder", {
@@ -332,17 +419,71 @@ export function StoryBuilderFlow() {
   const [error, setError] = useState<string | null>(null);
   const [productionJobId, setProductionJobId] = useState<string | null>(null);
   const [completedJob, setCompletedJob] = useState<Job | null>(null);
+  // Set while editing a single field from the Summary screen — "Continue" on
+  // that field should return straight to Summary instead of resuming the
+  // normal Hero->Companion->Setting->Mission->Mood sequence.
+  const [editingFromSummary, setEditingFromSummary] = useState(false);
+
+  const [optionImages, setOptionImages] = useState<Record<string, string>>({});
+
+  useState(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/seed-create-images");
+        if (!res.ok) return;
+        const { missing, existingImageUrls } = await res.json() as {
+          missing: { key: string; prompt: string }[];
+          existingImageUrls: Record<string, string>;
+        };
+        if (existingImageUrls) setOptionImages((prev) => ({ ...prev, ...existingImageUrls }));
+        if (!missing?.length) return;
+        // Only this flow's own sbHero/sbCompanion/sbSetting/sbMission keys —
+        // the shared endpoint returns every option-image spec in the app
+        // (main wizard's own hero/world/companion/etc too), and those are
+        // seeded by that wizard itself; no need to duplicate the work here.
+        const own = missing.filter((m) => m.key.startsWith("v5-sb"));
+        const BATCH = 8;
+        for (let i = 0; i < own.length; i += BATCH) {
+          const batch = own.slice(i, i + BATCH);
+          await Promise.all(batch.map(async ({ key, prompt }) => {
+            try {
+              const cacheRes = await fetch(`/api/admin/seed-create-images?key=${encodeURIComponent(key)}`, {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt }),
+              });
+              if (cacheRes.ok) {
+                const { imageKey, url } = await cacheRes.json() as { imageKey: string; url: string };
+                if (imageKey && url) setOptionImages((prev) => ({ ...prev, [imageKey]: url }));
+              }
+            } catch { /* best-effort */ }
+          }));
+        }
+      } catch { /* best-effort — cards fall back to their emoji shimmer */ }
+    })();
+  });
+
+  const nextOrSummary = useCallback((next: Step) => {
+    if (editingFromSummary) { setEditingFromSummary(false); setStep("summary"); }
+    else setStep(next);
+  }, [editingFromSummary]);
 
   const goNext = useCallback(() => {
     const idx = STEP_ORDER.indexOf(step);
-    if (idx >= 0 && idx < STEP_ORDER.length - 1) setStep(STEP_ORDER[idx + 1]);
-  }, [step]);
+    if (idx >= 0 && idx < STEP_ORDER.length - 1) nextOrSummary(STEP_ORDER[idx + 1]);
+  }, [step, nextOrSummary]);
 
   const goBack = useCallback(() => {
+    if (editingFromSummary) { setEditingFromSummary(false); setStep("summary"); return; }
+    // Leaving Review backward means the user might change something on
+    // Summary before confirming again — invalidate the cached generation so
+    // a re-confirm regenerates against whatever they end up with, instead of
+    // silently producing the stale story from before. (Returning to Review
+    // from a failed *production* attempt is a different path — see
+    // handleProduce's catch — and deliberately keeps the cached story.)
+    if (step === "review") setStory(null);
     const idx = STEP_ORDER.indexOf(step);
     if (idx > 0) setStep(STEP_ORDER[idx - 1]);
     else router.back();
-  }, [step, router]);
+  }, [step, router, editingFromSummary]);
 
   const handleReset = useCallback(() => {
     setStep("hero");
@@ -351,9 +492,11 @@ export function StoryBuilderFlow() {
     setError(null);
     setProductionJobId(null);
     setCompletedJob(null);
+    setEditingFromSummary(false);
   }, []);
 
-  // "Surprise Me!" — random preset combination (never custom), straight to review.
+  // "Surprise Me!" — random preset combination (never custom), straight to
+  // the Summary recap (still reviewable/editable, same as the normal path).
   const handleSurpriseMe = useCallback(() => {
     setState({
       hero: { type: pickRandom(HERO_PRESETS).id },
@@ -362,7 +505,7 @@ export function StoryBuilderFlow() {
       mission: pickRandom(MISSION_PRESETS).id,
       mood: pickRandom(STORY_MOODS).id,
     });
-    setStep("review");
+    setStep("summary");
   }, []);
 
   const handleProduce = useCallback(async (generated: GeneratedStory) => {
@@ -387,14 +530,17 @@ export function StoryBuilderFlow() {
       <PresetStep
         headline={ui.heroHeadline} presets={HERO_PRESETS} labels={heroLabels}
         selected={state.hero} onSelect={(c) => setState((s) => ({ ...s, hero: c as FieldChoice }))}
-        onConfirm={goNext} accent={MOOD_ACCENT} ui={ui} effectiveLanguage={effectiveLanguage}
+        onConfirm={goNext} onBack={editingFromSummary ? goBack : undefined} accent={MOOD_ACCENT} ui={ui} effectiveLanguage={effectiveLanguage}
         custom={{ label: ui.myOwnHero, placeholder: ui.heroPlaceholder, field: "heroName" }}
+        imageType="sbHero" optionImages={optionImages}
       />
-      <div className="px-5 -mt-4 pb-4">
-        <button onClick={handleSurpriseMe} className="w-full py-3 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-          🎲 {ui.surpriseMe}
-        </button>
-      </div>
+      {!editingFromSummary && (
+        <div className="px-5 -mt-4 pb-4">
+          <button onClick={handleSurpriseMe} className="w-full py-3 rounded-2xl font-semibold text-fs-body transition-all active:scale-[0.98]" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
+            🎲 {ui.surpriseMe}
+          </button>
+        </div>
+      )}
     </>
   );
 
@@ -404,6 +550,7 @@ export function StoryBuilderFlow() {
       selected={state.companion} onSelect={(c) => setState((s) => ({ ...s, companion: c as FieldChoice }))}
       onConfirm={goNext} onBack={goBack} accent={MOOD_ACCENT} ui={ui} effectiveLanguage={effectiveLanguage}
       custom={{ label: ui.myOwnCompanion, placeholder: ui.companionPlaceholder, field: "companionName" }}
+      imageType="sbCompanion" optionImages={optionImages}
     />
   );
 
@@ -413,6 +560,7 @@ export function StoryBuilderFlow() {
       selected={state.setting} onSelect={(c) => setState((s) => ({ ...s, setting: c as FieldChoice }))}
       onConfirm={goNext} onBack={goBack} accent={MOOD_ACCENT} ui={ui} effectiveLanguage={effectiveLanguage}
       custom={{ label: ui.myOwnPlace, placeholder: ui.settingPlaceholder, field: "world" }}
+      imageType="sbSetting" optionImages={optionImages}
     />
   );
 
@@ -421,6 +569,7 @@ export function StoryBuilderFlow() {
       headline={ui.missionHeadline} presets={MISSION_PRESETS} labels={missionLabels}
       selected={state.mission} onSelect={(id) => setState((s) => ({ ...s, mission: id as string }))}
       onConfirm={goNext} onBack={goBack} accent={MOOD_ACCENT} ui={ui} effectiveLanguage={effectiveLanguage}
+      imageType="sbMission" optionImages={optionImages}
     />
   );
 
@@ -432,10 +581,22 @@ export function StoryBuilderFlow() {
     />
   );
 
+  if (step === "summary") return (
+    <SummaryView
+      state={state} ui={ui}
+      heroLabels={heroLabels} companionLabels={companionLabels} settingLabels={settingLabels}
+      missionLabels={missionLabels} moodLabels={moodLabels}
+      onEditStep={(s) => { setEditingFromSummary(true); setStep(s); }}
+      onConfirm={() => setStep("review")}
+      onBack={goBack}
+    />
+  );
+
   if (step === "review") return (
     <ReviewView
       state={state} effectiveLanguage={effectiveLanguage} ui={ui}
       onProduce={handleProduce} onBack={goBack} onError={setError}
+      existingStory={story}
     />
   );
 
