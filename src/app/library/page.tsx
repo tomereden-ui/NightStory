@@ -14,6 +14,7 @@ import StoryPoster from "@/components/ui/StoryPoster";
 import { dedupeBySeries } from "@/lib/dedupeBySeries";
 import type { DBChildProfile } from "@/app/api/child-profiles/route";
 import { getLessonsCatalog } from "@/constants/lessonsUi";
+import { MOODS as MOOD_DEFINITIONS } from "@/constants/moodUi";
 import { LANGUAGE_META } from "@/lib/i18n";
 import type { Language } from "@/types";
 
@@ -48,18 +49,12 @@ function formatDuration(seconds?: number): string | null {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-// Same 7 moods scenes are tagged with (see story-guidance.txt's SCENE
-// BREAKDOWN section) — one color/emoji per mood, reused for the library's
-// mood filter chips.
-const MOODS: { id: string; emoji: string; color: string }[] = [
-  { id: "Gentle",    emoji: "🌤️", color: "#4fc3f7" },
-  { id: "Whimsical", emoji: "✨",  color: "#a78bfa" },
-  { id: "Playful",   emoji: "🎈",  color: "#fbbf24" },
-  { id: "Tense",     emoji: "⚡",  color: "#fb923c" },
-  { id: "Soothing",  emoji: "🌊",  color: "#10b981" },
-  { id: "Wondrous",  emoji: "🌟",  color: "#f472b6" },
-  { id: "Cozy",      emoji: "🕯️", color: "#f59e0b" },
-];
+// Same moods scenes are tagged with (see src/constants/moodUi.ts and
+// config/story-guidance.txt's SCENE BREAKDOWN section) — reused here for
+// the library's mood filter chips.
+const MOODS: { id: string; emoji: string; color: string }[] = MOOD_DEFINITIONS.map(
+  ({ id, emoji, color }) => ({ id, emoji, color })
+);
 
 // A story doesn't have one mood of its own — only its scenes do — so this
 // picks the most common primaryMood across them (first one wins a tie) as
